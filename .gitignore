@@ -6,7 +6,6 @@ build/
 .packages
 .pub-cache/
 .pub/
-pubspec.lock
 
 # IDE - IntelliJ / Android Studio
 .idea/
