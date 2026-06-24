@@ -1,0 +1,67 @@
+[33md78d5de[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Initial commit: Flutter port of Math Challenge game
+ .gitignore   |   1 [31m-[m
+ pubspec.lock | 714 [32m+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[m
+ 2 files changed, 714 insertions(+), 1 deletion(-)
+[33m5ed946b[m first commit
+ README.md | 2 [32m++[m
+ 1 file changed, 2 insertions(+)
+[33mec66b94[m Initial commit: Flutter port of Math Challenge game
+ .gitignore                                         |   52 [32m+[m
+ README.md                                          |  244 [32m++++[m
+ analysis_options.yaml                              |   30 [32m+[m
+ android/.gitignore                                 |   13 [32m+[m
+ android/app/build.gradle                           |   57 [32m+[m
+ android/app/src/debug/AndroidManifest.xml          |    7 [32m+[m
+ android/app/src/main/AndroidManifest.xml           |   50 [32m+[m
+ .../com/example/math_challenge/MainActivity.kt     |    5 [32m+[m
+ .../res/drawable-hdpi/ic_launcher_foreground.png   |  Bin [31m0[m -> [32m53506[m bytes
+ .../res/drawable-mdpi/ic_launcher_foreground.png   |  Bin [31m0[m -> [32m25275[m bytes
+ .../main/res/drawable-v21/launch_background.xml    |   12 [32m+[m
+ .../res/drawable-xhdpi/ic_launcher_foreground.png  |  Bin [31m0[m -> [32m83812[m bytes
+ .../res/drawable-xxhdpi/ic_launcher_foreground.png |  Bin [31m0[m -> [32m172167[m bytes
+ .../drawable-xxxhdpi/ic_launcher_foreground.png    |  Bin [31m0[m -> [32m291078[m bytes
+ .../src/main/res/drawable/launch_background.xml    |   12 [32m+[m
+ .../src/main/res/mipmap-anydpi-v26/ic_launcher.xml |    9 [32m+[m
+ .../app/src/main/res/mipmap-hdpi/ic_launcher.png   |  Bin [31m0[m -> [32m12868[m bytes
+ .../app/src/main/res/mipmap-mdpi/ic_launcher.png   |  Bin [31m0[m -> [32m6222[m bytes
+ .../app/src/main/res/mipmap-xhdpi/ic_launcher.png  |  Bin [31m0[m -> [32m20725[m bytes
+ .../app/src/main/res/mipmap-xxhdpi/ic_launcher.png |  Bin [31m0[m -> [32m41950[m bytes
+ .../src/main/res/mipmap-xxxhdpi/ic_launcher.png    |  Bin [31m0[m -> [32m68355[m bytes
+ android/app/src/main/res/values-night/styles.xml   |   18 [32m+[m
+ android/app/src/main/res/values/colors.xml         |    4 [32m+[m
+ android/app/src/main/res/values/styles.xml         |    9 [32m+[m
+ android/app/src/profile/AndroidManifest.xml        |    7 [32m+[m
+ android/build.gradle                               |   18 [32m+[m
+ android/gradle.properties                          |    3 [32m+[m
+ android/gradle/wrapper/gradle-wrapper.properties   |    5 [32m+[m
+ android/settings.gradle                            |   26 [32m+[m
+ assets/fonts/Baloo2-Black.ttf                      |  Bin [31m0[m -> [32m708920[m bytes
+ assets/fonts/Baloo2-Bold.ttf                       |  Bin [31m0[m -> [32m708920[m bytes
+ assets/fonts/Baloo2-ExtraBold.ttf                  |  Bin [31m0[m -> [32m708920[m bytes
+ assets/fonts/PlusJakartaSans-Bold.ttf              |  Bin [31m0[m -> [32m708920[m bytes
+ assets/fonts/PlusJakartaSans-ExtraBold.ttf         |  Bin [31m0[m -> [32m708920[m bytes
+ assets/fonts/PlusJakartaSans-Medium.ttf            |  Bin [31m0[m -> [32m759720[m bytes
+ assets/fonts/PlusJakartaSans-SemiBold.ttf          |  Bin [31m0[m -> [32m708920[m bytes
+ assets/icon.png                                    |  Bin [31m0[m -> [32m1898070[m bytes
+ flutter_launcher_icons.yaml                        |    7 [32m+[m
+ lib/engine/game_state.dart                         | 1256 [32m++++++++++++++++++++[m
+ lib/engine/question_generator.dart                 |  364 [32m++++++[m
+ lib/game_config.dart                               |  196 [32m+++[m
+ lib/main.dart                                      |  158 [32m+++[m
+ lib/models/enums.dart                              |  161 [32m+++[m
+ lib/models/game_data.dart                          |  168 [32m+++[m
+ lib/models/player.dart                             |  132 [32m++[m
+ lib/screens/config_screen.dart                     |  329 [32m+++++[m
+ lib/screens/game_screen.dart                       |  650 [32m++++++++++[m
+ lib/screens/menu_screen.dart                       |  461 [32m+++++++[m
+ lib/screens/numtype_screen.dart                    |  182 [32m+++[m
+ lib/screens/player_screen.dart                     |  202 [32m++++[m
+ lib/services/audio.dart                            |   86 [32m++[m
+ lib/services/settings.dart                         |   98 [32m++[m
+ lib/services/storage.dart                          |   73 [32m++[m
+ lib/theme.dart                                     |   53 [32m+[m
+ lib/widgets/common.dart                            |  268 [32m+++++[m
+ lib/widgets/modals.dart                            | 1042 [32m++++++++++++++++[m
+ pubspec.yaml                                       |   41 [32m+[m
+ test/question_generator_test.dart                  |  114 [32m++[m
+ 58 files changed, 6622 insertions(+)
