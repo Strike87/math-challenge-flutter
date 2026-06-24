@@ -242,3 +242,5 @@ The manifest is pre-configured with Google's **test** AdMob App ID
 Personal / educational use. The original HTML game's licence terms apply
 to the underlying game design and content. The Flutter port itself is
 provided as-is for the original author's use.
+#   m a t h - c h a l l e n g e - f l u t t e r  
+ 
