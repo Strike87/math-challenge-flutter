@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
@@ -6,8 +7,82 @@ import '../models/enums.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
 
-class GameScreen extends StatelessWidget {
+class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
+
+  @override
+  State<GameScreen> createState() => _GameScreenState();
+}
+
+class _GameScreenState extends State<GameScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _popController;
+  late final Animation<double> _scaleAnim;
+  late final Animation<double> _opacityAnim;
+
+  String? _feedbackEmoji;
+  bool _feedbackShowing = false;
+
+ // Emoji pools — randomly chosen per answer to add variety.
+  // Expanded from the original HTML game's CORRECT_RX / WRONG_RX arrays
+  // plus extras for more variety on long play sessions.
+  static const _correctEmojis = <String>[
+    // From original HTML CORRECT_RX:
+    '🎉', '🥳', '🤩', '👍', '💯', '⭐', '🔥',
+    // Added for variety:
+    '😊', '✨', '💪', '🌟', '⚡', '🏆', '👏',
+    '🎊', '😎', '🙌', '😃', '🚀', '🌈',
+  ];
+  static const _wrongEmojis = <String>[
+    // From original HTML WRONG_RX:
+    '🙈', '😥', '🤔', '😕', '😬',
+    // Added for variety:
+    '😢', '💥', '👎', '😞', '😔', '😫', '💔',
+    '😤', '🙊', '😒', '😴', '🤦', '🤷',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _popController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _scaleAnim = Tween<double>(begin: 0.2, end: 1.0).animate(
+      CurvedAnimation(parent: _popController, curve: Curves.elasticOut),
+    );
+    _opacityAnim = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _popController,
+        curve: const Interval(0.55, 1.0, curve: Curves.easeIn),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _popController.dispose();
+    super.dispose();
+  }
+
+  /// Called from answer button taps — fires the emoji pop animation.
+  void _showFeedback(bool correct) {
+    final pool = correct ? _correctEmojis : _wrongEmojis;
+    final emoji = pool[Random().nextInt(pool.length)];
+
+    setState(() {
+      _feedbackEmoji = emoji;
+      _feedbackShowing = true;
+    });
+    _popController.forward(from: 0);
+
+    // Auto-hide after the animation finishes (~900ms total visible time).
+    Future.delayed(const Duration(milliseconds: 900), () {
+      if (mounted) {
+        setState(() => _feedbackShowing = false);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,88 +92,134 @@ class GameScreen extends StatelessWidget {
     final pl = gs.p[rt.activePlayer];
 
     return SafeArea(
-      child: Column(
+      child: Stack(
         children: [
-          // Top bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.red),
-                  onPressed: gs.showQuitConfirm,
-                ),
-                ModeBadge(
-                  label: _modeLabel(gs),
-                  color: _modeColor(gs),
-                ),
-                if (rt.comboMultiplier > 1.0 && gs.mode != GameMode.combo)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(GameConfig.mango),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text('⚡ ×${rt.comboMultiplier.toStringAsFixed(1)}',
-                        style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11,
+          // ===== Original screen content =====
+          Column(
+            children: [
+              // Top bar
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.red),
+                      onPressed: gs.showQuitConfirm,
+                    ),
+                    ModeBadge(
+                      label: _modeLabel(gs),
+                      color: _modeColor(gs),
+                    ),
+                    if (rt.comboMultiplier > 1.0 && gs.mode != GameMode.combo)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(GameConfig.mango),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text('⚡ ×${rt.comboMultiplier.toStringAsFixed(1)}',
+                            style: const TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.w800, fontSize: 11,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    const Spacer(),
+                    if (rt.timer != null && gs.mode != GameMode.blitz && gs.mode != GameMode.combo)
+                      _TimerCircle(gs: gs, s: s),
+                  ],
+                ),
+              ),
+
+              // Scorecards + boss
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: _ScorecardsRow(gs: gs, s: s),
+              ),
+
+              // Mode-specific widgets
+              if (gs.mode == GameMode.survival || gs.rt.challenge == Operation.dailyBoss)
+                _LivesRow(gs: gs, s: s),
+              if (gs.mode == GameMode.combo)
+                _ComboMeter(gs: gs, s: s),
+
+              // Power-up HUD
+              if (pl.pups.isNotEmpty && gs.players == 1)
+                _PowerUpHud(gs: gs, pid: rt.activePlayer, s: s),
+
+              // Question card
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      _QuestionCard(gs: gs, s: s),
+                      const SizedBox(height: 16),
+                      _AnswersGrid(gs: gs, s: s, onAnswered: _showFeedback),
+                      const SizedBox(height: 12),
+                      if (gs.reactionPill.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(GameConfig.coral).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(gs.reactionPill,
+                            style: const TextStyle(
+                              color: Color(GameConfig.coral),
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                const Spacer(),
-                if (rt.timer != null && gs.mode != GameMode.blitz && gs.mode != GameMode.combo)
-                  _TimerCircle(gs: gs, s: s),
-              ],
-            ),
+                ),
+              ),
+            ],
           ),
 
-          // Scorecards + boss
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: _ScorecardsRow(gs: gs, s: s),
-          ),
-
-          // Mode-specific widgets
-          if (gs.mode == GameMode.survival || gs.rt.challenge == Operation.dailyBoss)
-            _LivesRow(gs: gs, s: s),
-          if (gs.mode == GameMode.combo)
-            _ComboMeter(gs: gs, s: s),
-
-          // Power-up HUD
-          if (pl.pups.isNotEmpty && gs.players == 1)
-            _PowerUpHud(gs: gs, pid: rt.activePlayer, s: s),
-
-          // Question card
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _QuestionCard(gs: gs, s: s),
-                  const SizedBox(height: 16),
-                  _AnswersGrid(gs: gs, s: s),
-                  const SizedBox(height: 12),
-                  if (gs.reactionPill.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(GameConfig.coral).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(gs.reactionPill,
-                        style: const TextStyle(
-                          color: Color(GameConfig.coral),
-                          fontWeight: FontWeight.w800,
+          // ===== Emoji feedback overlay =====
+          if (_feedbackShowing && _feedbackEmoji != null)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: AnimatedBuilder(
+                    animation: _popController,
+                    builder: (_, __) {
+                      return Opacity(
+                        opacity: _opacityAnim.value,
+                        child: Transform.scale(
+                          scale: _scaleAnim.value,
+                          child: Container(
+                            width: 140,
+                            height: 140,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.95),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.25),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(
+                                _feedbackEmoji!,
+                                style: const TextStyle(fontSize: 80),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                ],
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -595,9 +716,11 @@ class _QuestionCard extends StatelessWidget {
 }
 
 class _AnswersGrid extends StatelessWidget {
-  const _AnswersGrid({required this.gs, required this.s});
+  const _AnswersGrid({required this.gs, required this.s, required this.onAnswered});
   final GameState gs;
   final SettingsService s;
+  // Callback invoked with `true` for correct, `false` for wrong.
+  final void Function(bool correct) onAnswered;
 
   @override
   Widget build(BuildContext context) {
@@ -619,7 +742,15 @@ class _AnswersGrid extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            onTap: gs.rt.accepting ? () => gs.onAnswer(c) : null,
+            onTap: gs.rt.accepting
+                ? () {
+                    // Detect correctness BEFORE calling onAnswer,
+                    // because onAnswer advances the question.
+                    final correct = c == q.answer;
+                    gs.onAnswer(c);
+                    onAnswered(correct);
+                  }
+                : null,
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,

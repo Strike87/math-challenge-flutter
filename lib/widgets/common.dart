@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/avatars.dart';
 import '../game_config.dart';
 import '../models/player.dart';
 import '../services/settings.dart';
@@ -263,6 +264,214 @@ class NeoCard extends StatelessWidget {
         ],
       ),
       child: Padding(padding: padding, child: child),
+    );
+  }
+}
+
+// ============================================================================
+// AVATAR PICKER
+// ============================================================================
+
+/// A full-screen modal dialog that lets the user pick an avatar emoji.
+///
+/// Usage:
+/// ```dart
+/// final selected = await showDialog<String>(
+///   context: context,
+///   builder: (_) => const AvatarPickerDialog(currentAvatar: '🐶'),
+/// );
+/// if (selected != null) {
+///   // Save to player profile / settings
+///   setState(() => myAvatar = selected);
+/// }
+/// ```
+class AvatarPickerDialog extends StatefulWidget {
+  const AvatarPickerDialog({
+    super.key,
+    this.currentAvatar,
+  });
+
+  /// Currently selected avatar (highlighted in the grid).
+  final String? currentAvatar;
+
+  @override
+  State<AvatarPickerDialog> createState() => _AvatarPickerDialogState();
+}
+
+class _AvatarPickerDialogState extends State<AvatarPickerDialog>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController =
+        TabController(length: AvatarPool.categories.length, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.all(16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.75,
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text('Pick your avatar',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: AppFonts.head,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            // Category tabs
+            TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              labelColor: const Color(GameConfig.coral),
+              unselectedLabelColor: Colors.grey.shade600,
+              indicatorColor: const Color(GameConfig.coral),
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontFamily: AppFonts.body,
+              ),
+              tabs: AvatarPool.categories
+                  .map((c) => Tab(text: c.name))
+                  .toList(),
+            ),
+            // Grid
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: AvatarPool.categories.map((category) {
+                  return GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 5,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      childAspectRatio: 1,
+                    ),
+                    itemCount: category.emojis.length,
+                    itemBuilder: (_, i) {
+                      final emoji = category.emojis[i];
+                      final isSelected = emoji == widget.currentAvatar;
+                      return GestureDetector(
+                        onTap: () => Navigator.of(context).pop(emoji),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(GameConfig.coral)
+                                    .withValues(alpha: 0.15)
+                                : Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(GameConfig.coral)
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(emoji,
+                              style: const TextStyle(fontSize: 28),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact avatar selector tile — for use inside a settings screen.
+///
+/// Shows the current avatar with a "Change" button. Tapping opens
+/// [AvatarPickerDialog] and calls [onChanged] with the new emoji.
+///
+/// Usage:
+/// ```dart
+/// AvatarSelectorTile(
+///   currentAvatar: myAvatar,
+///   onChanged: (emoji) {
+///     setState(() => myAvatar = emoji);
+///     Storage.setString('mc_avatar', emoji);
+///   },
+/// )
+/// ```
+class AvatarSelectorTile extends StatelessWidget {
+  const AvatarSelectorTile({
+    super.key,
+    required this.currentAvatar,
+    required this.onChanged,
+    this.label = 'Avatar',
+  });
+
+  final String currentAvatar;
+  final ValueChanged<String> onChanged;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: const Color(GameConfig.coral).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(currentAvatar, style: const TextStyle(fontSize: 28)),
+        ),
+      ),
+      title: Text(label,
+        style: const TextStyle(
+          fontWeight: FontWeight.w800,
+          fontFamily: AppFonts.body,
+        ),
+      ),
+      subtitle: const Text('Tap to change'),
+      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+      onTap: () async {
+        final selected = await showDialog<String>(
+          context: context,
+          builder: (_) => AvatarPickerDialog(currentAvatar: currentAvatar),
+        );
+        if (selected != null && selected != currentAvatar) {
+          onChanged(selected);
+        }
+      },
     );
   }
 }
