@@ -5,6 +5,7 @@ import '../game_config.dart';
 import '../models/player.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
+import '../constants/avatars.dart';
 
 class PlayerSetupScreen extends StatelessWidget {
   const PlayerSetupScreen({super.key});
@@ -93,8 +94,75 @@ class _PlayerSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+
+          // Tappable avatar card — opens full picker with ~50 emojis
+          GestureDetector(
+            onTap: () async {
+              final current = pl.avatar is String ? pl.avatar as String : '🐶';
+              final selected = await showDialog<String>(
+                context: context,
+                builder: (_) => AvatarPickerDialog(currentAvatar: current),
+              );
+              if (selected != null) {
+                gs.pickAvatar(pid, selected);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(GameConfig.coral).withValues(alpha: 0.4),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: const Color(GameConfig.coral).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: AvatarWidget(avatar: pl.avatar, size: 40),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          pl.avatar is AvatarCustom ? 'Custom avatar' : 'Tap to change',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontFamily: AppFonts.body,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${AvatarPool.all.length}+ emojis available',
+                          style: TextStyle(
+                            color: s.muted,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.grey),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Quick-pick strip — original 11 emojis + Custom option
           SizedBox(
-            height: 80,
+            height: 64,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: GameConfig.avatarBases.length + 1,
@@ -116,7 +184,7 @@ class _PlayerSection extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             children: [
               NeoButton(

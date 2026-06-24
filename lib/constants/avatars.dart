@@ -1,12 +1,12 @@
-/// Expanded avatar list for Math Challenge.
-///
-/// Originally the HTML game had 11 animal emojis. We've expanded to ~50
-/// across 5 themed categories for more variety.
-///
-/// Usage:
-///   import '../constants/avatars.dart';
-///   final emoji = AvatarPool.all.first;  // '🐶'
-///   final random = AvatarPool.random();  // random pick
+// Expanded avatar list for Math Challenge.
+//
+// Originally the HTML game had 11 animal emojis. We've expanded to ~50
+// across 5 themed categories for more variety.
+//
+// Usage:
+//   import '../constants/avatars.dart';
+//   final emoji = AvatarPool.all.first;  // '🐶'
+//   final random = AvatarPool.random();  // random pick
 
 class AvatarPool {
   AvatarPool._();

@@ -134,6 +134,9 @@ class SettingsModal extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            _section('Player Avatar', s),
+            _AvatarSettingsTile(gs: gs),
+            const SizedBox(height: 16),
             _section('Display & Audio', s),
             Row(
               children: [
@@ -203,6 +206,77 @@ class SettingsModal extends StatelessWidget {
           fontSize: 12,
           fontWeight: FontWeight.w800,
           letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
+/// Avatar selector tile used inside SettingsModal.
+/// Opens the full AvatarPickerDialog with ~50 emojis.
+class _AvatarSettingsTile extends StatelessWidget {
+  const _AvatarSettingsTile({required this.gs});
+  final GameState gs;
+
+  @override
+  Widget build(BuildContext context) {
+    final p1 = gs.p[1];
+    final currentAvatar = p1.avatar is String ? p1.avatar as String : '🐶';
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(GameConfig.coral).withValues(alpha: 0.3), width: 1.5),
+      ),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () async {
+          final selected = await showDialog<String>(
+            context: context,
+            builder: (_) => AvatarPickerDialog(currentAvatar: currentAvatar),
+          );
+          if (selected != null && selected != currentAvatar) {
+            gs.pickAvatar(1, selected);
+            await gs.save();
+          }
+        },
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(GameConfig.coral).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: AvatarWidget(avatar: p1.avatar, size: 32),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text('Default Avatar',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontFamily: AppFonts.body,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text('Tap to change • ~50 emojis available',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.grey),
+          ],
         ),
       ),
     );

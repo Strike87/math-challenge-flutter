@@ -746,7 +746,7 @@ class _AnswersGrid extends StatelessWidget {
                 ? () {
                     // Detect correctness BEFORE calling onAnswer,
                     // because onAnswer advances the question.
-                    final correct = c == q.answer;
+                    final correct = c == q.ans;
                     gs.onAnswer(c);
                     onAnswered(correct);
                   }
