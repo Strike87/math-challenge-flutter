@@ -1,6 +1,6 @@
 # Behavioral Parity Tracker (BPT)
 
-Date: 2026-06-27
+Date: 2026-06-28
 
 Original source of truth: `C:\Users\Strik\math-challenge\www\index.html`
 
@@ -59,7 +59,7 @@ Internal engine difficulties are:
 
 | ID | System | Type | HTML source | Flutter source | Status | Confidence | Owner | Test | Source Verified | Regression ID | Finding / required proof |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| BPT-001 | IAP / Google Play purchases | Partial / service missing | `index.html:6648`, `index.html:12013`, `index.html:12161`, `index.html:12453` | `lib\services\iap.dart:25`, `lib\engine\game_state.dart:2308`, `lib\widgets\modals.dart:2399`, `lib\widgets\modals.dart:2707` | PARTIAL / NOT FROZEN | Confirmed | Unassigned | Unit / Widget / Device / Play Console | Yes | RT-052 / RT-052A | BPT-001A adult-gated purchase entry is verified and frozen separately. Full BPT-001 remains incomplete: Flutter still has no real `in_app_purchase` dependency, platform purchase stream, verified delivery, duplicate transaction persistence, acknowledgement, restore, native-only safety, or Play Console/device proof. BPT-001 is split into BPT-001A adult gate / purchase entry, BPT-001B product constants and purchase launch, BPT-001C delivery / duplicate protection / acknowledgement, BPT-001D restore / auto-restore / error handling, and BPT-001E native-only enforcement / dev-only simulation guard. |
+| BPT-001 | IAP / Google Play purchases | Ported local behavior | `index.html:6648`, `index.html:12013`, `index.html:12161`, `index.html:12453` | `lib\services\iap.dart:25`, `lib\engine\game_state.dart:2308`, `lib\widgets\modals.dart:2399`, `lib\widgets\modals.dart:2707`, `test\iap_adult_gate_test.dart:32`, `test\iap_delivery_test.dart:30`, `test\iap_restore_native_safety_test.dart:30` | VERIFIED / Frozen for local IAP behavior; device QA pending | Confirmed | Codex | Unit / Widget / Device / Play Console | Yes | RT-052A / RT-052B/C / RT-052D/E | Local BPT-001 behavior is verified: adult gate before real-money purchase entry; exact product IDs and purchase option IDs; delivery amounts and ad-removal entitlement; duplicate transaction protection; `completePurchase` on successful and duplicate approved purchases; manual restore and launch auto-restore of `ads_remove` only; consumables never restored as coins; already-owned remove-ads maps to restore/success; typed purchase errors grant nothing; unavailable native store grants nothing; dev simulation is blocked from native release. Manual release QA still remains for real `in_app_purchase` adapter wiring, Android internal-test purchase/restore, and Play Console/device proof. Repo note: the repository contains pre-existing modified and untracked port work outside this BPT-001 slice, so this verification claim applies only to the files and behavior touched for BPT-001, not to unrelated pending changes. |
 | BPT-001A | IAP adult gate / purchase entry | Ported behavior | `index.html:12049`, `index.html:12165` | `lib\services\iap.dart:25`, `lib\engine\game_state.dart:2308`, `lib\widgets\modals.dart:2399`, `lib\widgets\modals.dart:2707`, `test\iap_adult_gate_test.dart:32` | VERIFIED / Frozen for scoped purchase-entry gate slice | Confirmed | Codex | Unit / Widget | Yes | RT-052A | Required behavior verified: the four real-money products (`100_coins`, `500_coins`, `1200_coins`, `ads_remove`) open Adult Gate before any IAP adapter call; wrong answer and cancel/close do not call the adapter; correct answer calls the adapter exactly once for the selected product; a new purchase attempt gets a fresh question; gate success grants no coins and does not set `adsRemoved`; local coin purchases do not show the gate. Validation passed on 2026-06-28: `flutter test test\iap_adult_gate_test.dart`, `flutter test`, and `flutter analyze`. Repo note: the repository contains pre-existing modified and untracked port work outside this BPT-001A slice, so this verification claim applies only to the files and behavior touched for BPT-001A, not to unrelated pending changes. |
 | BPT-002 | AdMob banner/interstitial/rewarded | Missing | `index.html:11444`, `index.html:11542`, `index.html:11675`, `index.html:11727` | `pubspec.yaml:9` | COULD NOT REPLICATE | Confirmed | Unassigned | Device | Yes | RT-050 / RT-051 | Original has full Capacitor AdMob lifecycle and screen gating. Flutter has no `google_mobile_ads` dependency or ad service yet. Rewarded-ad commercial actions may need their own child-safe / ad-policy handling, but the real-money purchase adult gate belongs in BPT-001. |
 | BPT-003 | Adaptive difficulty formulas | Ported behavior | `index.html:9778`, `index.html:9875` | `lib\engine\game_state.dart:964`, `lib\engine\game_state.dart:1511`, `lib\engine\game_state.dart:1525`, `lib\models\game_data.dart:134` | VERIFIED | Confirmed | Codex | Unit | Yes | RT-001 | Source formulas ported: mastery gains/penalties, confidence EMA, thresholds, per-skill nudge, expert/insane counters, and global adaptive mean. RT-001 passed on 2026-06-26. |
@@ -161,6 +161,8 @@ Delivery rules:
 - delivered transaction IDs must persist
 - ad-removal entitlement must persist
 
+RT-052B/C now cover the verified delivery and acknowledgement slice in `lib\engine\game_state.dart` and `test\iap_delivery_test.dart`. RT-052D/E cover restore, auto-restore, error handling, and native-only safety in `lib\engine\game_state.dart`, `lib\services\iap.dart`, and `test\iap_restore_native_safety_test.dart`.
+
 Important separation:
 
 - Adult gate protects entry into the billing flow.
@@ -168,6 +170,8 @@ Important separation:
 - Do not combine those into one method that grants rewards immediately after solving the math gate.
 
 ### BPT-001D: Restore / Auto-Restore / Error Handling
+
+Implementation status: `VERIFIED / Frozen for scoped restore and error-handling slice` as of 2026-06-28.
 
 Restore rules:
 
@@ -186,6 +190,8 @@ Minimum error handling:
 
 ### BPT-001E: Native-Only Enforcement / Dev Simulation Guard
 
+Implementation status: `VERIFIED / Frozen for scoped native-safety slice` as of 2026-06-28.
+
 On native Android, if the store or purchase plugin is unavailable, show an error and grant nothing. There must be no fallback path that silently grants coins or removes ads on a native build.
 
 A simulated purchase flow is acceptable only in non-native browser/dev context, clearly gated so it cannot reach a real device release build.
@@ -197,6 +203,7 @@ This tracker keeps IAP regression coverage under `RT-052` because `RT-050` and `
 ```powershell
 flutter test test\iap_adult_gate_test.dart
 flutter test test\iap_delivery_test.dart
+flutter test test\iap_restore_native_safety_test.dart
 flutter test
 flutter analyze
 ```
@@ -281,6 +288,8 @@ Every fixed behavior should eventually point to one regression ID. A row can sta
 | RT-050 | BPT-002 | AdMob banner gating | Device | Banner appears only on approved screens and never during gameplay or modal overlays. |
 | RT-051 | BPT-002 | Rewarded/interstitial ads | Device | Rewarded grant, cooldown, no-fill handling, interstitial preload/show/retry behavior match release rules. |
 | RT-052A | BPT-001A | IAP adult gate / purchase entry | Unit / Widget | Tapping `100_coins`, `500_coins`, `1200_coins`, or `ads_remove` opens Adult Gate before adapter calls; wrong/cancelled gates start no purchase; correct gate calls the adapter exactly once for the selected product; gate success grants no coins and does not remove ads; new attempts regenerate the question; local coin purchases do not show the gate. |
+| RT-052B/C | BPT-001B/C | IAP delivery / duplicate transaction handling | Unit | `100_coins`, `500_coins`, `1200_coins`, and `ads_remove` deliver exact entitlements only after an approved purchase; unknown, failed, cancelled, and pending purchases grant nothing; stable transaction keys are persisted before/with delivery; duplicate transaction IDs do not double-grant; duplicate approved purchases still call `completePurchase`; delivered IDs, coins, and `adsRemoved` survive reload. |
+| RT-052D/E | BPT-001D/E | IAP restore / native safety | Unit | Manual restore and launch auto-restore restore only `ads_remove`; consumable coin products never restore as coins; mixed restore restores only ad removal; already-owned ad removal maps to restore/success; user-cancelled, billing-unavailable, network, developer/unknown, unavailable store, and native-release simulation paths grant nothing and show calm source-appropriate feedback. |
 | RT-052 | BPT-001 | IAP adult gate / delivery / restore | Unit / Widget / Device / Play Console | Adult gate opens before purchase adapter calls; wrong/cancelled gate starts no purchase; correct gate calls purchase exactly once for selected product; gate regenerates per attempt; gate success grants nothing by itself; source product IDs and option IDs match exactly; `100_coins`, `500_coins`, `1200_coins`, and `ads_remove` deliver exact entitlements only after approved purchase; duplicate transaction keys do not double-grant; already-delivered approved transactions are still finished; failed/cancelled/pending/unknown purchases grant nothing; manual and launch auto-restore restore `ads_remove` only; consumables are never restored as new coins; already-owned remove-ads maps to restore; native unavailable store grants nothing; browser/dev simulation cannot run on native release. |
 
 ## Behavior Freeze
@@ -307,7 +316,8 @@ A system can move to `Frozen` only after its BPT row is `VERIFIED`, source verif
 | Number type unlocks | BPT-011 | Frozen for scoped number-type unlock slice | RT-012 | Natural default, integer 500-coin unlock, rational/decimal 1200-coin unlock, insufficient-coin handling, one-time deduction, persistence, and migration/reset compatibility are verified. |
 | Mode/player eligibility | BPT-017A | Frozen for scoped mode/player eligibility slice | RT-041 | Blitz, Death, Combo, and Survival are restricted to 1P and remain visible but greyed/disabled in 2P. Handled in enums, state setters, startGame, and config tabs. |
 | Paid purchase adult gate | BPT-001A | Frozen for scoped purchase-entry gate slice | RT-052A | Adult Gate modal, purchase-entry coordinator, product constants, and fake-adapter call/no-call behavior are covered by RT-052A. Gate success intentionally grants no entitlement. Do not refactor unless BPT-001A is reopened with a verified bug. |
-| Paid purchases / ads | BPT-001 / BPT-002 | Not frozen | RT-052 / RT-050 / RT-051 | Full IAP still requires real `in_app_purchase` launch, verified delivery, duplicate protection, acknowledgement, restore, error handling, native-only safety, and Play Console/device proof. BPT-001A is frozen separately. AdMob remains separate under BPT-002. |
+| Paid purchases / local IAP behavior | BPT-001 | Frozen for local IAP behavior; device QA pending | RT-052A / RT-052B/C / RT-052D/E | Adult gate, delivery, duplicate protection, acknowledgement calls, restore, error handling, and native-safety simulation guard are covered locally. Real Play Console/internal-test purchase and restore remain release QA. Do not refactor unless BPT-001 is reopened with a verified bug. |
+| AdMob | BPT-002 | Not frozen | RT-050 / RT-051 | Flutter still needs AdMob service implementation and device proof for banner gating, rewarded grants, cooldowns, no-fill handling, and interstitial behavior. |
 | Visual identity | BPT-017 | Frozen for scoped visual/responsive layout slice | RT-040 | Phone and tablet layouts, coin shop, and skill dashboard layouts are verified. Do not refactor unless BPT-017 is reopened with a verified bug. |
 
 ## Dependency Graph

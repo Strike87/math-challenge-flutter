@@ -2432,8 +2432,7 @@ class _BuyCoinsPanel extends StatelessWidget {
             onTap: () => gs.beginIapPurchase(IapProducts.removeAds),
           ),
           TextButton(
-            onPressed: () =>
-                gs.showToast('Restore purchases coming with Google Play IAP'),
+            onPressed: gs.restorePurchases,
             child: const Text(
               'Restore Purchases',
               style: TextStyle(

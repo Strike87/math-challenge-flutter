@@ -232,6 +232,7 @@ Widget _modalHost(GameState state, {Size size = const Size(390, 700)}) {
 
 class _FakeIapPurchaseAdapter implements IapPurchaseAdapter {
   final List<IapProduct> buyCalls = [];
+  final List<IapPurchase> completeCalls = [];
   int restoreCalls = 0;
 
   @override
@@ -240,8 +241,14 @@ class _FakeIapPurchaseAdapter implements IapPurchaseAdapter {
   }
 
   @override
-  Future<void> restorePurchases() async {
+  Future<void> completePurchase(IapPurchase purchase) async {
+    completeCalls.add(purchase);
+  }
+
+  @override
+  Future<List<IapPurchase>> restorePurchases() async {
     restoreCalls++;
+    return const [];
   }
 }
 

@@ -13,6 +13,7 @@ import '../services/storage.dart';
 import '../services/settings.dart';
 import '../services/audio.dart';
 import '../services/iap.dart';
+import '../services/admob.dart';
 import 'question_generator.dart';
 
 /// Screen identifier — mirrors the original HTML section IDs.
@@ -137,8 +138,13 @@ class GameState extends ChangeNotifier {
     required this.settings,
     required this.audio,
     IapPurchaseAdapter? iapAdapter,
+    AdMobService? adService,
     AdultGateChallenge Function()? adultGateFactory,
+    int Function()? nowMillisProvider,
   })  : iapAdapter = iapAdapter ?? const UnavailableIapPurchaseAdapter(),
+        adService = adService ?? const UnavailableAdMobService(),
+        _nowMillis =
+            nowMillisProvider ?? (() => DateTime.now().millisecondsSinceEpoch),
         _adultGateFactory =
             adultGateFactory ?? (() => AdultGateChallenge.random());
 
@@ -159,6 +165,9 @@ class GameState extends ChangeNotifier {
   static const double _adaptThresholdMedium = 65;
   static const double _adaptThresholdHard = 82;
   static const double _adaptThresholdExpert = 93;
+  static const int rewardedAdCoins = 100;
+  static const int rewardedCooldownMs = 300000;
+  static const int interstitialCadenceGames = 3;
 
   static const Map<PowerUp, String> _powerUpBonusStorageKeys = {
     PowerUp.time: 'time',
@@ -229,7 +238,9 @@ class GameState extends ChangeNotifier {
   final SettingsService settings;
   final AudioService audio;
   final IapPurchaseAdapter iapAdapter;
+  final AdMobService adService;
   final AdultGateChallenge Function() _adultGateFactory;
+  final int Function() _nowMillis;
   final QuestionGenerator _qgen = QuestionGenerator();
   final Random _rng = Random();
 
@@ -279,6 +290,8 @@ class GameState extends ChangeNotifier {
   List<String> unlockedHats = [];
   bool adsRemoved = false;
   List<String> iapDeliveredTxs = [];
+  int adGameCount = 0;
+  int lastRewardedAt = 0;
 
   // ─── UI routing ─────────────────────────────────────────────
   GameScreen currentScreen = GameScreen.menu;
@@ -398,6 +411,9 @@ class GameState extends ChangeNotifier {
     unlockedHats = _loadStringListCompat('mc_unlockedHats');
     adsRemoved = Storage.getBool('mc_adsRemoved', false);
     iapDeliveredTxs = Storage.getStringList('mc_iapDeliveredTxs', []);
+    adGameCount = Storage.getInt('mc_adGameCount', 0);
+    lastRewardedAt = Storage.getInt('mc_lastRewardedAt', 0);
+    await restorePurchases(silent: true);
     _loadPlayerData(1);
     _loadPlayerData(2);
     await _updateLoginStreak();
@@ -426,6 +442,8 @@ class GameState extends ChangeNotifier {
     await Storage.setStringList('mc_unlockedHats', unlockedHats);
     await Storage.setBool('mc_adsRemoved', adsRemoved);
     await Storage.setStringList('mc_iapDeliveredTxs', iapDeliveredTxs);
+    await Storage.setInt('mc_adGameCount', adGameCount);
+    await Storage.setInt('mc_lastRewardedAt', lastRewardedAt);
     await Storage.setString('mc_p1_name', p[1].name);
     await Storage.setString(
         'mc_p1_avatar', p[1].avatar is String ? p[1].avatar as String : '🐶');
@@ -965,6 +983,91 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ─── Ad operations ─────────────────────────────────────────
+  @visibleForTesting
+  AdMobRequestPolicy get debugAdRequestPolicy => adService.requestPolicy;
+
+  bool isBannerEligibleFor(GameScreen screen) =>
+      !adsRemoved &&
+      (screen == GameScreen.numType || screen == GameScreen.player);
+
+  int rewardedCooldownRemainingMs({int? nowMillis}) {
+    if (lastRewardedAt <= 0) return 0;
+    final elapsed = (nowMillis ?? _nowMillis()) - lastRewardedAt;
+    return max(0, rewardedCooldownMs - elapsed);
+  }
+
+  bool get isRewardedAdOnCooldown => rewardedCooldownRemainingMs() > 0;
+
+  Future<void> syncBannerForCurrentScreen() async {
+    try {
+      if (isBannerEligibleFor(currentScreen)) {
+        await adService.showBanner();
+      } else {
+        await adService.hideBanner();
+      }
+    } catch (_) {
+      // Ad service failures should never crash normal game navigation.
+    }
+  }
+
+  Future<void> _recordCompletedGameForAds() async {
+    if (adsRemoved) {
+      await _hideAdsSafely();
+      return;
+    }
+    adGameCount++;
+    await Storage.setInt('mc_adGameCount', adGameCount);
+    if (adGameCount % interstitialCadenceGames != 0) return;
+
+    try {
+      await adService.showInterstitial();
+    } catch (_) {
+      // No-fill or service errors are deliberately silent.
+    }
+  }
+
+  @visibleForTesting
+  Future<void> debugRecordCompletedGameForAds() => _recordCompletedGameForAds();
+
+  Future<bool> claimRewardedAdCoins({int? nowMillis}) async {
+    if (adsRemoved) {
+      showToast('Ads are removed');
+      return false;
+    }
+    final now = nowMillis ?? _nowMillis();
+    if (rewardedCooldownRemainingMs(nowMillis: now) > 0) {
+      showToast('Rewarded ad is cooling down');
+      return false;
+    }
+
+    var rewarded = false;
+    try {
+      rewarded = await adService.showRewarded();
+    } catch (_) {
+      rewarded = false;
+    }
+    if (!rewarded) {
+      showToast('Rewarded ad unavailable. Please try again later.');
+      return false;
+    }
+
+    lastRewardedAt = now;
+    await Storage.setInt('mc_lastRewardedAt', lastRewardedAt);
+    addCoins(rewardedAdCoins, true);
+    await save();
+    showToast('🎬 +$rewardedAdCoins🪙');
+    return true;
+  }
+
+  Future<void> _hideAdsSafely() async {
+    try {
+      await adService.hideBanner();
+    } catch (_) {
+      // Best-effort cleanup only.
+    }
+  }
+
   // ─── Toast ──────────────────────────────────────────────────
   void showToast(String msg) {
     if (toastVisible && hasListeners) {
@@ -1006,6 +1109,7 @@ class GameState extends ChangeNotifier {
   // ─── Screen / modal routing ─────────────────────────────────
   void showScreen(GameScreen s) {
     currentScreen = s;
+    unawaited(syncBannerForCurrentScreen());
     notifyListeners();
   }
 
@@ -1785,6 +1889,7 @@ class GameState extends ChangeNotifier {
     rt.state = 'ended';
     rt.timer?.cancel();
     gamesPlayed++;
+    unawaited(_recordCompletedGameForAds());
     if (gamesPlayed >= 10) unlockAch('persistent');
 
     // Save high score
@@ -2274,7 +2379,7 @@ class GameState extends ChangeNotifier {
   // ─── Coin shop ──────────────────────────────────────────────
   Future<void> buyShopItem(ShopItem item) async {
     if (item.special == 'watch') {
-      showToast('Rewarded ads are not ready yet');
+      await claimRewardedAdCoins();
       return;
     }
     if (!item.consumable && shopOwned.contains(item.id)) {
@@ -2341,9 +2446,9 @@ class GameState extends ChangeNotifier {
       await iapAdapter.buyProduct(product);
       _closeAdultGateToReturnModal();
       showToast('Opening Google Play...');
-    } on IapUnavailableException {
+    } on IapException catch (e) {
       _closeAdultGateToReturnModal();
-      showToast('Google Play purchases are not ready yet');
+      await _handleIapError(e, product: product);
     } catch (_) {
       _closeAdultGateToReturnModal();
       showToast('Purchase could not start');
@@ -2370,8 +2475,7 @@ class GameState extends ChangeNotifier {
   }
 
   @visibleForTesting
-  List<String> get debugIapDeliveredTxs =>
-      List.unmodifiable(iapDeliveredTxs);
+  List<String> get debugIapDeliveredTxs => List.unmodifiable(iapDeliveredTxs);
 
   Future<bool> handleIapPurchase(IapPurchase purchase) async {
     if (!purchase.isApproved) return false;
@@ -2387,6 +2491,7 @@ class GameState extends ChangeNotifier {
           addCoins(product.deliveredCoins, true);
         } else if (product.removesAds) {
           adsRemoved = true;
+          unawaited(_hideAdsSafely());
           await Storage.setBool('mc_adsRemoved', true);
           notifyListeners();
         }
@@ -2407,6 +2512,72 @@ class GameState extends ChangeNotifier {
           : '✅ ${product.label} added! +${product.deliveredCoins}🪙');
     }
     return delivered;
+  }
+
+  Future<bool> restorePurchases({bool silent = false}) async {
+    try {
+      final purchases = await iapAdapter.restorePurchases();
+      final restored = await _applyRestoredPurchases(purchases);
+      if (!silent) {
+        showToast(restored
+            ? 'Purchases restored. Ads are removed.'
+            : 'No purchases to restore.');
+      }
+      return restored;
+    } on IapException catch (e) {
+      if (!silent) await _handleIapError(e);
+      return false;
+    } catch (_) {
+      if (!silent) showToast('Purchase service failed. Please try again.');
+      return false;
+    }
+  }
+
+  Future<bool> _applyRestoredPurchases(List<IapPurchase> purchases) async {
+    var restoredAds = false;
+    for (final purchase in purchases) {
+      if (!purchase.isApproved) continue;
+      if (purchase.productId != IapProducts.removeAdsId) continue;
+      restoredAds = true;
+    }
+
+    if (restoredAds) {
+      adsRemoved = true;
+      unawaited(_hideAdsSafely());
+      await Storage.setBool('mc_adsRemoved', true);
+      await save();
+      notifyListeners();
+    }
+    return restoredAds;
+  }
+
+  Future<void> _handleIapError(IapException e, {IapProduct? product}) async {
+    switch (e.code) {
+      case IapErrorCode.userCancelled:
+        return;
+      case IapErrorCode.alreadyOwned:
+        if (product?.removesAds == true) {
+          adsRemoved = true;
+          unawaited(_hideAdsSafely());
+          await Storage.setBool('mc_adsRemoved', true);
+          await save();
+          notifyListeners();
+          showToast('Purchases restored. Ads are removed.');
+          return;
+        }
+        showToast('You already own this purchase.');
+        return;
+      case IapErrorCode.billingUnavailable:
+        showToast('Google Play billing is not available on this device.');
+        return;
+      case IapErrorCode.network:
+        showToast('Connection lost. Please try again when online.');
+        return;
+      case IapErrorCode.developer:
+      case IapErrorCode.unknown:
+        showToast('Purchase failed. Please try again.');
+        return;
+    }
   }
 
   Future<void> _rememberIapTransaction(String key) async {

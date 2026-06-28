@@ -4,6 +4,15 @@ enum IapProductKind { consumable, nonConsumable }
 
 enum IapPurchaseStatus { approved, pending, failed, cancelled }
 
+enum IapErrorCode {
+  userCancelled,
+  alreadyOwned,
+  billingUnavailable,
+  network,
+  developer,
+  unknown,
+}
+
 class IapProduct {
   const IapProduct({
     required this.key,
@@ -108,16 +117,56 @@ class IapPurchase {
 abstract class IapPurchaseAdapter {
   Future<void> buyProduct(IapProduct product);
   Future<void> completePurchase(IapPurchase purchase);
-  Future<void> restorePurchases();
+  Future<List<IapPurchase>> restorePurchases();
 }
 
-class IapUnavailableException implements Exception {
-  const IapUnavailableException([this.message = 'IAP adapter unavailable']);
+class IapException implements Exception {
+  const IapException(this.code, [this.message = 'IAP error']);
 
+  final IapErrorCode code;
   final String message;
 
   @override
   String toString() => message;
+}
+
+class IapUnavailableException extends IapException {
+  const IapUnavailableException([String message = 'IAP adapter unavailable'])
+      : super(IapErrorCode.billingUnavailable, message);
+}
+
+class DevIapPurchaseAdapter implements IapPurchaseAdapter {
+  const DevIapPurchaseAdapter({
+    required this.isNativeRelease,
+    this.restoredPurchases = const [],
+  });
+
+  final bool isNativeRelease;
+  final List<IapPurchase> restoredPurchases;
+
+  void _guardNativeRelease() {
+    if (isNativeRelease) {
+      throw const IapUnavailableException(
+        'Simulated purchases are disabled on native release',
+      );
+    }
+  }
+
+  @override
+  Future<void> buyProduct(IapProduct product) async {
+    _guardNativeRelease();
+  }
+
+  @override
+  Future<void> completePurchase(IapPurchase purchase) async {
+    _guardNativeRelease();
+  }
+
+  @override
+  Future<List<IapPurchase>> restorePurchases() async {
+    _guardNativeRelease();
+    return restoredPurchases;
+  }
 }
 
 class UnavailableIapPurchaseAdapter implements IapPurchaseAdapter {
@@ -134,7 +183,7 @@ class UnavailableIapPurchaseAdapter implements IapPurchaseAdapter {
   }
 
   @override
-  Future<void> restorePurchases() {
+  Future<List<IapPurchase>> restorePurchases() {
     throw const IapUnavailableException();
   }
 }
