@@ -1,15 +1,18 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../game_config.dart';
+import '../models/celebration.dart';
 import '../models/enums.dart';
 import '../models/player.dart';
 import '../models/game_data.dart';
 import '../services/storage.dart';
 import '../services/settings.dart';
 import '../services/audio.dart';
+import '../services/iap.dart';
 import 'question_generator.dart';
 
 /// Screen identifier — mirrors the original HTML section IDs.
@@ -30,6 +33,7 @@ enum GameModal {
   avatarBuilder,
   skillDashboard,
   coinShop,
+  adultGate,
   dailyChallenges,
 }
 
@@ -67,6 +71,7 @@ class RuntimeState {
   DailyBoss? dailyBoss;
   int dailyBossLives;
   int dailyBossProgress;
+  int dailyBossRewardEarned;
   bool dailyBossWon;
   bool frozen;
   bool isFollowUp;
@@ -106,6 +111,7 @@ class RuntimeState {
         dailyBoss = null,
         dailyBossLives = 3,
         dailyBossProgress = 0,
+        dailyBossRewardEarned = 0,
         dailyBossWon = false,
         frozen = false,
         isFollowUp = false,
@@ -127,10 +133,103 @@ class _FollowUpData {
 /// - options (mode, difficulty, etc.)
 /// - screen + modal routing
 class GameState extends ChangeNotifier {
-  GameState({required this.settings, required this.audio});
+  GameState({
+    required this.settings,
+    required this.audio,
+    IapPurchaseAdapter? iapAdapter,
+    AdultGateChallenge Function()? adultGateFactory,
+  })  : iapAdapter = iapAdapter ?? const UnavailableIapPurchaseAdapter(),
+        _adultGateFactory =
+            adultGateFactory ?? (() => AdultGateChallenge.random());
+
+  static const int _masteryFastMs = 1500;
+  static const int _masteryNormalMs = 3000;
+  static const double _masteryGainFast = 7;
+  static const double _masteryGainNormal = 5;
+  static const double _masteryGainSlow = 3;
+  static const double _masteryPenalty = -4;
+  static const double _masteryPenaltyTimeout = -2;
+  static const double _masteryMax = 100;
+  static const double _masteryDefault = 20;
+  static const double _confidenceSpeedDivisor = 120;
+  static const double _confidenceEmaAlpha = 0.25;
+  static const double _confidenceDefault = 50;
+  static const int _confidenceDefaultMs = 5000;
+  static const double _adaptThresholdEasy = 45;
+  static const double _adaptThresholdMedium = 65;
+  static const double _adaptThresholdHard = 82;
+  static const double _adaptThresholdExpert = 93;
+
+  static const Map<PowerUp, String> _powerUpBonusStorageKeys = {
+    PowerUp.time: 'time',
+    PowerUp.fifty: 'fifty',
+    PowerUp.double: 'double',
+    PowerUp.shield: 'shield',
+    PowerUp.freeze: 'freeze',
+    PowerUp.switchOp: 'switch',
+  };
+
+  static const List<String> _resetStorageKeys = [
+    'mc_coins',
+    'mc_scores',
+    'mc_gamesPlayed',
+    'mc_adaptLvl',
+    'mc_achs',
+    'mc_achievements',
+    'mc_achievements_raw',
+    'mc_skills',
+    'mc_skillMap',
+    'mc_skillMap_raw',
+    'mc_numTypeUnlocked',
+    'mc_numTypeUnlocked_integers',
+    'mc_numTypeUnlocked_rationals',
+    'mc_unlocked_integers',
+    'mc_unlocked_rationals',
+    'mc_loginStreak',
+    'mc_streakLastDay',
+    'mc_lastLoginDay',
+    'mc_avatarCustom',
+    'mc_avatarCustom1',
+    'mc_avatarCustom2',
+    'mc_p1Data',
+    'mc_p1_name',
+    'mc_p1_avatar',
+    'mc_p2Data',
+    'mc_p2_name',
+    'mc_p2_avatar',
+    'mc_dailyProgress',
+    'mc_dailyProgress_raw',
+    'mc_dailyChallenges',
+    'mc_dailyCoinsDate',
+    'mc_dailyBossClaimed',
+    'mc_lastDailyBossClaimDay',
+    'mc_puBonus',
+    'mc_livesBonus',
+    'mc_shopOwned',
+    'mc_unlockedAvatars',
+    'mc_unlockedHats',
+    'mc_adsRemoved',
+    'mc_iapDeliveredTxs',
+    'mc_lastRewardedAt',
+    'mc_adGameCount',
+    'mc_sound',
+    'mc_dark',
+    'mc_vibration',
+    'mc_dyslexia',
+    'mc_colorblind',
+    'mc_animSpeed',
+    'mc_reduceMotion',
+    'mc_lowPerf',
+  ];
+
+  @visibleForTesting
+  static List<String> get debugResetStorageKeys =>
+      List.unmodifiable(_resetStorageKeys);
 
   final SettingsService settings;
   final AudioService audio;
+  final IapPurchaseAdapter iapAdapter;
+  final AdultGateChallenge Function() _adultGateFactory;
   final QuestionGenerator _qgen = QuestionGenerator();
   final Random _rng = Random();
 
@@ -150,8 +249,11 @@ class GameState extends ChangeNotifier {
 
   // ─── Runtime ────────────────────────────────────────────────
   late RuntimeState rt = RuntimeState();
-  late List<PlayerState> p = [PlayerState(), PlayerState(name: 'Player 1', avatar: '🐶'),
-                                                 PlayerState(name: 'Player 2', avatar: '🐱')];
+  late List<PlayerState> p = [
+    PlayerState(),
+    PlayerState(name: 'Player 1', avatar: '🐶'),
+    PlayerState(name: 'Player 2', avatar: '🐱')
+  ];
 
   // ─── Persistent ─────────────────────────────────────────────
   int coins = 0;
@@ -168,12 +270,15 @@ class GameState extends ChangeNotifier {
     '2': AvatarCustom(base: '🐸'),
   };
   Map<String, int> dailyProgress = {};
+  Map<String, bool> dailyCompleted = {};
+  List<String> dailyChallengeIds = [];
   DailyBoss? dailyBoss;
-  int lastDailyBossClaimDay = -1;
+  String dailyBossDateKey = '';
   List<String> shopOwned = [];
   List<String> unlockedAvatars = [];
   List<String> unlockedHats = [];
   bool adsRemoved = false;
+  List<String> iapDeliveredTxs = [];
 
   // ─── UI routing ─────────────────────────────────────────────
   GameScreen currentScreen = GameScreen.menu;
@@ -181,14 +286,92 @@ class GameState extends ChangeNotifier {
   String toastMessage = '';
   bool toastVisible = false;
   Timer? _toastTimer;
+  final List<String> _toastQueue = [];
   int builderPid = 1;
   AvatarCustom builderAvatar = AvatarCustom();
   bool isDailyBossClaimedToday = false;
   String reactionPill = '';
   String bigEmoji = '';
   bool bigEmojiVisible = false;
+  CelebrationEvent celebration = const CelebrationEvent.none();
+  int _celebrationSeq = 0;
   int lastUnlockedAchievementCount = 0;
   List<Achievement> newlyUnlocked = [];
+  String resultIcon = '🏆';
+  String resultTitle = 'Great Job!';
+  String resultDescription = '';
+  AdultGateChallenge? adultGateChallenge;
+  IapProduct? pendingIapProduct;
+  String adultGateError = '';
+  bool adultGateBusy = false;
+  GameModal _adultGateReturnModal = GameModal.none;
+
+  MasterLevel? get clearedMasterLevel {
+    final idx = _masterLevel - 1;
+    if (currentModal != GameModal.stageCleared ||
+        idx < 0 ||
+        idx >= GameConfig.masterLevels.length) {
+      return null;
+    }
+    return GameConfig.masterLevels[idx];
+  }
+
+  MasterLevel? get nextMasterLevel {
+    if (_masterLevel < 0 || _masterLevel >= GameConfig.masterLevels.length) {
+      return null;
+    }
+    return GameConfig.masterLevels[_masterLevel];
+  }
+
+  MasterLevel? get currentMasterLevel {
+    if (_masterLevel < 0 || _masterLevel >= GameConfig.masterLevels.length) {
+      return null;
+    }
+    return GameConfig.masterLevels[_masterLevel];
+  }
+
+  int get masterLevel => _masterLevel;
+
+  int get masterProgress => _masterProgress;
+
+  int get masterLives => _masterLives;
+
+  List<String> get availableAvatarBases =>
+      _mergeUnlocked(GameConfig.avatarBases, unlockedAvatars);
+
+  List<String> get availableAvatarHats =>
+      _mergeUnlocked(GameConfig.avatarHats, unlockedHats);
+
+  bool get isDailyCoinsClaimedToday =>
+      _normalizeDateKey(Storage.getString('mc_dailyCoinsDate', '')) ==
+      _dailyDateKey();
+
+  List<DailyChallenge> get activeDailyChallenges {
+    final byId = {for (final c in GameConfig.dailyChallenges) c.id: c};
+    final ids = dailyChallengeIds.isEmpty
+        ? GameConfig.dailyChallenges.take(3).map((c) => c.id)
+        : dailyChallengeIds;
+    return ids.map((id) => byId[id]).whereType<DailyChallenge>().toList();
+  }
+
+  List<String> _mergeUnlocked(List<String> base, List<String> unlocked) {
+    final seen = <String>{};
+    final out = <String>[];
+    for (final emoji in [...base, ...unlocked]) {
+      if (emoji.isEmpty || seen.contains(emoji)) continue;
+      seen.add(emoji);
+      out.add(emoji);
+    }
+    return out;
+  }
+
+  @override
+  void dispose() {
+    _toastTimer?.cancel();
+    _toastQueue.clear();
+    rt.timer?.cancel();
+    super.dispose();
+  }
 
   // ─── Load / save ────────────────────────────────────────────
   Future<void> load() async {
@@ -197,31 +380,29 @@ class GameState extends ChangeNotifier {
     adaptLvlRaw = Storage.getDouble('mc_adaptLvl', 0);
     adaptLvl = adaptLvlRaw.round();
     achievements = _loadAchs();
-    highScores = Storage.getObjectList<HighScore>('mc_scores',
-        (j) => HighScore.fromJson(j));
+    highScores = List<HighScore>.from(Storage.getObjectList<HighScore>(
+        'mc_scores', (j) => HighScore.fromJson(j)));
     coins = Storage.getInt('mc_coins', 0);
     skillMap = _loadSkillMap();
-    numTypeUnlocked = {
-      'integers': Storage.getInt('mc_numTypeUnlocked_integers', 0),
-      'rationals': Storage.getInt('mc_numTypeUnlocked_rationals', 0),
-    };
+    numTypeUnlocked = _loadNumTypeUnlocked();
     loginStreak = Storage.getInt('mc_loginStreak', 0);
-    avatarCustom['1'] = Storage.getObject<AvatarCustom>('mc_avatarCustom1',
-        (j) => AvatarCustom.fromJson(j), AvatarCustom(base: '🐶'))!;
-    avatarCustom['2'] = Storage.getObject<AvatarCustom>('mc_avatarCustom2',
-        (j) => AvatarCustom.fromJson(j), AvatarCustom(base: '🐸'))!;
+    avatarCustom['1'] = _loadAvatarCustom(1);
+    avatarCustom['2'] = _loadAvatarCustom(2);
     dailyProgress = _loadDailyProgress();
-    dailyBoss = _generateDailyBoss(DateTime.now());
-    shopOwned = Storage.getStringList('mc_shopOwned', []);
-    unlockedAvatars = Storage.getStringList('mc_unlockedAvatars', []);
-    unlockedHats = Storage.getStringList('mc_unlockedHats', []);
+    dailyChallengeIds = _loadDailyChallengeIds();
+    final today = DateTime.now();
+    dailyBossDateKey = _dailyDateKey(today);
+    dailyBoss = _generateDailyBoss(today);
+    shopOwned = _loadOwnedList('mc_shopOwned');
+    unlockedAvatars = _loadStringListCompat('mc_unlockedAvatars');
+    unlockedHats = _loadStringListCompat('mc_unlockedHats');
     adsRemoved = Storage.getBool('mc_adsRemoved', false);
-    p[1].name = Storage.getString('mc_p1_name', 'Player 1');
-    p[1].avatar = Storage.getString('mc_p1_avatar', '🐶');
-    p[2].name = Storage.getString('mc_p2_name', 'Player 2');
-    p[2].avatar = Storage.getString('mc_p2_avatar', '🐱');
-    _updateLoginStreak();
+    iapDeliveredTxs = Storage.getStringList('mc_iapDeliveredTxs', []);
+    _loadPlayerData(1);
+    _loadPlayerData(2);
+    await _updateLoginStreak();
     _updateDailyBossClaimStatus();
+    await _persistLoadedMigrationState();
     notifyListeners();
   }
 
@@ -232,8 +413,10 @@ class GameState extends ChangeNotifier {
     await Storage.setString('mc_achievements', _encodeAchs());
     await Storage.setObjectList('mc_scores', highScores);
     await Storage.setString('mc_skillMap', _encodeSkillMap());
-    await Storage.setInt('mc_numTypeUnlocked_integers', numTypeUnlocked['integers']!);
-    await Storage.setInt('mc_numTypeUnlocked_rationals', numTypeUnlocked['rationals']!);
+    await Storage.setInt(
+        'mc_numTypeUnlocked_integers', numTypeUnlocked['integers']!);
+    await Storage.setInt(
+        'mc_numTypeUnlocked_rationals', numTypeUnlocked['rationals']!);
     await Storage.setInt('mc_loginStreak', loginStreak);
     await Storage.setObject('mc_avatarCustom1', avatarCustom['1']!.toJson());
     await Storage.setObject('mc_avatarCustom2', avatarCustom['2']!.toJson());
@@ -242,20 +425,58 @@ class GameState extends ChangeNotifier {
     await Storage.setStringList('mc_unlockedAvatars', unlockedAvatars);
     await Storage.setStringList('mc_unlockedHats', unlockedHats);
     await Storage.setBool('mc_adsRemoved', adsRemoved);
+    await Storage.setStringList('mc_iapDeliveredTxs', iapDeliveredTxs);
     await Storage.setString('mc_p1_name', p[1].name);
-    await Storage.setString('mc_p1_avatar', p[1].avatar is String ? p[1].avatar as String : '🐶');
+    await Storage.setString(
+        'mc_p1_avatar', p[1].avatar is String ? p[1].avatar as String : '🐶');
     await Storage.setString('mc_p2_name', p[2].name);
-    await Storage.setString('mc_p2_avatar', p[2].avatar is String ? p[2].avatar as String : '🐱');
+    await Storage.setString(
+        'mc_p2_avatar', p[2].avatar is String ? p[2].avatar as String : '🐱');
+  }
+
+  Future<void> _persistLoadedMigrationState() async {
+    await save();
+    await Storage.setString(
+      'mc_dailyChallenges',
+      jsonEncode({'date': _dailyDateKey(), 'challenges': dailyChallengeIds}),
+    );
+    await _normalizeStoredDateKey('mc_dailyCoinsDate');
+    await _migrateDailyBossClaimDate();
+  }
+
+  Future<void> _normalizeStoredDateKey(String key) async {
+    final raw = Storage.getString(key, '');
+    if (raw.isEmpty) return;
+    final normalized = _normalizeDateKey(raw);
+    if (_isDateKey(normalized)) {
+      await Storage.setString(key, normalized);
+    }
+  }
+
+  Future<void> _migrateDailyBossClaimDate() async {
+    final raw = Storage.getString('mc_dailyBossClaimed', '');
+    final normalized = _normalizeDateKey(raw);
+    if (_isDateKey(normalized)) {
+      await Storage.setString('mc_dailyBossClaimed', normalized);
+      return;
+    }
+
+    final legacyDay = Storage.getInt('mc_lastDailyBossClaimDay', -1);
+    if (legacyDay >= 0) {
+      await Storage.setString(
+          'mc_dailyBossClaimed', _dateKeyFromDayNumber(legacyDay));
+    }
   }
 
   // ─── Helpers ────────────────────────────────────────────────
   Map<String, bool> _loadAchs() {
-    final raw = Storage.getString('mc_achievements_raw', '');
+    final raw = Storage.getString(
+        'mc_achievements', Storage.getString('mc_achievements_raw', ''));
     final m = <String, bool>{};
     for (final a in GameConfig.achievementsDef) {
       m[a.id] = false;
     }
-    if (raw.isEmpty) return m;
+    if (raw.isEmpty) return _loadLegacyAchs(m);
     for (final part in raw.split(',')) {
       if (part.isEmpty) continue;
       final kv = part.split('=');
@@ -264,64 +485,475 @@ class GameState extends ChangeNotifier {
     return m;
   }
 
+  Map<String, bool> _loadLegacyAchs(Map<String, bool> defaults) {
+    final raw = Storage.getString('mc_achs', '');
+    if (raw.isEmpty) return defaults;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        for (final entry in decoded) {
+          if (entry is! Map) continue;
+          final id = entry['id'];
+          if (id is String && defaults.containsKey(id)) {
+            defaults[id] = entry['unlocked'] == true;
+          }
+        }
+      }
+    } catch (_) {
+      // Ignore malformed legacy achievement data.
+    }
+    return defaults;
+  }
+
   String _encodeAchs() {
-    return achievements.entries.map((e) => '${e.key}=${e.value ? 1 : 0}').join(',');
+    return achievements.entries
+        .map((e) => '${e.key}=${e.value ? 1 : 0}')
+        .join(',');
   }
 
   Map<String, SkillData> _loadSkillMap() {
-    final raw = Storage.getString('mc_skillMap_raw', '');
+    final raw = Storage.getString(
+        'mc_skillMap', Storage.getString('mc_skillMap_raw', ''));
     final def = <String, SkillData>{};
-    for (final op in [Operation.addition, Operation.subtraction,
-                      Operation.multiplication, Operation.division]) {
+    for (final op in [
+      Operation.addition,
+      Operation.subtraction,
+      Operation.multiplication,
+      Operation.division
+    ]) {
       def[op.name] = SkillData();
     }
-    if (raw.isEmpty) return def;
+    if (raw.isEmpty) return _loadLegacySkillMap(def);
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      for (final entry in decoded.entries) {
+        final value = entry.value;
+        if (value is Map<String, dynamic>) {
+          def[entry.key] = SkillData.fromJson(value);
+        } else if (value is Map) {
+          def[entry.key] = SkillData.fromJson(Map<String, dynamic>.from(value));
+        }
+      }
+    } catch (_) {
+      // Legacy builds wrote a non-JSON debug string here. Ignore it safely.
+    }
     return def;
   }
 
+  Map<String, SkillData> _loadLegacySkillMap(Map<String, SkillData> defaults) {
+    final raw = Storage.getString('mc_skills', '');
+    if (raw.isEmpty) return defaults;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        for (final entry in decoded.entries) {
+          final key = entry.key;
+          final value = entry.value;
+          if (key is! String || value is! Map) continue;
+          defaults[key] = SkillData.fromJson(Map<String, dynamic>.from(value));
+        }
+      }
+    } catch (_) {
+      // Ignore malformed legacy skill data.
+    }
+    return defaults;
+  }
+
+  Map<String, int> _loadNumTypeUnlocked() {
+    final split = {
+      'integers': Storage.getInt('mc_numTypeUnlocked_integers', 0),
+      'rationals': Storage.getInt('mc_numTypeUnlocked_rationals', 0),
+    };
+    if (split.values.any((value) => value != 0)) return split;
+
+    final raw = Storage.getString('mc_numTypeUnlocked', '');
+    if (raw.isEmpty) return split;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        split['integers'] = _legacyUnlockFlag(decoded['integers']);
+        split['rationals'] = _legacyUnlockFlag(decoded['rationals']);
+      }
+    } catch (_) {
+      // Ignore malformed legacy number type unlock data.
+    }
+    return split;
+  }
+
+  int _legacyUnlockFlag(Object? value) {
+    if (value == true) return 1;
+    if (value is num && value > 0) return 1;
+    return 0;
+  }
+
+  AvatarCustom _loadAvatarCustom(int pid) {
+    final key = 'mc_avatarCustom$pid';
+    if (Storage.containsKey(key)) {
+      final current = Storage.getObject<AvatarCustom>(
+        key,
+        (j) => AvatarCustom.fromJson(j),
+      );
+      if (current != null) return current;
+    }
+
+    if (pid == 1) {
+      final legacy = _decodeJsonMap(Storage.getString('mc_avatarCustom', ''));
+      if (legacy != null) return AvatarCustom.fromJson(legacy);
+    }
+
+    return AvatarCustom(base: pid == 1 ? '🐶' : '🐸');
+  }
+
+  void _loadPlayerData(int pid) {
+    final defaultName = 'Player $pid';
+    final defaultAvatar = pid == 1 ? '🐶' : '🐱';
+    final nameKey = 'mc_p${pid}_name';
+    final avatarKey = 'mc_p${pid}_avatar';
+
+    if (Storage.containsKey(nameKey) || Storage.containsKey(avatarKey)) {
+      p[pid].name = Storage.getString(nameKey, defaultName);
+      p[pid].avatar = Storage.getString(avatarKey, defaultAvatar);
+      return;
+    }
+
+    final legacy = _decodeJsonMap(Storage.getString('mc_p${pid}Data', ''));
+    if (legacy == null) {
+      p[pid].name = defaultName;
+      p[pid].avatar = defaultAvatar;
+      return;
+    }
+
+    p[pid].name = legacy['name'] as String? ?? defaultName;
+    final avatar = legacy['avatar'];
+    if (avatar is String) {
+      p[pid].avatar = avatar;
+    } else if (avatar is Map) {
+      final custom = AvatarCustom.fromJson(Map<String, dynamic>.from(avatar));
+      avatarCustom['$pid'] = custom;
+      p[pid].avatar = custom.base;
+    } else {
+      p[pid].avatar = defaultAvatar;
+    }
+  }
+
+  List<String> _loadOwnedList(String key) {
+    final list = Storage.getStringList(key, []);
+    if (list.isNotEmpty) return list;
+
+    final raw = Storage.getString(key, '');
+    if (raw.isEmpty) return list;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        return decoded.entries
+            .where((entry) => entry.key is String && entry.value == true)
+            .map((entry) => entry.key as String)
+            .toList();
+      }
+      if (decoded is List) return decoded.whereType<String>().toList();
+    } catch (_) {
+      // Ignore malformed legacy ownership data.
+    }
+    return list;
+  }
+
+  List<String> _loadStringListCompat(String key) {
+    final list = Storage.getStringList(key, []);
+    if (list.isNotEmpty) return list;
+
+    final raw = Storage.getString(key, '');
+    if (raw.isEmpty) return list;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) return decoded.whereType<String>().toList();
+    } catch (_) {
+      // Ignore malformed legacy list data.
+    }
+    return list;
+  }
+
+  Map<String, dynamic>? _decodeJsonMap(String raw) {
+    if (raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {
+      // Ignore malformed legacy object data.
+    }
+    return null;
+  }
+
   String _encodeSkillMap() {
-    return skillMap.entries
-        .map((e) => '${e.key}:${e.value.toJson()}')
-        .join(';');
+    return jsonEncode(
+        skillMap.map((key, value) => MapEntry(key, value.toJson())));
   }
 
   Map<String, int> _loadDailyProgress() {
-    final raw = Storage.getString('mc_dailyProgress_raw', '');
+    final raw = Storage.getString(
+        'mc_dailyProgress', Storage.getString('mc_dailyProgress_raw', ''));
     final m = <String, int>{};
+    dailyCompleted = {};
     if (raw.isEmpty) return m;
-    for (final part in raw.split(',')) {
-      final kv = part.split('=');
-      if (kv.length == 2) m[kv[0]] = int.tryParse(kv[1]) ?? 0;
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      for (final entry in decoded.entries) {
+        final value = entry.value;
+        if (value is Map<String, dynamic>) {
+          final current = (value['current'] as num?)?.toInt() ?? 0;
+          m[entry.key] = current;
+          dailyCompleted[entry.key] = value['completed'] == true ||
+              current >= _dailyChallengeTarget(entry.key);
+        } else if (value is Map) {
+          final mapped = Map<String, dynamic>.from(value);
+          final current = (mapped['current'] as num?)?.toInt() ?? 0;
+          m[entry.key] = current;
+          dailyCompleted[entry.key] = mapped['completed'] == true ||
+              current >= _dailyChallengeTarget(entry.key);
+        } else {
+          final current = (value as num?)?.toInt() ?? 0;
+          m[entry.key] = current;
+          dailyCompleted[entry.key] =
+              current >= _dailyChallengeTarget(entry.key);
+        }
+      }
+      return m;
+    } catch (_) {
+      for (final part in raw.split(',')) {
+        final kv = part.split('=');
+        if (kv.length == 2) {
+          final current = int.tryParse(kv[1]) ?? 0;
+          m[kv[0]] = current;
+          dailyCompleted[kv[0]] = current >= _dailyChallengeTarget(kv[0]);
+        }
+      }
     }
     return m;
   }
 
   String _encodeDailyProgress() {
-    return dailyProgress.entries.map((e) => '${e.key}=${e.value}').join(',');
+    final ids = {...dailyProgress.keys, ...dailyCompleted.keys};
+    return jsonEncode({
+      for (final id in ids)
+        id: {
+          'current': dailyProgress[id] ?? 0,
+          'completed': dailyCompleted[id] ?? false,
+        }
+    });
   }
 
-  void _updateLoginStreak() {
-    final today = DateTime.now().millisecondsSinceEpoch ~/ GameConfig.msPerDay;
-    final lastDay = Storage.getInt('mc_lastLoginDay', -1);
-    if (lastDay == today) return;
+  int _dailyChallengeTarget(String id) {
+    return GameConfig.dailyChallenges
+        .firstWhere(
+          (c) => c.id == id,
+          orElse: () => const DailyChallenge(
+            id: '',
+            title: '',
+            desc: '',
+            reward: 0,
+            type: '',
+            target: 1,
+          ),
+        )
+        .target;
+  }
+
+  List<String> _loadDailyChallengeIds() {
+    final today = _dailyDateKey();
+    final raw = Storage.getString('mc_dailyChallenges', '');
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      final ids = (decoded['challenges'] as List?)
+              ?.map(_dailyChallengeIdFromSavedValue)
+              .whereType<String>()
+              .where((id) => GameConfig.dailyChallenges.any((c) => c.id == id))
+              .toList() ??
+          [];
+      if (_normalizeDateKey(decoded['date'] as String? ?? '') == today &&
+          ids.isNotEmpty) {
+        return ids.take(3).toList();
+      }
+    } catch (_) {
+      // Regenerate below when stored data is missing or malformed.
+    }
+
+    dailyProgress = {};
+    dailyCompleted = {};
+    final challenges = [...GameConfig.dailyChallenges];
+    challenges.shuffle(Random(_hashString('daily-challenges:$today')));
+    final ids = challenges.take(3).map((c) => c.id).toList();
+    Storage.setString(
+      'mc_dailyChallenges',
+      jsonEncode({'date': today, 'challenges': ids}),
+    );
+    Storage.setString('mc_dailyProgress', _encodeDailyProgress());
+    return ids;
+  }
+
+  String _dailyDateKey([DateTime? date]) {
+    final d = date ?? DateTime.now();
+    final y = d.year.toString().padLeft(4, '0');
+    final m = d.month.toString().padLeft(2, '0');
+    final day = d.day.toString().padLeft(2, '0');
+    return '$y-$m-$day';
+  }
+
+  String? _dailyChallengeIdFromSavedValue(Object? value) {
+    if (value is String) return value;
+    if (value is Map) {
+      final id = value['id'];
+      if (id is String) return id;
+    }
+    return null;
+  }
+
+  String _normalizeDateKey(String raw) {
+    if (raw.isEmpty) return '';
+    if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(raw)) return raw;
+
+    final parts = raw.split(RegExp(r'\s+'));
+    if (parts.length == 4) {
+      const months = {
+        'Jan': 1,
+        'Feb': 2,
+        'Mar': 3,
+        'Apr': 4,
+        'May': 5,
+        'Jun': 6,
+        'Jul': 7,
+        'Aug': 8,
+        'Sep': 9,
+        'Oct': 10,
+        'Nov': 11,
+        'Dec': 12,
+      };
+      final month = months[parts[1]];
+      final day = int.tryParse(parts[2]);
+      final year = int.tryParse(parts[3]);
+      if (month != null && day != null && year != null) {
+        return _dailyDateKey(DateTime(year, month, day));
+      }
+    }
+
+    final parsed = DateTime.tryParse(raw);
+    return parsed == null ? raw : _dailyDateKey(parsed);
+  }
+
+  bool _isDateKey(String value) =>
+      RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value);
+
+  String _dateKeyFromDayNumber(int dayNumber) {
+    return _dailyDateKey(
+      DateTime.fromMillisecondsSinceEpoch(dayNumber * GameConfig.msPerDay),
+    );
+  }
+
+  int _hashString(String value) {
+    var hash = 2166136261;
+    for (var i = 0; i < value.length; i++) {
+      hash ^= value.codeUnitAt(i);
+      hash = (hash * 16777619) & 0xffffffff;
+    }
+    return hash;
+  }
+
+  Map<PowerUp, int> _loadPowerUpBonus() {
+    final bonus = {for (final pu in PowerUp.values) pu: 0};
+    final raw = Storage.getString('mc_puBonus', '');
+    if (raw.isEmpty) return bonus;
+
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      for (final pu in PowerUp.values) {
+        final key = _powerUpBonusStorageKeys[pu]!;
+        final value = decoded[key] ?? decoded[pu.name];
+        bonus[pu] = (value as num?)?.toInt() ?? 0;
+      }
+    } catch (_) {
+      // Corrupt or legacy values should not break game start.
+    }
+
+    return bonus;
+  }
+
+  void _savePowerUpBonus(Map<PowerUp, int> bonus) {
+    Storage.setString(
+      'mc_puBonus',
+      jsonEncode({
+        for (final pu in PowerUp.values)
+          _powerUpBonusStorageKeys[pu]!: bonus[pu] ?? 0,
+      }),
+    );
+  }
+
+  void _clearPowerUpBonus() {
+    _savePowerUpBonus({for (final pu in PowerUp.values) pu: 0});
+  }
+
+  void _applyPowerUpBonusIfEligible({
+    required bool isMaster,
+    required bool isBoss,
+  }) {
+    if (players != 1 || isMaster || isBoss) return;
+
+    final bonus = _loadPowerUpBonus();
+    if (!bonus.values.any((count) => count > 0)) return;
+
+    for (final entry in bonus.entries) {
+      final count = entry.value;
+      if (count <= 0) continue;
+      p[1].pups.addAll(List.filled(count, entry.key));
+    }
+    _clearPowerUpBonus();
+  }
+
+  Future<void> _updateLoginStreak() async {
+    final today = _dayNumberFromDateKey(_dailyDateKey());
+    final hasCurrentLastDay = Storage.containsKey('mc_lastLoginDay');
+    final lastDay = hasCurrentLastDay
+        ? Storage.getInt('mc_lastLoginDay', -1)
+        : _dayNumberFromDateKey(
+            _normalizeDateKey(Storage.getString('mc_streakLastDay', '')));
+    if (lastDay == today) {
+      if (!hasCurrentLastDay) {
+        await Storage.setInt('mc_lastLoginDay', today);
+      }
+      await Storage.setInt('mc_loginStreak', loginStreak);
+      return;
+    }
     if (lastDay == today - 1) {
       loginStreak++;
     } else {
       loginStreak = 1;
     }
-    Storage.setInt('mc_lastLoginDay', today);
+    await Storage.setInt('mc_lastLoginDay', today);
+    await Storage.setInt('mc_loginStreak', loginStreak);
     notifyListeners();
   }
 
+  int _dayNumberFromDateKey(String key) {
+    final parsed = DateTime.tryParse(key);
+    if (parsed == null) return -1;
+    return parsed.millisecondsSinceEpoch ~/ GameConfig.msPerDay;
+  }
+
   DailyBoss _generateDailyBoss(DateTime date) {
-    final day = date.millisecondsSinceEpoch ~/ GameConfig.msPerDay;
-    final idx = day % GameConfig.dailyBosses.length;
+    final key = _dailyDateKey(date);
+    final seed = _hashString('daily-boss:$key');
+    final idx = seed % GameConfig.dailyBosses.length;
     return GameConfig.dailyBosses[idx];
   }
 
+  @visibleForTesting
+  DailyBoss debugGenerateDailyBoss(DateTime date) => _generateDailyBoss(date);
+
   void _updateDailyBossClaimStatus() {
-    final today = DateTime.now().millisecondsSinceEpoch ~/ GameConfig.msPerDay;
-    isDailyBossClaimedToday = Storage.getInt('mc_lastDailyBossClaimDay', -1) == today;
+    final today = _dailyDateKey();
+    final legacyDay =
+        DateTime.now().millisecondsSinceEpoch ~/ GameConfig.msPerDay;
+    isDailyBossClaimedToday =
+        _normalizeDateKey(Storage.getString('mc_dailyBossClaimed', '')) ==
+                today ||
+            Storage.getInt('mc_lastDailyBossClaimDay', -1) == legacyDay;
   }
 
   // ─── Coin operations ────────────────────────────────────────
@@ -335,14 +967,40 @@ class GameState extends ChangeNotifier {
 
   // ─── Toast ──────────────────────────────────────────────────
   void showToast(String msg) {
+    if (toastVisible && hasListeners) {
+      _toastQueue.add(msg);
+      return;
+    }
+    _showToastNow(msg);
+  }
+
+  void _showToastNow(String msg) {
     toastMessage = msg;
     toastVisible = true;
     notifyListeners();
     _toastTimer?.cancel();
     _toastTimer = Timer(const Duration(milliseconds: 2400), () {
+      if (_toastQueue.isNotEmpty) {
+        _showToastNow(_toastQueue.removeAt(0));
+        return;
+      }
       toastVisible = false;
       notifyListeners();
     });
+  }
+
+  void _celebrate(
+    CelebrationKind kind, {
+    required String emoji,
+    required String message,
+  }) {
+    _celebrationSeq++;
+    celebration = CelebrationEvent(
+      id: _celebrationSeq,
+      kind: kind,
+      emoji: emoji,
+      message: message,
+    );
   }
 
   // ─── Screen / modal routing ─────────────────────────────────
@@ -360,6 +1018,10 @@ class GameState extends ChangeNotifier {
   }
 
   void closeModal() {
+    if (currentModal == GameModal.adultGate) {
+      cancelAdultGate();
+      return;
+    }
     currentModal = GameModal.none;
     if (rt.state == 'paused' && rt.gameActive) {
       rt.state = 'playing';
@@ -369,8 +1031,13 @@ class GameState extends ChangeNotifier {
 
   bool _isPausingModal(GameModal m) {
     return [
-      GameModal.quitConfirm, GameModal.settings, GameModal.highScore,
-      GameModal.achievements, GameModal.skillDashboard, GameModal.coinShop,
+      GameModal.quitConfirm,
+      GameModal.settings,
+      GameModal.highScore,
+      GameModal.achievements,
+      GameModal.skillDashboard,
+      GameModal.coinShop,
+      GameModal.adultGate,
     ].contains(m);
   }
 
@@ -386,46 +1053,68 @@ class GameState extends ChangeNotifier {
     showScreen(GameScreen.numType);
   }
 
-  void selectNumType(String numTypeName) {
+  Future<void> selectNumType(String numTypeName) async {
     final nt = NumberType.fromString(numTypeName);
     if (nt == NumberType.integers && numTypeUnlocked['integers']! < 1) {
-      // Unlock cost: 50 coins
-      if (coins < 50) {
-        showToast('Need 50 🪙 to unlock Integers');
+      // Match the original HTML economy.
+      if (coins < 500) {
+        showToast('Need 500 🪙 to unlock Integers');
         return;
       }
-      addCoins(-50);
+      addCoins(-500);
       numTypeUnlocked['integers'] = 1;
-    } else if (nt == NumberType.rationals && numTypeUnlocked['rationals']! < 1) {
-      if (coins < 100) {
-        showToast('Need 100 🪙 to unlock Rationals');
+    } else if (nt == NumberType.rationals &&
+        numTypeUnlocked['rationals']! < 1) {
+      if (coins < 1200) {
+        showToast('Need 1200 🪙 to unlock Rationals');
         return;
       }
-      addCoins(-100);
+      addCoins(-1200);
       numTypeUnlocked['rationals'] = 1;
     }
     numType = nt;
+    await save();
     showScreen(GameScreen.config);
   }
 
   void setOption(String key, dynamic value) {
     switch (key) {
-      case 'players': players = value as int; break;
-      case 'mode': mode = GameMode.fromString(value as String); break;
-      case 'diff': diff = Difficulty.fromString(value as String); break;
-      case 'q': questionCount = value as int; break;
+      case 'players':
+        players = value as int;
+        if (!GameMode.isAvailableForPlayers(mode, players)) {
+          mode = GameMode.standard;
+        }
+        break;
+      case 'mode':
+        final nextMode = GameMode.fromString(value as String);
+        if (GameMode.isAvailableForPlayers(nextMode, players)) {
+          mode = nextMode;
+        } else {
+          mode = GameMode.standard;
+        }
+        break;
+      case 'diff':
+        diff = Difficulty.fromString(value as String);
+        break;
+      case 'q':
+        questionCount = value as int;
+        break;
     }
     notifyListeners();
   }
 
-  void setAdaptive(bool v) { adaptive = v; notifyListeners(); }
+  void setAdaptive(bool v) {
+    adaptive = v;
+    notifyListeners();
+  }
 
   void goToPlayerSetup() {
     showScreen(GameScreen.player);
   }
 
   void backFromPlayers() {
-    if (rt.challenge == Operation.master || rt.challenge == Operation.dailyBoss) {
+    if (rt.challenge == Operation.master ||
+        rt.challenge == Operation.dailyBoss) {
       showScreen(GameScreen.menu);
       return;
     }
@@ -466,6 +1155,13 @@ class GameState extends ChangeNotifier {
 
   // ─── Game lifecycle ─────────────────────────────────────────
   void startGame() {
+    // Safety: block 2P games in single-player-only modes.
+    if (!GameMode.isAvailableForPlayers(mode, players)) {
+      mode = GameMode.standard;
+      notifyListeners();
+      return;
+    }
+
     closeModal();
 
     // Reset player data
@@ -477,20 +1173,31 @@ class GameState extends ChangeNotifier {
         isMasterOrBoss: isMaster || isBoss,
       );
     }
+    _applyPowerUpBonusIfEligible(isMaster: isMaster, isBoss: isBoss);
 
     // Reset runtime
     rt = RuntimeState()
-      ..challenge = isMaster ? Operation.master : (isBoss ? Operation.dailyBoss : rt.challenge)
+      ..challenge = isMaster
+          ? Operation.master
+          : (isBoss ? Operation.dailyBoss : rt.challenge)
       ..dailyBoss = isBoss ? dailyBoss : null
-      ..dailyBossLives = isBoss ? (dailyBoss?.goal ?? 12) : 3
+      ..dailyBossLives = 3
       ..gameActive = true
       ..state = 'playing'
       ..isWarmUp = (mode == GameMode.standard && !isMaster && !isBoss);
 
-    rt.maxTurns = ([GameMode.blitz, GameMode.death, GameMode.survival, GameMode.combo]
-        .contains(mode) || isMaster || isBoss)
-        ? 99999
-        : players * questionCount;
+    rt.maxTurns = isMaster
+        ? (currentMasterLevel?.goal ?? 99999)
+        : isBoss
+            ? (rt.dailyBoss?.goal ?? dailyBoss?.goal ?? 99999)
+            : ([
+                GameMode.blitz,
+                GameMode.death,
+                GameMode.survival,
+                GameMode.combo
+              ].contains(mode)
+                ? 99999
+                : players * questionCount);
 
     if (isMaster) {
       // Master reset: 3 lives
@@ -554,7 +1261,11 @@ class GameState extends ChangeNotifier {
       boss = lvl.boss;
       final masterNt = lvl.numType;
       numType = masterNt == 'mixed'
-          ? [NumberType.natural, NumberType.integers, NumberType.rationals][_rng.nextInt(3)]
+          ? [
+              NumberType.natural,
+              NumberType.integers,
+              NumberType.rationals
+            ][_rng.nextInt(3)]
           : NumberType.fromString(masterNt);
     } else if (rt.challenge == Operation.dailyBoss) {
       final lvl = rt.dailyBoss ?? dailyBoss!;
@@ -562,7 +1273,11 @@ class GameState extends ChangeNotifier {
       type = Operation.fromString(lvl.type);
       boss = lvl.icon;
       numType = lvl.numType == 'mixed'
-          ? [NumberType.natural, NumberType.integers, NumberType.rationals][_rng.nextInt(3)]
+          ? [
+              NumberType.natural,
+              NumberType.integers,
+              NumberType.rationals
+            ][_rng.nextInt(3)]
           : NumberType.fromString(lvl.numType);
     }
 
@@ -572,13 +1287,19 @@ class GameState extends ChangeNotifier {
     }
 
     if (type == Operation.mixed || type == Operation.survival) {
-      type = [Operation.multiplication, Operation.division,
-              Operation.addition, Operation.subtraction][_rng.nextInt(4)];
+      type = [
+        Operation.multiplication,
+        Operation.division,
+        Operation.addition,
+        Operation.subtraction
+      ][_rng.nextInt(4)];
     }
 
     // Adaptive difficulty
-    if (adaptive && rt.challenge != Operation.master &&
-        rt.challenge != Operation.dailyBoss && mode != GameMode.survival) {
+    if (adaptive &&
+        rt.challenge != Operation.master &&
+        rt.challenge != Operation.dailyBoss &&
+        mode != GameMode.survival) {
       d = _getAdaptDiff(type);
     }
 
@@ -601,8 +1322,15 @@ class GameState extends ChangeNotifier {
     }
 
     q = Question(
-      type: q.type, key: q.key, text: q.text, ans: q.ans,
-      choices: q.choices, boss: boss, diff: d, ratDP: q.ratDP,
+      type: q.type,
+      key: q.key,
+      text: q.text,
+      ans: q.ans,
+      choices: q.choices,
+      boss: boss,
+      diff: d,
+      numType: numType,
+      ratDP: q.ratDP,
     );
 
     rt.q = q;
@@ -611,24 +1339,46 @@ class GameState extends ChangeNotifier {
 
     // Start per-question timer
     if (mode != GameMode.blitz && mode != GameMode.combo) {
+      rt.qTimerLimit = 0;
       _startQuestionTimer();
     }
   }
 
   Difficulty _getAdaptDiff(Operation type) {
-    final m = skillMap[type.name]?.mastery ?? 20;
-    if (m < 35) return Difficulty.easy;
-    if (m < 60) return Difficulty.medium;
-    if (m < 80) return Difficulty.hard;
-    if (m < 95) return Difficulty.expert;
+    final m = skillMap[type.name]?.mastery ?? _masteryDefault;
+    if (m < _adaptThresholdEasy) return Difficulty.easy;
+    if (m < _adaptThresholdMedium) return Difficulty.medium;
+    if (m < _adaptThresholdHard) return Difficulty.hard;
+    if (m < _adaptThresholdExpert) return Difficulty.expert;
     return Difficulty.insane;
   }
 
-  void _startQuestionTimer() {
-    final baseMs = GameConfig.timerBaseMs[diff.name] ?? 10000;
-    final penalty = adaptLvl ~/ GameConfig.timerPenaltyStep;
-    final duration = max(GameConfig.timerMinMs, baseMs - penalty * 1000);
-    rt.qTimerLimit = duration ~/ 1000;
+  int _getTimerLimitMs() {
+    if (mode == GameMode.blitz || mode == GameMode.combo) {
+      return rt.blitzTotalMs;
+    }
+    if (rt.challenge == Operation.master) {
+      return (currentMasterLevel?.time ?? 10) * 1000;
+    }
+    if (rt.challenge == Operation.dailyBoss) {
+      return (rt.dailyBoss?.time ?? dailyBoss?.time ?? 9) * 1000;
+    }
+    if (mode == GameMode.survival) {
+      return GameConfig.phaseTimesMs[rt.survivalPhase.clamp(0, 4)];
+    }
+
+    final timerDiff = adaptive && rt.q?.diff != null ? rt.q!.diff! : diff;
+    final baseMs = GameConfig.timerBaseMs[timerDiff.name] ??
+        GameConfig.timerBaseMs['hard']!;
+    final penalty = (adaptLvl ~/ GameConfig.timerPenaltyStep) * 1000;
+    return max(GameConfig.timerMinMs, baseMs - penalty);
+  }
+
+  void _startQuestionTimer({int resumeElapsedMs = 0}) {
+    final limitMs =
+        rt.qTimerLimit > 0 ? rt.qTimerLimit * 1000 : _getTimerLimitMs();
+    final duration = max(0, limitMs - resumeElapsedMs);
+    rt.qTimerLimit = limitMs ~/ 1000;
     rt.timerDurationMs = duration;
     rt.timerStart = DateTime.now().millisecondsSinceEpoch;
     rt.timer?.cancel();
@@ -646,6 +1396,7 @@ class GameState extends ChangeNotifier {
   void _startGlobalTimer(int totalMs) {
     rt.timerStart = DateTime.now().millisecondsSinceEpoch;
     rt.timerDurationMs = totalMs;
+    rt.qTimerLimit = totalMs ~/ 1000;
     rt.timer?.cancel();
     rt.timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
       final elapsed = DateTime.now().millisecondsSinceEpoch - rt.timerStart;
@@ -688,7 +1439,9 @@ class GameState extends ChangeNotifier {
     pl.total++;
     pl.timeMs += timeTaken;
     pl.history.add(HistoryEntry(
-      type: q.type, correct: isCorrect, ms: timeTaken,
+      type: q.type,
+      correct: isCorrect,
+      ms: timeTaken,
     ));
     if (pl.history.length > 75) {
       pl.history = pl.history.sublist(pl.history.length - 50);
@@ -718,6 +1471,20 @@ class GameState extends ChangeNotifier {
     if (mode == GameMode.survival) {
       rt.survivalCorrect++;
       addCoins(1, true);
+      if (rt.survivalCorrect % 10 == 0) {
+        final boss = GameConfig
+            .survivalBosses[_rng.nextInt(GameConfig.survivalBosses.length)];
+        addCoins(GameConfig.survivalBossReward, true);
+        bigEmoji = boss;
+        reactionPill = '👹 BOSS DOWN! +${GameConfig.survivalBossReward}🪙';
+        bigEmojiVisible = true;
+        audio.vibratePattern([80, 30, 80, 30, 120]);
+        _celebrate(
+          CelebrationKind.bossClear,
+          emoji: boss,
+          message: 'BOSS DOWN! +${GameConfig.survivalBossReward}🪙',
+        );
+      }
       final newPhase = min(rt.survivalCorrect ~/ 5, 4);
       if (newPhase > rt.survivalPhase) {
         rt.survivalPhase = newPhase;
@@ -732,15 +1499,18 @@ class GameState extends ChangeNotifier {
       int mult = 1;
       if (streak >= GameConfig.comboThresholds[2]) {
         mult = GameConfig.comboMultipliers[2];
-      } else if (streak >= GameConfig.comboThresholds[1]) mult = GameConfig.comboMultipliers[1];
-      else if (streak >= GameConfig.comboThresholds[0]) mult = GameConfig.comboMultipliers[0];
+      } else if (streak >= GameConfig.comboThresholds[1])
+        mult = GameConfig.comboMultipliers[1];
+      else if (streak >= GameConfig.comboThresholds[0])
+        mult = GameConfig.comboMultipliers[0];
       rt.comboMultiplier = mult.toDouble();
       rt.comboMaxMultiplier = max(rt.comboMaxMultiplier, mult);
     } else {
       rt.combo++;
       if (rt.combo >= 10) {
         rt.comboMultiplier = 2.0;
-      } else if (rt.combo >= 5) rt.comboMultiplier = 1.5;
+      } else if (rt.combo >= 5)
+        rt.comboMultiplier = 1.5;
       else if (rt.combo >= 3) rt.comboMultiplier = 1.2;
     }
 
@@ -749,7 +1519,9 @@ class GameState extends ChangeNotifier {
         rt.challenge != Operation.master &&
         rt.challenge != Operation.dailyBoss &&
         ![GameMode.combo, GameMode.survival].contains(mode);
-    if (eligibleForPU && pl.correct > 0 && pl.correct % GameConfig.puRewardInterval == 0) {
+    if (eligibleForPU &&
+        pl.correct > 0 &&
+        pl.correct % GameConfig.puRewardInterval == 0) {
       final pu = PowerUp.values[_rng.nextInt(PowerUp.values.length)];
       pl.pups.add(pu);
       audio.playPowerUp();
@@ -772,12 +1544,14 @@ class GameState extends ChangeNotifier {
     } else if (mode == GameMode.combo) {
       if (timeTaken < 1500) {
         bonus = 5;
-      } else if (timeTaken < 2500) bonus = 3;
+      } else if (timeTaken < 2500)
+        bonus = 3;
       else if (timeTaken < 4000) bonus = 1;
     } else if (isBlitz) {
       if (timeTaken < 1500) {
         bonus = 8;
-      } else if (timeTaken < 2500) bonus = 5;
+      } else if (timeTaken < 2500)
+        bonus = 5;
       else if (timeTaken < 4000) bonus = 2;
     } else if (mode == GameMode.survival) {
       bonus = GameConfig.phaseBonus[min(rt.survivalPhase, 4)];
@@ -802,18 +1576,24 @@ class GameState extends ChangeNotifier {
       if (pl.streak == GameConfig.streakThresholds[i]) {
         addCoins(GameConfig.streakCoins[i], true);
         audio.vibratePattern([50, 30, 50]);
-        showToast('🔥 Streak ×${[5,10,20][i]}! +${GameConfig.streakCoins[i]}🪙');
+        showToast(
+            '🔥 Streak ×${[5, 10, 20][i]}! +${GameConfig.streakCoins[i]}🪙');
       }
     }
-    if (pl.streak == 1 && pl.total > 1 && pl.history.length >= 2 &&
+    if (pl.streak == 1 &&
+        pl.total > 1 &&
+        pl.history.length >= 2 &&
         !pl.history[pl.history.length - 2].correct) {
       addCoins(3, true);
       showToast('🎁 Comeback! +3🪙');
     }
 
+    final bossDown = mode == GameMode.survival && rt.survivalCorrect % 10 == 0;
     final rx = GameConfig.correctRx[_rng.nextInt(GameConfig.correctRx.length)];
-    reactionPill = '$rx +$pts';
-    bigEmoji = rx.split(' ').first;
+    if (!bossDown) {
+      reactionPill = '$rx +$pts';
+      bigEmoji = rx.split(' ').first;
+    }
     bigEmojiVisible = true;
     audio.playCorrect();
     audio.vibrateCorrect();
@@ -848,6 +1628,13 @@ class GameState extends ChangeNotifier {
           _endGame(true, false);
         } else {
           // Show stage cleared modal
+          if (_masterLevel >= 3) unlockAch('math_wizard');
+          _updateDailyProgress('master_stage');
+          _celebrate(
+            CelebrationKind.stageClear,
+            emoji: lvl.boss,
+            message: 'Stage cleared!',
+          );
           rt.state = 'paused';
           showModal(GameModal.stageCleared);
         }
@@ -857,11 +1644,19 @@ class GameState extends ChangeNotifier {
       if (rt.dailyBossProgress >= lvl.goal) {
         rt.dailyBossWon = true;
         unlockAch('daily_boss');
-        addCoins(lvl.reward);
-        final today = DateTime.now().millisecondsSinceEpoch ~/ GameConfig.msPerDay;
-        Storage.setInt('mc_lastDailyBossClaimDay', today);
+        final today = _dailyDateKey();
+        final alreadyClaimed = isDailyBossClaimedToday ||
+            _normalizeDateKey(Storage.getString('mc_dailyBossClaimed', '')) ==
+                today;
+        if (!alreadyClaimed) {
+          addCoins(lvl.reward);
+          rt.dailyBossRewardEarned = lvl.reward;
+          unawaited(Storage.setString('mc_dailyBossClaimed', today));
+          _updateDailyProgress('daily_boss');
+        } else {
+          rt.dailyBossRewardEarned = 0;
+        }
         isDailyBossClaimedToday = true;
-        _updateDailyProgress('daily_boss');
         _endGame(true, false);
       }
     } else {
@@ -874,7 +1669,8 @@ class GameState extends ChangeNotifier {
     }
   }
 
-  void _onWrong(PlayerState pl, int pid, bool isSkip, bool isTimeout, num? val) {
+  void _onWrong(
+      PlayerState pl, int pid, bool isSkip, bool isTimeout, num? val) {
     rt.combo = 0;
     rt.comboMultiplier = 1.0;
 
@@ -905,6 +1701,9 @@ class GameState extends ChangeNotifier {
     }
 
     pl.streak = 0;
+    final wrongLabel = isTimeout
+        ? "⏰ Time's Up!"
+        : GameConfig.wrongRx[_rng.nextInt(GameConfig.wrongRx.length)];
 
     if (mode == GameMode.survival && !isSkip) {
       rt.survivalLives--;
@@ -934,7 +1733,7 @@ class GameState extends ChangeNotifier {
       // Master: lose a life
       _masterLives--;
       bigEmoji = '💔';
-      reactionPill = '💔 Ans: ${rt.q?.ans}';
+      reactionPill = '$wrongLabel 💔 Ans: ${rt.q?.ans}';
       bigEmojiVisible = true;
       audio.playWrong();
       audio.vibrateWrong();
@@ -949,9 +1748,8 @@ class GameState extends ChangeNotifier {
         bigEmoji = '⏩';
         reactionPill = 'Skipped! Ans: ${rt.q?.ans}';
       } else {
-        bigEmoji = isTimeout ? '⏰' : '😢';
-        reactionPill = isTimeout ? "⏰ Time's Up! Ans: ${rt.q?.ans}"
-                                  : '😢 Ans: ${rt.q?.ans}';
+        bigEmoji = isTimeout ? '⏰' : wrongLabel.split(' ').first;
+        reactionPill = '$wrongLabel Ans: ${rt.q?.ans}';
       }
       bigEmojiVisible = true;
       if (!isTimeout) {
@@ -959,7 +1757,9 @@ class GameState extends ChangeNotifier {
         audio.vibrateWrong();
       }
       // Follow-up
-      if (!isSkip && !isTimeout && mode == GameMode.standard &&
+      if (!isSkip &&
+          !isTimeout &&
+          mode == GameMode.standard &&
           rt.challenge != Operation.dailyBoss) {
         rt.isFollowUp = true;
         rt.followUpData = _FollowUpData(rt.q!.type, rt.q!.diff ?? diff);
@@ -999,10 +1799,13 @@ class GameState extends ChangeNotifier {
       if (highScores.length > 10) highScores = highScores.sublist(0, 10);
     }
 
-    // First win
-    if (win) unlockAch('first_win');
+    // Original source unlocks this after the first completed game.
+    if (gamesPlayed >= 1) unlockAch('first_win');
     // Perfect score
-    if (p[1].total > 0 && p[1].correct == p[1].total) unlockAch('perfect_score');
+    final perfect = p[1].total > 0 && p[1].correct == p[1].total;
+    if (perfect) {
+      unlockAch('perfect_score');
+    }
     // Streak master
     if (p[1].maxStreak >= 10) unlockAch('streak_master');
     // Speed demon
@@ -1011,13 +1814,105 @@ class GameState extends ChangeNotifier {
     if (mode == GameMode.death && p[1].score >= 250) unlockAch('survivor');
     // Skill master
     for (final e in skillMap.entries) {
-      if (e.value.confidence >= 90) unlockAch('skill_master');
+      if (e.value.count >= 5 && e.value.mastery >= 90) {
+        unlockAch('skill_master');
+        break;
+      }
     }
     // Quick learner
     if (adaptLvl >= 8) unlockAch('quick_learner');
 
+    _prepareResultSummary(win: win, loss: loss);
+
+    if (win) {
+      final isBossWin = rt.dailyBossWon;
+      final isMasterWin = rt.challenge == Operation.master;
+      _celebrate(
+        isBossWin
+            ? CelebrationKind.bossClear
+            : perfect
+                ? CelebrationKind.perfect
+                : CelebrationKind.win,
+        emoji: isBossWin
+            ? (rt.dailyBoss?.icon ?? '🐲')
+            : isMasterWin
+                ? '👑'
+                : perfect
+                    ? '💯'
+                    : '🎉',
+        message: isBossWin
+            ? 'Daily Boss defeated!'
+            : isMasterWin
+                ? 'Master Challenge complete!'
+                : perfect
+                    ? 'Perfect score!'
+                    : 'You win!',
+      );
+    }
+
     save();
     showModal(GameModal.win);
+  }
+
+  void _prepareResultSummary({required bool win, required bool loss}) {
+    final p1 = p[1];
+    final p2 = p[2];
+
+    if (loss) {
+      resultIcon = '💀';
+      resultTitle = 'Game Over!';
+      if (rt.challenge == Operation.master) {
+        final stage = min(_masterLevel + 1, GameConfig.masterLevels.length);
+        resultDescription = 'You reached Stage $stage';
+      } else if (rt.challenge == Operation.dailyBoss) {
+        final boss = rt.dailyBoss?.name ?? 'Daily Boss';
+        resultDescription =
+            '$boss survived with ${rt.dailyBossProgress} hits landed.';
+      } else {
+        resultDescription = 'Final Score: ${p1.score}';
+      }
+      return;
+    }
+
+    if (win && rt.challenge == Operation.master) {
+      resultIcon = '👑';
+      resultTitle = 'Legendary!';
+      resultDescription = 'You found the Treasure! 🎊';
+      return;
+    }
+
+    if (win && rt.dailyBossWon) {
+      final boss = rt.dailyBoss;
+      resultIcon = boss?.icon ?? '🐲';
+      resultTitle = '${boss?.name ?? 'Daily Boss'} Defeated!';
+      resultDescription = rt.dailyBossRewardEarned > 0
+          ? 'Daily reward claimed: +${rt.dailyBossRewardEarned} coins'
+          : "Cleared again for practice. Today's reward was already claimed.";
+      return;
+    }
+
+    if (players == 2 && mode == GameMode.standard) {
+      if (p1.score > p2.score) {
+        resultIcon = p1.avatar is String ? p1.avatar as String : '🏆';
+        resultTitle = '${p1.name} Wins! 🏆';
+      } else if (p2.score > p1.score) {
+        resultIcon = p2.avatar is String ? p2.avatar as String : '🏆';
+        resultTitle = '${p2.name} Wins! 🏆';
+      } else {
+        resultIcon = '🤝';
+        resultTitle = "It's a Tie!";
+      }
+      resultDescription = '${p1.score} – ${p2.score}';
+      return;
+    }
+
+    resultIcon = mode == GameMode.blitz || mode == GameMode.combo ? '⏱️' : '🌟';
+    resultTitle = mode == GameMode.blitz || mode == GameMode.combo
+        ? "Time's Up!"
+        : win
+            ? 'Great Job!'
+            : 'Game Over';
+    resultDescription = 'Final Score: ${p1.score}';
   }
 
   void advanceStage() {
@@ -1049,31 +1944,128 @@ class GameState extends ChangeNotifier {
 
   // ─── Adaptive + skill tracking ──────────────────────────────
   void _updateAdapt(bool correct, int timeMs, Operation type) {
-    final delta = correct
-        ? (timeMs < 2000 ? 0.4 : timeMs < 4000 ? 0.2 : 0.1)
-        : -0.5;
-    adaptLvlRaw = max(0, adaptLvlRaw + delta);
-    adaptLvl = adaptLvlRaw.round();
+    final sd = skillMap[type.name];
+    if (sd == null) return;
+
+    final prevMastery = sd.mastery == 0 ? _masteryDefault : sd.mastery;
+    if (correct) {
+      final boost = timeMs < 2000 ? 0.6 : 0.2;
+      sd.mastery = min(_masteryMax, prevMastery + boost);
+    } else {
+      sd.mastery = max(0, prevMastery - 0.5);
+    }
+    _recomputeAdaptiveLevel();
   }
 
   void _updateSkillMap(Operation type, Difficulty d, bool correct, int timeMs) {
     final sd = skillMap[type.name] ?? SkillData();
     if (correct) {
       switch (d) {
-        case Difficulty.easy:    sd.easy++; break;
-        case Difficulty.medium:  sd.medium++; break;
-        case Difficulty.hard:    sd.hard++; break;
-        default: break;
+        case Difficulty.easy:
+          sd.easy++;
+          break;
+        case Difficulty.medium:
+          sd.medium++;
+          break;
+        case Difficulty.hard:
+          sd.hard++;
+          break;
+        case Difficulty.expert:
+          sd.expert++;
+          break;
+        case Difficulty.insane:
+          sd.insane++;
+          break;
       }
       sd.correct++;
     }
     sd.count++;
-    // Mastery: exponential moving average
-    final target = correct ? 100.0 : 0.0;
-    sd.mastery = sd.mastery * 0.85 + target * 0.15;
-    // Confidence: % correct
-    sd.confidence = sd.count == 0 ? 0 : (sd.correct / sd.count) * 100;
+    _updateMastery(sd, correct, timeMs);
     skillMap[type.name] = sd;
+  }
+
+  void _updateMastery(SkillData sd, bool correct, int timeMs) {
+    double change;
+    if (correct) {
+      if (timeMs < _masteryFastMs) {
+        change = _masteryGainFast;
+      } else if (timeMs < _masteryNormalMs) {
+        change = _masteryGainNormal;
+      } else {
+        change = _masteryGainSlow;
+      }
+    } else {
+      final timeoutLimitMs = rt.qTimerLimit > 0 ? rt.qTimerLimit * 1000 : 10000;
+      change = (timeMs == 0 || timeMs >= timeoutLimitMs)
+          ? _masteryPenaltyTimeout
+          : _masteryPenalty;
+    }
+
+    final baseMastery = sd.mastery == 0 ? _masteryDefault : sd.mastery;
+    sd.mastery = max(0, min(_masteryMax, baseMastery + change));
+
+    final ms = timeMs == 0 ? _confidenceDefaultMs : timeMs;
+    final speedScore = max(0, 100 - (ms / _confidenceSpeedDivisor));
+    final baseConfidence =
+        sd.confidence == 0 ? _confidenceDefault : sd.confidence;
+    sd.confidence = (baseConfidence * (1 - _confidenceEmaAlpha) +
+            speedScore * _confidenceEmaAlpha)
+        .roundToDouble();
+    _recomputeAdaptiveLevel();
+  }
+
+  void _recomputeAdaptiveLevel() {
+    final values = skillMap.values;
+    if (values.isEmpty) {
+      adaptLvlRaw = 0;
+      adaptLvl = 0;
+      return;
+    }
+    final sum = values.fold<double>(
+      0,
+      (total, skill) =>
+          total + (skill.mastery == 0 ? _masteryDefault : skill.mastery),
+    );
+    final mean = sum / values.length;
+    adaptLvlRaw = (mean / 100) * 10;
+    adaptLvl = min(10, adaptLvlRaw.round());
+  }
+
+  @visibleForTesting
+  Difficulty debugGetAdaptDiff(Operation type) => _getAdaptDiff(type);
+
+  @visibleForTesting
+  int debugQuestionTimerDurationMs() => rt.timerDurationMs;
+
+  @visibleForTesting
+  void debugRestartQuestionTimer({int resumeElapsedMs = 0}) =>
+      _startQuestionTimer(resumeElapsedMs: resumeElapsedMs);
+
+  @visibleForTesting
+  void debugSetMasterStage(int level) {
+    _masterLevel = level.clamp(0, GameConfig.masterLevels.length - 1).toInt();
+    _masterLives = 3;
+    _masterProgress = 0;
+    players = 1;
+    mode = GameMode.standard;
+    adaptive = false;
+    rt.challenge = Operation.master;
+  }
+
+  @visibleForTesting
+  void debugUpdateSkillMap(
+          Operation type, Difficulty difficulty, bool correct, int timeMs) =>
+      _updateSkillMap(type, difficulty, correct, timeMs);
+
+  @visibleForTesting
+  void debugUpdateAdapt(bool correct, int timeMs, Operation type) =>
+      _updateAdapt(correct, timeMs, type);
+
+  @visibleForTesting
+  void debugRecordAdaptiveAnswer(
+      Operation type, Difficulty difficulty, bool correct, int timeMs) {
+    _updateSkillMap(type, difficulty, correct, timeMs);
+    _updateAdapt(correct, timeMs, type);
   }
 
   // ─── Achievements ───────────────────────────────────────────
@@ -1082,34 +2074,70 @@ class GameState extends ChangeNotifier {
     achievements[id] = true;
     final a = GameConfig.achievementsDef.firstWhere((e) => e.id == id);
     newlyUnlocked.add(a);
+    _celebrate(
+      CelebrationKind.achievement,
+      emoji: a.icon,
+      message: '${a.name} unlocked!',
+    );
     showToast('${a.icon} ${a.name} unlocked!');
   }
 
   // ─── Daily challenges ───────────────────────────────────────
   void _updateDailyProgress(String id) {
+    final ch = _activeDailyChallenge(id);
+    if (ch == null || dailyCompleted[id] == true) return;
     final cur = dailyProgress[id] ?? 0;
-    dailyProgress[id] = cur + 1;
-    final ch = GameConfig.dailyChallenges.firstWhere((c) => c.id == id);
-    if (cur + 1 >= ch.target) {
-      addCoins(ch.reward);
-      showToast('🎁 ${ch.title} complete! +${ch.reward}🪙');
-    }
+    final next = cur + 1;
+    dailyProgress[id] = next;
+    if (next >= ch.target) _completeDailyChallenge(ch);
   }
 
   void _updateDailyProgressAbsolute(String id, int value) {
+    final ch = _activeDailyChallenge(id);
+    if (ch == null || dailyCompleted[id] == true) return;
     final cur = dailyProgress[id] ?? 0;
     if (value > cur) {
       dailyProgress[id] = value;
-      final ch = GameConfig.dailyChallenges.firstWhere((c) => c.id == id);
-      if (value >= ch.target && cur < ch.target) {
-        addCoins(ch.reward);
-        showToast('🎁 ${ch.title} complete! +${ch.reward}🪙');
-      }
+      if (value >= ch.target) _completeDailyChallenge(ch);
     }
   }
 
+  DailyChallenge? _activeDailyChallenge(String id) {
+    for (final c in activeDailyChallenges) {
+      if (c.id == id) return c;
+    }
+    return null;
+  }
+
+  void _completeDailyChallenge(DailyChallenge ch) {
+    if (dailyCompleted[ch.id] == true) return;
+    dailyProgress[ch.id] = max(dailyProgress[ch.id] ?? 0, ch.target);
+    dailyCompleted[ch.id] = true;
+    addCoins(ch.reward);
+    _celebrate(
+      CelebrationKind.reward,
+      emoji: '🎁',
+      message: '${ch.title} complete!',
+    );
+    showToast('🎁 ${ch.title} complete! +${ch.reward}🪙');
+
+    final completedToday =
+        activeDailyChallenges.where((c) => dailyCompleted[c.id] == true).length;
+    if (completedToday >= 3) unlockAch('daily_grind');
+  }
+
+  @visibleForTesting
+  void debugUpdateDailyProgress(String id) => _updateDailyProgress(id);
+
+  @visibleForTesting
+  void debugUpdateDailyProgressAbsolute(String id, int value) =>
+      _updateDailyProgressAbsolute(id, value);
+
   // ─── Power-up usage ─────────────────────────────────────────
   void usePowerUp(PowerUp pu) {
+    if (!rt.accepting) return;
+    if (_isPowerUpBlocked(pu)) return;
+
     final pl = p[rt.activePlayer];
     if (!pl.pups.contains(pu)) return;
     pl.pups.remove(pu);
@@ -1120,6 +2148,7 @@ class GameState extends ChangeNotifier {
       case PowerUp.time:
         rt.timer?.cancel();
         rt.timerDurationMs += 5000;
+        if (rt.qTimerLimit > 0) rt.qTimerLimit += 5;
         rt.timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
           final elapsed = DateTime.now().millisecondsSinceEpoch - rt.timerStart;
           if (elapsed >= rt.timerDurationMs) {
@@ -1133,7 +2162,9 @@ class GameState extends ChangeNotifier {
       case PowerUp.fifty:
         // Remove 2 wrong answers
         if (rt.q != null) {
-          final wrong = rt.q!.choices.where((c) => (c - rt.q!.ans).abs() >= 1e-9).toList();
+          final wrong = rt.q!.choices
+              .where((c) => (c - rt.q!.ans).abs() >= 1e-9)
+              .toList();
           wrong.shuffle(_rng);
           for (final w in wrong.take(2)) {
             rt.q!.choices.remove(w);
@@ -1148,34 +2179,89 @@ class GameState extends ChangeNotifier {
         break;
       case PowerUp.freeze:
         rt.timer?.cancel();
+        rt.frozen = true;
         break;
       case PowerUp.switchOp:
-        _nextTurn();
+        Timer(const Duration(milliseconds: 500), () {
+          if (!rt.gameActive || rt.state != 'playing') return;
+          _generateQ();
+          notifyListeners();
+        });
         break;
     }
     audio.playPowerUp();
     notifyListeners();
   }
 
+  bool _isPowerUpBlocked(PowerUp pu) {
+    if (pu == PowerUp.time || pu == PowerUp.freeze) {
+      if (mode == GameMode.blitz || mode == GameMode.combo) return true;
+    }
+    if (pu == PowerUp.freeze && (mode == GameMode.survival || rt.frozen)) {
+      return true;
+    }
+    return false;
+  }
+
   // ─── Avatar builder ─────────────────────────────────────────
   void showAvatarBuilder(int pid) {
     builderPid = pid;
-    builderAvatar = avatarCustom['$pid'] ?? AvatarCustom();
+    final selected = p[pid].avatar;
+    final saved = avatarCustom['$pid'];
+    if (selected is AvatarCustom) {
+      builderAvatar = selected;
+    } else if (selected is String && selected.trim().isNotEmpty) {
+      builderAvatar = AvatarCustom(
+        base: selected,
+        hat: saved?.hat ?? '',
+        accessory: saved?.accessory ?? '',
+        color: saved?.color,
+      );
+    } else {
+      builderAvatar = saved ?? AvatarCustom();
+    }
     showModal(GameModal.avatarBuilder);
   }
 
-  void setBuilderBase(String s) { builderAvatar = AvatarCustom(
-    base: s, hat: builderAvatar.hat, accessory: builderAvatar.accessory, color: builderAvatar.color,
-  ); notifyListeners(); }
-  void setBuilderHat(String s) { builderAvatar = AvatarCustom(
-    base: builderAvatar.base, hat: s, accessory: builderAvatar.accessory, color: builderAvatar.color,
-  ); notifyListeners(); }
-  void setBuilderAccessory(String s) { builderAvatar = AvatarCustom(
-    base: builderAvatar.base, hat: builderAvatar.hat, accessory: s, color: builderAvatar.color,
-  ); notifyListeners(); }
-  void setBuilderColor(String? s) { builderAvatar = AvatarCustom(
-    base: builderAvatar.base, hat: builderAvatar.hat, accessory: builderAvatar.accessory, color: s,
-  ); notifyListeners(); }
+  void setBuilderBase(String s) {
+    builderAvatar = AvatarCustom(
+      base: s,
+      hat: builderAvatar.hat,
+      accessory: builderAvatar.accessory,
+      color: builderAvatar.color,
+    );
+    notifyListeners();
+  }
+
+  void setBuilderHat(String s) {
+    builderAvatar = AvatarCustom(
+      base: builderAvatar.base,
+      hat: s,
+      accessory: builderAvatar.accessory,
+      color: builderAvatar.color,
+    );
+    notifyListeners();
+  }
+
+  void setBuilderAccessory(String s) {
+    builderAvatar = AvatarCustom(
+      base: builderAvatar.base,
+      hat: builderAvatar.hat,
+      accessory: s,
+      color: builderAvatar.color,
+    );
+    notifyListeners();
+  }
+
+  void setBuilderColor(String? s) {
+    builderAvatar = AvatarCustom(
+      base: builderAvatar.base,
+      hat: builderAvatar.hat,
+      accessory: builderAvatar.accessory,
+      color: s,
+    );
+    notifyListeners();
+  }
 
   void saveCustomAvatar() {
     avatarCustom['$builderPid'] = builderAvatar;
@@ -1186,10 +2272,9 @@ class GameState extends ChangeNotifier {
   }
 
   // ─── Coin shop ──────────────────────────────────────────────
-  void buyShopItem(ShopItem item) {
+  Future<void> buyShopItem(ShopItem item) async {
     if (item.special == 'watch') {
-      addCoins(100);
-      showToast('+100 🪙 Daily bonus');
+      showToast('Rewarded ads are not ready yet');
       return;
     }
     if (!item.consumable && shopOwned.contains(item.id)) {
@@ -1204,43 +2289,223 @@ class GameState extends ChangeNotifier {
     if (!item.consumable) shopOwned.add(item.id);
 
     if (item.id.startsWith('av_')) {
-      unlockedAvatars.add(item.emoji);
+      if (!unlockedAvatars.contains(item.emoji))
+        unlockedAvatars.add(item.emoji);
     } else if (item.id.startsWith('hat_')) {
-      unlockedHats.add(item.emoji);
+      if (!unlockedHats.contains(item.emoji)) unlockedHats.add(item.emoji);
     } else if (item.id == 'pack_powerups') {
-      // Add 5 of each power-up to next game
-      showToast('🎒 Power Pack applied to next game');
+      final bonus = _loadPowerUpBonus();
+      for (final pu in PowerUp.values) {
+        bonus[pu] = (bonus[pu] ?? 0) + 5;
+      }
+      _savePowerUpBonus(bonus);
+      showToast('⚡ Power Pack activated! Bonus power-ups next game');
     } else if (item.id == 'pack_lives') {
       Storage.setInt('mc_livesBonus', Storage.getInt('mc_livesBonus', 0) + 1);
       showToast('❤️ Extra life added to next Master run');
     }
-    save();
+    await save();
     notifyListeners();
   }
 
-  void resetAllData() {
-    Storage.remove('mc_coins');
-    Storage.remove('mc_gamesPlayed');
-    Storage.remove('mc_adaptLvl');
-    Storage.remove('mc_achievements_raw');
-    Storage.remove('mc_scores');
-    Storage.remove('mc_skillMap_raw');
-    Storage.remove('mc_numTypeUnlocked_integers');
-    Storage.remove('mc_numTypeUnlocked_rationals');
-    Storage.remove('mc_loginStreak');
-    Storage.remove('mc_avatarCustom1');
-    Storage.remove('mc_avatarCustom2');
-    Storage.remove('mc_dailyProgress_raw');
-    Storage.remove('mc_shopOwned');
-    Storage.remove('mc_unlockedAvatars');
-    Storage.remove('mc_unlockedHats');
-    Storage.remove('mc_adsRemoved');
-    Storage.remove('mc_p1_name');
-    Storage.remove('mc_p1_avatar');
-    Storage.remove('mc_p2_name');
-    Storage.remove('mc_p2_avatar');
-    load();
+  void beginIapPurchase(IapProduct product) {
+    if (product.removesAds && adsRemoved) {
+      showToast('Ads already removed');
+      return;
+    }
+    pendingIapProduct = product;
+    adultGateChallenge = _adultGateFactory();
+    adultGateError = '';
+    adultGateBusy = false;
+    _adultGateReturnModal =
+        currentModal == GameModal.adultGate ? GameModal.none : currentModal;
+    currentModal = GameModal.adultGate;
+    notifyListeners();
+  }
+
+  Future<void> submitAdultGateAnswer(String answer) async {
+    final product = pendingIapProduct;
+    final challenge = adultGateChallenge;
+    if (product == null || challenge == null || adultGateBusy) return;
+    if (!challenge.accepts(answer)) {
+      adultGateError = 'Not quite. Please try again.';
+      notifyListeners();
+      return;
+    }
+
+    adultGateBusy = true;
+    adultGateError = '';
+    notifyListeners();
+
+    try {
+      await iapAdapter.buyProduct(product);
+      _closeAdultGateToReturnModal();
+      showToast('Opening Google Play...');
+    } on IapUnavailableException {
+      _closeAdultGateToReturnModal();
+      showToast('Google Play purchases are not ready yet');
+    } catch (_) {
+      _closeAdultGateToReturnModal();
+      showToast('Purchase could not start');
+    }
+  }
+
+  void cancelAdultGate() {
+    _closeAdultGateToReturnModal();
+  }
+
+  void _closeAdultGateToReturnModal() {
+    pendingIapProduct = null;
+    adultGateChallenge = null;
+    adultGateError = '';
+    adultGateBusy = false;
+    currentModal = _adultGateReturnModal;
+    _adultGateReturnModal = GameModal.none;
+    if (rt.state == 'paused' &&
+        rt.gameActive &&
+        currentModal == GameModal.none) {
+      rt.state = 'playing';
+    }
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  List<String> get debugIapDeliveredTxs =>
+      List.unmodifiable(iapDeliveredTxs);
+
+  Future<bool> handleIapPurchase(IapPurchase purchase) async {
+    if (!purchase.isApproved) return false;
+
+    final product = IapProducts.byProductId(purchase.productId);
+    var delivered = false;
+
+    if (product != null) {
+      final txKey = purchase.transactionKey;
+      if (!iapDeliveredTxs.contains(txKey)) {
+        await _rememberIapTransaction(txKey);
+        if (product.kind == IapProductKind.consumable) {
+          addCoins(product.deliveredCoins, true);
+        } else if (product.removesAds) {
+          adsRemoved = true;
+          await Storage.setBool('mc_adsRemoved', true);
+          notifyListeners();
+        }
+        await save();
+        delivered = true;
+      }
+    }
+
+    try {
+      await iapAdapter.completePurchase(purchase);
+    } catch (_) {
+      showToast('Purchase delivered. Google Play confirmation will retry.');
+    }
+
+    if (delivered && product != null) {
+      showToast(product.removesAds
+          ? '✅ ${product.label} — ads removed forever!'
+          : '✅ ${product.label} added! +${product.deliveredCoins}🪙');
+    }
+    return delivered;
+  }
+
+  Future<void> _rememberIapTransaction(String key) async {
+    if (!iapDeliveredTxs.contains(key)) {
+      iapDeliveredTxs.add(key);
+    }
+    if (iapDeliveredTxs.length > 50) {
+      iapDeliveredTxs = iapDeliveredTxs.sublist(iapDeliveredTxs.length - 50);
+    }
+    await Storage.setStringList('mc_iapDeliveredTxs', iapDeliveredTxs);
+  }
+
+  Future<void> resetAllData() async {
+    rt.timer?.cancel();
+    for (final key in _resetStorageKeys) {
+      await Storage.remove(key);
+    }
+    _resetInMemoryData();
     showToast('All data reset');
+  }
+
+  void _resetInMemoryData() {
+    coins = 0;
+    gamesPlayed = 0;
+    adaptLvlRaw = 0;
+    adaptLvl = 0;
+    achievements = {
+      for (final achievement in GameConfig.achievementsDef)
+        achievement.id: false,
+    };
+    highScores = [];
+    skillMap = {
+      for (final op in [
+        Operation.addition,
+        Operation.subtraction,
+        Operation.multiplication,
+        Operation.division,
+      ])
+        op.name: SkillData(),
+    };
+    numTypeUnlocked = {'integers': 0, 'rationals': 0};
+    loginStreak = 0;
+    avatarCustom = {
+      '1': AvatarCustom(base: '🐶'),
+      '2': AvatarCustom(base: '🐸'),
+    };
+    dailyProgress = {};
+    dailyCompleted = {};
+    dailyChallengeIds = [];
+    final today = DateTime.now();
+    dailyBossDateKey = _dailyDateKey(today);
+    dailyBoss = _generateDailyBoss(today);
+    shopOwned = [];
+    unlockedAvatars = [];
+    unlockedHats = [];
+    adsRemoved = false;
+    iapDeliveredTxs = [];
+    p = [
+      PlayerState(),
+      PlayerState(name: 'Player 1', avatar: '🐶'),
+      PlayerState(name: 'Player 2', avatar: '🐱'),
+    ];
+    rt = RuntimeState();
+    _masterLevel = 0;
+    _masterLives = 3;
+    _masterProgress = 0;
+    currentScreen = GameScreen.menu;
+    currentModal = GameModal.none;
+    _toastTimer?.cancel();
+    _toastQueue.clear();
+    toastMessage = '';
+    toastVisible = false;
+    builderPid = 1;
+    builderAvatar = AvatarCustom();
+    isDailyBossClaimedToday = false;
+    reactionPill = '';
+    bigEmoji = '';
+    bigEmojiVisible = false;
+    celebration = const CelebrationEvent.none();
+    lastUnlockedAchievementCount = 0;
+    newlyUnlocked = [];
+    resultIcon = '🏆';
+    resultTitle = 'Great Job!';
+    resultDescription = '';
+    adultGateChallenge = null;
+    pendingIapProduct = null;
+    adultGateError = '';
+    adultGateBusy = false;
+    _adultGateReturnModal = GameModal.none;
+    settings.load(
+      dark: false,
+      sound: true,
+      vibration: true,
+      dyslexia: false,
+      colorblind: false,
+      lowPerf: false,
+      reduceMotion: false,
+      animSpeed: 1.0,
+    );
   }
 
   // ─── Reaction pill clearing ─────────────────────────────────

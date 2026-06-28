@@ -13,36 +13,111 @@ class AvatarPool {
 
   // ===== Original 11 from HTML game (kept at the top for backward compat) =====
   static const List<String> originals = [
-    '🐶', '🐱', '🦁', '🐸', '🐼', '🦊', '🐯', '🦋', '🐙', '🦉', '🐧',
+    '🐶',
+    '🐱',
+    '🦁',
+    '🐸',
+    '🐼',
+    '🦊',
+    '🐯',
+    '🦋',
+    '🐙',
+    '🦉',
+    '🐧',
   ];
 
   // ===== Mammals =====
   static const List<String> mammals = [
-    '🐶', '🐱', '🦁', '🐼', '🦊', '🐯', '🐺', '🐻', '🐨', '🐮',
-    '🐷', '🐹', '🐰', '🐭', '🦄', '🐎', '🦓', '🦒', '🐘',
-    '🦏', '🦛', '🐒', '🦍', '🦧', '🐕', '🐈', '🦘', '🦨', '🦡',
+    '🐶',
+    '🐱',
+    '🦁',
+    '🐼',
+    '🦊',
+    '🐯',
+    '🐺',
+    '🐻',
+    '🐨',
+    '🐮',
+    '🐷',
+    '🐹',
+    '🐰',
+    '🐭',
+    '🦄',
+    '🐎',
+    '🦓',
+    '🦒',
+    '🐘',
+    '🦏',
+    '🦛',
+    '🐒',
+    '🦍',
+    '🦧',
+    '🐕',
+    '🐈',
+    '🦘',
+    '🦨',
+    '🦡',
   ];
 
   // ===== Birds =====
   static const List<String> birds = [
-    '🦉', '🐧', '🐦', '🐤', '🦆', '🦅', '🕊️', '🦢', '🦜', '🦩',
-    '🐔', '🦃', '🦚', '🦤',
+    '🦉',
+    '🐧',
+    '🐦',
+    '🐤',
+    '🦆',
+    '🦅',
+    '🕊️',
+    '🦢',
+    '🦜',
+    '🦩',
+    '🐔',
+    '🦃',
+    '🦚',
+    '🦤',
   ];
 
   // ===== Sea & reptiles =====
   static const List<String> sea = [
-    '🐸', '🐙', '🐬', '🐳', '🐋', '🦈', '🐟', '🐠', '🦐', '🦀',
-    '🦞', '🐚', '🦑', '🐢', '🐍', '🦎', '🐊',
+    '🐸',
+    '🐙',
+    '🐬',
+    '🐳',
+    '🐋',
+    '🦈',
+    '🐟',
+    '🐠',
+    '🦐',
+    '🦀',
+    '🦞',
+    '🐚',
+    '🦑',
+    '🐢',
+    '🐍',
+    '🦎',
+    '🐊',
   ];
 
   // ===== Bugs & small critters =====
   static const List<String> bugs = [
-    '🦋', '🐝', '🐞', '🐜', '🦗', '🕷️', '🦂', '🐌', '🦟',
+    '🦋',
+    '🐝',
+    '🐞',
+    '🐜',
+    '🦗',
+    '🕷️',
+    '🦂',
+    '🐌',
+    '🦟',
   ];
 
   // ===== Mythical / fantasy (fun bonus) =====
   static const List<String> fantasy = [
-    '🦄', '🐉', '🐲', '🦕', '🦖',
+    '🦄',
+    '🐉',
+    '🐲',
+    '🦕',
+    '🦖',
   ];
 
   /// All avatars merged (deduplicated, original 11 first).
@@ -64,12 +139,12 @@ class AvatarPool {
 
   /// Categories for the picker UI.
   static const List<AvatarCategory> categories = [
-    AvatarCategory(name: 'Original',  emojis: originals),
-    AvatarCategory(name: 'Mammals',   emojis: mammals),
-    AvatarCategory(name: 'Birds',     emojis: birds),
-    AvatarCategory(name: 'Sea',       emojis: sea),
-    AvatarCategory(name: 'Bugs',      emojis: bugs),
-    AvatarCategory(name: 'Fantasy',   emojis: fantasy),
+    AvatarCategory(name: 'Original', emojis: originals),
+    AvatarCategory(name: 'Mammals', emojis: mammals),
+    AvatarCategory(name: 'Birds', emojis: birds),
+    AvatarCategory(name: 'Sea', emojis: sea),
+    AvatarCategory(name: 'Bugs', emojis: bugs),
+    AvatarCategory(name: 'Fantasy', emojis: fantasy),
   ];
 
   /// Pick a random avatar — useful for default assignment.

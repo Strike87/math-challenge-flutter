@@ -9,6 +9,7 @@ class Question {
   final List<num> choices;
   final String? boss;
   final Difficulty? diff;
+  final NumberType? numType;
   final int? ratDP;
 
   const Question({
@@ -19,6 +20,7 @@ class Question {
     required this.choices,
     this.boss,
     this.diff,
+    this.numType,
     this.ratDP,
   });
 
@@ -60,11 +62,12 @@ class PlayerState {
     List<PowerUp>? pups,
     this.doubleActive = false,
     this.shieldActive = false,
-  }) : history = history ?? [],
-       pups = pups ?? [];
+  })  : history = history ?? [],
+        pups = pups ?? [];
 
   /// Reset to fresh game session values while keeping name + avatar.
-  void resetForGame({required bool isSinglePlayer, required bool isMasterOrBoss}) {
+  void resetForGame(
+      {required bool isSinglePlayer, required bool isMasterOrBoss}) {
     score = 0;
     correct = 0;
     total = 0;
@@ -76,9 +79,8 @@ class PlayerState {
     maxStreak = 0;
     history = [];
     // Only single-player non-boss Standard mode awards all 6 starting power-ups.
-    pups = (isSinglePlayer && !isMasterOrBoss)
-        ? [...PowerUp.values]
-        : <PowerUp>[];
+    pups =
+        (isSinglePlayer && !isMasterOrBoss) ? [...PowerUp.values] : <PowerUp>[];
     doubleActive = false;
     shieldActive = false;
   }
@@ -117,16 +119,16 @@ class AvatarCustom {
   });
 
   Map<String, dynamic> toJson() => {
-    'base': base,
-    'hat': hat,
-    'accessory': accessory,
-    'color': color,
-  };
+        'base': base,
+        'hat': hat,
+        'accessory': accessory,
+        'color': color,
+      };
 
   static AvatarCustom fromJson(Map<String, dynamic> j) => AvatarCustom(
-    base: (j['base'] as String?) ?? '🐶',
-    hat: (j['hat'] as String?) ?? '',
-    accessory: (j['accessory'] as String?) ?? '',
-    color: j['color'] as String?,
-  );
+        base: (j['base'] as String?) ?? '🐶',
+        hat: (j['hat'] as String?) ?? '',
+        accessory: (j['accessory'] as String?) ?? '',
+        color: j['color'] as String?,
+      );
 }

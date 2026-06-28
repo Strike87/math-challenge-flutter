@@ -11,24 +11,37 @@ enum Operation {
 
   String get label {
     switch (this) {
-      case Operation.addition: return 'Addition';
-      case Operation.subtraction: return 'Subtraction';
-      case Operation.multiplication: return 'Multiply';
-      case Operation.division: return 'Division';
-      case Operation.mixed: return 'Mixed';
-      case Operation.master: return 'Master';
-      case Operation.dailyBoss: return 'Daily Boss';
-      case Operation.survival: return 'Survival';
+      case Operation.addition:
+        return 'Addition';
+      case Operation.subtraction:
+        return 'Subtraction';
+      case Operation.multiplication:
+        return 'Multiply';
+      case Operation.division:
+        return 'Division';
+      case Operation.mixed:
+        return 'Mixed';
+      case Operation.master:
+        return 'Master';
+      case Operation.dailyBoss:
+        return 'Daily Boss';
+      case Operation.survival:
+        return 'Survival';
     }
   }
 
   String get symbol {
     switch (this) {
-      case Operation.addition: return '+';
-      case Operation.subtraction: return '−';
-      case Operation.multiplication: return '×';
-      case Operation.division: return '÷';
-      default: return '?';
+      case Operation.addition:
+        return '+';
+      case Operation.subtraction:
+        return '−';
+      case Operation.multiplication:
+        return '×';
+      case Operation.division:
+        return '÷';
+      default:
+        return '?';
     }
   }
 
@@ -67,10 +80,14 @@ enum NumberType {
 
   String get label {
     switch (this) {
-      case NumberType.natural: return 'Natural';
-      case NumberType.integers: return 'Integers';
-      case NumberType.rationals: return 'Rationals';
-      case NumberType.mixed: return 'Mixed';
+      case NumberType.natural:
+        return 'Natural';
+      case NumberType.integers:
+        return 'Integers';
+      case NumberType.rationals:
+        return 'Rationals';
+      case NumberType.mixed:
+        return 'Mixed';
     }
   }
 
@@ -92,32 +109,60 @@ enum GameMode {
 
   String get label {
     switch (this) {
-      case GameMode.standard: return 'Standard';
-      case GameMode.blitz: return '⚡ Blitz';
-      case GameMode.death: return '💀 Death';
-      case GameMode.survival: return '💪 Survival';
-      case GameMode.combo: return '🔥 Combo';
+      case GameMode.standard:
+        return 'Standard';
+      case GameMode.blitz:
+        return '⚡ Blitz';
+      case GameMode.death:
+        return '💀 Death';
+      case GameMode.survival:
+        return '💪 Survival';
+      case GameMode.combo:
+        return '🔥 Combo';
     }
   }
 
   String get description {
     switch (this) {
-      case GameMode.standard: return 'Classic timed quiz — score points for every correct answer!';
-      case GameMode.blitz: return '60 seconds — answer as many as possible';
-      case GameMode.death: return 'One wrong answer = Game Over!';
-      case GameMode.survival: return '3 hearts, endless questions — difficulty rises every 5 correct. Boss appears every 10!';
-      case GameMode.combo: return 'Build your streak for bigger multipliers';
+      case GameMode.standard:
+        return 'Classic timed quiz — score points for every correct answer!';
+      case GameMode.blitz:
+        return '60 seconds — answer as many as possible';
+      case GameMode.death:
+        return 'One wrong answer = Game Over!';
+      case GameMode.survival:
+        return '3 hearts, endless questions — difficulty rises every 5 correct. Boss appears every 10!';
+      case GameMode.combo:
+        return 'Build your streak for bigger multipliers';
     }
   }
 
   String get icon {
     switch (this) {
-      case GameMode.standard: return '⭐';
-      case GameMode.blitz: return '⚡';
-      case GameMode.death: return '💀';
-      case GameMode.survival: return '💪';
-      case GameMode.combo: return '🔥';
+      case GameMode.standard:
+        return '⭐';
+      case GameMode.blitz:
+        return '⚡';
+      case GameMode.death:
+        return '💀';
+      case GameMode.survival:
+        return '💪';
+      case GameMode.combo:
+        return '🔥';
     }
+  }
+
+  /// Modes restricted to single-player games.
+  static const Set<GameMode> singlePlayerOnly = {
+    GameMode.blitz,
+    GameMode.death,
+    GameMode.survival,
+    GameMode.combo,
+  };
+
+  /// Returns true if [mode] is available for the given player count.
+  static bool isAvailableForPlayers(GameMode mode, int players) {
+    return players == 1 || !singlePlayerOnly.contains(mode);
   }
 
   static GameMode fromString(String s) {
@@ -139,23 +184,35 @@ enum PowerUp {
 
   String get label {
     switch (this) {
-      case PowerUp.time: return '+5s';
-      case PowerUp.fifty: return '50/50';
-      case PowerUp.double: return '×2';
-      case PowerUp.shield: return '🛡️';
-      case PowerUp.freeze: return '⏸️ Freeze';
-      case PowerUp.switchOp: return '🔀 Swap';
+      case PowerUp.time:
+        return '+5s';
+      case PowerUp.fifty:
+        return '50/50';
+      case PowerUp.double:
+        return '×2';
+      case PowerUp.shield:
+        return '🛡️';
+      case PowerUp.freeze:
+        return '⏸️ Freeze';
+      case PowerUp.switchOp:
+        return '🔀 Swap';
     }
   }
 
   String get icon {
     switch (this) {
-      case PowerUp.time: return '⏱️';
-      case PowerUp.fifty: return '✂️';
-      case PowerUp.double: return '✨';
-      case PowerUp.shield: return '🛡️';
-      case PowerUp.freeze: return '❄️';
-      case PowerUp.switchOp: return '🔀';
+      case PowerUp.time:
+        return '⏱️';
+      case PowerUp.fifty:
+        return '✂️';
+      case PowerUp.double:
+        return '✨';
+      case PowerUp.shield:
+        return '🛡️';
+      case PowerUp.freeze:
+        return '❄️';
+      case PowerUp.switchOp:
+        return '🔀';
     }
   }
 }

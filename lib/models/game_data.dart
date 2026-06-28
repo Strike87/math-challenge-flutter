@@ -1,13 +1,13 @@
 /// Master Mode level definition — 5 story stages with bosses.
 class MasterLevel {
   final String name;
-  final String type;       // operation or 'mixed'
-  final String diff;       // difficulty key
-  final int goal;          // correct answers needed
-  final int time;          // seconds per question
-  final String boss;       // boss emoji
-  final String numType;    // 'natural' | 'integers' | 'rationals' | 'mixed'
-  final String story;      // shown after stage cleared
+  final String type; // operation or 'mixed'
+  final String diff; // difficulty key
+  final int goal; // correct answers needed
+  final int time; // seconds per question
+  final String boss; // boss emoji
+  final String numType; // 'natural' | 'integers' | 'rationals' | 'mixed'
+  final String story; // shown after stage cleared
 
   const MasterLevel({
     required this.name,
@@ -116,18 +116,18 @@ class HighScore {
   });
 
   Map<String, dynamic> toJson() => {
-    'name': name,
-    'score': score,
-    'mode': mode,
-    'date': date,
-  };
+        'name': name,
+        'score': score,
+        'mode': mode,
+        'date': date,
+      };
 
   static HighScore fromJson(Map<String, dynamic> j) => HighScore(
-    name: j['name'] as String? ?? 'Player',
-    score: (j['score'] as num?)?.toInt() ?? 0,
-    mode: j['mode'] as String? ?? 'standard',
-    date: j['date'] as String? ?? '',
-  );
+        name: j['name'] as String? ?? 'Player',
+        score: (j['score'] as num?)?.toInt() ?? 0,
+        mode: j['mode'] as String? ?? 'standard',
+        date: j['date'] as String? ?? '',
+      );
 }
 
 /// Per-skill mastery tracking.
@@ -135,6 +135,8 @@ class SkillData {
   int easy;
   int medium;
   int hard;
+  int expert;
+  int insane;
   int correct;
   int count;
   double mastery;
@@ -144,6 +146,8 @@ class SkillData {
     this.easy = 0,
     this.medium = 0,
     this.hard = 0,
+    this.expert = 0,
+    this.insane = 0,
     this.correct = 0,
     this.count = 0,
     this.mastery = 20,
@@ -151,18 +155,26 @@ class SkillData {
   });
 
   Map<String, dynamic> toJson() => {
-    'easy': easy, 'medium': medium, 'hard': hard,
-    'correct': correct, 'count': count,
-    'mastery': mastery, 'confidence': confidence,
-  };
+        'easy': easy,
+        'medium': medium,
+        'hard': hard,
+        'expert': expert,
+        'insane': insane,
+        'correct': correct,
+        'count': count,
+        'mastery': mastery,
+        'confidence': confidence,
+      };
 
   static SkillData fromJson(Map<String, dynamic> j) => SkillData(
-    easy: (j['easy'] as num?)?.toInt() ?? 0,
-    medium: (j['medium'] as num?)?.toInt() ?? 0,
-    hard: (j['hard'] as num?)?.toInt() ?? 0,
-    correct: (j['correct'] as num?)?.toInt() ?? 0,
-    count: (j['count'] as num?)?.toInt() ?? 0,
-    mastery: (j['mastery'] as num?)?.toDouble() ?? 20,
-    confidence: (j['confidence'] as num?)?.toDouble() ?? 0,
-  );
+        easy: (j['easy'] as num?)?.toInt() ?? 0,
+        medium: (j['medium'] as num?)?.toInt() ?? 0,
+        hard: (j['hard'] as num?)?.toInt() ?? 0,
+        expert: (j['expert'] as num?)?.toInt() ?? 0,
+        insane: (j['insane'] as num?)?.toInt() ?? 0,
+        correct: (j['correct'] as num?)?.toInt() ?? 0,
+        count: (j['count'] as num?)?.toInt() ?? 0,
+        mastery: (j['mastery'] as num?)?.toDouble() ?? 20,
+        confidence: (j['confidence'] as num?)?.toDouble() ?? 0,
+      );
 }

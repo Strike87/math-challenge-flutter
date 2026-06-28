@@ -11,9 +11,14 @@ class AppTheme {
 
   static ThemeData _base(SettingsService s, Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final bg = isDark ? const Color(GameConfig.bgDark) : const Color(GameConfig.bgLight);
-    final surface = isDark ? const Color(0xFF1E1B18) : Colors.white;
-    final text = isDark ? const Color(GameConfig.textDark) : const Color(GameConfig.textLight);
+    final bg = isDark
+        ? const Color(GameConfig.bgDark)
+        : const Color(GameConfig.bgLight);
+    final surface = isDark ? const Color(0xBF1E1A16) : const Color(0xBFFFFFFF);
+    final text = isDark
+        ? const Color(GameConfig.textDark)
+        : const Color(GameConfig.textLight);
+    final bodyFamily = bodyFont;
 
     return ThemeData(
       useMaterial3: true,
@@ -29,21 +34,50 @@ class AppTheme {
         secondary: const Color(GameConfig.sky),
       ),
       textTheme: TextTheme(
-        bodyLarge: TextStyle(color: text, fontWeight: s.bodyWeight, height: s.bodyLineHeight),
-        bodyMedium: TextStyle(color: text, fontWeight: s.bodyWeight, height: s.bodyLineHeight),
-        bodySmall: TextStyle(color: text, fontWeight: s.bodyWeight, height: s.bodyLineHeight),
-        titleLarge: TextStyle(color: text, fontWeight: FontWeight.w800),
-        titleMedium: TextStyle(color: text, fontWeight: FontWeight.w700),
-        titleSmall: TextStyle(color: text, fontWeight: FontWeight.w700),
+        bodyLarge: TextStyle(
+          color: text,
+          fontWeight: s.bodyWeight,
+          height: s.bodyLineHeight,
+          fontFamily: bodyFamily,
+        ),
+        bodyMedium: TextStyle(
+          color: text,
+          fontWeight: s.bodyWeight,
+          height: s.bodyLineHeight,
+          fontFamily: bodyFamily,
+        ),
+        bodySmall: TextStyle(
+          color: text,
+          fontWeight: s.bodyWeight,
+          height: s.bodyLineHeight,
+          fontFamily: bodyFamily,
+        ),
+        titleLarge: TextStyle(
+          color: text,
+          fontWeight: FontWeight.w900,
+          fontFamily: headFont,
+        ),
+        titleMedium: TextStyle(
+          color: text,
+          fontWeight: FontWeight.w800,
+          fontFamily: headFont,
+        ),
+        titleSmall: TextStyle(
+          color: text,
+          fontWeight: FontWeight.w800,
+          fontFamily: headFont,
+        ),
       ),
-      fontFamily: 'PlusJakartaSans',
+      fontFamily: bodyFamily,
       appBarTheme: AppBarTheme(
         backgroundColor: bg,
         foregroundColor: text,
         elevation: 0,
         centerTitle: false,
       ),
-      dividerColor: isDark ? const Color(GameConfig.borderDark) : const Color(GameConfig.borderLight),
+      dividerColor: isDark
+          ? const Color(GameConfig.borderDark)
+          : const Color(GameConfig.borderLight),
     );
   }
 

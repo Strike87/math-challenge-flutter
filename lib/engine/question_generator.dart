@@ -7,7 +7,9 @@ import '../models/player.dart';
 /// Mirrors the original HTML game's `_buildQ`, `_applyNumType`, and
 /// `_generateQCore` logic, adapted to Dart.
 class QuestionGenerator {
-  final Random _rng = Random();
+  QuestionGenerator({Random? rng}) : _rng = rng ?? Random();
+
+  final Random _rng;
 
   /// Build a question for the given operation + difficulty + numType.
   Question build({
@@ -25,6 +27,7 @@ class QuestionGenerator {
       ans: q.ans,
       choices: choices,
       diff: diff,
+      numType: numType,
       ratDP: q.ratDP,
     );
   }
@@ -39,23 +42,38 @@ class QuestionGenerator {
 
     if (type == Operation.addition) {
       switch (diff) {
-        case Difficulty.easy:    a = randInt(1, 10);  b = randInt(1, 10);  break;
-        case Difficulty.medium:  a = randInt(11, 49); b = randInt(11, 49); break;
-        case Difficulty.hard:    a = randInt(25, 99); b = randInt(25, 99); break;
-        case Difficulty.expert:  a = randInt(50, 199);b = randInt(50, 199);break;
-        case Difficulty.insane:  a = randInt(100,499);b = randInt(100,499);break;
+        case Difficulty.easy:
+          a = randInt(1, 10);
+          b = randInt(1, 10);
+          break;
+        case Difficulty.medium:
+          a = randInt(11, 49);
+          b = randInt(11, 49);
+          break;
+        case Difficulty.hard:
+          a = randInt(25, 99);
+          b = randInt(25, 99);
+          break;
+        case Difficulty.expert:
+          a = randInt(50, 199);
+          b = randInt(50, 199);
+          break;
+        case Difficulty.insane:
+          a = randInt(100, 499);
+          b = randInt(100, 499);
+          break;
       }
       final missing = diff == Difficulty.easy ? 3 : randInt(1, 3);
       if (missing == 3) {
-        key = 'a${min(a,b)}+${max(a,b)}';
+        key = 'a${min(a, b)}+${max(a, b)}';
         text = '$a + $b = ?';
         ans = a + b;
       } else if (missing == 1) {
-        key = 'a?+$b=${a+b}';
+        key = 'a?+$b=${a + b}';
         text = '? + $b = ${a + b}';
         ans = a;
       } else {
-        key = 'a$a+?=${a+b}';
+        key = 'a$a+?=${a + b}';
         text = '$a + ? = ${a + b}';
         ans = b;
       }
@@ -64,11 +82,26 @@ class QuestionGenerator {
 
     if (type == Operation.subtraction) {
       switch (diff) {
-        case Difficulty.easy:    b = randInt(1, 9);     ans = randInt(1, 9);    break;
-        case Difficulty.medium:  b = randInt(5, 44);    ans = randInt(5, 44);   break;
-        case Difficulty.hard:    b = randInt(15, 79);   ans = randInt(15, 79);  break;
-        case Difficulty.expert:  b = randInt(50, 149);  ans = randInt(50, 149); break;
-        case Difficulty.insane:  b = randInt(100, 399); ans = randInt(100, 399);break;
+        case Difficulty.easy:
+          b = randInt(1, 9);
+          ans = randInt(1, 9);
+          break;
+        case Difficulty.medium:
+          b = randInt(5, 44);
+          ans = randInt(5, 44);
+          break;
+        case Difficulty.hard:
+          b = randInt(15, 79);
+          ans = randInt(15, 79);
+          break;
+        case Difficulty.expert:
+          b = randInt(50, 149);
+          ans = randInt(50, 149);
+          break;
+        case Difficulty.insane:
+          b = randInt(100, 399);
+          ans = randInt(100, 399);
+          break;
       }
       a = b + ans as int;
       final result = a - b;
@@ -92,17 +125,33 @@ class QuestionGenerator {
     if (type == Operation.multiplication) {
       late int mA, mB;
       switch (diff) {
-        case Difficulty.easy:    mA = randInt(2, 5);   mB = randInt(2, 5);   break;
-        case Difficulty.medium:  mA = randInt(2, 10);  mB = randInt(2, 10);  break;
-        case Difficulty.hard:    mA = randInt(3, 12);  mB = randInt(3, 12);  break;
-        case Difficulty.expert:  mA = randInt(11, 20); mB = randInt(11, 20); break;
-        case Difficulty.insane:  mA = randInt(15, 25); mB = randInt(15, 25); break;
+        case Difficulty.easy:
+          mA = randInt(2, 5);
+          mB = randInt(2, 5);
+          break;
+        case Difficulty.medium:
+          mA = randInt(2, 10);
+          mB = randInt(2, 10);
+          break;
+        case Difficulty.hard:
+          mA = randInt(3, 12);
+          mB = randInt(3, 12);
+          break;
+        case Difficulty.expert:
+          mA = randInt(11, 20);
+          mB = randInt(11, 20);
+          break;
+        case Difficulty.insane:
+          mA = randInt(15, 25);
+          mB = randInt(15, 25);
+          break;
       }
-      a = mA; b = mB;
+      a = mA;
+      b = mB;
       final prod = a * b;
       final missing = diff == Difficulty.easy ? 3 : randInt(1, 3);
       if (missing == 3) {
-        key = 'm${min(a,b)}x${max(a,b)}';
+        key = 'm${min(a, b)}x${max(a, b)}';
         text = '$a × $b = ?';
         ans = prod;
       } else if (missing == 1) {
@@ -120,13 +169,30 @@ class QuestionGenerator {
     if (type == Operation.division) {
       late int dB, dAns;
       switch (diff) {
-        case Difficulty.easy:    dB = randInt(2, 5);   dAns = randInt(2, 5);   break;
-        case Difficulty.medium:  dB = randInt(2, 10);  dAns = randInt(2, 10);  break;
-        case Difficulty.hard:    dB = randInt(3, 12);  dAns = randInt(3, 12);  break;
-        case Difficulty.expert:  dB = randInt(11, 15); dAns = randInt(11, 15); break;
-        case Difficulty.insane:  dB = randInt(12, 20); dAns = randInt(12, 20); break;
+        case Difficulty.easy:
+          dB = randInt(2, 5);
+          dAns = randInt(2, 5);
+          break;
+        case Difficulty.medium:
+          dB = randInt(2, 10);
+          dAns = randInt(2, 10);
+          break;
+        case Difficulty.hard:
+          dB = randInt(3, 12);
+          dAns = randInt(3, 12);
+          break;
+        case Difficulty.expert:
+          dB = randInt(11, 15);
+          dAns = randInt(11, 15);
+          break;
+        case Difficulty.insane:
+          dB = randInt(12, 20);
+          dAns = randInt(12, 20);
+          break;
       }
-      b = dB; ans = dAns; a = b * (ans as int);
+      b = dB;
+      ans = dAns;
+      a = b * (ans as int);
       final quotient = ans;
       final missing = diff == Difficulty.easy ? 3 : randInt(1, 3);
       if (missing == 3) {
@@ -146,19 +212,24 @@ class QuestionGenerator {
     }
 
     // Fallback to multiplication
-    final maxN = diff == Difficulty.easy ? 5 : diff == Difficulty.medium ? 10 : 12;
+    final maxN = diff == Difficulty.easy
+        ? 5
+        : diff == Difficulty.medium
+            ? 10
+            : 12;
     final a2 = randInt(2, maxN);
     final b2 = randInt(2, maxN);
     return _QBase(
       type: Operation.multiplication,
-      key: 'm${min(a2,b2)}x${max(a2,b2)}',
+      key: 'm${min(a2, b2)}x${max(a2, b2)}',
       text: '$a2 × $b2 = ?',
       ans: a2 * b2,
     );
   }
 
   // ─── Number type modifier ───────────────────────────────────
-  _QBase _applyNumType(_QBase q, Operation type, Difficulty diff, NumberType numType) {
+  _QBase _applyNumType(
+      _QBase q, Operation type, Difficulty diff, NumberType numType) {
     if (numType == NumberType.natural) return q;
     if (q.key.contains('?') || q.text.contains('NaN')) return q;
 
@@ -168,8 +239,11 @@ class QuestionGenerator {
     String wrap(num n) => n < 0 ? '($n)' : '$n';
 
     final decPlaces = {
-      Difficulty.easy: 1, Difficulty.medium: 1, Difficulty.hard: 2,
-      Difficulty.expert: 2, Difficulty.insane: 3,
+      Difficulty.easy: 1,
+      Difficulty.medium: 1,
+      Difficulty.hard: 2,
+      Difficulty.expert: 2,
+      Difficulty.insane: 3,
     }[diff]!;
     final factor = pow(10, decPlaces).toInt();
     double round(num n, int dp) =>
@@ -187,7 +261,8 @@ class QuestionGenerator {
           final a = rawA * signA;
           final b = rawB * signB;
           return _QBase(
-            type: type, ans: a + b,
+            type: type,
+            ans: a + b,
             text: '${wrap(a)} + ${wrap(b)} = ?',
             key: 'int+$a+$b',
           );
@@ -202,7 +277,8 @@ class QuestionGenerator {
           final a = rawA;
           final b = rawB * signB;
           return _QBase(
-            type: type, ans: a - b,
+            type: type,
+            ans: a - b,
             text: '${wrap(a)} − ${wrap(b)} = ?',
             key: 'int-$a-$b',
           );
@@ -218,7 +294,8 @@ class QuestionGenerator {
           final a = rawA * signA;
           final b = rawB * signB;
           return _QBase(
-            type: type, ans: a * b,
+            type: type,
+            ans: a * b,
             text: '${wrap(a)} × ${wrap(b)} = ?',
             key: 'intx${a}x$b',
           );
@@ -235,7 +312,8 @@ class QuestionGenerator {
           final ans = a / b;
           if (ans == ans.roundToDouble()) {
             return _QBase(
-              type: type, ans: ans.toInt(),
+              type: type,
+              ans: ans.toInt(),
               text: '${wrap(a)} ÷ ${wrap(b)} = ?',
               key: 'intd$a/$b',
             );
@@ -251,6 +329,7 @@ class QuestionGenerator {
         final fracPart = randInt(1, factor - 1);
         return round(intPart + fracPart / factor, decPlaces);
       }
+
       double safeNum(num n) => double.parse(n.toStringAsFixed(decPlaces));
       double safeAns(num n) => double.parse(n.toStringAsFixed(decPlaces));
 
@@ -260,21 +339,26 @@ class QuestionGenerator {
         final ans = safeAns(a + b);
         if (ans.isNaN) return q;
         return _QBase(
-          type: type, ans: ans,
+          type: type,
+          ans: ans,
           text: '$a + $b = ?',
-          key: 'ra$a+$b', ratDP: decPlaces,
+          key: 'ra$a+$b',
+          ratDP: decPlaces,
         );
       }
       if (type == Operation.subtraction) {
         final b = makeDecimal();
-        final extra = round(randInt(1, 8) + randInt(1, factor - 1) / factor, decPlaces);
+        final extra =
+            round(randInt(1, 8) + randInt(1, factor - 1) / factor, decPlaces);
         final a = safeNum(b + extra);
         final ans = safeAns(a - b);
         if (ans.isNaN) return q;
         return _QBase(
-          type: type, ans: ans,
+          type: type,
+          ans: ans,
           text: '$a − $b = ?',
-          key: 'rs$a-$b', ratDP: decPlaces,
+          key: 'rs$a-$b',
+          ratDP: decPlaces,
         );
       }
       if (type == Operation.multiplication) {
@@ -283,9 +367,11 @@ class QuestionGenerator {
         final ans = double.parse((a * b).toStringAsFixed(decPlaces));
         if (ans.isNaN) return q;
         return _QBase(
-          type: type, ans: ans,
+          type: type,
+          ans: ans,
           text: '$a × $b = ?',
-          key: 'rm${a}x$b', ratDP: decPlaces,
+          key: 'rm${a}x$b',
+          ratDP: decPlaces,
         );
       }
       if (type == Operation.division) {
@@ -294,9 +380,11 @@ class QuestionGenerator {
         final a = safeNum(b * ans);
         if (a.isNaN || ans.isNaN) return q;
         return _QBase(
-          type: type, ans: ans,
+          type: type,
+          ans: ans,
           text: '$a ÷ $b = ?',
-          key: 'rd$a/$b', ratDP: decPlaces,
+          key: 'rd$a/$b',
+          ratDP: decPlaces,
         );
       }
     }
@@ -314,9 +402,12 @@ class QuestionGenerator {
 
     final choices = <num>{q.ans};
     final candidates = <num?>[
-      q.ans + 1, q.ans - 1,
-      q.ans + 10, q.ans - 10,
-      (q.ans * 1.1).round(), (q.ans * 0.9).round(),
+      q.ans + 1,
+      q.ans - 1,
+      q.ans + 10,
+      q.ans - 10,
+      (q.ans * 1.1).round(),
+      (q.ans * 0.9).round(),
       isIntegers ? -q.ans : null,
       isRationals ? ratRound(q.ans + 0.1) : null,
       isRationals ? ratRound(q.ans - 0.1) : null,

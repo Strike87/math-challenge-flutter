@@ -12,6 +12,7 @@ import 'screens/config_screen.dart';
 import 'screens/player_screen.dart';
 import 'screens/game_screen.dart' as game_screen;
 import 'theme.dart';
+import 'widgets/celebration_overlay.dart';
 import 'widgets/modals.dart';
 
 Future<void> main() async {
@@ -83,7 +84,8 @@ class _AppShell extends StatelessWidget {
                   center: Alignment.topLeft,
                   radius: 1.2,
                   colors: [
-                    const Color(GameConfig.mango).withValues(alpha: s.dark ? 0.15 : 0.28),
+                    const Color(GameConfig.mango)
+                        .withValues(alpha: s.dark ? 0.28 : 0.32),
                     Colors.transparent,
                   ],
                 ),
@@ -97,7 +99,8 @@ class _AppShell extends StatelessWidget {
                   center: Alignment.bottomRight,
                   radius: 1.2,
                   colors: [
-                    const Color(GameConfig.sky).withValues(alpha: s.dark ? 0.12 : 0.22),
+                    const Color(GameConfig.sky)
+                        .withValues(alpha: s.dark ? 0.24 : 0.25),
                     Colors.transparent,
                   ],
                 ),
@@ -117,19 +120,22 @@ class _AppShell extends StatelessWidget {
                   opacity: state.toastVisible ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 200),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
                       color: const Color(GameConfig.coral),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(GameConfig.coral).withValues(alpha: 0.4),
+                          color: const Color(GameConfig.coral)
+                              .withValues(alpha: 0.4),
                           blurRadius: 14,
                           offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: Text(state.toastMessage,
+                    child: Text(
+                      state.toastMessage,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
@@ -141,6 +147,7 @@ class _AppShell extends StatelessWidget {
             ),
           // Modal layer
           const ModalRouter(),
+          CelebrationOverlay(state: state, settings: s),
         ],
       ),
     );
@@ -148,11 +155,16 @@ class _AppShell extends StatelessWidget {
 
   Widget _screenFor(gs.GameScreen s) {
     switch (s) {
-      case gs.GameScreen.menu:     return const MenuScreen();
-      case gs.GameScreen.numType:  return const NumTypeScreen();
-      case gs.GameScreen.config:   return const ConfigScreen();
-      case gs.GameScreen.player:   return const PlayerSetupScreen();
-      case gs.GameScreen.game:     return const game_screen.GameScreen();
+      case gs.GameScreen.menu:
+        return const MenuScreen();
+      case gs.GameScreen.numType:
+        return const NumTypeScreen();
+      case gs.GameScreen.config:
+        return const ConfigScreen();
+      case gs.GameScreen.player:
+        return const PlayerSetupScreen();
+      case gs.GameScreen.game:
+        return const game_screen.GameScreen();
     }
   }
 }

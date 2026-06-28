@@ -5,7 +5,6 @@ import '../game_config.dart';
 import '../models/player.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
-import '../constants/avatars.dart';
 
 class PlayerSetupScreen extends StatelessWidget {
   const PlayerSetupScreen({super.key});
@@ -28,7 +27,8 @@ class PlayerSetupScreen extends StatelessWidget {
                   onPressed: gs.backFromPlayers,
                 ),
                 Expanded(
-                  child: Text('Player Setup',
+                  child: Text(
+                    'Player Setup',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: s.text,
@@ -79,13 +79,21 @@ class _PlayerSection extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: s.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: s.border),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(GameConfig.borderMdLight)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Player $pid Avatar',
+          Text(
+            'Player $pid Avatar',
             style: TextStyle(
               color: s.muted,
               fontSize: 12,
@@ -101,7 +109,10 @@ class _PlayerSection extends StatelessWidget {
               final current = pl.avatar is String ? pl.avatar as String : '🐶';
               final selected = await showDialog<String>(
                 context: context,
-                builder: (_) => AvatarPickerDialog(currentAvatar: current),
+                builder: (_) => AvatarPickerDialog(
+                  currentAvatar: current,
+                  availableAvatars: gs.availableAvatarBases,
+                ),
               );
               if (selected != null) {
                 gs.pickAvatar(pid, selected);
@@ -110,8 +121,8 @@ class _PlayerSection extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
+                color: s.surface2.withValues(alpha: s.dark ? 0.90 : 0.70),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                   color: const Color(GameConfig.coral).withValues(alpha: 0.4),
                   width: 1.5,
@@ -123,8 +134,13 @@ class _PlayerSection extends StatelessWidget {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: const Color(GameConfig.coral).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
+                      color:
+                          const Color(GameConfig.coral).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: const Color(GameConfig.coral)
+                            .withValues(alpha: 0.2),
+                      ),
                     ),
                     child: Center(
                       child: AvatarWidget(avatar: pl.avatar, size: 40),
@@ -136,7 +152,9 @@ class _PlayerSection extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          pl.avatar is AvatarCustom ? 'Custom avatar' : 'Tap to change',
+                          pl.avatar is AvatarCustom
+                              ? 'Custom avatar'
+                              : 'Tap to change',
                           style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             fontFamily: AppFonts.body,
@@ -144,7 +162,7 @@ class _PlayerSection extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${AvatarPool.all.length}+ emojis available',
+                          '${gs.availableAvatarBases.length} unlocked emojis',
                           style: TextStyle(
                             color: s.muted,
                             fontSize: 11,
@@ -165,7 +183,7 @@ class _PlayerSection extends StatelessWidget {
             height: 64,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: GameConfig.avatarBases.length + 1,
+              itemCount: gs.availableAvatarBases.length + 1,
               itemBuilder: (_, i) {
                 if (i == 0) {
                   return _AvatarOption(
@@ -175,7 +193,7 @@ class _PlayerSection extends StatelessWidget {
                     isCustom: true,
                   );
                 }
-                final a = GameConfig.avatarBases[i - 1];
+                final a = gs.availableAvatarBases[i - 1];
                 return _AvatarOption(
                   avatar: a,
                   selected: pl.avatar == a,
@@ -191,7 +209,8 @@ class _PlayerSection extends StatelessWidget {
                 label: '🎨 Customize Avatar',
                 color: GameConfig.grape,
                 fontSize: 12,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 onPressed: () => gs.showAvatarBuilder(pid),
               ),
             ],
@@ -204,17 +223,21 @@ class _PlayerSection extends StatelessWidget {
                 child: AvatarWidget(avatar: pl.avatar, size: 28),
               ),
               hintText: 'Enter Player $pid name',
+              filled: true,
+              fillColor: s.surface2.withValues(alpha: s.dark ? 0.90 : 0.70),
+              counterStyle: TextStyle(color: s.muted),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(18),
                 borderSide: BorderSide(color: s.border),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(18),
                 borderSide: BorderSide(color: s.border),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(GameConfig.coral), width: 2),
+                borderRadius: BorderRadius.circular(18),
+                borderSide:
+                    const BorderSide(color: Color(GameConfig.coral), width: 2),
               ),
             ),
             controller: TextEditingController(text: pl.name),
@@ -241,25 +264,41 @@ class _AvatarOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 64,
         margin: const EdgeInsets.only(right: 8),
         decoration: BoxDecoration(
-          color: selected ? const Color(GameConfig.coral).withValues(alpha: 0.15) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          color: selected
+              ? const Color(GameConfig.coral).withValues(alpha: 0.15)
+              : s.surface2.withValues(alpha: s.dark ? 0.90 : 0.70),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: selected ? const Color(GameConfig.coral) : Colors.grey.shade300,
+            color: selected
+                ? const Color(GameConfig.coral)
+                : Colors.white.withValues(alpha: 0.7),
             width: selected ? 2 : 1,
           ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color:
+                        const Color(GameConfig.coral).withValues(alpha: 0.20),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
         child: Stack(
           children: [
             Center(child: AvatarWidget(avatar: avatar, size: 40)),
             if (isCustom)
               const Positioned(
-                top: 4, right: 4,
+                top: 4,
+                right: 4,
                 child: Text('🎨', style: TextStyle(fontSize: 12)),
               ),
           ],

@@ -1,9 +1,14 @@
+import 'dart:math' as math;
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
 import '../game_config.dart';
 import '../models/enums.dart';
 import '../models/game_data.dart';
+import '../models/player.dart';
+import '../services/iap.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
 
@@ -14,11 +19,14 @@ class ModalRouter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
+    final s = context.watch<SettingsService>();
     if (gs.currentModal == GameModal.none) return const SizedBox.shrink();
     return Stack(
       children: [
         ModalBarrier(
-          color: Colors.black54,
+          color: s.dark
+              ? Colors.black.withValues(alpha: 0.65)
+              : const Color(0xFF1E140A).withValues(alpha: 0.45),
           dismissible: false,
         ),
         Center(
@@ -34,20 +42,36 @@ class ModalRouter extends StatelessWidget {
 
   Widget _pickModal(GameState gs, BuildContext context) {
     switch (gs.currentModal) {
-      case GameModal.settings:        return SettingsModal(gs: gs);
-      case GameModal.masterIntro:     return MasterIntroModal(gs: gs);
-      case GameModal.dailyBoss:       return DailyBossModal(gs: gs);
-      case GameModal.stageCleared:    return StageClearedModal(gs: gs);
-      case GameModal.win:             return WinModal(gs: gs);
-      case GameModal.quitConfirm:     return QuitConfirmModal(gs: gs);
-      case GameModal.highScore:       return HighScoreModal(gs: gs);
-      case GameModal.achievements:    return AchievementsModal(gs: gs);
-      case GameModal.tutorial:        return TutorialModal(gs: gs);
-      case GameModal.avatarBuilder:   return AvatarBuilderModal(gs: gs);
-      case GameModal.skillDashboard:  return SkillDashboardModal(gs: gs);
-      case GameModal.coinShop:        return CoinShopModal(gs: gs);
-      case GameModal.dailyChallenges: return DailyChallengesModal(gs: gs);
-      case GameModal.none:            return const SizedBox.shrink();
+      case GameModal.settings:
+        return SettingsModal(gs: gs);
+      case GameModal.masterIntro:
+        return MasterIntroModal(gs: gs);
+      case GameModal.dailyBoss:
+        return DailyBossModal(gs: gs);
+      case GameModal.stageCleared:
+        return StageClearedModal(gs: gs);
+      case GameModal.win:
+        return WinModal(gs: gs);
+      case GameModal.quitConfirm:
+        return QuitConfirmModal(gs: gs);
+      case GameModal.highScore:
+        return HighScoreModal(gs: gs);
+      case GameModal.achievements:
+        return AchievementsModal(gs: gs);
+      case GameModal.tutorial:
+        return TutorialModal(gs: gs);
+      case GameModal.avatarBuilder:
+        return AvatarBuilderModal(gs: gs);
+      case GameModal.skillDashboard:
+        return SkillDashboardModal(gs: gs);
+      case GameModal.coinShop:
+        return CoinShopModal(gs: gs);
+      case GameModal.adultGate:
+        return AdultGateModal(gs: gs);
+      case GameModal.dailyChallenges:
+        return DailyChallengesModal(gs: gs);
+      case GameModal.none:
+        return const SizedBox.shrink();
     }
   }
 }
@@ -71,41 +95,100 @@ class ModalShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-    return Container(
+    final radius = BorderRadius.circular(28);
+    final modal = Container(
       decoration: BoxDecoration(
-        color: s.surface,
-        borderRadius: BorderRadius.circular(24),
+        color: s.dark ? const Color(0xE01C1814) : const Color(0xD1FFFFFF),
+        borderRadius: radius,
+        border: Border.all(
+          color: s.dark
+              ? Colors.white.withValues(alpha: 0.10)
+              : Colors.white.withValues(alpha: 0.92),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.14),
+            blurRadius: 64,
+            offset: const Offset(0, 24),
+          ),
+        ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight ?? 600),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(icon, style: const TextStyle(fontSize: 40)),
-              const SizedBox(height: 4),
-              Text(title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: s.text,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  fontFamily: AppFonts.head,
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 4,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(GameConfig.coral),
+                      Color(GameConfig.mango),
+                      Color(GameConfig.sky),
+                      Color(GameConfig.mint),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Flexible(child: SingleChildScrollView(child: child)),
-              if (actions.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: actions,
-                ),
-              ],
-            ],
-          ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(icon, style: const TextStyle(fontSize: 44)),
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          color: s.text,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          fontFamily: AppFonts.head,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Flexible(child: SingleChildScrollView(child: child)),
+                  if (actions.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: actions,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+
+    if (s.lowPerf) return modal;
+
+    return ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+        child: modal,
       ),
     );
   }
@@ -138,19 +221,50 @@ class SettingsModal extends StatelessWidget {
             _AvatarSettingsTile(gs: gs),
             const SizedBox(height: 16),
             _section('Display & Audio', s),
-            Row(
-              children: [
-                _TrioBtn(icon: '🌓', label: 'Dark Mode', state: s.dark ? 'ON' : 'OFF', active: s.dark, onTap: s.toggleDark),
-                _TrioBtn(icon: '🔊', label: 'Sound', state: s.sound ? 'ON' : 'OFF', active: s.sound, onTap: s.toggleSound),
-                _TrioBtn(icon: '📳', label: 'Vibration', state: s.vibration ? 'ON' : 'OFF', active: s.vibration, onTap: s.toggleVibration),
-              ],
+            SizedBox(
+              height: 136,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _TrioBtn(
+                      icon: '🌓',
+                      label: 'Dark Mode',
+                      state: s.dark ? 'ON' : 'OFF',
+                      active: s.dark,
+                      onTap: s.toggleDark),
+                  _TrioBtn(
+                      icon: '🔊',
+                      label: 'Sound',
+                      state: s.sound ? 'ON' : 'OFF',
+                      active: s.sound,
+                      onTap: s.toggleSound),
+                  _TrioBtn(
+                      icon: '📳',
+                      label: 'Vibration',
+                      state: s.vibration ? 'ON' : 'OFF',
+                      active: s.vibration,
+                      onTap: s.toggleVibration),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
             _section('Accessibility', s),
-            _CheckTile(label: 'Dyslexia-friendly font', value: s.dyslexia, onChanged: (_) => s.toggleDyslexia()),
-            _CheckTile(label: 'Color-blind safe palette', value: s.colorblind, onChanged: (_) => s.toggleColorblind()),
-            _CheckTile(label: 'Performance mode (faster on all devices)', value: s.lowPerf, onChanged: (_) => s.toggleLowPerf()),
-            _CheckTile(label: 'Reduce motion', value: s.reduceMotion, onChanged: (_) => s.toggleReduceMotion()),
+            _CheckTile(
+                label: 'Dyslexia-friendly font',
+                value: s.dyslexia,
+                onChanged: (_) => s.toggleDyslexia()),
+            _CheckTile(
+                label: 'Color-blind safe palette',
+                value: s.colorblind,
+                onChanged: (_) => s.toggleColorblind()),
+            _CheckTile(
+                label: 'Performance mode (faster on all devices)',
+                value: s.lowPerf,
+                onChanged: (_) => s.toggleLowPerf()),
+            _CheckTile(
+                label: 'Reduce motion',
+                value: s.reduceMotion,
+                onChanged: (_) => s.toggleReduceMotion()),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
@@ -158,13 +272,16 @@ class SettingsModal extends StatelessWidget {
                   const Text('Anim speed:'),
                   Expanded(
                     child: Slider(
-                      min: 0.3, max: 2.0, divisions: 17,
+                      min: 0.3,
+                      max: 2.0,
+                      divisions: 17,
                       value: s.animSpeed,
                       activeColor: const Color(GameConfig.coral),
                       onChanged: s.setAnimSpeed,
                     ),
                   ),
-                  Text('${s.animSpeed.toStringAsFixed(1)}x',
+                  Text(
+                    '${s.animSpeed.toStringAsFixed(1)}x',
                     style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ],
@@ -200,7 +317,8 @@ class SettingsModal extends StatelessWidget {
   Widget _section(String text, SettingsService s) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(text,
+      child: Text(
+        text,
         style: TextStyle(
           color: s.muted,
           fontSize: 12,
@@ -220,21 +338,34 @@ class _AvatarSettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
     final p1 = gs.p[1];
     final currentAvatar = p1.avatar is String ? p1.avatar as String : '🐶';
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(GameConfig.coral).withValues(alpha: 0.3), width: 1.5),
+        color: s.surface2.withValues(alpha: s.dark ? 0.9 : 0.7),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+            color: const Color(GameConfig.coral).withValues(alpha: 0.3),
+            width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () async {
           final selected = await showDialog<String>(
             context: context,
-            builder: (_) => AvatarPickerDialog(currentAvatar: currentAvatar),
+            builder: (_) => AvatarPickerDialog(
+              currentAvatar: currentAvatar,
+              availableAvatars: gs.availableAvatarBases,
+            ),
           );
           if (selected != null && selected != currentAvatar) {
             gs.pickAvatar(1, selected);
@@ -248,7 +379,10 @@ class _AvatarSettingsTile extends StatelessWidget {
               height: 48,
               decoration: BoxDecoration(
                 color: const Color(GameConfig.coral).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: const Color(GameConfig.coral).withValues(alpha: 0.2),
+                ),
               ),
               child: Center(
                 child: AvatarWidget(avatar: p1.avatar, size: 32),
@@ -258,24 +392,27 @@ class _AvatarSettingsTile extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text('Default Avatar',
+                children: [
+                  Text(
+                    'Default Avatar',
                     style: TextStyle(
+                      color: s.text,
                       fontWeight: FontWeight.w800,
                       fontFamily: AppFonts.body,
                     ),
                   ),
-                  SizedBox(height: 2),
-                  Text('Tap to change • ~50 emojis available',
+                  const SizedBox(height: 2),
+                  Text(
+                    'Tap to change • unlocked emojis only',
                     style: TextStyle(
-                      color: Colors.grey,
+                      color: s.muted,
                       fontSize: 11,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.grey),
+            Icon(Icons.chevron_right, color: s.muted),
           ],
         ),
       ),
@@ -285,8 +422,11 @@ class _AvatarSettingsTile extends StatelessWidget {
 
 class _TrioBtn extends StatelessWidget {
   const _TrioBtn({
-    required this.icon, required this.label, required this.state,
-    required this.active, required this.onTap,
+    required this.icon,
+    required this.label,
+    required this.state,
+    required this.active,
+    required this.onTap,
   });
   final String icon, label, state;
   final bool active;
@@ -294,35 +434,109 @@ class _TrioBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: active ? const Color(GameConfig.coral).withValues(alpha: 0.15) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: active ? const Color(GameConfig.coral) : Colors.grey.shade300,
-              width: active ? 2 : 1,
+      child: Semantics(
+        button: true,
+        toggled: active,
+        label: label,
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            decoration: BoxDecoration(
+              color: active
+                  ? const Color(GameConfig.coral).withValues(alpha: 0.15)
+                  : s.surface2.withValues(alpha: s.dark ? 0.9 : 0.7),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: active
+                    ? const Color(GameConfig.coral)
+                    : Colors.white.withValues(alpha: 0.7),
+                width: active ? 2 : 1,
+              ),
+              boxShadow: active
+                  ? [
+                      BoxShadow(
+                        color: const Color(GameConfig.coral)
+                            .withValues(alpha: 0.18),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
             ),
-          ),
-          child: Column(
-            children: [
-              Text(icon, style: const TextStyle(fontSize: 20)),
-              Text(label,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                textAlign: TextAlign.center,
-              ),
-              Text(state,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  color: active ? const Color(GameConfig.coral) : Colors.grey,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                SizedBox(
+                  height: 38,
+                  child: Center(
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: active
+                            ? Colors.white.withValues(alpha: 0.42)
+                            : s.surface.withValues(alpha: s.dark ? 0.7 : 0.6),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.62),
+                        ),
+                      ),
+                      child: Text(icon, style: const TextStyle(fontSize: 23)),
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                SizedBox(
+                  height: 28,
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          color: s.text,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          fontFamily: AppFonts.head,
+                          height: 1.0,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        softWrap: false,
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  constraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 26),
+                  alignment: Alignment.center,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: active
+                        ? const Color(GameConfig.coral)
+                        : s.surface.withValues(alpha: s.dark ? 0.95 : 0.85),
+                    borderRadius: BorderRadius.circular(99),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.45),
+                    ),
+                  ),
+                  child: Text(
+                    state,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: active ? Colors.white : s.muted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -331,7 +545,8 @@ class _TrioBtn extends StatelessWidget {
 }
 
 class _CheckTile extends StatelessWidget {
-  const _CheckTile({required this.label, required this.value, required this.onChanged});
+  const _CheckTile(
+      {required this.label, required this.value, required this.onChanged});
   final String label;
   final bool value;
   final void Function(bool) onChanged;
@@ -343,7 +558,8 @@ class _CheckTile extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(label,
+            child: Text(
+              label,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
@@ -371,19 +587,63 @@ class MasterIntroModal extends StatelessWidget {
       icon: '🏆🗺️',
       title: 'The Master Challenge',
       actions: [
-        NeoButton(label: 'I am Ready! 🗡️', color: GameConfig.coral, onPressed: gs.startMasterMode),
-        NeoButton(label: 'Cancel', outlined: true, color: GameConfig.mutedLight, onPressed: () {
-          gs.closeModal();
-          gs.showScreen(GameScreen.menu);
-        }),
+        NeoButton(
+            label: 'I am Ready! 🗡️',
+            color: GameConfig.coral,
+            onPressed: gs.startMasterMode),
+        NeoButton(
+            label: 'Cancel',
+            outlined: true,
+            color: GameConfig.mutedLight,
+            onPressed: () {
+              gs.closeModal();
+              gs.showScreen(GameScreen.menu);
+            }),
       ],
-      child: const Text(
-        'Welcome, brave explorer! Clear 5 Stages to find the treasure.\n'
-        'Defeat the Bosses in each level.\n'
-        'You have 3 Hearts ❤️❤️❤️ total. Good luck!',
-        textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 14, height: 1.5),
+      child: const _MasterIntroCopy(),
+    );
+  }
+}
+
+class _MasterIntroCopy extends StatelessWidget {
+  const _MasterIntroCopy();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final base = TextStyle(
+      color: s.text2,
+      fontSize: 14,
+      fontWeight: FontWeight.w500,
+      height: 1.55,
+      fontFamily: AppFonts.body,
+    );
+    final strong = base.copyWith(
+      color: s.text,
+      fontWeight: FontWeight.w900,
+    );
+    return Text.rich(
+      TextSpan(
+        style: base,
+        children: [
+          const TextSpan(text: 'Welcome, brave explorer! Clear '),
+          TextSpan(text: '5 Stages', style: strong),
+          const TextSpan(text: ' to find the treasure.\nDefeat the '),
+          TextSpan(text: 'Bosses', style: strong),
+          const TextSpan(text: ' in each level.\nYou have '),
+          TextSpan(text: '3 Hearts ', style: strong),
+          const TextSpan(
+            text: '♥♥♥',
+            style: TextStyle(
+              color: Color(GameConfig.coral),
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const TextSpan(text: ' total. Good luck!'),
+        ],
       ),
+      textAlign: TextAlign.center,
     );
   }
 }
@@ -403,10 +663,12 @@ class DailyBossModal extends StatelessWidget {
       icon: b.icon,
       title: b.name,
       actions: [
-        if (!gs.isDailyBossClaimedToday)
-          NeoButton(label: "Fight Today's Boss", color: GameConfig.coral, onPressed: gs.startDailyBoss),
         NeoButton(
-          label: 'Close',
+            label: "Fight Today's Boss",
+            color: GameConfig.coral,
+            onPressed: gs.startDailyBoss),
+        NeoButton(
+          label: 'Cancel',
           outlined: true,
           color: GameConfig.mutedLight,
           onPressed: gs.closeModal,
@@ -414,34 +676,148 @@ class DailyBossModal extends StatelessWidget {
       ],
       child: Column(
         children: [
-          Text(b.desc, textAlign: TextAlign.center),
+          Text(
+            b.desc,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              height: 1.45,
+            ),
+          ),
           const SizedBox(height: 12),
-          _InfoRow('Mission', '${b.type} • ${b.diff} • ${b.numType}'),
-          _InfoRow('Rules', '${b.goal} correct • ${b.time}s each'),
-          _InfoRow('Reward', gs.isDailyBossClaimedToday ? 'Claimed today' : '${b.reward} 🪙'),
-          _InfoRow('Status', gs.isDailyBossClaimedToday ? 'Cleared today' : 'Ready to fight'),
+          _ReportBox(
+            rows: [
+              _ReportRow(
+                'Mission',
+                '${_bossTypeLabel(b.type)} • ${_titleCase(b.diff)} • ${_numTypeLabel(b.numType)}',
+              ),
+              _ReportRow(
+                'Rules',
+                '${b.goal} correct answers • 3 hearts • ${b.time}s each',
+              ),
+              _ReportRow(
+                'Reward',
+                gs.isDailyBossClaimedToday
+                    ? 'Reward claimed today'
+                    : '${b.reward} coins',
+              ),
+              _ReportRow(
+                'Status',
+                gs.isDailyBossClaimedToday
+                    ? 'Cleared today. Replay for practice.'
+                    : 'Ready to fight',
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow(this.k, this.v);
-  final String k, v;
+class _ReportRow {
+  const _ReportRow(this.label, this.value);
+  final String label;
+  final String value;
+}
+
+class _ReportBox extends StatelessWidget {
+  const _ReportBox({required this.rows});
+  final List<_ReportRow> rows;
+
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(width: 80,
-          child: Text(k, style: const TextStyle(fontWeight: FontWeight.w800)),
-        ),
-        Expanded(child: Text(v)),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: s.surface2.withValues(alpha: s.dark ? 0.9 : 0.72),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: s.border, width: 1.5),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < rows.length; i++) ...[
+            _ReportBoxRow(row: rows[i]),
+            if (i != rows.length - 1)
+              Divider(height: 1, color: s.border.withValues(alpha: 0.72)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ReportBoxRow extends StatelessWidget {
+  const _ReportBoxRow({required this.row});
+  final _ReportRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 78,
+            child: Text(
+              row.label,
+              maxLines: 1,
+              overflow: TextOverflow.clip,
+              style: TextStyle(
+                color: s.muted,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                fontFamily: AppFonts.body,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              row.value,
+              textAlign: TextAlign.right,
+              softWrap: true,
+              style: TextStyle(
+                color: s.text,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                height: 1.25,
+                fontFamily: AppFonts.body,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _bossTypeLabel(String value) =>
+    value == 'mixed' ? 'Mixed Operations' : _titleCase(value);
+
+String _numTypeLabel(String value) {
+  return switch (value) {
+    'natural' => 'Natural',
+    'integers' => 'Integers',
+    'rationals' => 'Rationals',
+    'mixed' => 'Mixed',
+    _ => _titleCase(value),
+  };
+}
+
+String _titleCase(String value) {
+  if (value.isEmpty) return value;
+  return value
+      .split(RegExp(r'[\s_-]+'))
+      .where((part) => part.isNotEmpty)
+      .map((part) => part[0].toUpperCase() + part.substring(1).toLowerCase())
+      .join(' ');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -453,16 +829,21 @@ class StageClearedModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cleared = gs.clearedMasterLevel;
+    final next = gs.nextMasterLevel;
     return ModalShell(
       icon: '🌟',
-      title: 'Stage Cleared!',
+      title: cleared == null ? 'Stage Cleared!' : '${cleared.name} Cleared! 🌟',
       actions: [
-        NeoButton(label: 'Next Stage →', color: GameConfig.coral, onPressed: gs.advanceStage),
+        NeoButton(
+            label: next == null ? 'Continue →' : 'Enter ${next.name} →',
+            color: GameConfig.coral,
+            onPressed: gs.advanceStage),
       ],
-      child: const Text(
-        'You defeated the boss! The next stage awaits...',
+      child: Text(
+        cleared?.story ?? 'You defeated the boss! The next stage awaits...',
         textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 14, height: 1.5),
+        style: const TextStyle(fontSize: 14, height: 1.5),
       ),
     );
   }
@@ -479,10 +860,9 @@ class WinModal extends StatelessWidget {
   Widget build(BuildContext context) {
     final p1 = gs.p[1];
     final p2 = gs.p[2];
-    final isWin = p1.score > 0;
     return ModalShell(
-      icon: isWin ? '🏆' : '😢',
-      title: isWin ? 'Great Job!' : 'Game Over',
+      icon: gs.resultIcon,
+      title: gs.resultTitle,
       actions: [
         NeoButton(
           label: 'Replay',
@@ -498,33 +878,42 @@ class WinModal extends StatelessWidget {
       ],
       child: Column(
         children: [
-          _ResultRow('Player', 'Score', 'Acc', 'Time', header: true),
-          _ResultRow(p1.name, '${p1.score}', '${p1.accuracy.toStringAsFixed(0)}%',
-            '${(p1.avgMs / 1000).toStringAsFixed(1)}s'),
-          if (gs.players == 2 && p2.score > 0)
-            _ResultRow(p2.name, '${p2.score}', '${p2.accuracy.toStringAsFixed(0)}%',
-              '${(p2.avgMs / 1000).toStringAsFixed(1)}s'),
+          if (gs.resultDescription.isNotEmpty) ...[
+            Text(
+              gs.resultDescription,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w800, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (gs.players == 2 && gs.mode == GameMode.standard)
+            _CompareResultReport(p1: p1, p2: p2)
+          else
+            _SingleResultReport(player: p1),
           const SizedBox(height: 12),
           if (p1.maxStreak > 0)
-            Text('🔥 Best streak: ${p1.maxStreak}',
+            Text(
+              '🔥 Best streak: ${p1.maxStreak}',
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           if (gs.newlyUnlocked.isNotEmpty) ...[
             const SizedBox(height: 12),
-            const Text('🎉 Achievements Unlocked!',
+            const Text(
+              '🎉 Achievements Unlocked!',
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
             ...gs.newlyUnlocked.map((a) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(a.icon, style: const TextStyle(fontSize: 20)),
-                  const SizedBox(width: 8),
-                  Text(a.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                ],
-              ),
-            )),
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(a.icon, style: const TextStyle(fontSize: 20)),
+                      const SizedBox(width: 8),
+                      Text(a.name,
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                )),
           ],
         ],
       ),
@@ -532,25 +921,149 @@ class WinModal extends StatelessWidget {
   }
 }
 
-class _ResultRow extends StatelessWidget {
-  const _ResultRow(this.name, this.score, this.acc, this.time, {this.header = false});
-  final String name, score, acc, time;
+class _SingleResultReport extends StatelessWidget {
+  const _SingleResultReport({required this.player});
+
+  final PlayerState player;
+
+  @override
+  Widget build(BuildContext context) {
+    final wrong = player.total - player.correct - player.skipped;
+    return Column(
+      children: [
+        Text(
+          "${player.name}'s Report",
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontWeight: FontWeight.w900,
+            fontFamily: AppFonts.head,
+            letterSpacing: 1.0,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _ReportBox(
+          rows: [
+            _ReportRow('Final Score', '${player.score}'),
+            _ReportRow('Accuracy', '${player.accuracy.round()}%'),
+            _ReportRow('✓ Correct', '${player.correct}'),
+            _ReportRow('✗ Wrong', '$wrong'),
+            _ReportRow('Skipped', '${player.skipped}'),
+            _ReportRow('Time Bonus', '${player.bonus}pts'),
+            _ReportRow('Best Streak', '${player.maxStreak}'),
+            _ReportRow(
+                'Avg Time', '${(player.avgMs / 1000).toStringAsFixed(1)}s'),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _CompareResultReport extends StatelessWidget {
+  const _CompareResultReport({required this.p1, required this.p2});
+
+  final PlayerState p1;
+  final PlayerState p2;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _CompareResultRow('Stat', p1.name, p2.name, header: true),
+        _CompareResultRow('Score', '${p1.score}', '${p2.score}'),
+        _CompareResultRow(
+            'Accuracy', '${p1.accuracy.round()}%', '${p2.accuracy.round()}%'),
+        _CompareResultRow('✓ Correct', '${p1.correct}', '${p2.correct}'),
+        _CompareResultRow(
+            '✗ Wrong', '${_wrongCount(p1)}', '${_wrongCount(p2)}'),
+        _CompareResultRow('Skipped', '${p1.skipped}', '${p2.skipped}'),
+        _CompareResultRow(
+            'Avg Time',
+            '${(p1.avgMs / 1000).toStringAsFixed(1)}s',
+            '${(p2.avgMs / 1000).toStringAsFixed(1)}s'),
+      ],
+    );
+  }
+
+  int _wrongCount(PlayerState player) =>
+      player.total - player.correct - player.skipped;
+}
+
+class _CompareResultRow extends StatelessWidget {
+  const _CompareResultRow(this.label, this.first, this.second,
+      {this.header = false});
+
+  final String label;
+  final String first;
+  final String second;
   final bool header;
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
     final style = TextStyle(
-      fontWeight: header ? FontWeight.w900 : FontWeight.w600,
+      color: s.text,
       fontSize: 13,
+      fontWeight: header ? FontWeight.w900 : FontWeight.w700,
+      fontFamily: AppFonts.body,
+      height: 1.2,
     );
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: s.border.withValues(alpha: 0.45)),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: Text(label, style: style)),
+          Expanded(
+            child: Text(first, textAlign: TextAlign.center, style: style),
+          ),
+          Expanded(
+            child: Text(second, textAlign: TextAlign.right, style: style),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResultRow extends StatelessWidget {
+  const _ResultRow(this.a, this.b, this.c, this.d, {this.header = false});
+
+  final String a;
+  final String b;
+  final String c;
+  final String d;
+  final bool header;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final style = TextStyle(
+      color: header ? s.muted : s.text,
+      fontSize: 12,
+      fontWeight: header ? FontWeight.w900 : FontWeight.w700,
+      fontFamily: AppFonts.body,
+      height: 1.2,
+      letterSpacing: header ? 0.8 : 0,
+    );
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: s.border.withValues(alpha: 0.42)),
+        ),
+      ),
       child: Row(
         children: [
-          Expanded(flex: 2, child: Text(name, style: style)),
-          Expanded(child: Text(score, style: style, textAlign: TextAlign.end)),
-          Expanded(child: Text(acc, style: style, textAlign: TextAlign.end)),
-          Expanded(child: Text(time, style: style, textAlign: TextAlign.end)),
+          Expanded(flex: 2, child: Text(a, style: style)),
+          Expanded(child: Text(b, textAlign: TextAlign.center, style: style)),
+          Expanded(child: Text(c, textAlign: TextAlign.center, style: style)),
+          Expanded(child: Text(d, textAlign: TextAlign.right, style: style)),
         ],
       ),
     );
@@ -565,17 +1078,24 @@ class QuitConfirmModal extends StatelessWidget {
   final GameState gs;
   @override
   Widget build(BuildContext context) => ModalShell(
-    icon: '❌',
-    title: 'Quit Game?',
-    actions: [
-      NeoButton(label: 'Yes, Quit', color: GameConfig.punch, onPressed: gs.quitToMenu),
-      NeoButton(label: 'Cancel', outlined: true, color: GameConfig.mutedLight, onPressed: gs.closeModal),
-    ],
-    child: const Text(
-      'Your current progress will be lost. Are you sure?',
-      textAlign: TextAlign.center,
-    ),
-  );
+        icon: '❌',
+        title: 'Quit Game?',
+        actions: [
+          NeoButton(
+              label: 'Yes, Quit',
+              color: GameConfig.punch,
+              onPressed: gs.quitToMenu),
+          NeoButton(
+              label: 'Cancel',
+              outlined: true,
+              color: GameConfig.mutedLight,
+              onPressed: gs.closeModal),
+        ],
+        child: const Text(
+          'Your current progress will be lost. Are you sure?',
+          textAlign: TextAlign.center,
+        ),
+      );
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -591,19 +1111,22 @@ class HighScoreModal extends StatelessWidget {
       icon: '🏆',
       title: 'Hall of Fame',
       actions: [
-        NeoButton(label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
+        NeoButton(
+            label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
       ],
       child: gs.highScores.isEmpty
-        ? const Text('No scores yet. Play a game!',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
-          )
-        : Column(
-            children: [
-              _ResultRow('Name', 'Score', 'Mode', 'Date', header: true),
-              ...gs.highScores.map((s) => _ResultRow(s.name, '${s.score}', s.mode, s.date.substring(5))),
-            ],
-          ),
+          ? const Text(
+              'No scores yet. Play a game!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+            )
+          : Column(
+              children: [
+                _ResultRow('Name', 'Score', 'Mode', 'Date', header: true),
+                ...gs.highScores.map((s) => _ResultRow(
+                    s.name, '${s.score}', s.mode, s.date.substring(5))),
+              ],
+            ),
     );
   }
 }
@@ -617,38 +1140,83 @@ class AchievementsModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsService>();
     return ModalShell(
       icon: '🎯',
       title: 'Achievements',
       maxHeight: 540,
       actions: [
-        NeoButton(label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
+        NeoButton(
+            label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
       ],
       child: Column(
         children: GameConfig.achievementsDef.map((a) {
           final unlocked = gs.achievements[a.id] == true;
-          return ListTile(
-            leading: Text(a.icon,
-              style: TextStyle(
-                fontSize: 28,
-                color: unlocked ? null : Colors.grey.shade400,
+          return Container(
+            margin: const EdgeInsets.symmetric(vertical: 5),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: unlocked
+                  ? settings.surface2
+                      .withValues(alpha: settings.dark ? 0.9 : 0.72)
+                  : settings.surface2
+                      .withValues(alpha: settings.dark ? 0.55 : 0.42),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: unlocked
+                    ? const Color(GameConfig.mint).withValues(alpha: 0.42)
+                    : Colors.white.withValues(alpha: 0.55),
               ),
+              boxShadow: unlocked
+                  ? [
+                      BoxShadow(
+                        color: const Color(GameConfig.mint)
+                            .withValues(alpha: 0.12),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
             ),
-            title: Text(a.name,
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                color: unlocked ? null : Colors.grey,
-              ),
+            child: Row(
+              children: [
+                Opacity(
+                  opacity: unlocked ? 1 : 0.32,
+                  child: Text(a.icon, style: const TextStyle(fontSize: 32)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        a.name,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontFamily: AppFonts.head,
+                          color: unlocked ? settings.text : settings.muted,
+                          height: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        a.desc,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: settings.muted,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  unlocked ? Icons.check_circle : Icons.lock_outline,
+                  color:
+                      unlocked ? const Color(GameConfig.mint) : settings.muted,
+                ),
+              ],
             ),
-            subtitle: Text(a.desc,
-              style: TextStyle(
-                fontSize: 12,
-                color: unlocked ? null : Colors.grey,
-              ),
-            ),
-            trailing: unlocked
-              ? const Icon(Icons.check_circle, color: Color(GameConfig.mint))
-              : const Icon(Icons.lock_outline, color: Colors.grey),
           );
         }).toList(),
       ),
@@ -669,7 +1237,10 @@ class TutorialModal extends StatelessWidget {
       icon: '❓',
       title: 'How to Play',
       actions: [
-        NeoButton(label: 'Got it!', color: GameConfig.coral, onPressed: gs.closeModal),
+        NeoButton(
+            label: 'Got it!',
+            color: GameConfig.coral,
+            onPressed: gs.closeModal),
       ],
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -680,7 +1251,8 @@ class TutorialModal extends StatelessWidget {
           Text('• Blitz ⚡: 60 seconds — answer as many as possible'),
           Text('• Death 💀: One wrong answer = Game Over!'),
           Text('• Master 🏆: Story mode with boss battles'),
-          Text('• Survival 💪: 3 hearts, endless questions — difficulty rises every 5 correct'),
+          Text(
+              '• Survival 💪: 3 hearts, endless questions — difficulty rises every 5 correct'),
           Text('• Combo 🔥: Build streaks for bigger multipliers'),
           SizedBox(height: 12),
           Text('Number Types', style: TextStyle(fontWeight: FontWeight.w900)),
@@ -691,7 +1263,8 @@ class TutorialModal extends StatelessWidget {
           SizedBox(height: 12),
           Text('Power-Ups', style: TextStyle(fontWeight: FontWeight.w900)),
           SizedBox(height: 8),
-          Text('Earn power-ups every 3 correct answers in single-player Standard mode.'),
+          Text(
+              'Earn power-ups every 3 correct answers in single-player Standard mode.'),
         ],
       ),
     );
@@ -707,150 +1280,460 @@ class AvatarBuilderModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
     return ModalShell(
       icon: '🎨',
       title: 'Avatar Builder',
       maxHeight: 600,
       actions: [
-        NeoButton(label: 'Save', color: GameConfig.coral, onPressed: gs.saveCustomAvatar),
-        NeoButton(label: 'Cancel', outlined: true, color: GameConfig.mutedLight, onPressed: gs.closeModal),
+        NeoButton(
+            label: 'Save Avatar',
+            color: GameConfig.coral,
+            onPressed: gs.saveCustomAvatar),
+        NeoButton(
+            label: 'Cancel',
+            outlined: true,
+            color: GameConfig.mutedLight,
+            onPressed: gs.closeModal),
       ],
+      child: DefaultTabController(
+        length: 4,
+        child: Column(
+          children: [
+            if (gs.players == 2) ...[
+              _AvatarBuilderPlayerTabs(gs: gs),
+              const SizedBox(height: 10),
+            ],
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _AvatarBuilderPreview(gs: gs, settings: s),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: s.surface2.withValues(alpha: s.dark ? 0.85 : 0.62),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.78),
+                      ),
+                    ),
+                    child: const TabBar(
+                      tabs: [
+                        Tab(
+                            child: _AvatarBuilderTabLabel(
+                                icon: '🐾', label: 'Character')),
+                        Tab(
+                            child: _AvatarBuilderTabLabel(
+                                icon: '🎩', label: 'Hat')),
+                        Tab(
+                            child: _AvatarBuilderTabLabel(
+                                icon: '🎒', label: 'Acc')),
+                        Tab(
+                            child: _AvatarBuilderTabLabel(
+                                icon: '🎨', label: 'Color')),
+                      ],
+                      labelColor: Colors.white,
+                      unselectedLabelColor: Color(GameConfig.mutedLight),
+                      indicator: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(GameConfig.coral),
+                            Color(0xFFD4681A),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(14)),
+                      ),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      dividerColor: Colors.transparent,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 250,
+              child: TabBarView(
+                children: [
+                  _AvatarButtonGrid(
+                    items: gs.availableAvatarBases,
+                    selected: gs.builderAvatar.base,
+                    onTap: gs.setBuilderBase,
+                  ),
+                  _AvatarButtonGrid(
+                    items: gs.availableAvatarHats,
+                    selected: gs.builderAvatar.hat,
+                    emptyLabel: '🚫',
+                    onTap: gs.setBuilderHat,
+                  ),
+                  _AvatarButtonGrid(
+                    items: GameConfig.avatarAccessories,
+                    selected: gs.builderAvatar.accessory,
+                    emptyLabel: '🚫',
+                    onTap: gs.setBuilderAccessory,
+                  ),
+                  _AvatarColorGrid(gs: gs),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarBuilderPlayerTabs extends StatelessWidget {
+  const _AvatarBuilderPlayerTabs({required this.gs});
+
+  final GameState gs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Flexible(
+          child: _AvatarBuilderPlayerTab(
+            label: '👤 Player 1',
+            active: gs.builderPid == 1,
+            onTap: () => gs.showAvatarBuilder(1),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: _AvatarBuilderPlayerTab(
+            label: '👤 Player 2',
+            active: gs.builderPid == 2,
+            onTap: () => gs.showAvatarBuilder(2),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AvatarBuilderPlayerTab extends StatelessWidget {
+  const _AvatarBuilderPlayerTab({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 140),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: active
+                ? const LinearGradient(
+                    colors: [Color(GameConfig.coral), Color(0xFFD4681A)],
+                  )
+                : null,
+            color: active
+                ? null
+                : s.surface2.withValues(alpha: s.dark ? 0.82 : 0.58),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: active
+                  ? Colors.transparent
+                  : Colors.white.withValues(alpha: 0.82),
+              width: 1.5,
+            ),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color:
+                          const Color(GameConfig.coral).withValues(alpha: 0.22),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                softWrap: false,
+                style: TextStyle(
+                  color: active ? Colors.white : s.text,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  fontFamily: AppFonts.body,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarBuilderPreview extends StatelessWidget {
+  const _AvatarBuilderPreview({required this.gs, required this.settings});
+
+  final GameState gs;
+  final SettingsService settings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 84,
+          height: 84,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color:
+                settings.surface2.withValues(alpha: settings.dark ? 0.85 : 0.6),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+                color: Colors.white.withValues(alpha: 0.9), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: AvatarWidget(avatar: gs.builderAvatar, size: 74),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'PLAYER ${gs.builderPid}',
+          style: TextStyle(
+            color: settings.muted,
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AvatarBuilderTabLabel extends StatelessWidget {
+  const _AvatarBuilderTabLabel({required this.icon, required this.label});
+
+  final String icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Center(child: AvatarWidget(avatar: gs.builderAvatar, size: 80)),
-          const SizedBox(height: 16),
-          const Text('Base', style: TextStyle(fontWeight: FontWeight.w800)),
-          SizedBox(height: 56,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: GameConfig.avatarBases.length,
-              itemBuilder: (_, i) {
-                final e = GameConfig.avatarBases[i];
-                return GestureDetector(
-                  onTap: () => gs.setBuilderBase(e),
-                  child: Container(
-                    width: 48,
-                    margin: const EdgeInsets.only(right: 6),
-                    decoration: BoxDecoration(
-                      color: gs.builderAvatar.base == e
-                        ? const Color(GameConfig.coral).withValues(alpha: 0.15)
-                        : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: gs.builderAvatar.base == e
-                          ? const Color(GameConfig.coral)
-                          : Colors.grey.shade300,
-                        width: 2,
-                      ),
-                    ),
-                    child: Center(child: Text(e, style: const TextStyle(fontSize: 24))),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text('Hat', style: TextStyle(fontWeight: FontWeight.w800)),
-          SizedBox(height: 56,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: GameConfig.avatarHats.length,
-              itemBuilder: (_, i) {
-                final e = GameConfig.avatarHats[i];
-                return GestureDetector(
-                  onTap: () => gs.setBuilderHat(e),
-                  child: Container(
-                    width: 48,
-                    margin: const EdgeInsets.only(right: 6),
-                    decoration: BoxDecoration(
-                      color: gs.builderAvatar.hat == e
-                        ? const Color(GameConfig.coral).withValues(alpha: 0.15)
-                        : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: gs.builderAvatar.hat == e
-                          ? const Color(GameConfig.coral)
-                          : Colors.grey.shade300,
-                        width: 2,
-                      ),
-                    ),
-                    child: Center(child: Text(e.isEmpty ? '∅' : e, style: const TextStyle(fontSize: 24))),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text('Accessory', style: TextStyle(fontWeight: FontWeight.w800)),
-          SizedBox(height: 56,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: GameConfig.avatarAccessories.length,
-              itemBuilder: (_, i) {
-                final e = GameConfig.avatarAccessories[i];
-                return GestureDetector(
-                  onTap: () => gs.setBuilderAccessory(e),
-                  child: Container(
-                    width: 48,
-                    margin: const EdgeInsets.only(right: 6),
-                    decoration: BoxDecoration(
-                      color: gs.builderAvatar.accessory == e
-                        ? const Color(GameConfig.coral).withValues(alpha: 0.15)
-                        : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: gs.builderAvatar.accessory == e
-                          ? const Color(GameConfig.coral)
-                          : Colors.grey.shade300,
-                        width: 2,
-                      ),
-                    ),
-                    child: Center(child: Text(e.isEmpty ? '∅' : e, style: const TextStyle(fontSize: 22))),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text('Color', style: TextStyle(fontWeight: FontWeight.w800)),
-          SizedBox(height: 48,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: GameConfig.avatarColors.length,
-              itemBuilder: (_, i) {
-                final c = GameConfig.avatarColors[i];
-                final selected = gs.builderAvatar.color == c;
-                return GestureDetector(
-                  onTap: () => gs.setBuilderColor(c),
-                  child: Container(
-                    width: 48,
-                    margin: const EdgeInsets.only(right: 6),
-                    decoration: BoxDecoration(
-                      color: c == null ? Colors.white : _color(c),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: selected ? const Color(GameConfig.coral) : Colors.grey.shade300,
-                        width: selected ? 3 : 1,
-                      ),
-                    ),
-                    child: c == null
-                      ? const Center(child: Text('∅', style: TextStyle(fontSize: 18)))
-                      : null,
-                  ),
-                );
-              },
+          Text(icon, style: const TextStyle(fontSize: 17)),
+          Text(
+            label,
+            maxLines: 1,
+            softWrap: false,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              fontFamily: AppFonts.body,
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Color _color(String hex) {
-    final h = hex.replaceAll('#', '');
-    return Color(int.parse('FF$h', radix: 16));
+class _AvatarButtonGrid extends StatelessWidget {
+  const _AvatarButtonGrid({
+    required this.items,
+    required this.selected,
+    required this.onTap,
+    this.emptyLabel = '🚫',
+  });
+
+  final List<String> items;
+  final String selected;
+  final ValueChanged<String> onTap;
+  final String emptyLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 340 ? 5 : 4;
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(2),
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+            ),
+            itemCount: items.length,
+            itemBuilder: (_, i) {
+              final item = items[i];
+              return _AvatarChoiceButton(
+                value: item,
+                label: item.isEmpty ? emptyLabel : item,
+                selected: selected == item,
+                onTap: () => onTap(item),
+              );
+            },
+          ),
+        );
+      },
+    );
   }
+}
+
+class _AvatarChoiceButton extends StatelessWidget {
+  const _AvatarChoiceButton({
+    required this.value,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String value;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: selected
+              ? LinearGradient(
+                  colors: [
+                    const Color(GameConfig.coral).withValues(alpha: 0.16),
+                    const Color(GameConfig.mango).withValues(alpha: 0.16),
+                  ],
+                )
+              : null,
+          color: selected
+              ? null
+              : s.surface2.withValues(alpha: s.dark ? 0.85 : 0.62),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected
+                ? const Color(GameConfig.coral)
+                : Colors.white.withValues(alpha: 0.85),
+            width: selected ? 2 : 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: selected
+                  ? const Color(GameConfig.coral).withValues(alpha: 0.2)
+                  : Colors.black.withValues(alpha: 0.06),
+              blurRadius: selected ? 12 : 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: value.isEmpty ? s.muted : null,
+            fontSize: value.isEmpty ? 20 : 26,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarColorGrid extends StatelessWidget {
+  const _AvatarColorGrid({required this.gs});
+
+  final GameState gs;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(4),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: GameConfig.avatarColors.map((color) {
+          final selected = gs.builderAvatar.color == color;
+          final parsed = color == null ? null : _avatarBuilderColor(color);
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => gs.setBuilderColor(color),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              width: 46,
+              height: 46,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: parsed ??
+                    s.surface2.withValues(alpha: s.dark ? 0.88 : 0.66),
+                border: Border.all(
+                  color: selected
+                      ? const Color(GameConfig.coral)
+                      : Colors.white.withValues(alpha: 0.9),
+                  width: selected ? 3 : 2.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: selected
+                        ? const Color(GameConfig.coral).withValues(alpha: 0.28)
+                        : Colors.black.withValues(alpha: 0.12),
+                    blurRadius: selected ? 12 : 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: color == null
+                  ? Text(
+                      '🚫',
+                      style: TextStyle(
+                        color: s.muted,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    )
+                  : null,
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+Color _avatarBuilderColor(String hex) {
+  final h = hex.replaceAll('#', '');
+  return Color(int.parse('FF$h', radix: 16));
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -862,61 +1745,349 @@ class SkillDashboardModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final skills = [
+      Operation.addition,
+      Operation.subtraction,
+      Operation.multiplication,
+      Operation.division,
+    ]
+        .map((op) => _SkillSnapshot(op, gs.skillMap[op.name] ?? SkillData()))
+        .toList();
+    final practiced = skills.where((item) => item.data.count > 0).toList()
+      ..sort((a, b) => a.accuracy.compareTo(b.accuracy));
+    final weakest = practiced.isEmpty ? null : practiced.first;
+
     return ModalShell(
-      icon: '📊',
+      icon: '📈',
       title: 'Skill Dashboard',
-      maxHeight: 540,
+      maxHeight: 600,
       actions: [
-        NeoButton(label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
+        NeoButton(
+            label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
       ],
       child: Column(
         children: [
-          Operation.addition,
-          Operation.subtraction,
-          Operation.multiplication,
-          Operation.division,
-        ].map((op) {
-          final sd = gs.skillMap[op.name] ?? SkillData();
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(op.symbol,
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(op.label,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    const Spacer(),
-                    Text('${sd.confidence.toStringAsFixed(0)}%',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: Color(GameConfig.coral),
+          SizedBox(
+            width: 240,
+            height: 240,
+            child: CustomPaint(
+              painter: _SkillRadarPainter(skills: skills, settings: s),
+            ),
+          ),
+          const SizedBox(height: 10),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final itemWidth = (constraints.maxWidth - 6) / 2;
+              return Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: skills
+                    .map((item) => SizedBox(
+                          width: itemWidth,
+                          child: _SkillLabelItem(item: item, settings: s),
+                        ))
+                    .toList(),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: s.surface2.withValues(alpha: s.dark ? 0.9 : 0.7),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: s.border, width: 1.5),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(width: 3, color: const Color(GameConfig.sky)),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 9),
+                      child: Text.rich(
+                        TextSpan(
+                          children: weakest == null
+                              ? const [
+                                  TextSpan(
+                                    text:
+                                        'Keep practicing! Focus on your weaker areas to become a Math Master! 🌟',
+                                  ),
+                                ]
+                              : [
+                                  const TextSpan(text: '💡 Focus on '),
+                                  TextSpan(
+                                    text: weakest.op.name,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w900),
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        ' (${weakest.accuracy.round()}% accuracy) to improve your overall score!',
+                                  ),
+                                ],
+                        ),
+                        style: TextStyle(
+                          color: s.text2,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          height: 1.25,
+                        ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                LinearProgressIndicator(
-                  value: sd.mastery / 100,
-                  minHeight: 8,
-                  backgroundColor: Colors.grey.shade200,
-                  color: const Color(GameConfig.coral),
-                ),
-                Text('Mastery ${sd.mastery.toStringAsFixed(0)}% • ${sd.correct}/${sd.count} correct',
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-          );
-        }).toList(),
+          ),
+        ],
       ),
     );
   }
+}
+
+class _SkillSnapshot {
+  const _SkillSnapshot(this.op, this.data);
+
+  final Operation op;
+  final SkillData data;
+
+  double get mastery => data.mastery.clamp(0, 100).toDouble();
+
+  double get accuracy =>
+      data.count == 0 ? 0 : (data.correct / data.count * 100).clamp(0, 100);
+}
+
+class _SkillLabelItem extends StatelessWidget {
+  const _SkillLabelItem({required this.item, required this.settings});
+
+  final _SkillSnapshot item;
+  final SettingsService settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _skillAccuracyColor(item.accuracy);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: settings.surface2.withValues(alpha: settings.dark ? 0.9 : 0.7),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: settings.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: '${item.op.name}: '),
+                    TextSpan(
+                      text: '${item.accuracy.round()}%',
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ],
+                ),
+                style: TextStyle(
+                  color: settings.text,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkillRadarPainter extends CustomPainter {
+  const _SkillRadarPainter({required this.skills, required this.settings});
+
+  final List<_SkillSnapshot> skills;
+  final SettingsService settings;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (skills.isEmpty) return;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) * 0.34;
+    final n = skills.length;
+    final ringPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color =
+          settings.dark ? const Color(0xFF333355) : const Color(0xFFFFE4C8);
+    final axisPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..color =
+          settings.dark ? const Color(0xFF444466) : const Color(0xFFFFCDA0);
+    final dataFill = Paint()
+      ..style = PaintingStyle.fill
+      ..color = const Color(GameConfig.coral).withValues(alpha: 0.18);
+    final dataStroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2
+      ..strokeJoin = StrokeJoin.round
+      ..color = const Color(GameConfig.coral);
+
+    for (final pct in [0.25, 0.5, 0.75, 1.0]) {
+      final path = _polygonPath(center, radius * pct, n, (_) => 1);
+      canvas.drawPath(path..close(), ringPaint);
+      _drawText(
+        canvas,
+        '${(pct * 100).round()}%',
+        Offset(center.dx + 4, center.dy - radius * pct - 10),
+        settings.muted.withValues(alpha: 0.65),
+        8,
+        FontWeight.w700,
+      );
+    }
+
+    for (var i = 0; i < n; i++) {
+      final edge = _point(center, radius, i, n);
+      canvas.drawLine(center, edge, axisPaint);
+    }
+
+    final hasData = skills.any((item) => item.data.count > 0);
+    final dataPath = _polygonPath(
+      center,
+      radius,
+      n,
+      (i) => hasData ? skills[i].mastery / 100 : 0.1,
+    )..close();
+    canvas.drawPath(dataPath, dataFill);
+    canvas.drawPath(dataPath, dataStroke);
+
+    for (var i = 0; i < n; i++) {
+      final item = skills[i];
+      final value = hasData ? item.mastery / 100 : 0.1;
+      final dot = _point(center, radius * value, i, n);
+      final dotColor = value >= 0.8
+          ? const Color(GameConfig.mint)
+          : value >= 0.5
+              ? const Color(GameConfig.mango)
+              : const Color(GameConfig.coral);
+
+      canvas.drawCircle(
+        dot,
+        5.5,
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(dot, 4.6, Paint()..color = dotColor);
+
+      if (item.data.count > 0) {
+        final label = _point(center, radius * value + 16, i, n);
+        _drawText(
+          canvas,
+          '${item.accuracy.round()}%',
+          label,
+          dotColor,
+          9,
+          FontWeight.w900,
+          centered: true,
+        );
+      }
+
+      final axisLabel = _point(center, radius + 22, i, n);
+      _drawText(
+        canvas,
+        item.op.label,
+        axisLabel,
+        settings.text,
+        10.5,
+        FontWeight.w900,
+        centered: true,
+      );
+    }
+
+    canvas.drawCircle(center, 3, axisPaint);
+  }
+
+  Path _polygonPath(
+    Offset center,
+    double radius,
+    int count,
+    double Function(int index) scaleForIndex,
+  ) {
+    final path = Path();
+    for (var i = 0; i < count; i++) {
+      final p = _point(center, radius * scaleForIndex(i), i, count);
+      if (i == 0) {
+        path.moveTo(p.dx, p.dy);
+      } else {
+        path.lineTo(p.dx, p.dy);
+      }
+    }
+    return path;
+  }
+
+  Offset _point(Offset center, double radius, int index, int count) {
+    final angle = (index * 2 * math.pi / count) - math.pi / 2;
+    return Offset(
+      center.dx + radius * math.cos(angle),
+      center.dy + radius * math.sin(angle),
+    );
+  }
+
+  void _drawText(
+    Canvas canvas,
+    String text,
+    Offset offset,
+    Color color,
+    double fontSize,
+    FontWeight weight, {
+    bool centered = false,
+  }) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: weight,
+          fontFamily: AppFonts.body,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(
+      canvas,
+      centered
+          ? offset - Offset(painter.width / 2, painter.height / 2)
+          : offset,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _SkillRadarPainter oldDelegate) {
+    return oldDelegate.skills != skills ||
+        oldDelegate.settings.dark != settings.dark ||
+        oldDelegate.settings.text != settings.text;
+  }
+}
+
+Color _skillAccuracyColor(double accuracy) {
+  if (accuracy >= 80) return const Color(GameConfig.mint);
+  if (accuracy >= 50) return const Color(GameConfig.mango);
+  return const Color(GameConfig.coral);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -928,48 +2099,154 @@ class CoinShopModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double gridHeight =
+        (MediaQuery.of(context).size.height * 0.54).clamp(380.0, 470.0);
+    final s = context.watch<SettingsService>();
     return ModalShell(
       icon: '🛒',
       title: 'Coin Shop',
-      maxHeight: 580,
+      maxHeight: 700,
       actions: [
-        NeoButton(label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
+        NeoButton(
+            label: 'Done', color: GameConfig.coral, onPressed: gs.closeModal),
       ],
       child: DefaultTabController(
-        length: 3,
-        child: Column(
-          children: [
-            Row(
+        length: 4,
+        child: Builder(
+          builder: (context) {
+            final controller = DefaultTabController.of(context);
+            return Column(
               children: [
-                const Text('🪙 Balance: ', style: TextStyle(fontWeight: FontWeight.w800)),
-                Text('${gs.coins}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    color: Color(GameConfig.coin),
-                    fontSize: 18,
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('🪙 ', style: TextStyle(fontSize: 18)),
+                      Text(
+                        '${gs.coins} coins',
+                        style: TextStyle(
+                          color: const Color(GameConfig.mango),
+                          fontFamily: AppFonts.head,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _ShopTabBar(controller: controller, s: s),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: gridHeight,
+                  child: TabBarView(
+                    children: [
+                      _ShopGrid(
+                          items: GameConfig.shopItems['avatars']!, gs: gs),
+                      _ShopGrid(items: GameConfig.shopItems['hats']!, gs: gs),
+                      _ShopGrid(items: GameConfig.shopItems['packs']!, gs: gs),
+                      _BuyCoinsPanel(gs: gs),
+                    ],
                   ),
                 ),
               ],
-            ),
-            const TabBar(
-              tabs: [
-                Tab(text: 'Avatars'),
-                Tab(text: 'Hats'),
-                Tab(text: 'Packs'),
-              ],
-              labelColor: Color(GameConfig.coral),
-            ),
-            SizedBox(
-              height: 320,
-              child: TabBarView(
-                children: [
-                  _ShopGrid(items: GameConfig.shopItems['avatars']!, gs: gs),
-                  _ShopGrid(items: GameConfig.shopItems['hats']!, gs: gs),
-                  _ShopGrid(items: GameConfig.shopItems['packs']!, gs: gs),
-                ],
-              ),
-            ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ShopTabBar extends StatelessWidget {
+  const _ShopTabBar({required this.controller, required this.s});
+  final TabController controller;
+  final SettingsService s;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, child) {
+        return Row(
+          children: [
+            _buildTab(0, '🐾', 'Avatars'),
+            const SizedBox(width: 4),
+            _buildTab(1, '🎩', 'Hats'),
+            const SizedBox(width: 4),
+            _buildTab(2, '⚡', 'Packs'),
+            const SizedBox(width: 4),
+            _buildTab(3, '💳', 'Buy'),
           ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTab(int index, String icon, String label) {
+    final active = controller.index == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => controller.animateTo(index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
+          decoration: BoxDecoration(
+            gradient: active
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(GameConfig.coral),
+                      Color(0xFFD4681A),
+                    ],
+                  )
+                : null,
+            color: active
+                ? null
+                : (s.dark
+                    ? const Color(0xFF28231E).withValues(alpha: 0.70)
+                    : Colors.white.withValues(alpha: 0.55)),
+            borderRadius: BorderRadius.circular(12),
+            border: active
+                ? null
+                : Border.all(
+                    color: s.dark
+                        ? Colors.white.withValues(alpha: 0.12)
+                        : Colors.white.withValues(alpha: 0.80),
+                    width: 1.5,
+                  ),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color:
+                          const Color(GameConfig.coral).withValues(alpha: 0.30),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 16)),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: active
+                      ? Colors.white
+                      : (s.dark
+                          ? const Color(GameConfig.mutedDark)
+                          : const Color(GameConfig.mutedLight)),
+                  fontFamily: AppFonts.head,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -983,57 +2260,642 @@ class _ShopGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
     return GridView.builder(
       padding: const EdgeInsets.all(8),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+        crossAxisCount: 3,
         mainAxisSpacing: 8,
         crossAxisSpacing: 8,
-        childAspectRatio: 0.95,
+        childAspectRatio: 0.70,
       ),
       itemCount: items.length,
       itemBuilder: (_, i) {
         final item = items[i];
         final owned = gs.shopOwned.contains(item.id);
-        return Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(GameConfig.coral).withValues(alpha: 0.3), width: 1.5),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(item.emoji, style: const TextStyle(fontSize: 32)),
-              const SizedBox(height: 4),
-              Text(item.name.replaceAll('\n', ' '),
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                maxLines: 2,
-              ),
-              const Spacer(),
-              if (owned && !item.consumable)
-                const Text('✓ Owned',
-                  style: TextStyle(
-                    color: Color(GameConfig.mint),
-                    fontWeight: FontWeight.w800,
-                    fontSize: 11,
-                  ),
-                )
-              else
-                NeoButton(
-                  label: item.special == 'watch' ? 'Watch Ad' : '${item.price} 🪙',
-                  color: GameConfig.coral,
-                  fontSize: 11,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  onPressed: () => gs.buyShopItem(item),
+        final dailyBonusClaimed =
+            item.special == 'watch' && gs.isDailyCoinsClaimedToday;
+        final canBuy = !((owned && !item.consumable) || dailyBonusClaimed);
+        return GestureDetector(
+          onTap: canBuy
+              ? () {
+                  gs.buyShopItem(item);
+                }
+              : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            decoration: BoxDecoration(
+              color: s.surface2.withValues(alpha: s.dark ? 0.90 : 0.72),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                  color: const Color(GameConfig.coral).withValues(alpha: 0.3),
+                  width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.07),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
                 ),
-            ],
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(item.emoji, style: const TextStyle(fontSize: 28)),
+                const SizedBox(height: 4),
+                Text(
+                  item.name.replaceAll('\n', ' '),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: s.text,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: AppFonts.head,
+                    height: 1.0,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                _ShopPricePill(
+                  text: dailyBonusClaimed
+                      ? 'Claimed'
+                      : (owned && !item.consumable)
+                          ? 'Owned'
+                          : item.special == 'watch'
+                              ? 'Free Daily'
+                              : '${item.price} 🪙',
+                  owned: (owned && !item.consumable) || dailyBonusClaimed,
+                ),
+              ],
+            ),
           ),
         );
       },
     );
+  }
+}
+
+class _ShopPricePill extends StatelessWidget {
+  const _ShopPricePill({required this.text, required this.owned});
+
+  final String text;
+  final bool owned;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 26),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        gradient: owned
+            ? null
+            : const LinearGradient(
+                colors: [Color(GameConfig.coral), Color(0xFFD4681A)],
+              ),
+        color:
+            owned ? const Color(GameConfig.mint).withValues(alpha: 0.16) : null,
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          text,
+          maxLines: 1,
+          softWrap: false,
+          style: TextStyle(
+            color: owned ? const Color(GameConfig.mint) : Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            fontFamily: AppFonts.head,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BuyCoinsPanel extends StatelessWidget {
+  const _BuyCoinsPanel({required this.gs});
+
+  final GameState gs;
+
+  @override
+  Widget build(BuildContext context) {
+    final dailyBonus = GameConfig.shopItems['packs']!
+        .firstWhere((item) => item.special == 'watch');
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        children: [
+          _RewardedAdCard(
+            claimed: gs.isDailyCoinsClaimedToday,
+            onTap: () {
+              gs.buyShopItem(dailyBonus);
+            },
+          ),
+          const SizedBox(height: 8),
+          _IapCard(
+            key: const Key('iapProduct_100_coins'),
+            icon: '🪙',
+            title: '100 Coins',
+            subtitle: 'Starter pack',
+            price: r'$0.99',
+            onTap: () => gs.beginIapPurchase(IapProducts.small),
+          ),
+          _IapCard(
+            key: const Key('iapProduct_500_coins'),
+            icon: '💰',
+            title: '500 Coins',
+            subtitle: '+50 bonus coins!',
+            price: r'$3.99',
+            badge: '⭐ Best Value',
+            highlighted: true,
+            onTap: () => gs.beginIapPurchase(IapProducts.medium),
+          ),
+          _IapCard(
+            key: const Key('iapProduct_1200_coins'),
+            icon: '🏆',
+            title: '1200 Coins',
+            subtitle: '+200 bonus coins!',
+            price: r'$7.99',
+            borderColor: const Color(GameConfig.textLight),
+            onTap: () => gs.beginIapPurchase(IapProducts.large),
+          ),
+          _IapCard(
+            key: const Key('iapProduct_ads_remove'),
+            icon: '🚫',
+            title: 'Remove Ads',
+            subtitle:
+                gs.adsRemoved ? 'Already active' : 'Forever, one-time purchase',
+            price: gs.adsRemoved ? 'Owned' : r'$1.99',
+            onTap: () => gs.beginIapPurchase(IapProducts.removeAds),
+          ),
+          TextButton(
+            onPressed: () =>
+                gs.showToast('Restore purchases coming with Google Play IAP'),
+            child: const Text(
+              'Restore Purchases',
+              style: TextStyle(
+                decoration: TextDecoration.underline,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const Text(
+            'Payments processed securely via Google Play.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11, color: Color(GameConfig.mutedLight)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RewardedAdCard extends StatelessWidget {
+  const _RewardedAdCard({required this.claimed, required this.onTap});
+
+  final bool claimed;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: claimed ? null : onTap,
+      child: Opacity(
+        opacity: claimed ? 0.62 : 1,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFF211C3D),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(GameConfig.grape).withValues(alpha: 0.5),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(GameConfig.grape).withValues(alpha: 0.18),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const Text('🎬', style: TextStyle(fontSize: 42)),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Watch a Short Ad',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: AppFonts.head,
+                        fontSize: 18,
+                        height: 1,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Free coins — no purchase needed',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Color(0xFFD7D1EA), fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.13),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      claimed ? '✓' : '+10🪙',
+                      style: const TextStyle(
+                        color: Color(GameConfig.coin),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      claimed ? 'CLAIMED' : 'WATCH',
+                      style: const TextStyle(
+                        color: Color(0xFFD7D1EA),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IapCard extends StatelessWidget {
+  const _IapCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.price,
+    required this.onTap,
+    this.badge,
+    this.highlighted = false,
+    this.borderColor,
+  });
+
+  final String icon;
+  final String title;
+  final String subtitle;
+  final String price;
+  final VoidCallback onTap;
+  final String? badge;
+  final bool highlighted;
+  final Color? borderColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final border = borderColor ??
+        (highlighted ? const Color(GameConfig.mango) : Colors.white);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: highlighted
+              ? const Color(GameConfig.lemon).withValues(alpha: 0.12)
+              : s.surface2.withValues(alpha: s.dark ? 0.9 : 0.74),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: border, width: highlighted ? 2 : 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.07),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            if (badge != null)
+              Positioned(
+                right: -10,
+                top: -18,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(GameConfig.coral),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    badge!.toUpperCase(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            Row(
+              children: [
+                SizedBox(
+                  width: 54,
+                  child: Center(
+                    child: Text(icon, style: const TextStyle(fontSize: 38)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: s.text,
+                          fontWeight: FontWeight.w900,
+                          fontFamily: AppFonts.head,
+                          fontSize: 18,
+                          height: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(GameConfig.mint),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                          height: 1.05,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  constraints: const BoxConstraints(minWidth: 74),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(GameConfig.mango),
+                        Color(0xFFFF6B2A),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(GameConfig.mango)
+                            .withValues(alpha: 0.22),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    price,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(GameConfig.textLight),
+                      fontWeight: FontWeight.w900,
+                      fontFamily: AppFonts.head,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AdultGateModal extends StatefulWidget {
+  const AdultGateModal({super.key, required this.gs});
+
+  final GameState gs;
+
+  @override
+  State<AdultGateModal> createState() => _AdultGateModalState();
+}
+
+class _AdultGateModalState extends State<AdultGateModal> {
+  final TextEditingController _answerController = TextEditingController();
+
+  @override
+  void dispose() {
+    _answerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final gs = widget.gs;
+    final s = context.watch<SettingsService>();
+    final challenge = gs.adultGateChallenge;
+    final product = gs.pendingIapProduct;
+    final price = _iapDisplayPrice(product);
+
+    return ModalShell(
+      icon: '🔐',
+      title: 'Adult Gate',
+      maxHeight: 500,
+      actions: [
+        NeoButton(
+          label: gs.adultGateBusy ? 'Opening...' : 'Continue',
+          color: GameConfig.coral,
+          onPressed: gs.adultGateBusy
+              ? () {}
+              : () => gs.submitAdultGateAnswer(_answerController.text),
+        ),
+        NeoButton(
+          label: 'Cancel',
+          outlined: true,
+          color: GameConfig.textLight,
+          textColor: const Color(GameConfig.textLight),
+          onPressed: gs.cancelAdultGate,
+        ),
+      ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: s.surface2.withValues(alpha: s.dark ? 0.9 : 0.78),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  product?.label ?? 'Google Play purchase',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: s.text,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: AppFonts.head,
+                    fontSize: 20,
+                  ),
+                ),
+                if (price.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    price,
+                    style: const TextStyle(
+                      color: Color(GameConfig.mango),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Grown-up check',
+            style: TextStyle(
+              color: s.text,
+              fontWeight: FontWeight.w900,
+              fontFamily: AppFonts.head,
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Solve this before opening Google Play.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: s.text.withValues(alpha: 0.72),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: s.dark ? 0.10 : 0.78),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: const Color(GameConfig.coral).withValues(alpha: 0.32),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${challenge?.prompt ?? '0 + 0'} =',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: s.text,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: AppFonts.head,
+                      fontSize: 26,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 96,
+                  child: TextField(
+                    key: const Key('adultGateAnswerField'),
+                    controller: _answerController,
+                    textAlign: TextAlign.center,
+                    keyboardType: TextInputType.number,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) =>
+                        gs.submitAdultGateAnswer(_answerController.text),
+                    style: TextStyle(
+                      color: s.text,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: AppFonts.head,
+                      fontSize: 22,
+                    ),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      filled: true,
+                      fillColor: s.surface,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: Color(GameConfig.coral),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (gs.adultGateError.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              gs.adultGateError,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(GameConfig.coral),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _iapDisplayPrice(IapProduct? product) {
+    switch (product?.productId) {
+      case IapProducts.smallId:
+        return r'$0.99';
+      case IapProducts.mediumId:
+        return r'$3.99';
+      case IapProducts.largeId:
+        return r'$7.99';
+      case IapProducts.removeAdsId:
+        return r'$1.99';
+      default:
+        return '';
+    }
   }
 }
 
@@ -1046,27 +2908,40 @@ class DailyChallengesModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
     return ModalShell(
       icon: '📅',
       title: 'Daily Challenges',
       maxHeight: 540,
       actions: [
-        NeoButton(label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
+        NeoButton(
+            label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
       ],
       child: Column(
-        children: GameConfig.dailyChallenges.map((c) {
+        children: gs.activeDailyChallenges.map((c) {
           final cur = gs.dailyProgress[c.id] ?? 0;
-          final done = cur >= c.target;
+          final done = gs.dailyCompleted[c.id] == true;
           return Container(
             margin: const EdgeInsets.symmetric(vertical: 4),
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: done ? const Color(GameConfig.mint).withValues(alpha: 0.1) : Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              color: done
+                  ? const Color(GameConfig.mint).withValues(alpha: 0.12)
+                  : s.surface2.withValues(alpha: s.dark ? 0.9 : 0.72),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: done ? const Color(GameConfig.mint) : Colors.grey.shade300,
+                color: done
+                    ? const Color(GameConfig.mint)
+                    : Colors.white.withValues(alpha: 0.68),
                 width: 1.5,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -1074,22 +2949,28 @@ class DailyChallengesModal extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(c.title,
-                        style: const TextStyle(
+                      Text(
+                        c.title,
+                        style: TextStyle(
+                          color: s.text,
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
                         ),
                       ),
-                      Text(c.desc, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      Text(c.desc,
+                          style: TextStyle(fontSize: 11, color: s.muted)),
                       const SizedBox(height: 4),
                       LinearProgressIndicator(
                         value: (cur / c.target).clamp(0.0, 1.0),
                         minHeight: 6,
-                        backgroundColor: Colors.grey.shade200,
-                        color: done ? const Color(GameConfig.mint) : const Color(GameConfig.coral),
+                        backgroundColor: s.surface.withValues(alpha: 0.65),
+                        color: done
+                            ? const Color(GameConfig.mint)
+                            : const Color(GameConfig.coral),
                       ),
-                      Text('$cur / ${c.target}',
-                        style: const TextStyle(fontSize: 10, color: Colors.grey),
+                      Text(
+                        '${cur.clamp(0, c.target)} / ${c.target}',
+                        style: TextStyle(fontSize: 10, color: s.muted),
                       ),
                     ],
                   ),
@@ -1097,13 +2978,15 @@ class DailyChallengesModal extends StatelessWidget {
                 const SizedBox(width: 8),
                 Column(
                   children: [
-                    Text('+${c.reward}',
-                      style: const TextStyle(
+                    Text(
+                      done ? '✓' : '+${c.reward}',
+                      style: TextStyle(
                         fontWeight: FontWeight.w900,
-                        color: Color(GameConfig.coin),
+                        color: Color(done ? GameConfig.mint : GameConfig.coin),
                       ),
                     ),
-                    const Text('🪙', style: TextStyle(fontSize: 16)),
+                    Text(done ? 'Done' : '🪙',
+                        style: const TextStyle(fontSize: 16)),
                   ],
                 ),
               ],

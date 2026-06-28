@@ -1,4 +1,8 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import '../constants/avatars.dart';
 import '../game_config.dart';
 import '../models/player.dart';
@@ -32,51 +36,138 @@ class NeoButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Color(color);
     if (outlined) {
-      return OutlinedButton(
+      return _PressableScale(
         onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: c,
-          side: BorderSide(color: c, width: 2),
-          padding: padding ?? const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          padding: padding ??
+              const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.52),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: c.withValues(alpha: 0.75), width: 1.5),
+          ),
+          child: DefaultTextStyle(
+            style: _labelStyle(c),
+            child: IconTheme(
+              data: IconThemeData(color: c, size: fontSize + 2),
+              child: _content(),
+            ),
+          ),
         ),
-        child: _content(),
       );
     }
-    return ElevatedButton(
+    return _PressableScale(
       onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: c,
-        foregroundColor: textColor,
-        elevation: 0,
-        padding: padding ?? const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding:
+            padding ?? const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [c, _gradientEnd(c)],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.30),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: c.withValues(alpha: 0.35),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: const Color(0xFFB42814).withValues(alpha: 0.20),
+              blurRadius: 0,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: DefaultTextStyle(
+          style: _labelStyle(textColor),
+          child: IconTheme(
+            data: IconThemeData(color: textColor, size: fontSize + 2),
+            child: _content(),
+          ),
+        ),
       ),
-      child: _content(),
     );
+  }
+
+  TextStyle _labelStyle(Color color) {
+    return TextStyle(
+      color: color,
+      fontWeight: FontWeight.w800,
+      fontSize: fontSize,
+      fontFamily: AppFonts.head,
+      letterSpacing: 0.5,
+      height: 1.05,
+    );
+  }
+
+  Color _gradientEnd(Color c) {
+    if (color == GameConfig.coral) return const Color(0xFFD4681A);
+    return Color.lerp(c, Colors.black, 0.18) ?? c;
   }
 
   Widget _content() {
     if (icon == null) {
-      return Text(label,
-        style: TextStyle(
-          fontWeight: FontWeight.w800,
-          fontSize: fontSize,
-          fontFamily: AppFonts.body,
-        ),
+      return Text(
+        label,
       );
     }
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(icon, size: fontSize + 2),
       const SizedBox(width: 8),
-      Text(label,
-        style: TextStyle(
-          fontWeight: FontWeight.w800,
-          fontSize: fontSize,
-          fontFamily: AppFonts.body,
+      Text(label),
+    ]);
+  }
+}
+
+class _PressableScale extends StatefulWidget {
+  const _PressableScale({
+    required this.child,
+    required this.onPressed,
+  });
+
+  final Widget child;
+  final VoidCallback onPressed;
+
+  @override
+  State<_PressableScale> createState() => _PressableScaleState();
+}
+
+class _PressableScaleState extends State<_PressableScale> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.watch<SettingsService>();
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTapUp: (_) {
+          setState(() => _pressed = false);
+          widget.onPressed();
+        },
+        child: AnimatedScale(
+          scale: _pressed ? 0.95 : 1,
+          duration: settings.duration(180),
+          curve: const Cubic(0.4, 0, 0.2, 1),
+          child: AnimatedSlide(
+            offset: _pressed ? const Offset(0, 0.04) : Offset.zero,
+            duration: settings.duration(180),
+            curve: const Cubic(0.4, 0, 0.2, 1),
+            child: widget.child,
+          ),
         ),
       ),
-    ]);
+    );
   }
 }
 
@@ -94,27 +185,34 @@ class AvatarWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (avatar is String) {
-      return Text(avatar as String,
+      return Text(
+        avatar as String,
         style: TextStyle(fontSize: size * 0.8),
       );
     }
     if (avatar is AvatarCustom) {
       final a = avatar as AvatarCustom;
+      final bgColor = a.color == null ? null : _parseColor(a.color!);
       return SizedBox(
         width: size,
         height: size,
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Text(a.base, style: TextStyle(fontSize: size * 0.7)),
-            if (a.color != null)
-              Text(a.base,
-                style: TextStyle(
-                  fontSize: size * 0.7,
-                  color: _parseColor(a.color!),
-                  foreground: Paint()..color = _parseColor(a.color!),
+            if (bgColor != null)
+              Container(
+                width: size * 0.86,
+                height: size * 0.86,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: bgColor.withValues(alpha: 0.26),
+                  border: Border.all(
+                    color: bgColor.withValues(alpha: 0.58),
+                    width: size * 0.035,
+                  ),
                 ),
               ),
+            Text(a.base, style: TextStyle(fontSize: size * 0.7)),
             if (a.hat.isNotEmpty)
               Positioned(
                 top: -size * 0.05,
@@ -123,7 +221,8 @@ class AvatarWidget extends StatelessWidget {
             if (a.accessory.isNotEmpty)
               Positioned(
                 bottom: size * 0.05,
-                child: Text(a.accessory, style: TextStyle(fontSize: size * 0.3)),
+                child:
+                    Text(a.accessory, style: TextStyle(fontSize: size * 0.3)),
               ),
           ],
         ),
@@ -162,7 +261,8 @@ class CoinPill extends StatelessWidget {
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         const Text('🪙', style: TextStyle(fontSize: 16)),
         const SizedBox(width: 4),
-        Text('$coins',
+        Text(
+          '$coins',
           style: TextStyle(
             color: settings.text,
             fontWeight: FontWeight.w800,
@@ -188,7 +288,8 @@ class ModeBadge extends StatelessWidget {
         color: color,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(label,
+      child: Text(
+        label,
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w800,
@@ -208,7 +309,11 @@ class StreakFire extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (streak < 3) return const SizedBox.shrink();
-    int count = streak >= 10 ? 3 : streak >= 5 ? 2 : 1;
+    int count = streak >= 10
+        ? 3
+        : streak >= 5
+            ? 2
+            : 1;
     return Text('🔥' * count, style: TextStyle(fontSize: size));
   }
 }
@@ -225,11 +330,35 @@ class BigEmojiOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedOpacity(
-      opacity: visible ? 1.0 : 0.0,
-      duration: const Duration(milliseconds: 250),
-      child: Text(emoji,
-        style: const TextStyle(fontSize: 96),
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('$emoji-$visible'),
+      tween: Tween<double>(
+        begin: visible ? 0.5 : 1.15,
+        end: visible ? 1.15 : 0.5,
+      ),
+      duration: const Duration(milliseconds: 350),
+      curve: const Cubic(0.2, 0.9, 0.3, 1),
+      builder: (context, scale, child) {
+        return AnimatedOpacity(
+          opacity: visible ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 250),
+          child: Transform.scale(scale: scale, child: child),
+        );
+      },
+      child: Text(
+        emoji,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 96,
+          height: 1,
+          shadows: [
+            Shadow(
+              color: Color(0x55FF5757),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -242,7 +371,7 @@ class NeoCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(16),
     this.color,
-    this.borderRadius = 22,
+    this.borderRadius = 28,
   });
   final Widget child;
   final EdgeInsets padding;
@@ -251,19 +380,38 @@ class NeoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final settings = context.watch<SettingsService>();
+    final radius = BorderRadius.circular(borderRadius);
+    Widget surface = Container(
       decoration: BoxDecoration(
-        color: color ?? Colors.white,
-        borderRadius: BorderRadius.circular(borderRadius),
+        color: color ??
+            (settings.dark ? const Color(0xBF1E1A16) : const Color(0xB8FFFFFF)),
+        borderRadius: radius,
+        border: Border.all(
+          color: settings.dark
+              ? Colors.white.withValues(alpha: 0.10)
+              : Colors.white.withValues(alpha: 0.88),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: settings.dark ? 0.35 : 0.09),
+            blurRadius: 32,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Padding(padding: padding, child: child),
+    );
+
+    if (settings.lowPerf) return surface;
+
+    return ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: surface,
+      ),
     );
   }
 }
@@ -289,10 +437,12 @@ class AvatarPickerDialog extends StatefulWidget {
   const AvatarPickerDialog({
     super.key,
     this.currentAvatar,
+    this.availableAvatars,
   });
 
   /// Currently selected avatar (highlighted in the grid).
   final String? currentAvatar;
+  final List<String>? availableAvatars;
 
   @override
   State<AvatarPickerDialog> createState() => _AvatarPickerDialogState();
@@ -301,12 +451,29 @@ class AvatarPickerDialog extends StatefulWidget {
 class _AvatarPickerDialogState extends State<AvatarPickerDialog>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  late final List<AvatarCategory> _categories;
 
   @override
   void initState() {
     super.initState();
-    _tabController =
-        TabController(length: AvatarPool.categories.length, vsync: this);
+    final allowed = widget.availableAvatars?.toSet();
+    final categories = allowed == null
+        ? AvatarPool.categories
+        : AvatarPool.categories
+            .map((category) => AvatarCategory(
+                  name: category.name,
+                  emojis: category.emojis
+                      .where((e) => allowed.contains(e))
+                      .toList(),
+                ))
+            .where((category) => category.emojis.isNotEmpty)
+            .toList();
+    _categories = categories.isEmpty
+        ? const [
+            AvatarCategory(name: 'Original', emojis: AvatarPool.originals),
+          ]
+        : categories;
+    _tabController = TabController(length: _categories.length, vsync: this);
   }
 
   @override
@@ -317,57 +484,113 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog>
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      insetPadding: const EdgeInsets.all(16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    final settings = context.watch<SettingsService>();
+    final radius = BorderRadius.circular(28);
+    final content = Container(
+      decoration: BoxDecoration(
+        color: settings.surface,
+        borderRadius: radius,
+        border: Border.all(
+          color: settings.dark
+              ? settings.border
+              : Colors.white.withValues(alpha: 0.85),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.13),
+            blurRadius: 48,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
       child: SizedBox(
         height: MediaQuery.of(context).size.height * 0.75,
         child: Column(
           children: [
-            // Header
+            Container(
+              height: 4,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(GameConfig.coral),
+                    Color(GameConfig.mango),
+                    Color(GameConfig.sky),
+                    Color(GameConfig.mint),
+                  ],
+                ),
+              ),
+            ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+              padding: const EdgeInsets.fromLTRB(20, 16, 12, 10),
               child: Row(
                 children: [
-                  const Expanded(
-                    child: Text('Pick your avatar',
+                  Expanded(
+                    child: Text(
+                      'Pick your avatar',
                       style: TextStyle(
-                        fontSize: 20,
+                        color: settings.text,
+                        fontSize: 22,
                         fontWeight: FontWeight.w900,
                         fontFamily: AppFonts.head,
+                        height: 1,
                       ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: Icon(Icons.close_rounded, color: settings.muted),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
             ),
-            // Category tabs
-            TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              labelColor: const Color(GameConfig.coral),
-              unselectedLabelColor: Colors.grey.shade600,
-              indicatorColor: const Color(GameConfig.coral),
-              labelStyle: const TextStyle(
-                fontWeight: FontWeight.w800,
-                fontFamily: AppFonts.body,
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: settings.surface2
+                    .withValues(alpha: settings.dark ? 0.85 : 0.70),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
               ),
-              tabs: AvatarPool.categories
-                  .map((c) => Tab(text: c.name))
-                  .toList(),
+              child: TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                dividerColor: Colors.transparent,
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelColor: Colors.white,
+                unselectedLabelColor: settings.muted,
+                indicator: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(GameConfig.coral),
+                      Color(0xFFD4681A),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontFamily: AppFonts.head,
+                  fontSize: 13,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontFamily: AppFonts.head,
+                  fontSize: 13,
+                ),
+                tabs: _categories.map((c) => Tab(text: c.name)).toList(),
+              ),
             ),
-            // Grid
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: AvatarPool.categories.map((category) {
+                children: _categories.map((category) {
                   return GridView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 5,
@@ -381,22 +604,37 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog>
                       final isSelected = emoji == widget.currentAvatar;
                       return GestureDetector(
                         onTap: () => Navigator.of(context).pop(emoji),
-                        child: Container(
+                        child: AnimatedContainer(
+                          duration: settings.duration(180),
+                          curve: Curves.easeOutCubic,
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? const Color(GameConfig.coral)
                                     .withValues(alpha: 0.15)
-                                : Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(12),
+                                : settings.surface2.withValues(
+                                    alpha: settings.dark ? 0.9 : 0.72),
+                            borderRadius: BorderRadius.circular(18),
                             border: Border.all(
                               color: isSelected
                                   ? const Color(GameConfig.coral)
-                                  : Colors.transparent,
-                              width: 2,
+                                  : Colors.white.withValues(alpha: 0.68),
+                              width: isSelected ? 2 : 1,
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (isSelected
+                                        ? const Color(GameConfig.coral)
+                                        : Colors.black)
+                                    .withValues(
+                                        alpha: isSelected ? 0.18 : 0.05),
+                                blurRadius: isSelected ? 12 : 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
                           child: Center(
-                            child: Text(emoji,
+                            child: Text(
+                              emoji,
                               style: const TextStyle(fontSize: 28),
                             ),
                           ),
@@ -410,6 +648,23 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog>
           ],
         ),
       ),
+    );
+
+    final wrapped = settings.lowPerf
+        ? content
+        : ClipRRect(
+            borderRadius: radius,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+              child: content,
+            ),
+          );
+
+    return Dialog(
+      insetPadding: const EdgeInsets.all(16),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: wrapped,
     );
   }
 }
@@ -435,11 +690,13 @@ class AvatarSelectorTile extends StatelessWidget {
     required this.currentAvatar,
     required this.onChanged,
     this.label = 'Avatar',
+    this.availableAvatars,
   });
 
   final String currentAvatar;
   final ValueChanged<String> onChanged;
   final String label;
+  final List<String>? availableAvatars;
 
   @override
   Widget build(BuildContext context) {
@@ -455,7 +712,8 @@ class AvatarSelectorTile extends StatelessWidget {
           child: Text(currentAvatar, style: const TextStyle(fontSize: 28)),
         ),
       ),
-      title: Text(label,
+      title: Text(
+        label,
         style: const TextStyle(
           fontWeight: FontWeight.w800,
           fontFamily: AppFonts.body,
@@ -466,7 +724,10 @@ class AvatarSelectorTile extends StatelessWidget {
       onTap: () async {
         final selected = await showDialog<String>(
           context: context,
-          builder: (_) => AvatarPickerDialog(currentAvatar: currentAvatar),
+          builder: (_) => AvatarPickerDialog(
+            currentAvatar: currentAvatar,
+            availableAvatars: availableAvatars,
+          ),
         );
         if (selected != null && selected != currentAvatar) {
           onChanged(selected);
