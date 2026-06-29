@@ -2635,6 +2635,8 @@ class GameState extends ChangeNotifier {
     unlockedHats = [];
     adsRemoved = false;
     iapDeliveredTxs = [];
+    adGameCount = 0;
+    lastRewardedAt = 0;
     p = [
       PlayerState(),
       PlayerState(name: 'Player 1', avatar: '🐶'),

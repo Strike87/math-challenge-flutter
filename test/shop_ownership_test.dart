@@ -152,7 +152,8 @@ void main() {
       expect(Storage.getInt('mc_livesBonus', 0), 2);
     });
 
-    test('+100 Coins pack is blocked until rewarded ads exist', () async {
+    test('+100 Coins pack grants nothing when rewarded ad is unavailable',
+        () async {
       final state = await makeState();
       final bonus = GameConfig.shopItems['packs']!
           .firstWhere((item) => item.id == 'pack_coins100');
@@ -161,7 +162,8 @@ void main() {
 
       expect(state.coins, 0);
       expect(Storage.containsKey('mc_dailyCoinsDate'), isFalse);
-      expect(state.toastMessage, 'Rewarded ads are not ready yet');
+      expect(state.toastMessage,
+          'Rewarded ad unavailable. Please try again later.');
     });
 
     test('locked shop avatars stay out of tap-to-change until bought',

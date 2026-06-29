@@ -2273,8 +2273,8 @@ class _ShopGrid extends StatelessWidget {
       itemBuilder: (_, i) {
         final item = items[i];
         final owned = gs.shopOwned.contains(item.id);
-        final dailyBonusClaimed =
-            item.special == 'watch' && gs.isDailyCoinsClaimedToday;
+        final dailyBonusClaimed = item.special == 'watch' &&
+            (gs.adsRemoved || gs.isRewardedAdOnCooldown);
         final canBuy = !((owned && !item.consumable) || dailyBonusClaimed);
         return GestureDetector(
           onTap: canBuy
@@ -2323,7 +2323,7 @@ class _ShopGrid extends StatelessWidget {
                       : (owned && !item.consumable)
                           ? 'Owned'
                           : item.special == 'watch'
-                              ? 'Free Daily'
+                              ? 'Watch Ad'
                               : '${item.price} 🪙',
                   owned: (owned && !item.consumable) || dailyBonusClaimed,
                 ),
@@ -2389,7 +2389,7 @@ class _BuyCoinsPanel extends StatelessWidget {
       child: Column(
         children: [
           _RewardedAdCard(
-            claimed: gs.isDailyCoinsClaimedToday,
+            claimed: gs.adsRemoved || gs.isRewardedAdOnCooldown,
             onTap: () {
               gs.buyShopItem(dailyBonus);
             },
@@ -2520,7 +2520,7 @@ class _RewardedAdCard extends StatelessWidget {
                 child: Column(
                   children: [
                     Text(
-                      claimed ? '✓' : '+10🪙',
+                      claimed ? '✓' : '+100🪙',
                       style: const TextStyle(
                         color: Color(GameConfig.coin),
                         fontWeight: FontWeight.w900,

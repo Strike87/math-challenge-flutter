@@ -102,9 +102,8 @@ void main() {
     });
   });
 
-  group('Rewarded coin bonus placeholder', () {
-    test('does not grant +100 coins until rewarded ads are implemented',
-        () async {
+  group('Rewarded coin bonus', () {
+    test('does not grant +100 coins when rewarded ad is unavailable', () async {
       final state = await makeState();
       final bonus = GameConfig.shopItems['packs']!
           .firstWhere((item) => item.id == 'pack_coins100');
@@ -114,7 +113,8 @@ void main() {
       expect(state.coins, 0);
       expect(state.isDailyCoinsClaimedToday, isFalse);
       expect(Storage.containsKey('mc_dailyCoinsDate'), isFalse);
-      expect(state.toastMessage, 'Rewarded ads are not ready yet');
+      expect(state.toastMessage,
+          'Rewarded ad unavailable. Please try again later.');
     });
   });
 

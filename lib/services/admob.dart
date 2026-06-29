@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class AdMobRequestPolicy {
@@ -152,14 +151,18 @@ class GoogleMobileAdsService implements AdMobService {
 
   @override
   Future<void> initialize() async {
-    await MobileAds.instance.updateRequestConfiguration(
-      RequestConfiguration(
-        tagForChildDirectedTreatment: TagForChildDirectedTreatment.yes,
-        maxAdContentRating: MaxAdContentRating.g,
-      ),
-    );
-    await MobileAds.instance.initialize();
-    _initialized = true;
+    try {
+      await MobileAds.instance.updateRequestConfiguration(
+        RequestConfiguration(
+          tagForChildDirectedTreatment: TagForChildDirectedTreatment.yes,
+          maxAdContentRating: MaxAdContentRating.g,
+        ),
+      );
+      await MobileAds.instance.initialize();
+      _initialized = true;
+    } catch (_) {
+      _initialized = false;
+    }
   }
 
   @override
@@ -179,7 +182,7 @@ class GoogleMobileAdsService implements AdMobService {
   Future<bool> showInterstitial() async {
     if (!_initialized || interstitialAdUnitId.isEmpty) return false;
     final completer = Completer<bool>();
-    await InterstitialAd.load(
+    InterstitialAd.load(
       adUnitId: interstitialAdUnitId,
       request: adRequest,
       adLoadCallback: InterstitialAdLoadCallback(
@@ -209,7 +212,7 @@ class GoogleMobileAdsService implements AdMobService {
   Future<bool> showRewarded() async {
     if (!_initialized || rewardedAdUnitId.isEmpty) return false;
     final completer = Completer<bool>();
-    await RewardedAd.load(
+    RewardedAd.load(
       adUnitId: rewardedAdUnitId,
       request: adRequest,
       rewardedAdLoadCallback: RewardedAdLoadCallback(

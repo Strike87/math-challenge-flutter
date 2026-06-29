@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -6,6 +8,7 @@ import 'game_config.dart';
 import 'services/storage.dart';
 import 'services/settings.dart';
 import 'services/audio.dart';
+import 'services/admob.dart';
 import 'screens/menu_screen.dart';
 import 'screens/numtype_screen.dart';
 import 'screens/config_screen.dart';
@@ -18,11 +21,20 @@ import 'widgets/modals.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Storage.init();
-  runApp(const MathChallengeApp());
+  final adService = GoogleMobileAdsService(
+    bannerAdUnitId: const String.fromEnvironment('ADMOB_BANNER_AD_UNIT_ID'),
+    interstitialAdUnitId:
+        const String.fromEnvironment('ADMOB_INTERSTITIAL_AD_UNIT_ID'),
+    rewardedAdUnitId: const String.fromEnvironment('ADMOB_REWARDED_AD_UNIT_ID'),
+  );
+  unawaited(adService.initialize());
+  runApp(MathChallengeApp(adService: adService));
 }
 
 class MathChallengeApp extends StatelessWidget {
-  const MathChallengeApp({super.key});
+  const MathChallengeApp({super.key, required this.adService});
+
+  final AdMobService adService;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +58,8 @@ class MathChallengeApp extends StatelessWidget {
         ChangeNotifierProvider(create: (ctx) {
           final s = ctx.read<SettingsService>();
           final a = ctx.read<AudioService>();
-          final state = gs.GameState(settings: s, audio: a);
+          final state =
+              gs.GameState(settings: s, audio: a, adService: adService);
           state.load();
           return state;
         }),
