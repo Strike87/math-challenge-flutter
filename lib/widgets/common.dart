@@ -330,18 +330,21 @@ class BigEmojiOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsService>();
+    if (settings.reduceMotion) return const SizedBox.shrink();
+
     return TweenAnimationBuilder<double>(
       key: ValueKey('$emoji-$visible'),
       tween: Tween<double>(
         begin: visible ? 0.5 : 1.15,
         end: visible ? 1.15 : 0.5,
       ),
-      duration: const Duration(milliseconds: 350),
+      duration: settings.duration(350),
       curve: const Cubic(0.2, 0.9, 0.3, 1),
       builder: (context, scale, child) {
         return AnimatedOpacity(
           opacity: visible ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 250),
+          duration: settings.duration(250),
           child: Transform.scale(scale: scale, child: child),
         );
       },

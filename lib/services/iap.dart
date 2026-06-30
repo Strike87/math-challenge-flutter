@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'dart:math';
+
+import 'package:in_app_purchase/in_app_purchase.dart' as store;
 
 enum IapProductKind { consumable, nonConsumable }
 
@@ -166,6 +169,219 @@ class DevIapPurchaseAdapter implements IapPurchaseAdapter {
   Future<List<IapPurchase>> restorePurchases() async {
     _guardNativeRelease();
     return restoredPurchases;
+  }
+}
+
+class NativeIapPurchaseAdapter implements IapPurchaseAdapter {
+  NativeIapPurchaseAdapter({
+    store.InAppPurchase? inAppPurchase,
+    this.restoreWait = const Duration(seconds: 2),
+  }) : _iap = inAppPurchase ?? store.InAppPurchase.instance;
+
+  final store.InAppPurchase _iap;
+  final Duration restoreWait;
+  final Map<String, store.ProductDetails> _products = {};
+  final Map<String, store.PurchaseDetails> _detailsByTx = {};
+  final StreamController<List<IapPurchase>> _purchaseUpdates =
+      StreamController<List<IapPurchase>>.broadcast();
+
+  StreamSubscription<List<store.PurchaseDetails>>? _subscription;
+  Completer<List<IapPurchase>>? _restoreCompleter;
+  Timer? _restoreTimer;
+  List<IapPurchase> _restoreBuffer = [];
+
+  Stream<List<IapPurchase>> get purchaseStream {
+    _ensureListening();
+    return _purchaseUpdates.stream;
+  }
+
+  Future<void> initialize() async {
+    _ensureListening();
+    await _ensureAvailable();
+    await _queryProducts(IapProducts.all.map((p) => p.productId).toSet());
+  }
+
+  Future<void> dispose() async {
+    _restoreTimer?.cancel();
+    await _subscription?.cancel();
+    await _purchaseUpdates.close();
+  }
+
+  @override
+  Future<void> buyProduct(IapProduct product) async {
+    _ensureListening();
+    await _ensureAvailable();
+    final details = await _productDetails(product.productId);
+    final param = store.PurchaseParam(productDetails: details);
+    final started = product.kind == IapProductKind.consumable
+        ? await _iap.buyConsumable(purchaseParam: param)
+        : await _iap.buyNonConsumable(purchaseParam: param);
+    if (!started) {
+      throw const IapException(
+        IapErrorCode.unknown,
+        'Purchase flow did not start',
+      );
+    }
+  }
+
+  @override
+  Future<void> completePurchase(IapPurchase purchase) async {
+    final details = _detailsByTx[purchase.transactionKey];
+    if (details == null || !details.pendingCompletePurchase) return;
+    await _iap.completePurchase(details);
+  }
+
+  @override
+  Future<List<IapPurchase>> restorePurchases() async {
+    _ensureListening();
+    await _ensureAvailable();
+
+    _restoreTimer?.cancel();
+    _restoreBuffer = [];
+    final completer = Completer<List<IapPurchase>>();
+    _restoreCompleter = completer;
+    _restoreTimer = Timer(restoreWait, _finishRestore);
+
+    try {
+      await _iap.restorePurchases();
+    } catch (e) {
+      _restoreTimer?.cancel();
+      _restoreCompleter = null;
+      _restoreBuffer = [];
+      throw _mapException(e);
+    }
+
+    return completer.future;
+  }
+
+  void _ensureListening() {
+    _subscription ??= _iap.purchaseStream.listen(_handleStorePurchases);
+  }
+
+  Future<void> _ensureAvailable() async {
+    if (!await _iap.isAvailable()) {
+      throw const IapUnavailableException();
+    }
+  }
+
+  Future<store.ProductDetails> _productDetails(String productId) async {
+    final cached = _products[productId];
+    if (cached != null) return cached;
+    await _queryProducts({productId});
+    final details = _products[productId];
+    if (details == null) {
+      throw IapException(
+        IapErrorCode.developer,
+        'Missing Play product: $productId',
+      );
+    }
+    return details;
+  }
+
+  Future<void> _queryProducts(Set<String> productIds) async {
+    final response = await _iap.queryProductDetails(productIds);
+    final error = response.error;
+    if (error != null) throw _mapStoreError(error);
+    for (final details in response.productDetails) {
+      _products[details.id] = details;
+    }
+    if (response.notFoundIDs.isNotEmpty) {
+      throw IapException(
+        IapErrorCode.developer,
+        'Missing Play products: ${response.notFoundIDs.join(', ')}',
+      );
+    }
+  }
+
+  void _handleStorePurchases(List<store.PurchaseDetails> detailsList) {
+    final purchases = detailsList.map(_fromStorePurchase).toList();
+    for (var i = 0; i < purchases.length; i++) {
+      _detailsByTx[purchases[i].transactionKey] = detailsList[i];
+    }
+
+    if (_restoreCompleter != null &&
+        detailsList.any((d) => d.status == store.PurchaseStatus.restored)) {
+      _restoreBuffer.addAll(purchases);
+      return;
+    }
+
+    if (purchases.isNotEmpty) _purchaseUpdates.add(purchases);
+  }
+
+  void _finishRestore() {
+    final completer = _restoreCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete(List<IapPurchase>.from(_restoreBuffer));
+    }
+    _restoreCompleter = null;
+    _restoreBuffer = [];
+  }
+
+  IapPurchase _fromStorePurchase(store.PurchaseDetails details) {
+    return IapPurchase(
+      productId: details.productID,
+      status: _mapStatus(details.status),
+      transactionId: details.purchaseID ?? '',
+      purchaseId: details.verificationData.serverVerificationData,
+      purchaseDate: _parsePurchaseDate(details.transactionDate),
+    );
+  }
+
+  IapPurchaseStatus _mapStatus(store.PurchaseStatus status) {
+    switch (status) {
+      case store.PurchaseStatus.purchased:
+      case store.PurchaseStatus.restored:
+        return IapPurchaseStatus.approved;
+      case store.PurchaseStatus.pending:
+        return IapPurchaseStatus.pending;
+      case store.PurchaseStatus.canceled:
+        return IapPurchaseStatus.cancelled;
+      case store.PurchaseStatus.error:
+        return IapPurchaseStatus.failed;
+    }
+  }
+
+  DateTime? _parsePurchaseDate(String? value) {
+    final millis = int.tryParse(value ?? '');
+    if (millis == null) return null;
+    return DateTime.fromMillisecondsSinceEpoch(millis);
+  }
+
+  IapException _mapStoreError(store.IAPError error) {
+    final code = error.code.toLowerCase();
+    if (code.contains('cancel')) {
+      return IapException(IapErrorCode.userCancelled, error.message);
+    }
+    if (code.contains('network') || code.contains('service')) {
+      return IapException(IapErrorCode.network, error.message);
+    }
+    if (code.contains('billing') || code.contains('unavailable')) {
+      return IapException(IapErrorCode.billingUnavailable, error.message);
+    }
+    if (code.contains('developer') ||
+        code.contains('not_found') ||
+        code.contains('notfound')) {
+      return IapException(IapErrorCode.developer, error.message);
+    }
+    return IapException(IapErrorCode.unknown, error.message);
+  }
+
+  IapException _mapException(Object error) {
+    if (error is IapException) return error;
+    if (error is store.InAppPurchaseException) {
+      final code = error.code.toLowerCase();
+      if (code.contains('network') || code.contains('service')) {
+        return IapException(IapErrorCode.network, error.message ?? '$error');
+      }
+      if (code.contains('billing') || code.contains('unavailable')) {
+        return IapException(
+          IapErrorCode.billingUnavailable,
+          error.message ?? '$error',
+        );
+      }
+      return IapException(IapErrorCode.unknown, error.message ?? '$error');
+    }
+    return IapException(IapErrorCode.unknown, '$error');
   }
 }
 

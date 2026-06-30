@@ -14,6 +14,7 @@ class SettingsService extends ChangeNotifier {
   bool _colorblind = false;
   bool _lowPerf = false;
   bool _reduceMotion = false;
+  bool _platformReduceMotion = false;
   double _animSpeed = 1.0;
 
   bool get dark => _dark;
@@ -22,7 +23,8 @@ class SettingsService extends ChangeNotifier {
   bool get dyslexia => _dyslexia;
   bool get colorblind => _colorblind;
   bool get lowPerf => _lowPerf;
-  bool get reduceMotion => _reduceMotion;
+  bool get reduceMotion => _reduceMotion || _platformReduceMotion;
+  bool get manualReduceMotion => _reduceMotion;
   double get animSpeed => _animSpeed;
 
   void load({
@@ -78,7 +80,9 @@ class SettingsService extends ChangeNotifier {
 
   void toggleLowPerf() {
     _lowPerf = !_lowPerf;
+    _animSpeed = _lowPerf ? 0.3 : 1.0;
     unawaited(Storage.setBool('mc_lowPerf', _lowPerf));
+    unawaited(Storage.setDouble('mc_animSpeed', _animSpeed));
     notifyListeners();
   }
 
@@ -91,6 +95,12 @@ class SettingsService extends ChangeNotifier {
   void setAnimSpeed(double v) {
     _animSpeed = v;
     unawaited(Storage.setDouble('mc_animSpeed', _animSpeed));
+    notifyListeners();
+  }
+
+  void setPlatformReduceMotion(bool value) {
+    if (_platformReduceMotion == value) return;
+    _platformReduceMotion = value;
     notifyListeners();
   }
 
@@ -149,10 +159,11 @@ class SettingsService extends ChangeNotifier {
   FontWeight get bodyWeight => _dyslexia ? FontWeight.w600 : FontWeight.w500;
   double get bodyLineHeight => _dyslexia ? 1.6 : 1.4;
 
-  /// Animation duration scales by animSpeed (higher = faster = shorter duration).
+  /// Animation duration scales like the original CSS variable:
+  /// 0.3x is short/fast, 2.0x is long/slow.
   Duration duration(double baseMs) {
-    if (_reduceMotion) return Duration.zero;
-    final scaled = baseMs / _animSpeed;
+    if (reduceMotion) return Duration.zero;
+    final scaled = baseMs * _animSpeed;
     return Duration(milliseconds: scaled.round());
   }
 }

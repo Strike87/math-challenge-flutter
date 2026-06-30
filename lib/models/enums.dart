@@ -131,7 +131,7 @@ enum GameMode {
       case GameMode.death:
         return 'One wrong answer = Game Over!';
       case GameMode.survival:
-        return '3 hearts, endless questions — difficulty rises every 5 correct. Boss appears every 10!';
+        return 'You have 3 hearts — lose one for each wrong answer. Stay alive!';
       case GameMode.combo:
         return 'Build your streak for bigger multipliers';
     }

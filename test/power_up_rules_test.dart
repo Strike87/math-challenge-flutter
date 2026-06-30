@@ -90,6 +90,8 @@ void main() {
 
       final blitzCount = _count(blitz, PowerUp.time);
       final blitzDuration = blitz.rt.timerDurationMs;
+      expect(blitz.isPowerUpBlocked(PowerUp.time), isTrue);
+      expect(blitz.isPowerUpBlocked(PowerUp.freeze), isTrue);
       blitz.usePowerUp(PowerUp.time);
 
       expect(_count(blitz, PowerUp.time), blitzCount);
@@ -103,6 +105,8 @@ void main() {
       combo.startGame();
 
       final comboCount = _count(combo, PowerUp.freeze);
+      expect(combo.isPowerUpBlocked(PowerUp.time), isTrue);
+      expect(combo.isPowerUpBlocked(PowerUp.freeze), isTrue);
       combo.usePowerUp(PowerUp.freeze);
 
       expect(_count(combo, PowerUp.freeze), comboCount);

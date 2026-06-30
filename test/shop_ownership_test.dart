@@ -152,18 +152,20 @@ void main() {
       expect(Storage.getInt('mc_livesBonus', 0), 2);
     });
 
-    test('+100 Coins pack grants nothing when rewarded ad is unavailable',
-        () async {
+    test('+20 Coins daily bonus grants once per day', () async {
       final state = await makeState();
       final bonus = GameConfig.shopItems['packs']!
           .firstWhere((item) => item.id == 'pack_coins100');
 
       await state.buyShopItem(bonus);
 
-      expect(state.coins, 0);
-      expect(Storage.containsKey('mc_dailyCoinsDate'), isFalse);
-      expect(state.toastMessage,
-          'Rewarded ad unavailable. Please try again later.');
+      expect(state.coins, GameState.dailyBonusCoins);
+      expect(state.isDailyCoinsClaimedToday, isTrue);
+
+      await state.buyShopItem(bonus);
+
+      expect(state.coins, GameState.dailyBonusCoins);
+      expect(state.toastMessage, 'Daily bonus already claimed');
     });
 
     test('locked shop avatars stay out of tap-to-change until bought',

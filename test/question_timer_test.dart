@@ -76,6 +76,37 @@ void main() {
       expect(combo.rt.qTimerLimit, GameConfig.comboTimerDefault ~/ 1000);
     });
 
+    test('blitz and combo global timers keep running after an answer',
+        () async {
+      final blitz = await makeState();
+      blitz.players = 1;
+      blitz.mode = GameMode.blitz;
+      blitz.rt.challenge = Operation.addition;
+      blitz.startGame();
+      final blitzTimer = blitz.rt.timer;
+      final blitzDuration = blitz.rt.timerDurationMs;
+
+      blitz.onAnswer(blitz.rt.q!.choices.first);
+
+      expect(blitz.rt.timer, same(blitzTimer));
+      expect(blitz.rt.timer?.isActive, isTrue);
+      expect(blitz.rt.timerDurationMs, blitzDuration);
+
+      final combo = await makeState();
+      combo.players = 1;
+      combo.mode = GameMode.combo;
+      combo.rt.challenge = Operation.addition;
+      combo.startGame();
+      final comboTimer = combo.rt.timer;
+      final comboDuration = combo.rt.timerDurationMs;
+
+      combo.onAnswer(combo.rt.q!.choices.first);
+
+      expect(combo.rt.timer, same(comboTimer));
+      expect(combo.rt.timer?.isActive, isTrue);
+      expect(combo.rt.timerDurationMs, comboDuration);
+    });
+
     test('uses adaptive generated difficulty instead of setup difficulty',
         () async {
       final state = await makeState();

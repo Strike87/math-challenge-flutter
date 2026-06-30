@@ -88,7 +88,7 @@ void main() {
       expect(ads.interstitialShows, 0);
     });
 
-    test('rewarded success grants exactly 100 coins and persists cooldown',
+    test('rewarded success grants exactly 10 coins and persists cooldown',
         () async {
       final ads = _FakeAdMobService(rewardedResult: true);
       final state = await _makeState(adService: ads, nowMillis: 1000000);
@@ -131,7 +131,7 @@ void main() {
       expect(await state.claimRewardedAdCoins(nowMillis: 1000000), isTrue);
       expect(await state.claimRewardedAdCoins(nowMillis: 1100000), isFalse);
       expect(ads.rewardedShows, 1);
-      expect(state.coins, 100);
+      expect(state.coins, GameState.rewardedAdCoins);
 
       final reloaded = await _makeState(
         adService: _FakeAdMobService(rewardedResult: true),
@@ -142,7 +142,7 @@ void main() {
       expect(reloaded.rewardedCooldownRemainingMs(nowMillis: 1100000), 200000);
 
       expect(await reloaded.claimRewardedAdCoins(nowMillis: 1300000), isTrue);
-      expect(reloaded.coins, 200);
+      expect(reloaded.coins, GameState.rewardedAdCoins * 2);
     });
 
     test('adsRemoved disables rewarded ad prompts', () async {

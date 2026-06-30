@@ -178,22 +178,14 @@ class _PlayerSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Quick-pick strip — original 11 emojis + Custom option
+          // Quick-pick strip — unlocked emoji avatars only.
           SizedBox(
             height: 64,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: gs.availableAvatarBases.length + 1,
+              itemCount: gs.availableAvatarBases.length,
               itemBuilder: (_, i) {
-                if (i == 0) {
-                  return _AvatarOption(
-                    avatar: gs.avatarCustom['$pid']!,
-                    selected: pl.avatar is AvatarCustom,
-                    onTap: () => gs.showAvatarBuilder(pid),
-                    isCustom: true,
-                  );
-                }
-                final a = gs.availableAvatarBases[i - 1];
+                final a = gs.availableAvatarBases[i];
                 return _AvatarOption(
                   avatar: a,
                   selected: pl.avatar == a,
@@ -255,12 +247,10 @@ class _AvatarOption extends StatelessWidget {
     required this.avatar,
     required this.selected,
     required this.onTap,
-    this.isCustom = false,
   });
   final Object avatar;
   final bool selected;
   final VoidCallback onTap;
-  final bool isCustom;
 
   @override
   Widget build(BuildContext context) {
@@ -292,17 +282,7 @@ class _AvatarOption extends StatelessWidget {
                 ]
               : null,
         ),
-        child: Stack(
-          children: [
-            Center(child: AvatarWidget(avatar: avatar, size: 40)),
-            if (isCustom)
-              const Positioned(
-                top: 4,
-                right: 4,
-                child: Text('🎨', style: TextStyle(fontSize: 12)),
-              ),
-          ],
-        ),
+        child: Center(child: AvatarWidget(avatar: avatar, size: 40)),
       ),
     );
   }

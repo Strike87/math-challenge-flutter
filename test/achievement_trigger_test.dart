@@ -136,6 +136,30 @@ void main() {
       }
     });
 
+    testWidgets('first_win does not unlock for a zero-correct report game',
+        (tester) async {
+      final state = await makeState();
+      try {
+        state.players = 1;
+        state.mode = GameMode.standard;
+        state.adaptive = false;
+        state.questionCount = 1;
+        state.rt.challenge = Operation.addition;
+        state.startGame();
+        final wrongChoice = state.rt.q!.choices.firstWhere(
+          (choice) => (choice - state.rt.q!.ans).abs() > 1e-9,
+        );
+
+        state.onAnswer(wrongChoice);
+        await tester.pump(const Duration(milliseconds: 1300));
+
+        expect(state.p[1].correct, 0);
+        expect(state.achievements['first_win'], isFalse);
+      } finally {
+        state.dispose();
+      }
+    });
+
     test('daily_grind unlocks after 3 completed daily challenges', () async {
       final state = await makeState();
       try {

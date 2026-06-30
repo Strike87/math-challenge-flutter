@@ -416,7 +416,7 @@ class GameConfig {
       ShopItem(
           id: 'pack_coins100',
           emoji: '💎',
-          name: '+100 Coins\nDaily bonus',
+          name: '+20 Coins\nDaily bonus',
           price: 0,
           special: 'watch'),
       ShopItem(

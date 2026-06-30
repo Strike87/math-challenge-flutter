@@ -9,6 +9,7 @@ import 'services/storage.dart';
 import 'services/settings.dart';
 import 'services/audio.dart';
 import 'services/admob.dart';
+import 'services/iap.dart';
 import 'screens/menu_screen.dart';
 import 'screens/numtype_screen.dart';
 import 'screens/config_screen.dart';
@@ -22,19 +23,34 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Storage.init();
   final adService = GoogleMobileAdsService(
-    bannerAdUnitId: const String.fromEnvironment('ADMOB_BANNER_AD_UNIT_ID'),
-    interstitialAdUnitId:
-        const String.fromEnvironment('ADMOB_INTERSTITIAL_AD_UNIT_ID'),
-    rewardedAdUnitId: const String.fromEnvironment('ADMOB_REWARDED_AD_UNIT_ID'),
+    bannerAdUnitId: const String.fromEnvironment(
+      'ADMOB_BANNER_AD_UNIT_ID',
+      defaultValue: 'ca-app-pub-5674349229505017/1557571975',
+    ),
+    interstitialAdUnitId: const String.fromEnvironment(
+      'ADMOB_INTERSTITIAL_AD_UNIT_ID',
+      defaultValue: 'ca-app-pub-5674349229505017/4131764421',
+    ),
+    rewardedAdUnitId: const String.fromEnvironment(
+      'ADMOB_REWARDED_AD_UNIT_ID',
+      defaultValue: 'ca-app-pub-5674349229505017/9726659855',
+    ),
   );
   unawaited(adService.initialize());
-  runApp(MathChallengeApp(adService: adService));
+  final iapAdapter = NativeIapPurchaseAdapter();
+  unawaited(iapAdapter.initialize().catchError((_) {}));
+  runApp(MathChallengeApp(adService: adService, iapAdapter: iapAdapter));
 }
 
 class MathChallengeApp extends StatelessWidget {
-  const MathChallengeApp({super.key, required this.adService});
+  const MathChallengeApp({
+    super.key,
+    required this.adService,
+    required this.iapAdapter,
+  });
 
   final AdMobService adService;
+  final NativeIapPurchaseAdapter iapAdapter;
 
   @override
   Widget build(BuildContext context) {
@@ -58,8 +74,13 @@ class MathChallengeApp extends StatelessWidget {
         ChangeNotifierProvider(create: (ctx) {
           final s = ctx.read<SettingsService>();
           final a = ctx.read<AudioService>();
-          final state =
-              gs.GameState(settings: s, audio: a, adService: adService);
+          final state = gs.GameState(
+            settings: s,
+            audio: a,
+            adService: adService,
+            iapAdapter: iapAdapter,
+            iapPurchaseStream: iapAdapter.purchaseStream,
+          );
           state.load();
           return state;
         }),
@@ -71,11 +92,42 @@ class MathChallengeApp extends StatelessWidget {
           theme: AppTheme.light(s),
           darkTheme: AppTheme.dark(s),
           themeMode: s.dark ? ThemeMode.dark : ThemeMode.light,
+          builder: (context, child) => _MotionSettingsBridge(
+            settings: s,
+            child: child ?? const SizedBox.shrink(),
+          ),
           home: const _AppShell(),
         ),
       ),
     );
   }
+}
+
+class _MotionSettingsBridge extends StatefulWidget {
+  const _MotionSettingsBridge({
+    required this.settings,
+    required this.child,
+  });
+
+  final SettingsService settings;
+  final Widget child;
+
+  @override
+  State<_MotionSettingsBridge> createState() => _MotionSettingsBridgeState();
+}
+
+class _MotionSettingsBridgeState extends State<_MotionSettingsBridge> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final mq = MediaQuery.of(context);
+    widget.settings.setPlatformReduceMotion(
+      mq.disableAnimations || mq.accessibleNavigation,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class _AppShell extends StatelessWidget {

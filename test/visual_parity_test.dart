@@ -190,6 +190,11 @@ class TestAppShell extends StatelessWidget {
 
 class MockAudioService implements AudioService {
   @override
+  int get debugTonePlayCount => 0;
+  @override
+  int get debugVibrationCount => 0;
+
+  @override
   Future<void> init() async {}
   @override
   Future<void> playTones(List<List<double>> tones) async {}

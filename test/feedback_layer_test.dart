@@ -46,6 +46,8 @@ void main() {
         expect(correct.bigEmojiVisible, isTrue);
         expect(_correctEmojiSet, contains(correct.bigEmoji));
         expect(correct.reactionPill, contains('+'));
+        expect(correct.rt.selectedAnswer, correct.rt.q!.ans);
+        expect(correct.rt.lastAnswerCorrect, isTrue);
         await tester.pump(const Duration(milliseconds: 1300));
       } finally {
         correct.dispose();
@@ -63,9 +65,65 @@ void main() {
         expect(wrong.bigEmojiVisible, isTrue);
         expect(_wrongEmojiSet, contains(wrong.bigEmoji));
         expect(wrong.reactionPill, contains('Ans:'));
+        expect(wrong.rt.selectedAnswer, wrongChoice);
+        expect(wrong.rt.lastAnswerCorrect, isFalse);
         await tester.pump(const Duration(milliseconds: 1300));
       } finally {
         wrong.dispose();
+      }
+    });
+
+    testWidgets(
+        'new games clear cached reaction emoji and stale turn callbacks',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        _startStandard(state);
+        final wrongChoice = state.rt.q!.choices.firstWhere(
+          (choice) => (choice - state.rt.q!.ans).abs() > 1e-9,
+        );
+        state.onAnswer(wrongChoice);
+
+        expect(state.bigEmojiVisible, isTrue);
+        expect(state.reactionPill, isNotEmpty);
+
+        _startStandard(state);
+        expect(state.bigEmojiVisible, isFalse);
+        expect(state.bigEmoji, isEmpty);
+        expect(state.reactionPill, isEmpty);
+
+        await tester.pump(const Duration(milliseconds: 1400));
+        expect(state.rt.gameActive, isTrue);
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('wrong answer shake is gated by reduce motion', (tester) async {
+      final normal = await _makeState(reduceMotion: false);
+      try {
+        _startStandard(normal);
+        final wrongChoice = normal.rt.q!.choices.firstWhere(
+          (choice) => (choice - normal.rt.q!.ans).abs() > 1e-9,
+        );
+        normal.onAnswer(wrongChoice);
+        expect(normal.screenShakeTick, greaterThan(0));
+        await tester.pump(const Duration(milliseconds: 1300));
+      } finally {
+        normal.dispose();
+      }
+
+      final reduced = await _makeState(reduceMotion: true);
+      try {
+        _startStandard(reduced);
+        final wrongChoice = reduced.rt.q!.choices.firstWhere(
+          (choice) => (choice - reduced.rt.q!.ans).abs() > 1e-9,
+        );
+        reduced.onAnswer(wrongChoice);
+        expect(reduced.screenShakeTick, 0);
+        await tester.pump(const Duration(milliseconds: 1300));
+      } finally {
+        reduced.dispose();
       }
     });
 
@@ -229,12 +287,31 @@ void main() {
         state.audio.vibratePowerUp();
 
         expect(audioCalls, 0);
+        expect(state.audio.debugVibrationCount, 0);
         expect(hapticCalls, 0);
       } finally {
         state.dispose();
-        messenger.setMockMethodCallHandler(audioGlobalChannel, (_) async => null);
-        messenger.setMockMethodCallHandler(audioPlayerChannel, (_) async => null);
+        messenger.setMockMethodCallHandler(
+            audioGlobalChannel, (_) async => null);
+        messenger.setMockMethodCallHandler(
+            audioPlayerChannel, (_) async => null);
         messenger.setMockMethodCallHandler(SystemChannels.platform, null);
+      }
+    });
+
+    test('correct and wrong sounds plus haptics fire when toggles are on',
+        () async {
+      final state = await _makeState(sound: true, vibration: true);
+      try {
+        await state.audio.playCorrect();
+        await state.audio.playWrong();
+        state.audio.vibrateCorrect();
+        state.audio.vibrateWrong();
+
+        expect(state.audio.debugTonePlayCount, 2);
+        expect(state.audio.debugVibrationCount, 2);
+      } finally {
+        state.dispose();
       }
     });
 

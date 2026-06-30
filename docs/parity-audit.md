@@ -196,7 +196,7 @@ The original has 13 modal surfaces. Flutter already has matching modal classes, 
 | Hat shop | Crown, Wizard, Top Hat, Halo, Fire, Star. | Partial | Verify exact emoji. Original wizard hat uses `🧙‍♂️`; Flutter may use `🧙`. |
 | Packs tab | Power Pack, daily bonus, extra life. | Partial | UI exists. Behavior incomplete. |
 | Power Pack | Costs 500, gives 5 of each power-up for next game(s). | Missing / Partial | Flutter currently needs persistent bonus behavior matching original. |
-| Daily bonus pack | Watch rewarded ad for +100 coins, daily/cooldown controlled. | Missing / Partial | Flutter currently needs real rewarded ad and daily claim/cooldown behavior. |
+| Daily bonus pack | Free +20 coins once per day, tracked by `mc_dailyCoinsDate`. | Complete / Needs device smoke | Rewarded ads are separate from the daily pack. |
 | Extra life pack | Costs 450, consumable Master life bonus. | Partial | Verify storage and consumption. |
 | Buy coins tab | Original IAP tab has coin products and restore purchases. | Missing | Add real buycoin tab and product cards. |
 | IAP product IDs | `100_coins`, `500_coins`, `1200_coins`, `ads_remove`. | Missing | Add Flutter `in_app_purchase` service with exact IDs and purchase option handling if needed. |
@@ -205,7 +205,7 @@ The original has 13 modal surfaces. Flutter already has matching modal classes, 
 | Restore purchases | Required for remove ads. | Missing | Add button and auto-restore on startup. |
 | AdMob banner | Original shows banner only on number type and player setup. | Missing | Add `google_mobile_ads` and strict screen/modal gating. |
 | AdMob interstitial | Original preloads and shows at safe moments. | Missing | Add service with no-crash no-fill handling. |
-| AdMob rewarded | Original used for daily coin bonus. | Missing | Add rewarded flow before granting +100 coins. |
+| AdMob rewarded | Buy-tab rewarded ad grants +10 coins after reward callback. | Complete / Needs device proof | Local tests cover reward/cooldown/failure; device ad loading remains release QA. |
 | Real ad IDs | Original web project has production IDs. | Missing in Flutter | Add release-safe config, no hardcoded test-only IDs in production. |
 
 ### 12. Avatar Builder, Emoji, And Icons
@@ -401,7 +401,7 @@ Goal: release-grade economy parity.
 
 - Add real buycoin tab.
 - Add `AdService` with banner gating: number type and player setup only.
-- Add rewarded flow for daily +100 coins.
+- Keep daily +20 coin bonus separate from rewarded +10 coin ads.
 - Add interstitial flow with no-fill safety.
 - Add `PurchaseService`.
 - Add product IDs: `100_coins`, `500_coins`, `1200_coins`, `ads_remove`.

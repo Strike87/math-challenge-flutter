@@ -45,6 +45,8 @@ class RuntimeState {
   Question? q;
   String state; // 'idle' | 'playing' | 'paused' | 'ended'
   bool accepting;
+  num? selectedAnswer;
+  bool lastAnswerCorrect;
   bool gameActive;
   int totalTurns;
   int maxTurns;
@@ -75,6 +77,7 @@ class RuntimeState {
   int dailyBossRewardEarned;
   bool dailyBossWon;
   bool frozen;
+  String bossMood;
   bool isFollowUp;
   _FollowUpData? followUpData;
   int lastDailyBossClaimDay;
@@ -85,6 +88,8 @@ class RuntimeState {
         q = null,
         state = 'idle',
         accepting = false,
+        selectedAnswer = null,
+        lastAnswerCorrect = false,
         gameActive = false,
         totalTurns = 0,
         maxTurns = 0,
@@ -115,6 +120,7 @@ class RuntimeState {
         dailyBossRewardEarned = 0,
         dailyBossWon = false,
         frozen = false,
+        bossMood = 'normal',
         isFollowUp = false,
         followUpData = null,
         lastDailyBossClaimDay = -1;
@@ -138,6 +144,7 @@ class GameState extends ChangeNotifier {
     required this.settings,
     required this.audio,
     IapPurchaseAdapter? iapAdapter,
+    Stream<List<IapPurchase>>? iapPurchaseStream,
     AdMobService? adService,
     AdultGateChallenge Function()? adultGateFactory,
     int Function()? nowMillisProvider,
@@ -146,7 +153,13 @@ class GameState extends ChangeNotifier {
         _nowMillis =
             nowMillisProvider ?? (() => DateTime.now().millisecondsSinceEpoch),
         _adultGateFactory =
-            adultGateFactory ?? (() => AdultGateChallenge.random());
+            adultGateFactory ?? (() => AdultGateChallenge.random()) {
+    _iapPurchaseSub = iapPurchaseStream?.listen((purchases) {
+      for (final purchase in purchases) {
+        unawaited(handleIapPurchase(purchase));
+      }
+    });
+  }
 
   static const int _masteryFastMs = 1500;
   static const int _masteryNormalMs = 3000;
@@ -165,7 +178,8 @@ class GameState extends ChangeNotifier {
   static const double _adaptThresholdMedium = 65;
   static const double _adaptThresholdHard = 82;
   static const double _adaptThresholdExpert = 93;
-  static const int rewardedAdCoins = 100;
+  static const int dailyBonusCoins = 20;
+  static const int rewardedAdCoins = 10;
   static const int rewardedCooldownMs = 300000;
   static const int interstitialCadenceGames = 3;
 
@@ -243,6 +257,7 @@ class GameState extends ChangeNotifier {
   final int Function() _nowMillis;
   final QuestionGenerator _qgen = QuestionGenerator();
   final Random _rng = Random();
+  StreamSubscription<List<IapPurchase>>? _iapPurchaseSub;
 
   // Master-mode progression state (kept outside `rt` because it survives
   // stage-clear modal round-trips but is reset on quit).
@@ -306,18 +321,20 @@ class GameState extends ChangeNotifier {
   String reactionPill = '';
   String bigEmoji = '';
   bool bigEmojiVisible = false;
+  int screenShakeTick = 0;
   CelebrationEvent celebration = const CelebrationEvent.none();
   int _celebrationSeq = 0;
   int lastUnlockedAchievementCount = 0;
   List<Achievement> newlyUnlocked = [];
   String resultIcon = '🏆';
-  String resultTitle = 'Great Job!';
+  String resultTitle = 'Player Report';
   String resultDescription = '';
   AdultGateChallenge? adultGateChallenge;
   IapProduct? pendingIapProduct;
   String adultGateError = '';
   bool adultGateBusy = false;
   GameModal _adultGateReturnModal = GameModal.none;
+  int _turnSeq = 0;
 
   MasterLevel? get clearedMasterLevel {
     final idx = _masterLevel - 1;
@@ -380,6 +397,9 @@ class GameState extends ChangeNotifier {
 
   @override
   void dispose() {
+    _turnSeq++;
+    rt.gameActive = false;
+    _iapPurchaseSub?.cancel();
     _toastTimer?.cancel();
     _toastQueue.clear();
     rt.timer?.cancel();
@@ -1060,6 +1080,19 @@ class GameState extends ChangeNotifier {
     return true;
   }
 
+  Future<bool> claimDailyCoinBonus() async {
+    if (isDailyCoinsClaimedToday) {
+      showToast('Daily bonus already claimed');
+      return false;
+    }
+
+    await Storage.setString('mc_dailyCoinsDate', _dailyDateKey());
+    addCoins(dailyBonusCoins, true);
+    await save();
+    showToast('💎 +$dailyBonusCoins🪙 daily bonus');
+    return true;
+  }
+
   Future<void> _hideAdsSafely() async {
     try {
       await adService.hideBanner();
@@ -1227,6 +1260,7 @@ class GameState extends ChangeNotifier {
 
   void startMasterMode() {
     closeModal();
+    _turnSeq++;
     players = 1;
     mode = GameMode.standard;
     adaptive = false;
@@ -1278,6 +1312,11 @@ class GameState extends ChangeNotifier {
       );
     }
     _applyPowerUpBonusIfEligible(isMaster: isMaster, isBoss: isBoss);
+    reactionPill = '';
+    bigEmoji = '';
+    bigEmojiVisible = false;
+    celebration = const CelebrationEvent.none();
+    screenShakeTick = 0;
 
     // Reset runtime
     rt = RuntimeState()
@@ -1438,6 +1477,9 @@ class GameState extends ChangeNotifier {
     );
 
     rt.q = q;
+    rt.selectedAnswer = null;
+    rt.lastAnswerCorrect = false;
+    rt.bossMood = 'normal';
     rt.qStartTs = DateTime.now().millisecondsSinceEpoch;
     rt.accepting = true;
 
@@ -1532,10 +1574,14 @@ class GameState extends ChangeNotifier {
   void _onAnswer(num? val, bool isSkip, bool isTimeout) {
     if (!rt.accepting || rt.state == 'paused') return;
     rt.accepting = false;
-    rt.timer?.cancel();
+    if (mode != GameMode.blitz && mode != GameMode.combo) {
+      rt.timer?.cancel();
+    }
 
     final q = rt.q!;
     final isCorrect = val != null && (val - q.ans).abs() < 1e-9;
+    rt.selectedAnswer = val;
+    rt.lastAnswerCorrect = isCorrect;
     final pid = rt.activePlayer;
     final pl = p[pid];
     final timeTaken = DateTime.now().millisecondsSinceEpoch - rt.qStartTs;
@@ -1580,9 +1626,11 @@ class GameState extends ChangeNotifier {
             .survivalBosses[_rng.nextInt(GameConfig.survivalBosses.length)];
         addCoins(GameConfig.survivalBossReward, true);
         bigEmoji = boss;
+        rt.bossMood = 'defeated';
         reactionPill = '👹 BOSS DOWN! +${GameConfig.survivalBossReward}🪙';
         bigEmojiVisible = true;
         audio.vibratePattern([80, 30, 80, 30, 120]);
+        _shakeScreen(vibrate: false);
         _celebrate(
           CelebrationKind.bossClear,
           emoji: boss,
@@ -1593,6 +1641,7 @@ class GameState extends ChangeNotifier {
       if (newPhase > rt.survivalPhase) {
         rt.survivalPhase = newPhase;
         audio.vibratePattern([60, 30, 60]);
+        _shakeScreen(vibrate: false);
       }
     }
 
@@ -1680,6 +1729,7 @@ class GameState extends ChangeNotifier {
       if (pl.streak == GameConfig.streakThresholds[i]) {
         addCoins(GameConfig.streakCoins[i], true);
         audio.vibratePattern([50, 30, 50]);
+        _shakeScreen(vibrate: false);
         showToast(
             '🔥 Streak ×${[5, 10, 20][i]}! +${GameConfig.streakCoins[i]}🪙');
       }
@@ -1697,6 +1747,11 @@ class GameState extends ChangeNotifier {
     if (!bossDown) {
       reactionPill = '$rx +$pts';
       bigEmoji = rx.split(' ').first;
+    }
+    if (rt.challenge == Operation.master ||
+        rt.challenge == Operation.dailyBoss) {
+      rt.bossMood = 'hit';
+      _shakeScreen();
     }
     bigEmojiVisible = true;
     audio.playCorrect();
@@ -1789,6 +1844,7 @@ class GameState extends ChangeNotifier {
       bigEmoji = '🛡️';
       bigEmojiVisible = true;
       audio.vibrateWrong();
+      _shakeScreen(vibrate: false);
       notifyListeners();
       return;
     }
@@ -1799,6 +1855,7 @@ class GameState extends ChangeNotifier {
       bigEmojiVisible = true;
       audio.playWrong();
       audio.vibrateWrong();
+      _shakeScreen(vibrate: false);
       Timer(const Duration(milliseconds: 600), () => _endGame(false, true));
       notifyListeners();
       return;
@@ -1812,10 +1869,12 @@ class GameState extends ChangeNotifier {
     if (mode == GameMode.survival && !isSkip) {
       rt.survivalLives--;
       bigEmoji = '💔';
+      rt.bossMood = 'hit';
       reactionPill = '💔 Ans: ${rt.q?.ans}';
       bigEmojiVisible = true;
       audio.playWrong();
       audio.vibrateWrong();
+      _shakeScreen(vibrate: false);
       if (rt.survivalLives <= 0) {
         Timer(const Duration(milliseconds: 900), () => _endGame(false, true));
         notifyListeners();
@@ -1824,10 +1883,12 @@ class GameState extends ChangeNotifier {
     } else if (rt.challenge == Operation.dailyBoss && !isSkip) {
       rt.dailyBossLives--;
       bigEmoji = '💔';
+      rt.bossMood = 'hit';
       reactionPill = '💔 Boss hit! Ans: ${rt.q?.ans}';
       bigEmojiVisible = true;
       audio.playWrong();
       audio.vibrateWrong();
+      _shakeScreen(vibrate: false);
       if (rt.dailyBossLives <= 0) {
         Timer(const Duration(milliseconds: 900), () => _endGame(false, true));
         notifyListeners();
@@ -1837,10 +1898,12 @@ class GameState extends ChangeNotifier {
       // Master: lose a life
       _masterLives--;
       bigEmoji = '💔';
+      rt.bossMood = 'hit';
       reactionPill = '$wrongLabel 💔 Ans: ${rt.q?.ans}';
       bigEmojiVisible = true;
       audio.playWrong();
       audio.vibrateWrong();
+      _shakeScreen(vibrate: false);
       if (_masterLives <= 0) {
         Timer(const Duration(milliseconds: 900), () => _endGame(false, true));
         notifyListeners();
@@ -1859,6 +1922,7 @@ class GameState extends ChangeNotifier {
       if (!isTimeout) {
         audio.playWrong();
         audio.vibrateWrong();
+        _shakeScreen(vibrate: false);
       }
       // Follow-up
       if (!isSkip &&
@@ -1873,12 +1937,21 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _shakeScreen({bool vibrate = true}) {
+    if (vibrate) audio.vibratePattern([100, 50, 100]);
+    if (!settings.reduceMotion) screenShakeTick++;
+  }
+
   void _scheduleNextTurn() {
     if (!rt.gameActive) return;
     if (rt.state == 'paused') return;
     final delay = mode == GameMode.blitz || mode == GameMode.combo ? 400 : 1300;
+    final seq = ++_turnSeq;
     Timer(Duration(milliseconds: delay), () {
+      if (seq != _turnSeq || !rt.gameActive) return;
       bigEmojiVisible = false;
+      bigEmoji = '';
+      reactionPill = '';
       _nextTurn();
     });
   }
@@ -1904,8 +1977,7 @@ class GameState extends ChangeNotifier {
       if (highScores.length > 10) highScores = highScores.sublist(0, 10);
     }
 
-    // Original source unlocks this after the first completed game.
-    if (gamesPlayed >= 1) unlockAch('first_win');
+    if (win && p[1].correct > 0) unlockAch('first_win');
     // Perfect score
     final perfect = p[1].total > 0 && p[1].correct == p[1].total;
     if (perfect) {
@@ -1932,27 +2004,25 @@ class GameState extends ChangeNotifier {
     if (win) {
       final isBossWin = rt.dailyBossWon;
       final isMasterWin = rt.challenge == Operation.master;
-      _celebrate(
-        isBossWin
-            ? CelebrationKind.bossClear
-            : perfect
-                ? CelebrationKind.perfect
-                : CelebrationKind.win,
-        emoji: isBossWin
-            ? (rt.dailyBoss?.icon ?? '🐲')
-            : isMasterWin
-                ? '👑'
-                : perfect
-                    ? '💯'
-                    : '🎉',
-        message: isBossWin
-            ? 'Daily Boss defeated!'
-            : isMasterWin
-                ? 'Master Challenge complete!'
-                : perfect
-                    ? 'Perfect score!'
-                    : 'You win!',
-      );
+      if (isBossWin || isMasterWin || perfect) {
+        _celebrate(
+          isBossWin
+              ? CelebrationKind.bossClear
+              : perfect
+                  ? CelebrationKind.perfect
+                  : CelebrationKind.win,
+          emoji: isBossWin
+              ? (rt.dailyBoss?.icon ?? '🐲')
+              : isMasterWin
+                  ? '👑'
+                  : '💯',
+          message: isBossWin
+              ? 'Daily Boss defeated!'
+              : isMasterWin
+                  ? 'Master Challenge complete!'
+                  : 'Perfect score!',
+        );
+      }
     }
 
     save();
@@ -2014,9 +2084,7 @@ class GameState extends ChangeNotifier {
     resultIcon = mode == GameMode.blitz || mode == GameMode.combo ? '⏱️' : '🌟';
     resultTitle = mode == GameMode.blitz || mode == GameMode.combo
         ? "Time's Up!"
-        : win
-            ? 'Great Job!'
-            : 'Game Over';
+        : 'Player Report';
     resultDescription = 'Final Score: ${p1.score}';
   }
 
@@ -2308,6 +2376,8 @@ class GameState extends ChangeNotifier {
     return false;
   }
 
+  bool isPowerUpBlocked(PowerUp pu) => _isPowerUpBlocked(pu);
+
   // ─── Avatar builder ─────────────────────────────────────────
   void showAvatarBuilder(int pid) {
     builderPid = pid;
@@ -2379,7 +2449,7 @@ class GameState extends ChangeNotifier {
   // ─── Coin shop ──────────────────────────────────────────────
   Future<void> buyShopItem(ShopItem item) async {
     if (item.special == 'watch') {
-      await claimRewardedAdCoins();
+      await claimDailyCoinBonus();
       return;
     }
     if (!item.consumable && shopOwned.contains(item.id)) {
@@ -2539,6 +2609,7 @@ class GameState extends ChangeNotifier {
       if (!purchase.isApproved) continue;
       if (purchase.productId != IapProducts.removeAdsId) continue;
       restoredAds = true;
+      unawaited(iapAdapter.completePurchase(purchase).catchError((_) {}));
     }
 
     if (restoredAds) {
@@ -2662,7 +2733,7 @@ class GameState extends ChangeNotifier {
     lastUnlockedAchievementCount = 0;
     newlyUnlocked = [];
     resultIcon = '🏆';
-    resultTitle = 'Great Job!';
+    resultTitle = 'Player Report';
     resultDescription = '';
     adultGateChallenge = null;
     pendingIapProduct = null;

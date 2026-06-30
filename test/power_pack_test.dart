@@ -102,19 +102,21 @@ void main() {
     });
   });
 
-  group('Rewarded coin bonus', () {
-    test('does not grant +100 coins when rewarded ad is unavailable', () async {
+  group('Daily coin bonus', () {
+    test('grants +20 coins once per day', () async {
       final state = await makeState();
       final bonus = GameConfig.shopItems['packs']!
           .firstWhere((item) => item.id == 'pack_coins100');
 
       await state.buyShopItem(bonus);
 
-      expect(state.coins, 0);
-      expect(state.isDailyCoinsClaimedToday, isFalse);
-      expect(Storage.containsKey('mc_dailyCoinsDate'), isFalse);
-      expect(state.toastMessage,
-          'Rewarded ad unavailable. Please try again later.');
+      expect(state.coins, GameState.dailyBonusCoins);
+      expect(state.isDailyCoinsClaimedToday, isTrue);
+
+      await state.buyShopItem(bonus);
+
+      expect(state.coins, GameState.dailyBonusCoins);
+      expect(state.toastMessage, 'Daily bonus already claimed');
     });
   });
 

@@ -457,8 +457,8 @@ a broken debounce in the original).
 ```
 🎒 Power Pack   — 500 coins — CONSUMABLE (can buy repeatedly; grants
                   ×5 of each power-up type per purchase)
-💎 +100 Coins   — FREE (price: 0) — "watch" special type, granted via
-                  watching a rewarded ad, not a coin purchase
+💎 +20 Coins    — FREE (price: 0) — daily bonus, claimed once per
+                  calendar day via `mc_dailyCoinsDate`, not a rewarded ad
 ❤️ Extra Life   — 450 coins — CONSUMABLE (can buy repeatedly; grants
                   +1 life, usable in Master mode)
 ```
@@ -518,6 +518,8 @@ Interstitial ad: shown after every 3 completed games.
                  Counter persisted to storage (survives force-quit/
                  restart) — Fix #88.
 
+Rewarded ad reward: +10 coins after the reward callback.
+
 Rewarded ad cooldown: 5 minutes (300,000 ms) between watches.
                        Timestamp of last watch persisted to storage
                        (survives force-quit/restart) — Fix #89.
@@ -531,64 +533,285 @@ Banner: shown ONLY on the number-type-select and player-setup screens.
 
 ---
 
-## 16. Persisted storage keys (partial list, 34+ confirmed)
+## 16. Accessibility & display settings — exact behavior per toggle
 
-This is every key found via direct grep of `LS.set`/`LS.get` calls in
-the source. When implementing the Flutter port's "Reset All Data"
-function, cross-reference against this list — and re-run the grep
-yourself against the live source before shipping, since this list may
-not be 100% exhaustive (some keys may be referenced via a dynamic/
-constructed string this grep pattern wouldn't catch).
+This section was added/corrected after a discrepancy surfaced between
+this document's original key list and a real test file
+(`persistence_schema_test.dart`) found in the in-progress Flutter port,
+which revealed several keys this document had missed. Each setting
+below was re-extracted directly from source rather than re-guessed.
 
-```
-mc_achs              — unlocked achievement IDs
-mc_adGameCount       — interstitial cadence counter (Fix #88)
-mc_adaptLvl          — integer adaptive difficulty (0-10)
-mc_adsRemoved        — bool, true if ads_remove IAP owned
-mc_animSpeed         — animation speed multiplier setting
-mc_avatarCustom      — player 1 custom avatar config
-mc_avatarCustom1     — (likely player slot variant — confirm exact
-                        purpose against source rather than assuming
-                        from name alone)
-mc_avatarCustom2     — (as above)
-mc_coins             — current coin balance
-mc_colorblind        — bool/mode, colorblind palette setting
-mc_dailyBossClaimed  — date key of last-claimed daily boss reward
-mc_dailyChallenges   — daily challenge progress state
-mc_dailyCoinsDate    — date key for daily coin bonus tracking
-mc_dailyProgress     — daily challenge progress (may overlap with
-                        mc_dailyChallenges — confirm distinct purpose
-                        of each against source before assuming
-                        duplication is a bug)
-mc_dark              — dark mode toggle
-mc_dyslexia          — dyslexia font toggle
-mc_gamesPlayed       — lifetime games-played counter
-mc_iapDeliveredTxs   — set of delivered IAP transaction IDs (dedup)
-mc_lastRewardedAt    — timestamp of last rewarded ad watch (Fix #89)
-mc_livesBonus        — extra lives purchased/granted count
-mc_lowPerf           — low-performance mode toggle
-mc_p2Data            — player 2 name/avatar data (Fix #28, #40 — must
-                        be included in BOTH load-on-startup AND the
-                        reset-all-data wipe list)
-mc_puBonus           — power-up bonus pool per type (object keyed by
-                        time/fifty/double/shield/freeze/switch)
-... (additional keys exist for adaptLvlRaw, sound/vibration toggles,
-    high scores, skill map, shop-owned items, settings not yet
-    individually re-confirmed in this extraction pass — re-grep
-    `LS\.(get|set)\('` against the live source for the complete,
-    current list before finalizing the reset-all-data function)
-```
+### Dark mode
+- Key: `mc_dark` (bool, default `false`)
+- On load: if true, the app sets a dark-theme marker on the root
+  element, which switches the active CSS custom-property set (colors)
+  to the dark variant.
+- Toggling re-writes the key and re-applies the marker immediately —
+  no restart required.
+- In Flutter: this should drive a `ThemeMode`/`ColorScheme` swap, not
+  just a few hardcoded color overrides — preserve full-app coverage.
 
-This list is intentionally marked partial/honest rather than
-presented as exhaustive — re-run the extraction yourself
-(`grep -oE "(LS|Storage)\.(set|get)\('[a-zA-Z_0-9]+'" index.html | sort -u`)
-against the current source before treating any persisted-key list as
-final, since this is exactly the kind of detail that drifts as fixes
-get added over time.
+### Sound
+- Key: `mc_sound` (bool, default `true`)
+- Read once at startup into the in-memory options object; gates every
+  sound-effect call in the game (correct/wrong/win/level-up/etc.).
+- Toggling re-writes the key. No other side effects.
+
+### Vibration
+- Key: `mc_vibration` (bool, default `true`)
+- **Centralized helper pattern (Fix #51)**: all haptic feedback in the
+  app funnels through one helper that checks the vibration setting
+  before triggering the device vibration API — individual call sites
+  never check the setting themselves. In the original there are over a
+  dozen call sites (different patterns/durations for different events:
+  short tap, success pattern, danger/wrong pattern, achievement
+  pattern, etc.) and every one of them goes through that single
+  gatekeeping function.
+- **Port requirement**: replicate the single-gatekeeper pattern, not
+  scattered per-call-site checks — this was explicitly a bug fix, not
+  a style preference. A future settings change (e.g. adding an
+  intensity slider) should only require touching one place.
+
+### Dyslexia-friendly font
+- Key: `mc_dyslexia` (bool, default `false`)
+- When enabled, swaps both the heading font and body font to a
+  dyslexia-friendly typeface, with a fallback chain if that font isn't
+  available.
+- The font is **lazy-loaded** — not bundled/loaded at startup, only
+  fetched the first time the toggle is actually switched on. In a
+  Flutter port this distinction may not matter (fonts are typically
+  bundled as assets rather than fetched over network), but the
+  underlying intent — don't pay the cost of this font for users who
+  never enable it — is worth preserving however Flutter's asset
+  loading makes sense (e.g. lazy asset bundle loading if app size is a
+  concern).
+
+### Colorblind-safe palette
+- Key: `mc_colorblind` (bool, default `false`)
+- When enabled, overrides the core color tokens (the same named tokens
+  documented in `flutter-visual-identity-spec.md` Section 2 — coral,
+  mango, sky, mint, grape, lemon, punch, plus border tones) with a
+  colorblind-safe alternate set, applied globally via the same
+  root-level marker pattern as dark mode.
+- **Important for the port**: this must reach every place those color
+  tokens are used — answer-correct/answer-wrong feedback colors,
+  buttons, badges, charts — not just menu chrome. A prior audit of the
+  in-progress Flutter scaffold found this only reached 3 files
+  (settings/menu/modals) and never touched the actual gameplay screen,
+  which defeats the feature's purpose. Treat full-coverage as the
+  acceptance bar, not just "the toggle exists and does something."
+
+### Reduce motion
+- Key: `mc_reduceMotion` (bool, default `false`) — this is the
+  **manual in-app toggle**, separate from and in addition to checking
+  the OS-level "prefers reduced motion" accessibility setting.
+- Effective state = manual toggle **OR** OS-level setting being active
+  (either one is sufficient to activate reduced motion — the user
+  doesn't have to enable both).
+- **Fix #108 → #170, a real historical bug worth calling out
+  explicitly**: the original reduce-motion check used to test whether
+  the animation-speed value was greater than zero — which is *always*
+  true, so reduced motion silently never activated regardless of the
+  toggle state. The fix changed this to properly check the OS-level
+  media-query state (and the manual toggle) instead. **Do not
+  reintroduce an always-true condition here** — this is exactly the
+  kind of bug that looks like a working feature (the toggle visually
+  flips, settings persist) while doing nothing functionally.
+- When active: skip celebratory effects (e.g. confetti) entirely, and
+  run any JS-side cleanup synchronously rather than animated, so the
+  visual state settles immediately instead of transitioning.
+
+### Animation speed
+- Key: `mc_animSpeed` (float, range 0.3–2.0, default depends on device)
+- **Default is itself adaptive**: if the device reports 4 or fewer
+  logical CPU cores, default to `0.3` (fastest/shortest animations);
+  otherwise default to `1.0` (normal speed). This is a one-time
+  decision made at first load based on device capability, not
+  re-evaluated continuously.
+- Exposed as a user-adjustable slider, range 0.3 to 2.0 in steps of
+  0.1 — so a user can manually choose anywhere from "very fast/short
+  animations" to "double-length animations," independent of the
+  device-capability default.
+- This value is read as a global multiplier wherever animation/timeout
+  durations are calculated throughout the app (e.g. a toast that
+  normally stays visible for some base duration gets that duration
+  divided or scaled by this multiplier) — so changing it has app-wide
+  reach, not just one screen.
+- **Relationship to performance mode**: enabling performance mode (see
+  below) force-sets this value to `0.3` as one of its effects; turning
+  performance mode back off resets it to `1.0`. They are linked but
+  distinct settings — performance mode is the "do several things at
+  once for a low-end device" switch, and animation speed is one of the
+  several things it adjusts (alongside whatever rendering-cost
+  reductions performance mode also applies, e.g. disabling expensive
+  blur/transparency effects — see Section 9 of
+  `flutter-visual-identity-spec.md` for the blur-disable behavior tied
+  to low-performance/low-transparency conditions).
+
+### Performance / low-power mode
+- Key: `mc_lowPerf` (bool)
+- Like animation speed, has a device-capability-based default
+  (detected at first load) but is also independently user-toggleable
+  afterward.
+- Toggling it directly drives the animation-speed value as described
+  above (`0.3` when on, `1.0` when off) and toggles a root-level
+  performance marker that the CSS reduced-effects rules key off of.
+- **This is the single most important accessibility/performance gap to
+  get right in the port**: a prior audit of the in-progress Flutter
+  scaffold found this toggle existing in the settings UI but having
+  zero effect anywhere else in the codebase — described in that
+  audit as "cosmetic only." For genuine parity, this toggle must
+  actually reduce real rendering cost (fewer/cheaper particle effects,
+  disabled blur, shorter animations via the linked animation-speed
+  change) — not just persist a value nobody reads.
+
+### Reset All Data
+A single destructive action that clears every key the app considers
+"its own" (explicitly NOT a blanket storage-clear, specifically to
+avoid wiping unrelated platform/plugin data that happens to share the
+same storage namespace — the original source has an explicit comment
+warning against using a global clear for this reason).
+
+The wipe list, by category:
+- **Progress/economy**: high scores, achievements, games-played count,
+  adaptive difficulty level, per-skill mastery map, coin balance
+- **Settings covered in this section**: sound, dark mode, vibration,
+  dyslexia font, colorblind palette, animation speed, performance mode
+- **Cosmetics/ownership**: shop-owned items, unlocked avatars,
+  unlocked hats, both players' custom avatar configs
+- **Power-up/bonus state**: power-up bonus pool, bonus lives count
+- **Daily systems**: daily challenge progress (both the progress-state
+  key and a related date-tracking key — see the open question below),
+  daily coin bonus date, daily boss claimed date
+- **Player identity**: both player 1 and player 2's saved name/avatar
+  data
+- **Streak tracking**: login streak count, last streak day
+- **Unlock-gating**: number-type unlock flags (the integers/rationals
+  unlock state specifically tracked as separate keys from the general
+  unlock flag)
+- **Ads/IAP runtime state**: ads-removed ownership flag, low-perf
+  flag (also listed under settings above — it's gameplay-adjacent
+  enough to have been added to the wipe list separately, after being
+  initially missed), last-rewarded-ad timestamp, interstitial cadence
+  counter, delivered-IAP-transaction dedup set
+
+**Two real historical bugs are directly relevant to building this list
+correctly, and both are the same class of mistake — a key gets
+introduced for a new feature, but the reset function isn't updated to
+include it, so old data survives a reset the user explicitly asked
+for:**
+- One: a per-player data key was being saved correctly but had been
+  left out of the wipe list, so that player's data silently survived
+  a full reset.
+- Two, later: four more keys (covering performance mode, rewarded-ad
+  cooldown, interstitial cadence, and IAP transaction dedup) were
+  found missing from the wipe list during a later hardening pass and
+  added together.
+
+**Port requirement**: when implementing Reset All Data in Flutter,
+don't hand-maintain this list from memory or from this document alone
+— structurally tie it to wherever keys are actually written (e.g. a
+single registry/enum of all persisted keys that both the
+read/write helpers AND the reset function consume), so a future new
+feature can't introduce the same bug a third time by simply forgetting
+a manual list update.
+
+**Open question flagged, not resolved, by this extraction pass**: two
+of the daily-related keys (the general daily-progress key and a
+challenge-specific progress key) may represent overlapping or
+distinct concerns — this document does not have a confirmed answer on
+whether that's intentional separation of concerns or a naming
+redundancy, and that should be confirmed against current source before
+assuming either interpretation when implementing the daily-challenge
+system in Flutter.
 
 ---
 
-## 17. How this document relates to the other two
+## 17. Persisted storage keys (corrected, ~40+ confirmed)
+
+**Correction note**: this document originally listed 34 keys from a
+narrower grep pattern and explicitly flagged two keys as unconfirmed
+guesses. A broader re-extraction plus cross-reference against a real
+test file in the in-progress Flutter port revealed the actual pattern:
+avatar customization is **not** two separately fixed-named keys per
+player — it's a per-player-indexed key (player 1 has the base key with
+no suffix, additional player slots are indexed), and the same broader
+pass surfaced roughly a dozen keys this document had missed entirely
+(notably player 1's data key, both unlocked-cosmetics keys, the
+number-type unlock key, both streak-tracking keys, shop ownership, the
+skill-mastery map, and — somewhat ironically — the sound and vibration
+keys themselves). The list below supersedes the one in earlier
+versions of this document.
+
+```
+mc_achs                 — unlocked achievement IDs
+mc_adGameCount           — interstitial cadence counter (Fix #88)
+mc_adaptLvl              — integer adaptive difficulty (0-10)
+mc_adsRemoved            — bool, true if ads_remove IAP owned
+mc_animSpeed             — animation speed multiplier (see Section 16)
+mc_avatarCustom          — player 1 custom avatar config
+mc_avatarCustom1/2/...   — additional player slots, indexed (NOT two
+                            independently-named fixed keys — confirm
+                            the indexing scheme against source if
+                            supporting more than 2 players ever becomes
+                            relevant)
+mc_coins                 — current coin balance
+mc_colorblind            — colorblind palette toggle (see Section 16)
+mc_dailyBossClaimed      — date key of last-claimed daily boss reward
+mc_dailyChallenges       — daily challenge progress state
+mc_dailyCoinsDate        — date key for daily coin bonus tracking
+mc_dailyProgress         — daily challenge progress (relationship to
+                            mc_dailyChallenges not yet fully confirmed
+                            — see open question in Section 16)
+mc_dark                  — dark mode toggle (see Section 16)
+mc_dyslexia              — dyslexia font toggle (see Section 16)
+mc_gamesPlayed           — lifetime games-played counter
+mc_iapDeliveredTxs       — set of delivered IAP transaction IDs (dedup)
+mc_lastRewardedAt        — timestamp of last rewarded ad watch (Fix #89)
+mc_livesBonus            — extra lives purchased/granted count
+mc_loginStreak           — consecutive-day login streak count
+mc_lowPerf               — performance mode toggle (see Section 16)
+mc_numTypeUnlocked       — general number-type unlock gating flag
+mc_p1Data                — player 1 name/avatar data
+mc_p2Data                — player 2 name/avatar data (Fix #28, #40 —
+                            must be included in BOTH load-on-startup
+                            AND the reset-all-data wipe list)
+mc_puBonus               — power-up bonus pool per type (object keyed
+                            by time/fifty/double/shield/freeze/switch)
+mc_reduceMotion          — manual reduce-motion toggle (see Section 16)
+mc_shopOwned             — set/map of purchased shop item IDs
+mc_skills                — per-operation mastery map (see Section 8)
+mc_sound                 — sound effects toggle (see Section 16)
+mc_streakLastDay         — date key of last login-streak day, used to
+                            detect streak continuation vs. reset
+mc_unlockedAvatars       — avatars unlocked via shop purchase
+mc_unlockedHats          — hats unlocked via shop purchase
+mc_unlocked_integers     — Integers number-type specifically unlocked
+mc_unlocked_rationals    — Rationals number-type specifically unlocked
+mc_vibration             — vibration toggle (see Section 16)
+```
+
+Additionally, a small number of **IAP runtime-state keys** exist that
+are NOT settings and should NOT be part of a typical mental model of
+"user data," but ARE real persisted keys worth knowing about if
+debugging purchase flow state: keys tracking the last-fetched product
+price (for display before a purchase completes), whether a purchase
+was approved pending delivery, whether receipts have finished loading
+on this session, and restore-purchase receipt state. These are
+transient/operational rather than user-facing settings or progress,
+and would not typically belong in a "Reset All Data" wipe list the
+same way the keys above do — confirm against source whether the
+original treats them as such before assuming either inclusion or
+exclusion is correct.
+
+This list is still presented as a confirmed-by-re-extraction snapshot,
+not a guaranteed-permanent one — re-run the extraction yourself against
+the live source before finalizing a Flutter persistence layer, since
+new keys get added as the original app evolves.
+
+---
+
+## 18. How this document relates to the other two
 
 - **`flutter-visual-identity-spec.md`** — colors, fonts, border-radius,
   shadows, animation curves. Use for ANY UI/visual decision.
