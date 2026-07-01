@@ -335,14 +335,16 @@ void main() {
 
         expect(find.text('Coin Shop'), findsOneWidget);
         expect(find.text('0 coins'), findsOneWidget);
-        for (final label in ['Avatars', 'Hats', 'Packs', 'Buy']) {
+        for (final label in ['Items', 'Boosts', 'Coins']) {
           expect(find.text(label), findsOneWidget);
         }
+        expect(find.text('AVATARS'), findsOneWidget);
+        expect(find.text('HATS'), findsOneWidget);
         expect(find.text('Dragon'), findsOneWidget);
         expect(find.text('Robot'), findsOneWidget);
 
-        await tester.ensureVisible(find.text('Buy'));
-        await tester.tap(find.text('Buy'));
+        await tester.ensureVisible(find.text('Coins'));
+        await tester.tap(find.text('Coins'));
         await tester.pumpAndSettle();
 
         expect(find.text('Watch a Short Ad'), findsOneWidget);

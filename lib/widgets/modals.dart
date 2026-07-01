@@ -2369,52 +2369,34 @@ class CoinShopModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double gridHeight =
-        (MediaQuery.of(context).size.height * 0.54).clamp(380.0, 470.0);
     final s = context.watch<SettingsService>();
+    final bodyHeight =
+        (MediaQuery.of(context).size.height * 0.58).clamp(410.0, 520.0);
     return ModalShell(
-      icon: '🛒',
+      icon: '🛍️',
       title: 'Coin Shop',
-      maxHeight: 700,
+      maxHeight: 720,
       actions: [
         NeoButton(
             label: 'Done', color: GameConfig.coral, onPressed: gs.closeModal),
       ],
       child: DefaultTabController(
-        length: 4,
+        length: 3,
         child: Builder(
           builder: (context) {
             final controller = DefaultTabController.of(context);
             return Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('🪙 ', style: TextStyle(fontSize: 18)),
-                      Text(
-                        '${gs.coins} coins',
-                        style: TextStyle(
-                          color: const Color(GameConfig.mango),
-                          fontFamily: AppFonts.head,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _ShopBalancePill(coins: gs.coins, s: s),
+                const SizedBox(height: 12),
                 _ShopTabBar(controller: controller, s: s),
                 const SizedBox(height: 12),
                 SizedBox(
-                  height: gridHeight,
+                  height: bodyHeight,
                   child: TabBarView(
                     children: [
-                      _ShopGrid(
-                          items: GameConfig.shopItems['avatars']!, gs: gs),
-                      _ShopGrid(items: GameConfig.shopItems['hats']!, gs: gs),
-                      _ShopPackList(
+                      _ShopItemsPanel(gs: gs),
+                      _ShopBoostsPanel(
                           items: GameConfig.shopItems['packs']!, gs: gs),
                       _BuyCoinsPanel(gs: gs),
                     ],
@@ -2424,6 +2406,48 @@ class CoinShopModal extends StatelessWidget {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _ShopBalancePill extends StatelessWidget {
+  const _ShopBalancePill({required this.coins, required this.s});
+
+  final int coins;
+  final SettingsService s;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(GameConfig.coin)
+            .withValues(alpha: s.dark ? 0.14 : 0.16),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(GameConfig.coin).withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('🪙', style: TextStyle(fontSize: 22)),
+          const SizedBox(width: 8),
+          Text(
+            '$coins coins',
+            maxLines: 1,
+            softWrap: false,
+            style: const TextStyle(
+              color: Color(GameConfig.mango),
+              fontFamily: AppFonts.head,
+              fontSize: 21,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2441,13 +2465,11 @@ class _ShopTabBar extends StatelessWidget {
       builder: (context, child) {
         return Row(
           children: [
-            _buildTab(0, '🐾', 'Avatars'),
-            const SizedBox(width: 4),
-            _buildTab(1, '🎩', 'Hats'),
-            const SizedBox(width: 4),
-            _buildTab(2, '⚡', 'Packs'),
-            const SizedBox(width: 4),
-            _buildTab(3, '💳', 'Buy'),
+            _buildTab(0, '🐾', 'Items'),
+            const SizedBox(width: 8),
+            _buildTab(1, '⚡', 'Boosts'),
+            const SizedBox(width: 8),
+            _buildTab(2, '💳', 'Coins'),
           ],
         );
       },
@@ -2460,8 +2482,8 @@ class _ShopTabBar extends StatelessWidget {
       child: GestureDetector(
         onTap: () => controller.animateTo(index),
         child: Container(
-          height: 68,
-          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
+          height: 58,
+          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
           decoration: BoxDecoration(
             gradient: active
                 ? const LinearGradient(
@@ -2500,19 +2522,19 @@ class _ShopTabBar extends StatelessWidget {
           ),
           child: FittedBox(
             fit: BoxFit.scaleDown,
-            child: Column(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(icon, style: const TextStyle(fontSize: 16)),
-                const SizedBox(height: 2),
+                const SizedBox(width: 6),
                 Text(
                   label,
                   maxLines: 1,
                   softWrap: false,
                   style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
                     color: active
                         ? Colors.white
                         : (s.dark
@@ -2530,197 +2552,254 @@ class _ShopTabBar extends StatelessWidget {
   }
 }
 
-class _ShopGrid extends StatelessWidget {
-  const _ShopGrid({required this.items, required this.gs});
+class _ShopItemsPanel extends StatelessWidget {
+  const _ShopItemsPanel({required this.gs});
+
+  final GameState gs;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(2, 2, 2, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ShopSectionTitle('Avatars'),
+          _ShopItemGrid(items: GameConfig.shopItems['avatars']!, gs: gs),
+          const SizedBox(height: 16),
+          _ShopSectionTitle('Hats'),
+          _ShopItemGrid(items: GameConfig.shopItems['hats']!, gs: gs),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShopSectionTitle extends StatelessWidget {
+  const _ShopSectionTitle(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 4, 6, 8),
+      child: Text(
+        title.toUpperCase(),
+        maxLines: 1,
+        softWrap: false,
+        style: TextStyle(
+          color: s.muted,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 2,
+          fontFamily: AppFonts.head,
+        ),
+      ),
+    );
+  }
+}
+
+class _ShopItemGrid extends StatelessWidget {
+  const _ShopItemGrid({required this.items, required this.gs});
   final List<ShopItem> items;
   final GameState gs;
 
   @override
   Widget build(BuildContext context) {
-    final s = context.watch<SettingsService>();
-    return GridView.builder(
-      padding: const EdgeInsets.all(8),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        childAspectRatio: 1.12,
-      ),
-      itemCount: items.length,
-      itemBuilder: (_, i) {
-        final item = items[i];
-        final owned = gs.shopOwned.contains(item.id);
-        final dailyBonusClaimed =
-            item.special == 'watch' && gs.isDailyCoinsClaimedToday;
-        final canAfford = item.special == 'watch' || gs.coins >= item.price;
-        final canBuy =
-            !((owned && !item.consumable) || dailyBonusClaimed) && canAfford;
-        return GestureDetector(
-          onTap: canBuy
-              ? () {
-                  gs.buyShopItem(item);
-                }
-              : null,
-          child: Opacity(
-            opacity: canBuy || owned ? 1 : 0.45,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-              decoration: BoxDecoration(
-                color: s.surface2.withValues(alpha: s.dark ? 0.90 : 0.72),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                    color: const Color(GameConfig.coral).withValues(alpha: 0.3),
-                    width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.07),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 430 ? 3 : 2;
+        final spacing = 10.0;
+        final cardWidth =
+            (constraints.maxWidth - spacing * (columns - 1)) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final item in items)
+              SizedBox(
+                width: cardWidth,
+                height: 150,
+                child: _ShopItemCard(item: item, gs: gs),
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(item.emoji, style: const TextStyle(fontSize: 32)),
-                  const SizedBox(height: 5),
-                  Text(
-                    item.name.replaceAll('\n', ' '),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: s.text,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      fontFamily: AppFonts.head,
-                      height: 1.0,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  _ShopPricePill(
-                    text: dailyBonusClaimed
-                        ? 'Claimed'
-                        : (owned && !item.consumable)
-                            ? 'Owned'
-                            : item.special == 'watch'
-                                ? 'Free Daily'
-                                : '🪙 ${item.price}',
-                    owned: (owned && !item.consumable) || dailyBonusClaimed,
-                  ),
-                ],
-              ),
-            ),
-          ),
+          ],
         );
       },
     );
   }
 }
 
-class _ShopPackList extends StatelessWidget {
-  const _ShopPackList({required this.items, required this.gs});
-  final List<ShopItem> items;
+class _ShopItemCard extends StatelessWidget {
+  const _ShopItemCard({required this.item, required this.gs});
+
+  final ShopItem item;
   final GameState gs;
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
+    final owned = gs.shopOwned.contains(item.id);
+    final canAfford = gs.coins >= item.price;
+    final canBuy = !(owned && !item.consumable) && canAfford;
+    return GestureDetector(
+      onTap: canBuy ? () => gs.buyShopItem(item) : null,
+      child: Opacity(
+        opacity: canBuy || owned ? 1 : 0.48,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: _shopCardDecoration(s),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(item.emoji, style: const TextStyle(fontSize: 34)),
+              const SizedBox(height: 8),
+              Text(
+                item.name.replaceAll('\n', ' '),
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: s.text,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  fontFamily: AppFonts.head,
+                ),
+              ),
+              const SizedBox(height: 10),
+              _ShopPricePill(
+                text: owned && !item.consumable ? 'Owned' : '🪙 ${item.price}',
+                owned: owned && !item.consumable,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ShopBoostsPanel extends StatelessWidget {
+  const _ShopBoostsPanel({required this.items, required this.gs});
+  final List<ShopItem> items;
+  final GameState gs;
+
+  @override
+  Widget build(BuildContext context) {
     return ListView.separated(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.fromLTRB(2, 2, 2, 10),
       itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (_, i) {
         final item = items[i];
-        final parts = item.name.split('\n');
-        final owned = gs.shopOwned.contains(item.id);
-        final dailyBonusClaimed =
-            item.special == 'watch' && gs.isDailyCoinsClaimedToday;
-        final canAfford = item.special == 'watch' || gs.coins >= item.price;
-        final canBuy =
-            !((owned && !item.consumable) || dailyBonusClaimed) && canAfford;
-        return GestureDetector(
-          onTap: canBuy ? () => gs.buyShopItem(item) : null,
-          child: Opacity(
-            opacity: canBuy || owned ? 1 : 0.45,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              decoration: BoxDecoration(
-                color: s.surface2.withValues(alpha: s.dark ? 0.90 : 0.72),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: const Color(GameConfig.coral).withValues(alpha: 0.25),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 48,
-                    child: Center(
-                      child: item.id == 'pack_lives'
-                          ? const Icon(Icons.favorite_rounded,
-                              color: Color(GameConfig.coral), size: 34)
-                          : Text(item.emoji,
-                              style: const TextStyle(fontSize: 34)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          parts.first,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: s.text,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            fontFamily: AppFonts.head,
-                          ),
-                        ),
-                        if (parts.length > 1) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            parts.skip(1).join(' '),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: s.muted,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  _ShopPricePill(
-                    text: dailyBonusClaimed
-                        ? 'Claimed'
-                        : (owned && !item.consumable)
-                            ? 'Owned'
-                            : item.special == 'watch'
-                                ? 'Free Daily'
-                                : '🪙 ${item.price}',
-                    owned: (owned && !item.consumable) || dailyBonusClaimed,
-                  ),
-                ],
-              ),
-            ),
-          ),
+        return _ShopActionRow(
+          item: item,
+          gs: gs,
+          onTap: () => gs.buyShopItem(item),
         );
       },
+    );
+  }
+}
+
+class _ShopActionRow extends StatelessWidget {
+  const _ShopActionRow(
+      {required this.item, required this.gs, required this.onTap});
+
+  final ShopItem item;
+  final GameState gs;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final parts = item.name.split('\n');
+    final owned = gs.shopOwned.contains(item.id);
+    final dailyBonusClaimed =
+        item.special == 'watch' && gs.isDailyCoinsClaimedToday;
+    final canAfford = item.special == 'watch' || gs.coins >= item.price;
+    final canBuy =
+        !((owned && !item.consumable) || dailyBonusClaimed) && canAfford;
+    final priceText = dailyBonusClaimed
+        ? 'Claimed'
+        : (owned && !item.consumable)
+            ? 'Owned'
+            : item.special == 'watch'
+                ? 'Free'
+                : '🪙 ${item.price}';
+
+    return GestureDetector(
+      onTap: canBuy ? onTap : null,
+      child: Opacity(
+        opacity: canBuy || owned || dailyBonusClaimed ? 1 : 0.48,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 96),
+          padding: const EdgeInsets.all(14),
+          decoration: _shopCardDecoration(s),
+          child: Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: s.dark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.white.withValues(alpha: 0.70),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: item.id == 'pack_lives'
+                      ? const Icon(Icons.favorite_rounded,
+                          color: Color(GameConfig.coral), size: 32)
+                      : Text(item.emoji, style: const TextStyle(fontSize: 32)),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      parts.first,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: s.text,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: AppFonts.head,
+                      ),
+                    ),
+                    if (parts.length > 1) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        parts.skip(1).join(' '),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: s.muted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              _ShopPricePill(
+                text: priceText,
+                owned: (owned && !item.consumable) || dailyBonusClaimed,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -2734,8 +2813,8 @@ class _ShopPricePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 26),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      constraints: const BoxConstraints(minHeight: 30, minWidth: 74),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         gradient: owned
             ? null
@@ -2754,7 +2833,7 @@ class _ShopPricePill extends StatelessWidget {
           softWrap: false,
           style: TextStyle(
             color: owned ? const Color(GameConfig.mint) : Colors.white,
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: FontWeight.w900,
             fontFamily: AppFonts.head,
           ),
@@ -2772,7 +2851,7 @@ class _BuyCoinsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.fromLTRB(2, 2, 2, 10),
       child: Column(
         children: [
           _RewardedAdCard(
@@ -2781,7 +2860,7 @@ class _BuyCoinsPanel extends StatelessWidget {
               gs.claimRewardedAdCoins();
             },
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _IapCard(
             key: const Key('iapProduct_100_coins'),
             icon: '🪙',
@@ -2796,8 +2875,6 @@ class _BuyCoinsPanel extends StatelessWidget {
             title: '500 Coins',
             subtitle: '+50 bonus coins!',
             price: r'$3.99',
-            popular: true,
-            borderColor: const Color(GameConfig.mango),
             onTap: () => gs.beginIapPurchase(IapProducts.medium),
           ),
           _IapCard(
@@ -2806,7 +2883,6 @@ class _BuyCoinsPanel extends StatelessWidget {
             title: '1200 Coins',
             subtitle: '+200 bonus coins!',
             price: r'$7.99',
-            borderColor: const Color(GameConfig.textLight),
             onTap: () => gs.beginIapPurchase(IapProducts.large),
           ),
           _IapCard(
@@ -2860,32 +2936,38 @@ class _RewardedAdCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Text('🎬', style: TextStyle(fontSize: 42)),
-              const SizedBox(width: 12),
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Center(
+                  child: Text('🎬', style: TextStyle(fontSize: 34)),
+                ),
+              ),
+              const SizedBox(width: 14),
               const Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        'Watch a Short Ad',
-                        maxLines: 1,
-                        softWrap: false,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontFamily: AppFonts.head,
-                          fontSize: 18,
-                          height: 1,
-                        ),
+                    Text(
+                      'Watch a Short Ad',
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: AppFonts.head,
+                        fontSize: 18,
+                        height: 1,
                       ),
                     ),
                     SizedBox(height: 4),
                     Text(
                       'Free coins',
-                      textAlign: TextAlign.center,
                       style: TextStyle(color: Color(0xFFD7D1EA), fontSize: 12),
                     ),
                   ],
@@ -2936,8 +3018,6 @@ class _IapCard extends StatelessWidget {
     required this.subtitle,
     required this.price,
     required this.onTap,
-    this.borderColor,
-    this.popular = false,
   });
 
   final String icon;
@@ -2945,151 +3025,125 @@ class _IapCard extends StatelessWidget {
   final String subtitle;
   final String price;
   final VoidCallback onTap;
-  final Color? borderColor;
-  final bool popular;
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-    final border = borderColor ?? Colors.white;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: EdgeInsets.fromLTRB(12, popular ? 16 : 10, 12, 10),
-        decoration: BoxDecoration(
-          color: popular
-              ? const Color(0xFFFFFBF0).withValues(alpha: s.dark ? 0.76 : 1)
-              : s.surface2.withValues(alpha: s.dark ? 0.9 : 0.74),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: border, width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.07),
-              blurRadius: 14,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: _shopCardDecoration(s),
+        child: Row(
           children: [
-            Padding(
-              padding: EdgeInsets.zero,
-              child: Row(
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                color: s.dark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.white.withValues(alpha: 0.70),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Center(
+                child: Text(icon, style: const TextStyle(fontSize: 34)),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: 54,
-                    child: Center(
-                      child: Text(icon, style: const TextStyle(fontSize: 38)),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: s.text,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: AppFonts.head,
+                      fontSize: 18,
+                      height: 1.0,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            title,
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            softWrap: false,
-                            style: TextStyle(
-                              color: s.text,
-                              fontWeight: FontWeight.w900,
-                              fontFamily: AppFonts.head,
-                              fontSize: 18,
-                              height: 1.0,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            subtitle,
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            softWrap: false,
-                            style: const TextStyle(
-                              color: Color(GameConfig.mint),
-                              fontWeight: FontWeight.w800,
-                              fontSize: 12,
-                              height: 1.05,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Container(
-                    constraints: const BoxConstraints(minWidth: 74),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(GameConfig.mango),
-                          Color(0xFFFF6B2A),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(GameConfig.mango)
-                              .withValues(alpha: 0.22),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      price,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(GameConfig.textLight),
-                        fontWeight: FontWeight.w900,
-                        fontFamily: AppFonts.head,
-                        fontSize: 16,
-                      ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(GameConfig.mint),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      height: 1.15,
                     ),
                   ),
                 ],
               ),
             ),
-            if (popular)
-              Positioned(
-                right: 0,
-                top: -10,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(GameConfig.coral),
-                    borderRadius: BorderRadius.circular(99),
+            const SizedBox(width: 12),
+            Container(
+              constraints: const BoxConstraints(minWidth: 80),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(GameConfig.mango),
+                    Color(0xFFFF6B2A),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color:
+                        const Color(GameConfig.mango).withValues(alpha: 0.22),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                  child: const Text(
-                    '⭐ BEST VALUE',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      fontFamily: AppFonts.head,
-                    ),
-                  ),
+                ],
+              ),
+              child: Text(
+                price,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(GameConfig.textLight),
+                  fontWeight: FontWeight.w900,
+                  fontFamily: AppFonts.head,
+                  fontSize: 16,
                 ),
               ),
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+BoxDecoration _shopCardDecoration(SettingsService s) {
+  return BoxDecoration(
+    color: s.surface2.withValues(alpha: s.dark ? 0.90 : 0.76),
+    borderRadius: BorderRadius.circular(20),
+    border: Border.all(
+      color: s.dark
+          ? Colors.white.withValues(alpha: 0.10)
+          : Colors.white.withValues(alpha: 0.84),
+      width: 1.4,
+    ),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: 0.07),
+        blurRadius: 16,
+        offset: const Offset(0, 5),
+      ),
+    ],
+  );
 }
 
 class AdultGateModal extends StatefulWidget {

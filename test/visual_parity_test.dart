@@ -491,10 +491,9 @@ void main() {
           TestAppWrapper(state: state, child: const TestAppShell()));
       await tester.pumpAndSettle();
       expect(find.text('Coin Shop'), findsOneWidget);
-      expect(find.text('Avatars'), findsOneWidget);
-      expect(find.text('Hats'), findsOneWidget);
-      expect(find.text('Packs'), findsOneWidget);
-      expect(find.text('Buy'), findsOneWidget);
+      expect(find.text('Items'), findsOneWidget);
+      expect(find.text('Boosts'), findsOneWidget);
+      expect(find.text('Coins'), findsOneWidget);
       expect(find.byType(SingleChildScrollView), findsWidgets);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),

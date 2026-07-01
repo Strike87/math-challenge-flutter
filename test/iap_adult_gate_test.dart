@@ -39,7 +39,7 @@ void main() {
         state.showModal(GameModal.coinShop);
         await tester.pumpWidget(_modalHost(state));
         await tester.pump();
-        await tester.tap(find.text('Buy'));
+        await tester.tap(find.text('Coins'));
         await tester.pumpAndSettle();
         final productCard = find.byKey(Key('iapProduct_${product.productId}'));
         await tester.ensureVisible(productCard);
