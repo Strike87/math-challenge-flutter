@@ -33,7 +33,8 @@ void main() {
   });
 
   group('RT-030 modal behavioral content parity', () {
-    testWidgets('Daily Boss modal mirrors source mission, rules, reward, status',
+    testWidgets(
+        'Daily Boss modal mirrors source mission, rules, reward, status',
         (tester) async {
       final state = await _makeState();
       try {
@@ -77,7 +78,8 @@ void main() {
         await tester.pump();
 
         expect(find.text('Reward claimed today'), findsOneWidget);
-        expect(find.text('Cleared today. Replay for practice.'), findsOneWidget);
+        expect(
+            find.text('Cleared today. Replay for practice.'), findsOneWidget);
         expect(find.text("Fight Today's Boss"), findsOneWidget);
       } finally {
         state.dispose();
@@ -320,7 +322,7 @@ void main() {
         expect(find.text('500 Coins'), findsOneWidget);
         expect(find.text('1200 Coins'), findsOneWidget);
         expect(find.text('Remove Ads'), findsOneWidget);
-        expect(find.text('Restore Purchases'), findsOneWidget);
+        expect(find.text('Restore Purchases'), findsNothing);
         expect(
           find.textContaining('Payments processed securely via Google Play.'),
           findsOneWidget,

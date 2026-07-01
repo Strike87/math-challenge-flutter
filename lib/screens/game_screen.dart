@@ -21,7 +21,6 @@ class _GameScreenState extends State<GameScreen> {
     final gs = context.watch<GameState>();
     final s = context.watch<SettingsService>();
     final rt = gs.rt;
-    final pl = gs.p[rt.activePlayer];
 
     return SafeArea(
       child: _ScreenShake(
@@ -73,7 +72,7 @@ class _GameScreenState extends State<GameScreen> {
                 if (gs.mode == GameMode.combo) _ComboMeter(gs: gs, s: s),
 
                 // Power-up HUD
-                if (pl.pups.isNotEmpty && gs.players == 1)
+                if (_shouldShowPowerUpHud(gs))
                   _PowerUpHud(gs: gs, pid: rt.activePlayer, s: s),
 
                 // Question card
@@ -702,9 +701,10 @@ class _BossCircleState extends State<_BossCircle>
 
     final gs = widget.gs;
     final isMaster = gs.rt.challenge == Operation.master;
-    final icon = isMaster
+    final normalIcon = isMaster
         ? (gs.currentMasterLevel?.boss ?? '🦍')
         : (gs.rt.dailyBoss?.icon ?? gs.dailyBoss?.icon ?? '🐲');
+    final icon = gs.rt.bossMood == 'wrong' ? '👾' : normalIcon;
     final circle = Container(
         width: 60,
         height: 60,
@@ -732,12 +732,18 @@ class _BossCircleState extends State<_BossCircle>
       child: TweenAnimationBuilder<double>(
         key: ValueKey(
             '${gs.rt.bossMood}-${gs.rt.totalTurns}-${gs.rt.selectedAnswer}'),
-        tween: Tween(begin: 0, end: gs.rt.bossMood == 'hit' ? 1 : 0),
+        tween: Tween(
+            begin: 0,
+            end:
+                (gs.rt.bossMood == 'hit' || gs.rt.bossMood == 'wrong') ? 1 : 0),
         duration: s.duration(450),
         curve: Curves.easeOut,
         child: circle,
         builder: (_, t, child) {
-          if (!effectsEnabled || gs.rt.bossMood != 'hit') return child!;
+          if (!effectsEnabled ||
+              (gs.rt.bossMood != 'hit' && gs.rt.bossMood != 'wrong')) {
+            return child!;
+          }
           final dx = math.sin(t * math.pi * 8) * (1 - t) * 8;
           final rot = math.sin(t * math.pi * 8) * (1 - t) * 0.08;
           return Transform.translate(
@@ -861,10 +867,13 @@ class _PlayerCard extends StatelessWidget {
                               children: activePowerUps
                                   .map(
                                     (icon) => Padding(
-                                      padding: const EdgeInsets.only(right: 3),
-                                      child: Text(
-                                        icon,
-                                        style: const TextStyle(fontSize: 13),
+                                      padding: const EdgeInsets.only(right: 4),
+                                      child: _ActivePlayerPowerUpIcon(
+                                        icon: icon,
+                                        s: s,
+                                        color: icon == '🛡️'
+                                            ? const Color(GameConfig.mint)
+                                            : const Color(GameConfig.mango),
                                       ),
                                     ),
                                   )
@@ -879,6 +888,38 @@ class _PlayerCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ActivePlayerPowerUpIcon extends StatelessWidget {
+  const _ActivePlayerPowerUpIcon({
+    required this.icon,
+    required this.s,
+    required this.color,
+  });
+
+  final String icon;
+  final SettingsService s;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return _ActivePowerUpGlow(
+      active: true,
+      s: s,
+      color: color,
+      child: Container(
+        width: 22,
+        height: 22,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          shape: BoxShape.circle,
+          border: Border.all(color: color.withValues(alpha: 0.55)),
+        ),
+        child: Text(icon, style: const TextStyle(fontSize: 13, height: 1)),
       ),
     );
   }
@@ -1071,13 +1112,12 @@ class _PowerUpHud extends StatelessWidget {
     for (final pu in pl.pups) {
       counts[pu] = (counts[pu] ?? 0) + 1;
     }
-    final powerUps =
-        PowerUp.values.where((pu) => (counts[pu] ?? 0) > 0).toList();
+    final powerUps = PowerUp.values;
 
     return Container(
-      height: 76,
+      height: 72,
       margin: const EdgeInsets.fromLTRB(12, 2, 12, 10),
-      padding: const EdgeInsets.fromLTRB(8, 11, 8, 8),
+      padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
       decoration: BoxDecoration(
         color: s.surface.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(24),
@@ -1090,94 +1130,165 @@ class _PowerUpHud extends StatelessWidget {
           ),
         ],
       ),
-      child: ListView.separated(
-        clipBehavior: Clip.none,
-        scrollDirection: Axis.horizontal,
-        itemCount: powerUps.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (_, i) {
-          final pu = powerUps[i];
-          final count = counts[pu] ?? 0;
-          final disabled = !gs.rt.accepting || gs.isPowerUpBlocked(pu);
-          final color = _powerUpColor(pu);
-          return GestureDetector(
-            onTap: disabled ? null : () => gs.usePowerUp(pu),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Opacity(
-                  opacity: disabled ? 0.42 : 1,
-                  child: Container(
-                    width: 80,
-                    height: 54,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.64),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: color.withValues(alpha: 0.36),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.15),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          _powerUpShortLabel(pu),
-                          maxLines: 1,
-                          softWrap: false,
-                          style: TextStyle(
-                            color: color,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 16,
-                            fontFamily: AppFonts.head,
+      child: Row(
+        children: [
+          for (var i = 0; i < powerUps.length; i++) ...[
+            Expanded(
+              child: Builder(builder: (_) {
+                final pu = powerUps[i];
+                final count = counts[pu] ?? 0;
+                final active = (pu == PowerUp.shield && pl.shieldActive) ||
+                    (pu == PowerUp.double && pl.doubleActive);
+                final disabled = active ||
+                    !gs.rt.accepting ||
+                    count == 0 ||
+                    gs.isPowerUpBlocked(pu);
+                final color = _powerUpColor(pu);
+                final tile = GestureDetector(
+                  onTap: disabled ? null : () => gs.usePowerUp(pu),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Opacity(
+                        opacity: active ? 1 : (disabled ? 0.42 : 1),
+                        child: Container(
+                          height: 52,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.64),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color:
+                                  color.withValues(alpha: active ? 0.95 : 0.36),
+                              width: active ? 2 : 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: color.withValues(
+                                    alpha: active ? 0.32 : 0.15),
+                                blurRadius: active ? 16 : 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                _powerUpShortLabel(pu),
+                                maxLines: 1,
+                                softWrap: false,
+                                style: TextStyle(
+                                  color: color,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16,
+                                  fontFamily: AppFonts.head,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: -4,
-                  top: -7,
-                  child: Container(
-                    width: 24,
-                    height: 24,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: const Color(GameConfig.punch),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(GameConfig.punch)
-                              .withValues(alpha: 0.28),
-                          blurRadius: 8,
+                      Positioned(
+                        right: -3,
+                        top: -7,
+                        child: Container(
+                          width: 22,
+                          height: 22,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: const Color(GameConfig.punch),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(GameConfig.punch)
+                                    .withValues(alpha: 0.28),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            '$count',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
-                    child: Text(
-                      '$count',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
+                      ),
+                    ],
+                  ),
+                );
+                return _ActivePowerUpGlow(
+                    active: active, s: s, color: color, child: tile);
+              }),
+            ),
+            if (i != powerUps.length - 1) const SizedBox(width: 4),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+bool _shouldShowPowerUpHud(GameState gs) {
+  if (gs.players != 1) return false;
+  if (gs.rt.challenge == Operation.master ||
+      gs.rt.challenge == Operation.dailyBoss) {
+    return false;
+  }
+  final pl = gs.p[gs.rt.activePlayer];
+  return pl.pups.isNotEmpty ||
+      pl.shieldActive ||
+      pl.doubleActive ||
+      gs.rt.frozen;
+}
+
+class _ActivePowerUpGlow extends StatelessWidget {
+  const _ActivePowerUpGlow({
+    required this.active,
+    required this.s,
+    required this.color,
+    required this.child,
+  });
+
+  final bool active;
+  final SettingsService s;
+  final Color color;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectsEnabled = !s.reduceMotion && !s.lowPerf;
+    return _WarningPulse(
+      active: active,
+      effectsEnabled: active && effectsEnabled,
+      duration: s.duration(700),
+      builder: (_, opacity) {
+        final glowOpacity = active ? 0.16 + (opacity * 0.24) : 0.0;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            if (active)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Opacity(
+                    opacity: glowOpacity,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(18),
                       ),
                     ),
                   ),
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+              ),
+            child,
+          ],
+        );
+      },
     );
   }
 }

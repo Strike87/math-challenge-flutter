@@ -260,7 +260,7 @@ void main() {
       expect(find.text('MATH'), findsOneWidget);
       expect(find.text('CHALLENGE'), findsOneWidget);
       expect(find.text('BOSS BATTLE EDITION'), findsOneWidget);
-      expect(find.byIcon(Icons.calendar_today), findsOneWidget);
+      expect(find.text('${DateTime.now().day}'), findsWidgets);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/01_menu_phone_light.png'));

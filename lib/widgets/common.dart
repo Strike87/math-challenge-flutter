@@ -34,7 +34,8 @@ class NeoButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = Color(color);
+    final settings = context.watch<SettingsService>();
+    final c = settings.accent(color);
     if (outlined) {
       return _PressableScale(
         onPressed: onPressed,
@@ -344,7 +345,7 @@ class BigEmojiOverlay extends StatelessWidget {
       builder: (context, scale, child) {
         return AnimatedOpacity(
           opacity: visible ? 1.0 : 0.0,
-          duration: settings.duration(250),
+          duration: settings.duration(350),
           child: Transform.scale(scale: scale, child: child),
         );
       },

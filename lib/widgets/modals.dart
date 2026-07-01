@@ -249,44 +249,7 @@ class SettingsModal extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _section('Accessibility', s),
-            _CheckTile(
-                label: 'Dyslexia-friendly font',
-                value: s.dyslexia,
-                onChanged: (_) => s.toggleDyslexia()),
-            _CheckTile(
-                label: 'Color-blind safe palette',
-                value: s.colorblind,
-                onChanged: (_) => s.toggleColorblind()),
-            _CheckTile(
-                label: 'Performance mode (faster on all devices)',
-                value: s.lowPerf,
-                onChanged: (_) => s.toggleLowPerf()),
-            _CheckTile(
-                label: 'Reduce motion',
-                value: s.manualReduceMotion,
-                onChanged: (_) => s.toggleReduceMotion()),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                children: [
-                  const Text('Anim speed:'),
-                  Expanded(
-                    child: Slider(
-                      min: 0.3,
-                      max: 2.0,
-                      divisions: 17,
-                      value: s.animSpeed,
-                      activeColor: const Color(GameConfig.coral),
-                      onChanged: s.setAnimSpeed,
-                    ),
-                  ),
-                  Text(
-                    '${s.animSpeed.toStringAsFixed(1)}x',
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ],
-              ),
-            ),
+            _AccessibilityPanel(s: s),
             const SizedBox(height: 16),
             _section('More', s),
             NeoButton(
@@ -308,6 +271,15 @@ class SettingsModal extends StatelessWidget {
                 gs.closeModal();
               },
             ),
+            const SizedBox(height: 8),
+            NeoButton(
+              label: 'Restore Purchases',
+              outlined: true,
+              color: GameConfig.sky,
+              onPressed: () {
+                gs.restorePurchases();
+              },
+            ),
           ],
         ),
       ),
@@ -325,6 +297,67 @@ class SettingsModal extends StatelessWidget {
           fontWeight: FontWeight.w800,
           letterSpacing: 1.2,
         ),
+      ),
+    );
+  }
+}
+
+class _AccessibilityPanel extends StatelessWidget {
+  const _AccessibilityPanel({required this.s});
+
+  final SettingsService s;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+      decoration: BoxDecoration(
+        color: s.surface2.withValues(alpha: s.dark ? 0.84 : 0.56),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.74)),
+      ),
+      child: Column(
+        children: [
+          _CheckTile(
+              label: 'Dyslexia-friendly font',
+              value: s.dyslexia,
+              onChanged: (_) => s.toggleDyslexia()),
+          _CheckTile(
+              label: 'Color-blind safe palette',
+              value: s.colorblind,
+              onChanged: (_) => s.toggleColorblind()),
+          _CheckTile(
+              label: 'Performance mode',
+              detail: '(faster on all devices)',
+              value: s.lowPerf,
+              onChanged: (_) => s.toggleLowPerf()),
+          _CheckTile(
+              label: 'Reduce motion',
+              value: s.manualReduceMotion,
+              onChanged: (_) => s.toggleReduceMotion()),
+          Row(
+            children: [
+              const Text(
+                'Anim speed:',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              Expanded(
+                child: Slider(
+                  min: 0.3,
+                  max: 2.0,
+                  divisions: 17,
+                  value: s.animSpeed,
+                  activeColor: s.accent(GameConfig.coral),
+                  onChanged: s.setAnimSpeed,
+                ),
+              ),
+              Text(
+                '${s.animSpeed.toStringAsFixed(1)}x',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -546,27 +579,50 @@ class _TrioBtn extends StatelessWidget {
 
 class _CheckTile extends StatelessWidget {
   const _CheckTile(
-      {required this.label, required this.value, required this.onChanged});
+      {required this.label,
+      required this.value,
+      required this.onChanged,
+      this.detail});
   final String label;
+  final String? detail;
   final bool value;
   final void Function(bool) onChanged;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          Switch.adaptive(
+          Checkbox(
             value: value,
-            activeThumbColor: const Color(GameConfig.coral),
-            onChanged: onChanged,
+            activeColor: const Color(GameConfig.coral),
+            visualDensity: VisualDensity.compact,
+            onChanged: (v) => onChanged(v ?? false),
+          ),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(
+                  color: context.watch<SettingsService>().text,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: AppFonts.body,
+                ),
+                children: [
+                  TextSpan(text: label),
+                  if (detail != null) ...[
+                    const TextSpan(text: '  '),
+                    TextSpan(
+                      text: detail,
+                      style: TextStyle(
+                        color: context.watch<SettingsService>().muted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -907,18 +963,41 @@ class WinModal extends StatelessWidget {
               '🎉 Achievements Unlocked!',
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
-            ...gs.newlyUnlocked.map((a) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(a.icon, style: const TextStyle(fontSize: 20)),
-                      const SizedBox(width: 8),
-                      Text(a.name,
-                          style: const TextStyle(fontWeight: FontWeight.w700)),
-                    ],
-                  ),
-                )),
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(GameConfig.coin).withValues(alpha: 0.13),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: const Color(GameConfig.coin).withValues(alpha: 0.35),
+                ),
+              ),
+              child: Column(
+                children: gs.newlyUnlocked
+                    .map(
+                      (a) => Container(
+                        margin: const EdgeInsets.symmetric(vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.72),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(
+                          '${a.icon} ${a.name}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
           ],
         ],
       ),
@@ -2282,10 +2361,10 @@ class _ShopGrid extends StatelessWidget {
     return GridView.builder(
       padding: const EdgeInsets.all(8),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
+        crossAxisCount: 2,
         mainAxisSpacing: 8,
         crossAxisSpacing: 8,
-        childAspectRatio: 0.70,
+        childAspectRatio: 1.12,
       ),
       itemCount: items.length,
       itemBuilder: (_, i) {
@@ -2293,59 +2372,64 @@ class _ShopGrid extends StatelessWidget {
         final owned = gs.shopOwned.contains(item.id);
         final dailyBonusClaimed =
             item.special == 'watch' && gs.isDailyCoinsClaimedToday;
-        final canBuy = !((owned && !item.consumable) || dailyBonusClaimed);
+        final canAfford = item.special == 'watch' || gs.coins >= item.price;
+        final canBuy =
+            !((owned && !item.consumable) || dailyBonusClaimed) && canAfford;
         return GestureDetector(
           onTap: canBuy
               ? () {
                   gs.buyShopItem(item);
                 }
               : null,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-            decoration: BoxDecoration(
-              color: s.surface2.withValues(alpha: s.dark ? 0.90 : 0.72),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                  color: const Color(GameConfig.coral).withValues(alpha: 0.3),
-                  width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.07),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(item.emoji, style: const TextStyle(fontSize: 28)),
-                const SizedBox(height: 4),
-                Text(
-                  item.name.replaceAll('\n', ' '),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: s.text,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    fontFamily: AppFonts.head,
-                    height: 1.0,
+          child: Opacity(
+            opacity: canBuy || owned ? 1 : 0.45,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              decoration: BoxDecoration(
+                color: s.surface2.withValues(alpha: s.dark ? 0.90 : 0.72),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                    color: const Color(GameConfig.coral).withValues(alpha: 0.3),
+                    width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.07),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                _ShopPricePill(
-                  text: dailyBonusClaimed
-                      ? 'Claimed'
-                      : (owned && !item.consumable)
-                          ? 'Owned'
-                          : item.special == 'watch'
-                              ? 'Free Daily'
-                              : '${item.price} 🪙',
-                  owned: (owned && !item.consumable) || dailyBonusClaimed,
-                ),
-              ],
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(item.emoji, style: const TextStyle(fontSize: 32)),
+                  const SizedBox(height: 5),
+                  Text(
+                    item.name.replaceAll('\n', ' '),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: s.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: AppFonts.head,
+                      height: 1.0,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  _ShopPricePill(
+                    text: dailyBonusClaimed
+                        ? 'Claimed'
+                        : (owned && !item.consumable)
+                            ? 'Owned'
+                            : item.special == 'watch'
+                                ? 'Free Daily'
+                                : '🪙 ${item.price}',
+                    owned: (owned && !item.consumable) || dailyBonusClaimed,
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -2372,82 +2456,87 @@ class _ShopPackList extends StatelessWidget {
         final owned = gs.shopOwned.contains(item.id);
         final dailyBonusClaimed =
             item.special == 'watch' && gs.isDailyCoinsClaimedToday;
-        final canBuy = !((owned && !item.consumable) || dailyBonusClaimed);
+        final canAfford = item.special == 'watch' || gs.coins >= item.price;
+        final canBuy =
+            !((owned && !item.consumable) || dailyBonusClaimed) && canAfford;
         return GestureDetector(
           onTap: canBuy ? () => gs.buyShopItem(item) : null,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            decoration: BoxDecoration(
-              color: s.surface2.withValues(alpha: s.dark ? 0.90 : 0.72),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: const Color(GameConfig.coral).withValues(alpha: 0.25),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
+          child: Opacity(
+            opacity: canBuy || owned ? 1 : 0.45,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                color: s.surface2.withValues(alpha: s.dark ? 0.90 : 0.72),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: const Color(GameConfig.coral).withValues(alpha: 0.25),
+                  width: 1.5,
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 48,
-                  child: Center(
-                    child: item.id == 'pack_lives'
-                        ? const Icon(Icons.favorite_rounded,
-                            color: Color(GameConfig.coral), size: 34)
-                        : Text(item.emoji,
-                            style: const TextStyle(fontSize: 34)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        parts.first,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: s.text,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          fontFamily: AppFonts.head,
-                        ),
-                      ),
-                      if (parts.length > 1) ...[
-                        const SizedBox(height: 2),
+                ],
+              ),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 48,
+                    child: Center(
+                      child: item.id == 'pack_lives'
+                          ? const Icon(Icons.favorite_rounded,
+                              color: Color(GameConfig.coral), size: 34)
+                          : Text(item.emoji,
+                              style: const TextStyle(fontSize: 34)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          parts.skip(1).join(' '),
-                          maxLines: 2,
+                          parts.first,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: s.muted,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                            color: s.text,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            fontFamily: AppFonts.head,
                           ),
                         ),
+                        if (parts.length > 1) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            parts.skip(1).join(' '),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: s.muted,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                _ShopPricePill(
-                  text: dailyBonusClaimed
-                      ? 'Claimed'
-                      : (owned && !item.consumable)
-                          ? 'Owned'
-                          : item.special == 'watch'
-                              ? 'Free Daily'
-                              : '${item.price} 🪙',
-                  owned: (owned && !item.consumable) || dailyBonusClaimed,
-                ),
-              ],
+                  const SizedBox(width: 10),
+                  _ShopPricePill(
+                    text: dailyBonusClaimed
+                        ? 'Claimed'
+                        : (owned && !item.consumable)
+                            ? 'Owned'
+                            : item.special == 'watch'
+                                ? 'Free Daily'
+                                : '🪙 ${item.price}',
+                    owned: (owned && !item.consumable) || dailyBonusClaimed,
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -2527,8 +2616,8 @@ class _BuyCoinsPanel extends StatelessWidget {
             title: '500 Coins',
             subtitle: '+50 bonus coins!',
             price: r'$3.99',
-            badge: '⭐ Best Value',
-            highlighted: true,
+            popular: true,
+            borderColor: const Color(GameConfig.mango),
             onTap: () => gs.beginIapPurchase(IapProducts.medium),
           ),
           _IapCard(
@@ -2548,16 +2637,6 @@ class _BuyCoinsPanel extends StatelessWidget {
                 gs.adsRemoved ? 'Already active' : 'Forever, one-time purchase',
             price: gs.adsRemoved ? 'Owned' : r'$1.99',
             onTap: () => gs.beginIapPurchase(IapProducts.removeAds),
-          ),
-          TextButton(
-            onPressed: gs.restorePurchases,
-            child: const Text(
-              'Restore Purchases',
-              style: TextStyle(
-                decoration: TextDecoration.underline,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
           ),
           const Text(
             'Payments processed securely via Google Play.',
@@ -2625,7 +2704,7 @@ class _RewardedAdCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Free coins — no purchase needed',
+                      'Free coins',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Color(0xFFD7D1EA), fontSize: 12),
                     ),
@@ -2677,9 +2756,8 @@ class _IapCard extends StatelessWidget {
     required this.subtitle,
     required this.price,
     required this.onTap,
-    this.badge,
-    this.highlighted = false,
     this.borderColor,
+    this.popular = false,
   });
 
   final String icon;
@@ -2687,27 +2765,25 @@ class _IapCard extends StatelessWidget {
   final String subtitle;
   final String price;
   final VoidCallback onTap;
-  final String? badge;
-  final bool highlighted;
   final Color? borderColor;
+  final bool popular;
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-    final border = borderColor ??
-        (highlighted ? const Color(GameConfig.mango) : Colors.white);
+    final border = borderColor ?? Colors.white;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
         margin: const EdgeInsets.only(bottom: 8),
-        padding: EdgeInsets.fromLTRB(12, badge == null ? 10 : 16, 12, 10),
+        padding: EdgeInsets.fromLTRB(12, popular ? 16 : 10, 12, 10),
         decoration: BoxDecoration(
-          color: highlighted
-              ? const Color(GameConfig.lemon).withValues(alpha: 0.12)
+          color: popular
+              ? const Color(0xFFFFFBF0).withValues(alpha: s.dark ? 0.76 : 1)
               : s.surface2.withValues(alpha: s.dark ? 0.9 : 0.74),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: border, width: highlighted ? 2 : 1.5),
+          border: Border.all(color: border, width: 1.5),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.07),
@@ -2719,29 +2795,8 @@ class _IapCard extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            if (badge != null)
-              Positioned(
-                right: 4,
-                top: -8,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(GameConfig.coral),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    badge!.toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ),
             Padding(
-              padding: EdgeInsets.only(top: badge == null ? 0 : 12),
+              padding: EdgeInsets.zero,
               child: Row(
                 children: [
                   SizedBox(
@@ -2828,6 +2883,28 @@ class _IapCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (popular)
+              Positioned(
+                right: 0,
+                top: -10,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(GameConfig.coral),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: const Text(
+                    '⭐ BEST VALUE',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: AppFonts.head,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

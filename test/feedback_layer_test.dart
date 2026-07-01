@@ -48,7 +48,13 @@ void main() {
         expect(correct.reactionPill, contains('+'));
         expect(correct.rt.selectedAnswer, correct.rt.q!.ans);
         expect(correct.rt.lastAnswerCorrect, isTrue);
-        await tester.pump(const Duration(milliseconds: 1300));
+        await tester.pump(const Duration(milliseconds: 899));
+        expect(correct.bigEmojiVisible, isTrue);
+        await tester.pump(const Duration(milliseconds: 1));
+        expect(correct.bigEmojiVisible, isFalse);
+        expect(correct.reactionPill, isNotEmpty);
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(correct.reactionPill, isEmpty);
       } finally {
         correct.dispose();
       }
@@ -67,7 +73,9 @@ void main() {
         expect(wrong.reactionPill, contains('Ans:'));
         expect(wrong.rt.selectedAnswer, wrongChoice);
         expect(wrong.rt.lastAnswerCorrect, isFalse);
-        await tester.pump(const Duration(milliseconds: 1300));
+        await tester.pump(const Duration(milliseconds: 900));
+        expect(wrong.bigEmojiVisible, isFalse);
+        await tester.pump(const Duration(milliseconds: 400));
       } finally {
         wrong.dispose();
       }
@@ -96,6 +104,39 @@ void main() {
         expect(state.rt.gameActive, isTrue);
       } finally {
         state.dispose();
+      }
+    });
+
+    test('master and daily boss wrong answers switch boss mood', () async {
+      final master = await _makeState();
+      try {
+        master.debugSetMasterStage(0);
+        master.startGame();
+        final wrongChoice = master.rt.q!.choices.firstWhere(
+          (choice) => (choice - master.rt.q!.ans).abs() > 1e-9,
+        );
+
+        master.onAnswer(wrongChoice);
+
+        expect(master.rt.bossMood, 'wrong');
+      } finally {
+        master.dispose();
+      }
+
+      final daily = await _makeState();
+      try {
+        daily.dailyBoss = GameConfig.dailyBosses.first;
+        daily.startDailyBoss();
+        daily.startGame();
+        final wrongChoice = daily.rt.q!.choices.firstWhere(
+          (choice) => (choice - daily.rt.q!.ans).abs() > 1e-9,
+        );
+
+        daily.onAnswer(wrongChoice);
+
+        expect(daily.rt.bossMood, 'wrong');
+      } finally {
+        daily.dispose();
       }
     });
 

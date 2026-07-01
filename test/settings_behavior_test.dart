@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:math_challenge/game_config.dart';
+import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
 import 'package:math_challenge/widgets/common.dart';
@@ -62,6 +64,22 @@ void main() {
     expect(settings.reduceMotion, isTrue);
     expect(settings.duration(1000), Duration.zero);
     expect(Storage.getBool('mc_reduceMotion', false), isTrue);
+  });
+
+  test('color-blind palette remaps visible accent colors', () async {
+    SharedPreferences.setMockInitialValues({});
+    await Storage.init();
+    final settings = makeSettings();
+
+    expect(settings.accent(GameConfig.coral), const Color(GameConfig.coral));
+    expect(settings.opColor(Operation.addition), const Color(GameConfig.mint));
+
+    settings.toggleColorblind();
+
+    expect(settings.accent(GameConfig.coral),
+        isNot(const Color(GameConfig.coral)));
+    expect(settings.opColor(Operation.addition),
+        isNot(const Color(GameConfig.mint)));
   });
 
   testWidgets('reduce motion hides big answer emoji reactions', (tester) async {

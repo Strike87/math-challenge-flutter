@@ -30,8 +30,8 @@ class ConfigScreen extends StatelessWidget {
             _SectionTitle('Players', s),
             _ToggleRow(
               options: [
-                _ToggleOpt('👤 1 Player', 1, const Color(GameConfig.sky)),
-                _ToggleOpt('👥 2 Players', 2, const Color(GameConfig.punch)),
+                _ToggleOpt('👤 1 Player', 1, s.accent(GameConfig.sky)),
+                _ToggleOpt('👥 2 Players', 2, s.accent(GameConfig.punch)),
               ],
               active: gs.players,
               onPick: (v) => gs.setOption('players', v),
@@ -53,10 +53,9 @@ class ConfigScreen extends StatelessWidget {
             _SectionTitle('Difficulty', s),
             _ToggleRow(
               options: [
-                _ToggleOpt('🌱 Easy', 'easy', const Color(GameConfig.mint)),
-                _ToggleOpt(
-                    '🔥 Medium', 'medium', const Color(GameConfig.mango)),
-                _ToggleOpt('💥 Hard', 'hard', const Color(GameConfig.punch)),
+                _ToggleOpt('🌱 Easy', 'easy', s.accent(GameConfig.mint)),
+                _ToggleOpt('🔥 Medium', 'medium', s.accent(GameConfig.mango)),
+                _ToggleOpt('💥 Hard', 'hard', s.accent(GameConfig.punch)),
               ],
               active: gs.diff.name,
               onPick: (v) => gs.setOption('diff', v),
@@ -73,10 +72,10 @@ class ConfigScreen extends StatelessWidget {
             _SectionTitle('Number of Questions', s),
             _ToggleRow(
               options: [
-                _ToggleOpt('10', 10, const Color(GameConfig.sky)),
-                _ToggleOpt('15', 15, const Color(GameConfig.sky)),
-                _ToggleOpt('20', 20, const Color(GameConfig.sky)),
-                _ToggleOpt('25', 25, const Color(GameConfig.sky)),
+                _ToggleOpt('10', 10, s.accent(GameConfig.sky)),
+                _ToggleOpt('15', 15, s.accent(GameConfig.sky)),
+                _ToggleOpt('20', 20, s.accent(GameConfig.sky)),
+                _ToggleOpt('25', 25, s.accent(GameConfig.sky)),
               ],
               active: gs.questionCount,
               onPick: (v) => gs.setOption('q', v),
@@ -121,7 +120,7 @@ class ConfigScreen extends StatelessWidget {
                   ),
                   Switch.adaptive(
                     value: gs.adaptive,
-                    activeThumbColor: const Color(GameConfig.coral),
+                    activeThumbColor: s.accent(GameConfig.coral),
                     onChanged: gs.setAdaptive,
                   ),
                 ],
@@ -381,7 +380,8 @@ class _ModeTabs extends StatelessWidget {
                   child: _ModeTabButton(
                     mode: availableModes[i],
                     active: availableModes[i] == active,
-                    disabled: !GameMode.isAvailableForPlayers(availableModes[i], players),
+                    disabled: !GameMode.isAvailableForPlayers(
+                        availableModes[i], players),
                     compact: compact,
                     settings: s,
                     onPick: onPick,
@@ -416,9 +416,8 @@ class _ModeTabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget buttonContent = AnimatedContainer(
-      duration: settings.duration(180),
-      curve: Curves.easeOutCubic,
+    final activeColor = settings.accent(GameConfig.coral);
+    Widget buttonContent = Container(
       height: 60,
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 3 : 5,
@@ -426,12 +425,12 @@ class _ModeTabButton extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         gradient: active
-            ? const LinearGradient(
+            ? LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(GameConfig.coral),
-                  Color(0xFFD4681A),
+                  activeColor,
+                  Color.lerp(activeColor, Colors.black, 0.18)!,
                 ],
               )
             : null,
@@ -440,8 +439,7 @@ class _ModeTabButton extends StatelessWidget {
         boxShadow: active
             ? [
                 BoxShadow(
-                  color:
-                      const Color(GameConfig.coral).withValues(alpha: 0.22),
+                  color: activeColor.withValues(alpha: 0.22),
                   blurRadius: 14,
                   offset: const Offset(0, 5),
                 ),
@@ -490,10 +488,26 @@ class _ModeTabButton extends StatelessWidget {
         opacity: 0.4,
         child: ColorFiltered(
           colorFilter: const ColorFilter.matrix([
-            0.2126, 0.7152, 0.0722, 0, 0,
-            0.2126, 0.7152, 0.0722, 0, 0,
-            0.2126, 0.7152, 0.0722, 0, 0,
-            0,      0,      0,      1, 0,
+            0.2126,
+            0.7152,
+            0.0722,
+            0,
+            0,
+            0.2126,
+            0.7152,
+            0.0722,
+            0,
+            0,
+            0.2126,
+            0.7152,
+            0.0722,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
           ]),
           child: buttonContent,
         ),

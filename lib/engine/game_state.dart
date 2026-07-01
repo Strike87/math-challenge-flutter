@@ -314,6 +314,7 @@ class GameState extends ChangeNotifier {
   String toastMessage = '';
   bool toastVisible = false;
   Timer? _toastTimer;
+  Timer? _bigEmojiHideTimer;
   final List<String> _toastQueue = [];
   int builderPid = 1;
   AvatarCustom builderAvatar = AvatarCustom();
@@ -401,6 +402,7 @@ class GameState extends ChangeNotifier {
     rt.gameActive = false;
     _iapPurchaseSub?.cancel();
     _toastTimer?.cancel();
+    _bigEmojiHideTimer?.cancel();
     _toastQueue.clear();
     rt.timer?.cancel();
     super.dispose();
@@ -1869,7 +1871,6 @@ class GameState extends ChangeNotifier {
     if (mode == GameMode.survival && !isSkip) {
       rt.survivalLives--;
       bigEmoji = '💔';
-      rt.bossMood = 'hit';
       reactionPill = '💔 Ans: ${rt.q?.ans}';
       bigEmojiVisible = true;
       audio.playWrong();
@@ -1883,7 +1884,7 @@ class GameState extends ChangeNotifier {
     } else if (rt.challenge == Operation.dailyBoss && !isSkip) {
       rt.dailyBossLives--;
       bigEmoji = '💔';
-      rt.bossMood = 'hit';
+      rt.bossMood = 'wrong';
       reactionPill = '💔 Boss hit! Ans: ${rt.q?.ans}';
       bigEmojiVisible = true;
       audio.playWrong();
@@ -1898,7 +1899,7 @@ class GameState extends ChangeNotifier {
       // Master: lose a life
       _masterLives--;
       bigEmoji = '💔';
-      rt.bossMood = 'hit';
+      rt.bossMood = 'wrong';
       reactionPill = '$wrongLabel 💔 Ans: ${rt.q?.ans}';
       bigEmojiVisible = true;
       audio.playWrong();
@@ -1945,10 +1946,19 @@ class GameState extends ChangeNotifier {
   void _scheduleNextTurn() {
     if (!rt.gameActive) return;
     if (rt.state == 'paused') return;
-    final delay = mode == GameMode.blitz || mode == GameMode.combo ? 400 : 1300;
+    const delay = 1300;
     final seq = ++_turnSeq;
+    _bigEmojiHideTimer?.cancel();
+    if (bigEmojiVisible) {
+      _bigEmojiHideTimer = Timer(const Duration(milliseconds: 900), () {
+        if (seq != _turnSeq || !rt.gameActive) return;
+        bigEmojiVisible = false;
+        notifyListeners();
+      });
+    }
     Timer(Duration(milliseconds: delay), () {
       if (seq != _turnSeq || !rt.gameActive) return;
+      _bigEmojiHideTimer?.cancel();
       bigEmojiVisible = false;
       bigEmoji = '';
       reactionPill = '';

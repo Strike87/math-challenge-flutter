@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
 import '../game_config.dart';
+import '../models/enums.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
 
@@ -27,7 +28,7 @@ class MenuScreen extends StatelessWidget {
               icon: '🏆',
               title: 'Master Challenge',
               subtitle: 'BOSS BATTLES • 5 STAGES',
-              color: const Color(GameConfig.coral),
+              color: s.accent(GameConfig.coral),
               onTap: () => gs.goToConfig('master'),
             ),
             const SizedBox(height: 10),
@@ -37,7 +38,7 @@ class MenuScreen extends StatelessWidget {
               subtitle: gs.isDailyBossClaimedToday
                   ? 'CLEARED TODAY'
                   : 'NEW CHALLENGE TODAY',
-              color: const Color(GameConfig.punch),
+              color: s.accent(GameConfig.punch),
               onTap: gs.isDailyBossClaimedToday ? () {} : gs.showDailyBoss,
             ),
             const SizedBox(height: 20),
@@ -53,13 +54,19 @@ class MenuScreen extends StatelessWidget {
               crossAxisSpacing: 12,
               childAspectRatio: 1.4,
               children: [
-                _PracticeCard('+', 'ADDITION', const Color(GameConfig.mint),
+                _PracticeCard('+', 'ADDITION', s.opColor(Operation.addition),
                     () => gs.goToConfig('addition')),
-                _PracticeCard('−', 'SUBTRACTION', const Color(GameConfig.sky),
+                _PracticeCard(
+                    '−',
+                    'SUBTRACTION',
+                    s.opColor(Operation.subtraction),
                     () => gs.goToConfig('subtraction')),
-                _PracticeCard('×', 'MULTIPLY', const Color(GameConfig.mango),
+                _PracticeCard(
+                    '×',
+                    'MULTIPLY',
+                    s.opColor(Operation.multiplication),
                     () => gs.goToConfig('multiplication')),
-                _PracticeCard('÷', 'DIVISION', const Color(GameConfig.punch),
+                _PracticeCard('÷', 'DIVISION', s.opColor(Operation.division),
                     () => gs.goToConfig('division')),
               ],
             ),
@@ -90,22 +97,28 @@ class MenuScreen extends StatelessWidget {
                     icon: Icons.bar_chart,
                     label: 'Skills',
                     onTap: () => gs.showModal(GameModal.skillDashboard)),
-                _NavBtn(
-                    icon: Icons.calendar_today,
-                    label: 'Daily',
+                _DailyNavBtn(
                     onTap: () => gs.showModal(GameModal.dailyChallenges)),
               ],
             ),
             const SizedBox(height: 16),
             Center(
-              child: Text(
-                '🟰 Designed by Mr. Mohamed Khairy, Mathematics Supervisor',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: s.muted,
-                  fontStyle: FontStyle.italic,
+              child: SizedBox(
+                width: double.infinity,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '🟰 Designed by Mr. Mohamed Khairy, Mathematics Supervisor',
+                    maxLines: 1,
+                    softWrap: false,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: s.muted,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
           ],
@@ -129,6 +142,99 @@ class MenuScreen extends StatelessWidget {
           color: Colors.white,
           fontWeight: FontWeight.w800,
           fontSize: 11,
+        ),
+      ),
+    );
+  }
+}
+
+class _DailyNavBtn extends StatelessWidget {
+  const _DailyNavBtn({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final day = DateTime.now().day;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: SizedBox(
+        width: 64,
+        height: 72,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: s.surface,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.75)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.07),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Container(
+                  width: 24,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: s.surface2,
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(color: s.muted.withValues(alpha: 0.55)),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: Color(GameConfig.coral),
+                          borderRadius:
+                              BorderRadius.vertical(top: Radius.circular(4)),
+                        ),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '$day',
+                              style: TextStyle(
+                                color: s.muted,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                                fontFamily: AppFonts.head,
+                                height: 1,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Daily',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: s.muted,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );

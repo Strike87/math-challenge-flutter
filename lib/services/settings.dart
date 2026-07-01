@@ -124,6 +124,24 @@ class SettingsService extends ChangeNotifier {
   Color get surface2 =>
       _dark ? const Color(0x732A2520) : const Color(0x73FFFFFF);
 
+  Color accent(int color) {
+    if (!_colorblind) return Color(color);
+    switch (color) {
+      case GameConfig.coral:
+        return const Color(0xFFD55E00);
+      case GameConfig.punch:
+        return const Color(0xFFCC79A7);
+      case GameConfig.mint:
+        return const Color(0xFF009E73);
+      case GameConfig.sky:
+        return const Color(0xFF0072B2);
+      case GameConfig.mango:
+        return const Color(0xFFE69F00);
+      default:
+        return Color(color);
+    }
+  }
+
   /// Colorblind-safe alternates — uses Okabe-Ito set for the main palette.
   Color opColor(Operation op) {
     if (_colorblind) {

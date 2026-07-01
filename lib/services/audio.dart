@@ -30,6 +30,7 @@ class AudioService {
     try {
       await _player.setReleaseMode(ReleaseMode.stop);
       await _player.setPlayerMode(PlayerMode.lowLatency);
+      await _player.setVolume(1);
     } catch (_) {}
     _initialised = true;
   }
@@ -74,7 +75,7 @@ class AudioService {
 
   Uint8List _wavFromTones(List<List<double>> tones) {
     const sampleRate = 22050;
-    const volume = 0.18;
+    const volume = 0.38;
     var totalSeconds = 0.0;
     for (final tone in tones) {
       final delay = tone.length > 2 ? tone[2] : 0.0;
