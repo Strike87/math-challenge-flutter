@@ -85,12 +85,14 @@ class ModalShell extends StatelessWidget {
     required this.child,
     this.actions = const [],
     this.maxHeight,
+    this.iconWidget,
   });
   final String icon;
   final String title;
   final Widget child;
   final List<Widget> actions;
   final double? maxHeight;
+  final Widget? iconWidget;
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +144,8 @@ class ModalShell extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(icon, style: const TextStyle(fontSize: 44)),
+                  iconWidget ??
+                      Text(icon, style: const TextStyle(fontSize: 44)),
                   const SizedBox(height: 4),
                   SizedBox(
                     width: double.infinity,
@@ -959,9 +962,17 @@ class WinModal extends StatelessWidget {
             ),
           if (gs.newlyUnlocked.isNotEmpty) ...[
             const SizedBox(height: 12),
-            const Text(
-              '🎉 Achievements Unlocked!',
-              style: TextStyle(fontWeight: FontWeight.w800),
+            const SizedBox(
+              width: double.infinity,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '🎉 Achievements Unlocked!',
+                  maxLines: 1,
+                  softWrap: false,
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
             ),
             Container(
               width: double.infinity,
@@ -1149,11 +1160,29 @@ class _ResultRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Expanded(flex: 2, child: Text(a, style: style)),
-          Expanded(child: Text(b, textAlign: TextAlign.center, style: style)),
-          Expanded(child: Text(c, textAlign: TextAlign.center, style: style)),
-          Expanded(child: Text(d, textAlign: TextAlign.right, style: style)),
+          Expanded(flex: 2, child: _fitCell(a, style, TextAlign.left)),
+          Expanded(child: _fitCell(b, style, TextAlign.center)),
+          Expanded(child: _fitCell(c, style, TextAlign.center)),
+          Expanded(child: _fitCell(d, style, TextAlign.right)),
         ],
+      ),
+    );
+  }
+
+  Widget _fitCell(String text, TextStyle style, TextAlign align) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: switch (align) {
+        TextAlign.right => Alignment.centerRight,
+        TextAlign.center => Alignment.center,
+        _ => Alignment.centerLeft,
+      },
+      child: Text(
+        text,
+        maxLines: 1,
+        softWrap: false,
+        textAlign: align,
+        style: style,
       ),
     );
   }
@@ -3115,15 +3144,91 @@ class _AdultGateModalState extends State<AdultGateModal> {
 // ═══════════════════════════════════════════════════════════════
 // Daily Challenges Modal
 // ═══════════════════════════════════════════════════════════════
+class _DailyCalendarBadge extends StatelessWidget {
+  const _DailyCalendarBadge({required this.date});
+
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return Container(
+      width: 54,
+      height: 58,
+      decoration: BoxDecoration(
+        color: s.surface2,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: s.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.10),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Container(
+            height: 18,
+            alignment: Alignment.center,
+            color: const Color(GameConfig.coral),
+            child: Text(
+              months[date.month - 1],
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 11,
+                height: 1,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: Text(
+                '${date.day}',
+                style: TextStyle(
+                  color: s.text,
+                  fontFamily: AppFonts.head,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 26,
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class DailyChallengesModal extends StatelessWidget {
-  const DailyChallengesModal({super.key, required this.gs});
+  const DailyChallengesModal({super.key, required this.gs, this.today});
   final GameState gs;
+  final DateTime? today;
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
     return ModalShell(
       icon: '📅',
+      iconWidget: _DailyCalendarBadge(date: today ?? DateTime.now()),
       title: 'Daily Challenges',
       maxHeight: 540,
       actions: [

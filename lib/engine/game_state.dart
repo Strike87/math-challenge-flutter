@@ -1325,9 +1325,7 @@ class GameState extends ChangeNotifier {
       );
     }
     _applyPowerUpBonusIfEligible(isMaster: isMaster, isBoss: isBoss);
-    reactionPill = '';
-    bigEmoji = '';
-    bigEmojiVisible = false;
+    _clearAnswerFeedback();
     celebration = const CelebrationEvent.none();
     screenShakeTick = 0;
 
@@ -2111,9 +2109,17 @@ class GameState extends ChangeNotifier {
 
   void advanceStage() {
     closeModal();
+    _clearAnswerFeedback();
     rt.state = 'playing';
     _masterProgress = 0;
     _nextTurn();
+  }
+
+  void _clearAnswerFeedback() {
+    _bigEmojiHideTimer?.cancel();
+    reactionPill = '';
+    bigEmoji = '';
+    bigEmojiVisible = false;
   }
 
   void replayGame() {

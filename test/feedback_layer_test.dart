@@ -107,6 +107,26 @@ void main() {
       }
     });
 
+    test('master stage advance clears cached answer feedback', () async {
+      final state = await _makeState();
+      try {
+        state.debugSetMasterStage(0);
+        state.startGame();
+        state.bigEmoji = '👍';
+        state.bigEmojiVisible = true;
+        state.reactionPill = '👍 Great! +15';
+
+        state.advanceStage();
+
+        expect(state.bigEmojiVisible, isFalse);
+        expect(state.bigEmoji, isEmpty);
+        expect(state.reactionPill, isEmpty);
+        expect(state.rt.gameActive, isTrue);
+      } finally {
+        state.dispose();
+      }
+    });
+
     test('master and daily boss wrong answers switch boss mood', () async {
       final master = await _makeState();
       try {

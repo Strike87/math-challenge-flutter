@@ -870,10 +870,6 @@ class _PlayerCard extends StatelessWidget {
                                       padding: const EdgeInsets.only(right: 4),
                                       child: _ActivePlayerPowerUpIcon(
                                         icon: icon,
-                                        s: s,
-                                        color: icon == '🛡️'
-                                            ? const Color(GameConfig.mint)
-                                            : const Color(GameConfig.mango),
                                       ),
                                     ),
                                   )
@@ -896,30 +892,17 @@ class _PlayerCard extends StatelessWidget {
 class _ActivePlayerPowerUpIcon extends StatelessWidget {
   const _ActivePlayerPowerUpIcon({
     required this.icon,
-    required this.s,
-    required this.color,
   });
 
   final String icon;
-  final SettingsService s;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return _ActivePowerUpGlow(
-      active: true,
-      s: s,
-      color: color,
-      child: Container(
-        width: 22,
-        height: 22,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          shape: BoxShape.circle,
-          border: Border.all(color: color.withValues(alpha: 0.55)),
-        ),
-        child: Text(icon, style: const TextStyle(fontSize: 13, height: 1)),
+    return SizedBox(
+      width: 22,
+      height: 22,
+      child: Center(
+        child: Text(icon, style: const TextStyle(fontSize: 15, height: 1)),
       ),
     );
   }
@@ -1267,7 +1250,7 @@ class _ActivePowerUpGlow extends StatelessWidget {
       effectsEnabled: active && effectsEnabled,
       duration: s.duration(700),
       builder: (_, opacity) {
-        final glowOpacity = active ? 0.16 + (opacity * 0.24) : 0.0;
+        final glowOpacity = active ? 0.08 + (opacity * 0.32) : 0.0;
         return Stack(
           clipBehavior: Clip.none,
           children: [
@@ -1285,7 +1268,8 @@ class _ActivePowerUpGlow extends StatelessWidget {
                   ),
                 ),
               ),
-            child,
+            Opacity(
+                opacity: active ? 0.72 + (opacity * 0.28) : 1, child: child),
           ],
         );
       },

@@ -156,7 +156,6 @@ class _DailyNavBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-    final day = DateTime.now().day;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -182,43 +181,10 @@ class _DailyNavBtn extends StatelessWidget {
                 ],
               ),
               child: Center(
-                child: Container(
-                  width: 24,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: s.surface2,
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(color: s.muted.withValues(alpha: 0.55)),
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        height: 6,
-                        decoration: const BoxDecoration(
-                          color: Color(GameConfig.coral),
-                          borderRadius:
-                              BorderRadius.vertical(top: Radius.circular(4)),
-                        ),
-                      ),
-                      Expanded(
-                        child: Center(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              '$day',
-                              style: TextStyle(
-                                color: s.muted,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w900,
-                                fontFamily: AppFonts.head,
-                                height: 1,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                child: Icon(
+                  Icons.calendar_today_outlined,
+                  size: 22,
+                  color: s.muted,
                 ),
               ),
             ),

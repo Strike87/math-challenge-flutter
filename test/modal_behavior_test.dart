@@ -392,6 +392,24 @@ void main() {
         state.dispose();
       }
     });
+
+    testWidgets('Daily Challenges uses real date badge instead of static emoji',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        await tester.pumpWidget(
+          _dailyChallengesHost(state, DateTime(2026, 7, 1)),
+        );
+        await tester.pump();
+
+        expect(find.text('Jul'), findsOneWidget);
+        expect(find.text('1'), findsOneWidget);
+        expect(find.text('17'), findsNothing);
+        expect(find.text('📅'), findsNothing);
+      } finally {
+        state.dispose();
+      }
+    });
   });
 }
 
@@ -431,6 +449,20 @@ Widget _modalHost(GameState state, {Size size = const Size(390, 700)}) {
             ],
           ),
         ),
+      ),
+    ),
+  );
+}
+
+Widget _dailyChallengesHost(GameState state, DateTime today) {
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<GameState>.value(value: state),
+      ChangeNotifierProvider<SettingsService>.value(value: state.settings),
+    ],
+    child: MaterialApp(
+      home: Scaffold(
+        body: DailyChallengesModal(gs: state, today: today),
       ),
     ),
   );
