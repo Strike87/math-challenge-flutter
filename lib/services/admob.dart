@@ -292,11 +292,14 @@ class _GoogleBannerAdState extends State<_GoogleBannerAd> {
   BannerAd? _ad;
   Timer? _retryTimer;
   bool _loaded = false;
+  int? _width;
+  int _loadToken = 0;
+  int _retryDelaySeconds = 5;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    unawaited(_load());
   }
 
   @override
@@ -304,7 +307,18 @@ class _GoogleBannerAdState extends State<_GoogleBannerAd> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.adUnitId != widget.adUnitId) {
       _disposeAd();
-      _load();
+      unawaited(_load());
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final width = MediaQuery.sizeOf(context).width.truncate();
+    if (width > 0 && width != _width) {
+      _width = width;
+      _disposeAd();
+      unawaited(_load());
     }
   }
 
@@ -315,15 +329,25 @@ class _GoogleBannerAdState extends State<_GoogleBannerAd> {
     super.dispose();
   }
 
-  void _load() {
+  Future<void> _load() async {
     _retryTimer?.cancel();
+    final token = ++_loadToken;
+    final width = _width ?? 320;
+    var size = AdSize.banner;
+    try {
+      size = await AdSize.getLargeAnchoredAdaptiveBannerAdSize(width) ?? size;
+    } catch (_) {
+      // Keep banner loading best-effort; ad failures should not affect play.
+    }
+    if (!mounted || token != _loadToken) return;
     final ad = BannerAd(
-      size: AdSize.banner,
+      size: size,
       adUnitId: widget.adUnitId,
       request: widget.request,
       listener: BannerAdListener(
         onAdLoaded: (ad) {
           if (!mounted || ad != _ad) return;
+          _retryDelaySeconds = 5;
           setState(() => _loaded = true);
         },
         onAdFailedToLoad: (ad, error) {
@@ -331,7 +355,11 @@ class _GoogleBannerAdState extends State<_GoogleBannerAd> {
           if (!mounted) return;
           if (ad == _ad) _ad = null;
           setState(() => _loaded = false);
-          _retryTimer = Timer(const Duration(seconds: 30), _load);
+          final delay = _retryDelaySeconds;
+          _retryDelaySeconds = (_retryDelaySeconds * 2).clamp(5, 60).toInt();
+          _retryTimer = Timer(Duration(seconds: delay), () {
+            unawaited(_load());
+          });
         },
       ),
     );
@@ -341,6 +369,7 @@ class _GoogleBannerAdState extends State<_GoogleBannerAd> {
   }
 
   void _disposeAd() {
+    _loadToken++;
     _ad?.dispose();
     _ad = null;
     _loaded = false;

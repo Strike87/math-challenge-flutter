@@ -1068,6 +1068,9 @@ class GameState extends ChangeNotifier {
 
     var rewarded = false;
     try {
+      if (isBannerEligibleFor(currentScreen)) {
+        await adService.hideBanner();
+      }
       rewarded = await adService.showRewarded();
     } on AdMobException catch (e) {
       if (e.code == AdMobErrorCode.rewardNotEarned) {
@@ -1077,6 +1080,8 @@ class GameState extends ChangeNotifier {
       rewarded = false;
     } catch (_) {
       rewarded = false;
+    } finally {
+      await syncBannerForCurrentScreen();
     }
     if (!rewarded) {
       showToast('Rewarded ad unavailable. Please try again later.');

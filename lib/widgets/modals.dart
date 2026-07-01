@@ -670,39 +670,157 @@ class _MasterIntroCopy extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-    final base = TextStyle(
-      color: s.text2,
-      fontSize: 14,
-      fontWeight: FontWeight.w500,
-      height: 1.55,
-      fontFamily: AppFonts.body,
-    );
-    final strong = base.copyWith(
-      color: s.text,
-      fontWeight: FontWeight.w900,
-    );
-    return Text.rich(
-      TextSpan(
-        style: base,
-        children: [
-          const TextSpan(text: 'Welcome, brave explorer! Clear '),
-          TextSpan(text: '5 Stages', style: strong),
-          const TextSpan(text: ' to find the treasure.\nDefeat the '),
-          TextSpan(text: 'Bosses', style: strong),
-          const TextSpan(text: ' in each level.\nYou have '),
-          TextSpan(text: '3 Hearts ', style: strong),
-          const TextSpan(
-            text: '♥♥♥',
-            style: TextStyle(
-              color: Color(GameConfig.coral),
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.2,
+    final stages = GameConfig.masterLevels;
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(GameConfig.mango).withValues(alpha: 0.16),
+                const Color(GameConfig.mint).withValues(alpha: 0.12),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(GameConfig.mango).withValues(alpha: 0.28),
             ),
           ),
-          const TextSpan(text: ' total. Good luck!'),
+          child: Column(
+            children: [
+              Text(
+                'Adventure Briefing',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: s.text,
+                  fontFamily: AppFonts.head,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Cross the map, defeat every boss, and unlock the treasure vault.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: s.text2,
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        const _AdventureRule(icon: '🗺️', title: 'Journey', text: '5 stages'),
+        const _AdventureRule(
+            icon: '⚔️', title: 'Quest', text: 'Beat each boss'),
+        const _AdventureRule(icon: '♥', title: 'Lives', text: '3 hearts'),
+        const SizedBox(height: 12),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (var i = 0; i < stages.length; i++)
+              _StageChip(index: i + 1, boss: stages[i].boss),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _AdventureRule extends StatelessWidget {
+  const _AdventureRule({
+    required this.icon,
+    required this.title,
+    required this.text,
+  });
+
+  final String icon;
+  final String title;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final isHeart = icon == '♥';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: s.surface2.withValues(alpha: s.dark ? 0.88 : 0.76),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.65)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 30,
+            child: Text(
+              icon,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isHeart ? const Color(GameConfig.coral) : null,
+                fontSize: isHeart ? 22 : 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: TextStyle(
+              color: s.text,
+              fontWeight: FontWeight.w900,
+              fontFamily: AppFonts.head,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            text,
+            style: TextStyle(
+              color: isHeart ? const Color(GameConfig.coral) : s.text,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ],
       ),
-      textAlign: TextAlign.center,
+    );
+  }
+}
+
+class _StageChip extends StatelessWidget {
+  const _StageChip({required this.index, required this.boss});
+
+  final int index;
+  final String boss;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: s.dark ? 0.12 : 0.72),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(
+          color: const Color(GameConfig.coral).withValues(alpha: 0.22),
+        ),
+      ),
+      child: Text(
+        '$index $boss',
+        style: TextStyle(
+          color: s.text,
+          fontWeight: FontWeight.w900,
+          fontSize: 13,
+        ),
+      ),
     );
   }
 }
@@ -749,11 +867,21 @@ class DailyBossModal extends StatelessWidget {
             rows: [
               _ReportRow(
                 'Mission',
-                '${_bossTypeLabel(b.type)} • ${_titleCase(b.diff)} • ${_numTypeLabel(b.numType)}',
+                '',
+                values: [
+                  _bossTypeLabel(b.type),
+                  _titleCase(b.diff),
+                  _numTypeLabel(b.numType),
+                ],
               ),
               _ReportRow(
                 'Rules',
-                '${b.goal} correct answers • 3 hearts • ${b.time}s each',
+                '',
+                values: [
+                  '${b.goal} correct answers',
+                  '3 hearts',
+                  '${b.time}s each',
+                ],
               ),
               _ReportRow(
                 'Reward',
@@ -776,9 +904,10 @@ class DailyBossModal extends StatelessWidget {
 }
 
 class _ReportRow {
-  const _ReportRow(this.label, this.value, {this.color});
+  const _ReportRow(this.label, this.value, {this.values, this.color});
   final String label;
   final String value;
+  final List<String>? values;
   final Color? color;
 }
 
@@ -843,21 +972,43 @@ class _ReportBoxRow extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              row.value,
-              textAlign: TextAlign.right,
-              softWrap: true,
-              style: TextStyle(
-                color: row.color ?? s.text,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                height: 1.25,
-                fontFamily: AppFonts.body,
-              ),
-            ),
+            child: row.values == null
+                ? Text(
+                    row.value,
+                    textAlign: TextAlign.right,
+                    softWrap: true,
+                    style: _reportValueStyle(s, row),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      for (final value in row.values!)
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            value,
+                            maxLines: 1,
+                            softWrap: false,
+                            textAlign: TextAlign.right,
+                            style: _reportValueStyle(s, row),
+                          ),
+                        ),
+                    ],
+                  ),
           ),
         ],
       ),
+    );
+  }
+
+  TextStyle _reportValueStyle(SettingsService s, _ReportRow row) {
+    return TextStyle(
+      color: row.color ?? s.text,
+      fontSize: 13,
+      fontWeight: FontWeight.w800,
+      height: 1.25,
+      fontFamily: AppFonts.body,
     );
   }
 }

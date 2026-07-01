@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -19,21 +20,31 @@ import 'theme.dart';
 import 'widgets/celebration_overlay.dart';
 import 'widgets/modals.dart';
 
+const _prodBannerAdUnitId = 'ca-app-pub-5674349229505017/3485297513';
+const _prodInterstitialAdUnitId = 'ca-app-pub-5674349229505017/9643207834';
+const _prodRewardedAdUnitId = 'ca-app-pub-5674349229505017/9292157969';
+
+const _testBannerAdUnitId = 'ca-app-pub-3940256099942544/9214589741';
+const _testInterstitialAdUnitId = 'ca-app-pub-3940256099942544/1033173712';
+const _testRewardedAdUnitId = 'ca-app-pub-3940256099942544/5224354917';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Storage.init();
   final adService = GoogleMobileAdsService(
     bannerAdUnitId: const String.fromEnvironment(
       'ADMOB_BANNER_AD_UNIT_ID',
-      defaultValue: 'ca-app-pub-5674349229505017/3485297513',
+      defaultValue: kReleaseMode ? _prodBannerAdUnitId : _testBannerAdUnitId,
     ),
     interstitialAdUnitId: const String.fromEnvironment(
       'ADMOB_INTERSTITIAL_AD_UNIT_ID',
-      defaultValue: 'ca-app-pub-5674349229505017/9643207834',
+      defaultValue:
+          kReleaseMode ? _prodInterstitialAdUnitId : _testInterstitialAdUnitId,
     ),
     rewardedAdUnitId: const String.fromEnvironment(
       'ADMOB_REWARDED_AD_UNIT_ID',
-      defaultValue: 'ca-app-pub-5674349229505017/9292157969',
+      defaultValue:
+          kReleaseMode ? _prodRewardedAdUnitId : _testRewardedAdUnitId,
     ),
   );
   await adService.initialize();

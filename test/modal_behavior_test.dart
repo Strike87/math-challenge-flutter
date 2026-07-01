@@ -59,14 +59,12 @@ void main() {
         expect(find.text('Nebula Hydra'), findsOneWidget);
         expect(find.text('A mixed-operation boss from the stars.'),
             findsOneWidget);
-        expect(
-          find.text('Mixed Operations • Hard • Rationals'),
-          findsOneWidget,
-        );
-        expect(
-          find.text('15 correct answers • 3 hearts • 7s each'),
-          findsOneWidget,
-        );
+        expect(find.text('Mixed Operations'), findsOneWidget);
+        expect(find.text('Hard'), findsOneWidget);
+        expect(find.text('Rationals'), findsOneWidget);
+        expect(find.text('15 correct answers'), findsOneWidget);
+        expect(find.text('3 hearts'), findsOneWidget);
+        expect(find.text('7s each'), findsOneWidget);
         expect(find.text('65 coins'), findsOneWidget);
         expect(find.text('Ready to fight'), findsOneWidget);
         expect(find.text("Fight Today's Boss"), findsOneWidget);
@@ -81,6 +79,36 @@ void main() {
         expect(
             find.text('Cleared today. Replay for practice.'), findsOneWidget);
         expect(find.text("Fight Today's Boss"), findsOneWidget);
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('Master intro feels like an adventure briefing',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        state.showModal(GameModal.masterIntro);
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+
+        expect(find.text('Adventure Briefing'), findsOneWidget);
+        expect(
+          find.text(
+            'Cross the map, defeat every boss, and unlock the treasure vault.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('5 stages'), findsOneWidget);
+        expect(find.text('Beat each boss'), findsOneWidget);
+        expect(find.text('3 hearts'), findsOneWidget);
+        expect(find.text('I am Ready! 🗡️'), findsOneWidget);
+        for (var i = 0; i < GameConfig.masterLevels.length; i++) {
+          expect(
+            find.text('${i + 1} ${GameConfig.masterLevels[i].boss}'),
+            findsOneWidget,
+          );
+        }
       } finally {
         state.dispose();
       }

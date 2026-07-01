@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -18,6 +19,7 @@ class AudioService {
 
   final SettingsService _settings;
   final AudioPlayer _player = AudioPlayer();
+  final Map<String, String> _toneFiles = {};
   bool _initialised = false;
   int _debugTonePlayCount = 0;
   int _debugVibrationCount = 0;
@@ -30,6 +32,18 @@ class AudioService {
     try {
       await _player.setReleaseMode(ReleaseMode.stop);
       await _player.setPlayerMode(PlayerMode.lowLatency);
+      await _player.setAudioContext(
+        AudioContext(
+          android: const AudioContextAndroid(
+            contentType: AndroidContentType.sonification,
+            usageType: AndroidUsageType.game,
+            audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+          ),
+          iOS: AudioContextIOS(
+            category: AVAudioSessionCategory.ambient,
+          ),
+        ),
+      );
       await _player.setVolume(1);
     } catch (_) {}
     _initialised = true;
@@ -40,15 +54,33 @@ class AudioService {
     if (!_settings.sound) return;
     _debugTonePlayCount++;
     final bytes = _wavFromTones(tones);
-    unawaited(_playBytes(bytes));
+    unawaited(_playBytes(bytes, _toneKey(tones)));
   }
 
-  Future<void> _playBytes(Uint8List bytes) async {
+  Future<void> _playBytes(Uint8List bytes, String key) async {
     try {
       await init();
       await _player.stop();
-      await _player.play(BytesSource(bytes, mimeType: 'audio/wav'), volume: 1);
+      final source = await _toneSource(bytes, key);
+      await _player.play(source, volume: 1);
     } catch (_) {}
+  }
+
+  Future<Source> _toneSource(Uint8List bytes, String key) async {
+    final cached = _toneFiles[key];
+    if (cached != null && File(cached).existsSync()) {
+      return DeviceFileSource(cached, mimeType: 'audio/wav');
+    }
+    final path = '${Directory.systemTemp.path}/math_challenge_$key.wav';
+    await File(path).writeAsBytes(bytes, flush: false);
+    _toneFiles[key] = path;
+    return DeviceFileSource(path, mimeType: 'audio/wav');
+  }
+
+  String _toneKey(List<List<double>> tones) {
+    return tones
+        .map((tone) => tone.map((v) => (v * 1000).round()).join('_'))
+        .join('__');
   }
 
   Future<void> playCorrect() => playTones([

@@ -80,6 +80,41 @@ void main() {
       expect(ads.bannerShows, 2);
     });
 
+    test('rewarded ads resume banner state on success, unavailable, and exit',
+        () async {
+      Future<void> expectBannerResume(
+        _FakeAdMobService ads, {
+        required bool expectedClaimed,
+      }) async {
+        final state = await _makeState(adService: ads);
+        state.currentScreen = GameScreen.numType;
+        await state.syncBannerForCurrentScreen();
+        expect(ads.bannerShows, 1);
+
+        expect(await state.claimRewardedAdCoins(), expectedClaimed);
+
+        expect(ads.bannerHides, 1);
+        expect(ads.bannerShows, 2);
+      }
+
+      await expectBannerResume(
+        _FakeAdMobService(rewardedResult: true),
+        expectedClaimed: true,
+      );
+      await expectBannerResume(
+        _FakeAdMobService(rewardedResult: false),
+        expectedClaimed: false,
+      );
+      await expectBannerResume(
+        _FakeAdMobService()
+          ..rewardedException = const AdMobException(
+            AdMobErrorCode.rewardNotEarned,
+            'closed',
+          ),
+        expectedClaimed: false,
+      );
+    });
+
     test('completed games persist counter and request interstitial every third',
         () async {
       final ads = _FakeAdMobService();
