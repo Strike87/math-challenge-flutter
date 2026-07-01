@@ -25,18 +25,18 @@ Future<void> main() async {
   final adService = GoogleMobileAdsService(
     bannerAdUnitId: const String.fromEnvironment(
       'ADMOB_BANNER_AD_UNIT_ID',
-      defaultValue: 'ca-app-pub-5674349229505017/1557571975',
+      defaultValue: 'ca-app-pub-5674349229505017/3485297513',
     ),
     interstitialAdUnitId: const String.fromEnvironment(
       'ADMOB_INTERSTITIAL_AD_UNIT_ID',
-      defaultValue: 'ca-app-pub-5674349229505017/4131764421',
+      defaultValue: 'ca-app-pub-5674349229505017/9643207834',
     ),
     rewardedAdUnitId: const String.fromEnvironment(
       'ADMOB_REWARDED_AD_UNIT_ID',
-      defaultValue: 'ca-app-pub-5674349229505017/9726659855',
+      defaultValue: 'ca-app-pub-5674349229505017/9292157969',
     ),
   );
-  unawaited(adService.initialize());
+  await adService.initialize();
   final iapAdapter = NativeIapPurchaseAdapter();
   unawaited(iapAdapter.initialize().catchError((_) {}));
   runApp(MathChallengeApp(adService: adService, iapAdapter: iapAdapter));
@@ -137,6 +137,7 @@ class _AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<gs.GameState>();
     final s = context.watch<SettingsService>();
+    final banner = state.bannerWidget();
     return Scaffold(
       backgroundColor: s.bg,
       body: Stack(
@@ -174,6 +175,16 @@ class _AppShell extends StatelessWidget {
           ),
           // Foreground screens
           _screenFor(state.currentScreen),
+          if (banner != null)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: Center(child: banner),
+              ),
+            ),
           // Toast
           if (state.toastVisible)
             Positioned(

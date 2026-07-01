@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class AdMobRequestPolicy {
@@ -23,6 +24,7 @@ class AdMobRequestPolicy {
 enum AdMobErrorCode {
   unavailable,
   nativeSimulationBlocked,
+  rewardNotEarned,
   unknown,
 }
 
@@ -48,6 +50,8 @@ abstract class AdMobService {
   Future<bool> showInterstitial();
 
   Future<bool> showRewarded();
+
+  Widget? bannerWidget();
 }
 
 class UnavailableAdMobService implements AdMobService {
@@ -70,6 +74,9 @@ class UnavailableAdMobService implements AdMobService {
 
   @override
   Future<bool> showRewarded() async => false;
+
+  @override
+  Widget? bannerWidget() => null;
 }
 
 class DevAdMobService implements AdMobService {
@@ -119,6 +126,9 @@ class DevAdMobService implements AdMobService {
     rewardedShows++;
     return rewardedAvailable;
   }
+
+  @override
+  Widget? bannerWidget() => nativeRelease ? null : const SizedBox.shrink();
 
   void _guardNativeReleaseSimulation() {
     if (nativeRelease) {
@@ -220,7 +230,14 @@ class GoogleMobileAdsService implements AdMobService {
           ad.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
               ad.dispose();
-              if (!completer.isCompleted) completer.complete(false);
+              if (!completer.isCompleted) {
+                completer.completeError(
+                  const AdMobException(
+                    AdMobErrorCode.rewardNotEarned,
+                    'Rewarded ad closed before reward.',
+                  ),
+                );
+              }
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
               ad.dispose();
@@ -241,6 +258,102 @@ class GoogleMobileAdsService implements AdMobService {
     return completer.future.timeout(
       const Duration(seconds: 30),
       onTimeout: () => false,
+    );
+  }
+
+  @override
+  Widget? bannerWidget() {
+    if (!_initialized || !_bannerRequested || bannerAdUnitId.isEmpty) {
+      return null;
+    }
+    return _GoogleBannerAd(
+      key: ValueKey('banner-$bannerAdUnitId'),
+      adUnitId: bannerAdUnitId,
+      request: adRequest,
+    );
+  }
+}
+
+class _GoogleBannerAd extends StatefulWidget {
+  const _GoogleBannerAd({
+    super.key,
+    required this.adUnitId,
+    required this.request,
+  });
+
+  final String adUnitId;
+  final AdRequest request;
+
+  @override
+  State<_GoogleBannerAd> createState() => _GoogleBannerAdState();
+}
+
+class _GoogleBannerAdState extends State<_GoogleBannerAd> {
+  BannerAd? _ad;
+  Timer? _retryTimer;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant _GoogleBannerAd oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.adUnitId != widget.adUnitId) {
+      _disposeAd();
+      _load();
+    }
+  }
+
+  @override
+  void dispose() {
+    _retryTimer?.cancel();
+    _disposeAd();
+    super.dispose();
+  }
+
+  void _load() {
+    _retryTimer?.cancel();
+    final ad = BannerAd(
+      size: AdSize.banner,
+      adUnitId: widget.adUnitId,
+      request: widget.request,
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          if (!mounted || ad != _ad) return;
+          setState(() => _loaded = true);
+        },
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+          if (!mounted) return;
+          if (ad == _ad) _ad = null;
+          setState(() => _loaded = false);
+          _retryTimer = Timer(const Duration(seconds: 30), _load);
+        },
+      ),
+    );
+    _ad = ad;
+    _loaded = false;
+    ad.load();
+  }
+
+  void _disposeAd() {
+    _ad?.dispose();
+    _ad = null;
+    _loaded = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ad = _ad;
+    if (!_loaded || ad == null) return const SizedBox.shrink();
+    return SizedBox(
+      width: ad.size.width.toDouble(),
+      height: ad.size.height.toDouble(),
+      child: AdWidget(ad: ad),
     );
   }
 }

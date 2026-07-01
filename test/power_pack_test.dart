@@ -106,7 +106,7 @@ void main() {
     test('grants +20 coins once per day', () async {
       final state = await makeState();
       final bonus = GameConfig.shopItems['packs']!
-          .firstWhere((item) => item.id == 'pack_coins100');
+          .firstWhere((item) => item.id == 'pack_daily_bonus');
 
       await state.buyShopItem(bonus);
 

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../game_config.dart';
@@ -1011,7 +1010,11 @@ class GameState extends ChangeNotifier {
 
   bool isBannerEligibleFor(GameScreen screen) =>
       !adsRemoved &&
+      currentModal == GameModal.none &&
       (screen == GameScreen.numType || screen == GameScreen.player);
+
+  Widget? bannerWidget() =>
+      isBannerEligibleFor(currentScreen) ? adService.bannerWidget() : null;
 
   int rewardedCooldownRemainingMs({int? nowMillis}) {
     if (lastRewardedAt <= 0) return 0;
@@ -1066,6 +1069,12 @@ class GameState extends ChangeNotifier {
     var rewarded = false;
     try {
       rewarded = await adService.showRewarded();
+    } on AdMobException catch (e) {
+      if (e.code == AdMobErrorCode.rewardNotEarned) {
+        showToast('Watch the full ad to earn coins.');
+        return false;
+      }
+      rewarded = false;
     } catch (_) {
       rewarded = false;
     }
@@ -1150,6 +1159,7 @@ class GameState extends ChangeNotifier {
 
   void showModal(GameModal m) {
     currentModal = m;
+    unawaited(syncBannerForCurrentScreen());
     if (rt.state == 'playing' && _isPausingModal(m)) {
       rt.state = 'paused';
     }
@@ -1165,6 +1175,7 @@ class GameState extends ChangeNotifier {
     if (rt.state == 'paused' && rt.gameActive) {
       rt.state = 'playing';
     }
+    unawaited(syncBannerForCurrentScreen());
     notifyListeners();
   }
 

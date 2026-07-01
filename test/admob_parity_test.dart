@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
@@ -56,6 +57,27 @@ void main() {
       await state.syncBannerForCurrentScreen();
       expect(ads.bannerShows, 1);
       expect(ads.bannerHides, 1);
+    });
+
+    test('banner is suppressed while a modal is open and resumes after close',
+        () async {
+      final ads = _FakeAdMobService();
+      final state = await _makeState(adService: ads);
+      state.currentScreen = GameScreen.numType;
+
+      await state.syncBannerForCurrentScreen();
+      expect(ads.bannerWidget(), isNotNull);
+      expect(ads.bannerShows, 1);
+
+      state.showModal(GameModal.coinShop);
+      await Future<void>.delayed(Duration.zero);
+      expect(state.bannerWidget(), isNull);
+      expect(ads.bannerHides, 1);
+
+      state.closeModal();
+      await Future<void>.delayed(Duration.zero);
+      expect(state.bannerWidget(), isNotNull);
+      expect(ads.bannerShows, 2);
     });
 
     test('completed games persist counter and request interstitial every third',
@@ -121,6 +143,18 @@ void main() {
       expect(errorState.lastRewardedAt, 0);
       expect(errorState.toastMessage,
           'Rewarded ad unavailable. Please try again later.');
+
+      final earlyExitAds = _FakeAdMobService()
+        ..rewardedException = const AdMobException(
+          AdMobErrorCode.rewardNotEarned,
+          'closed',
+        );
+      final earlyExitState = await _makeState(adService: earlyExitAds);
+
+      expect(await earlyExitState.claimRewardedAdCoins(), isFalse);
+      expect(earlyExitState.coins, 0);
+      expect(earlyExitState.lastRewardedAt, 0);
+      expect(earlyExitState.toastMessage, 'Watch the full ad to earn coins.');
     });
 
     test('rewarded cooldown blocks repeat claim and persists across reload',
@@ -223,6 +257,7 @@ class _FakeAdMobService implements AdMobService {
 
   bool rewardedResult;
   bool throwRewarded = false;
+  AdMobException? rewardedException;
   int bannerShows = 0;
   int bannerHides = 0;
   int interstitialShows = 0;
@@ -245,6 +280,9 @@ class _FakeAdMobService implements AdMobService {
   }
 
   @override
+  Widget? bannerWidget() => const SizedBox(key: Key('fakeBanner'));
+
+  @override
   Future<bool> showInterstitial() async {
     interstitialShows++;
     return true;
@@ -252,6 +290,8 @@ class _FakeAdMobService implements AdMobService {
 
   @override
   Future<bool> showRewarded() async {
+    final exception = rewardedException;
+    if (exception != null) throw exception;
     if (throwRewarded) {
       throw const AdMobException(AdMobErrorCode.unavailable, 'No ad loaded');
     }
