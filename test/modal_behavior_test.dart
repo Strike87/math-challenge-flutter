@@ -100,6 +100,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('5 stages'), findsOneWidget);
+        expect(find.text('Quest:'), findsOneWidget);
         expect(find.text('Beat each boss'), findsOneWidget);
         expect(find.text('3 hearts'), findsOneWidget);
         expect(find.text('I am Ready! 🗡️'), findsOneWidget);
@@ -109,6 +110,21 @@ void main() {
             findsOneWidget,
           );
         }
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('Settings Performance mode subtitle is separated',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        state.showModal(GameModal.settings);
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+
+        expect(find.text('Performance mode'), findsOneWidget);
+        expect(find.text('faster on all devices'), findsOneWidget);
       } finally {
         state.dispose();
       }
@@ -301,6 +317,12 @@ void main() {
         final p2 = state.p[2].avatar as AvatarCustom;
         expect(p2.base, '🐸');
         expect((state.p[1].avatar as AvatarCustom).base, '🐱');
+
+        state.showAvatarBuilder(1);
+        expect(state.builderAvatar.base, '🐱');
+        expect(state.builderAvatar.hat, '🎓');
+        expect(state.builderAvatar.accessory, '👓');
+        expect(state.builderAvatar.color, '#FF6B6B');
       } finally {
         state.dispose();
       }

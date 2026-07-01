@@ -49,8 +49,28 @@ void main() {
         expect(state.currentModal, GameModal.adultGate);
         expect(state.pendingIapProduct?.productId, product.productId);
         expect(adapter.buyCalls, isEmpty);
+        expect(find.byKey(const Key('adultGateAnswerField')), findsNothing);
       });
     }
+
+    testWidgets('initial warning screen advances to question screen',
+        (tester) async {
+      final adapter = _FakeIapPurchaseAdapter();
+      final state = await _makeState(adapter: adapter);
+
+      state.beginIapPurchase(IapProducts.small);
+      await tester.pumpWidget(_modalHost(state));
+      await tester.pump();
+
+      expect(find.text('Grown-up check'), findsOneWidget);
+      expect(find.byKey(const Key('adultGateAnswerField')), findsNothing);
+
+      await tester.tap(find.text('Continue'));
+      await tester.pump();
+
+      expect(find.byKey(const Key('adultGateAnswerField')), findsOneWidget);
+      expect(adapter.buyCalls, isEmpty);
+    });
 
     testWidgets('wrong answer does not call adapter', (tester) async {
       final adapter = _FakeIapPurchaseAdapter();
@@ -58,6 +78,8 @@ void main() {
 
       state.beginIapPurchase(IapProducts.small);
       await tester.pumpWidget(_modalHost(state));
+      await tester.pump();
+      await tester.tap(find.text('Continue'));
       await tester.pump();
       await tester.enterText(
         find.byKey(const Key('adultGateAnswerField')),
@@ -88,6 +110,25 @@ void main() {
       expect(state.adultGateChallenge, isNull);
     });
 
+    testWidgets('cancel closes from question screen without calling adapter',
+        (tester) async {
+      final adapter = _FakeIapPurchaseAdapter();
+      final state = await _makeState(adapter: adapter);
+
+      state.beginIapPurchase(IapProducts.medium);
+      await tester.pumpWidget(_modalHost(state));
+      await tester.pump();
+      await tester.tap(find.text('Continue'));
+      await tester.pump();
+      await tester.tap(find.text('Cancel'));
+      await tester.pump();
+
+      expect(adapter.buyCalls, isEmpty);
+      expect(state.currentModal, GameModal.none);
+      expect(state.pendingIapProduct, isNull);
+      expect(state.adultGateChallenge, isNull);
+    });
+
     testWidgets(
         'correct answer calls adapter exactly once for selected product',
         (tester) async {
@@ -99,6 +140,8 @@ void main() {
 
       state.beginIapPurchase(IapProducts.large);
       await tester.pumpWidget(_modalHost(state));
+      await tester.pump();
+      await tester.tap(find.text('Continue'));
       await tester.pump();
       await tester.enterText(
         find.byKey(const Key('adultGateAnswerField')),
@@ -125,6 +168,8 @@ void main() {
 
       state.beginIapPurchase(IapProducts.removeAds);
       await tester.pumpWidget(_modalHost(state));
+      await tester.pump();
+      await tester.tap(find.text('Continue'));
       await tester.pump();
       await tester.enterText(
         find.byKey(const Key('adultGateAnswerField')),

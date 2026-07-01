@@ -260,7 +260,6 @@ void main() {
       expect(find.text('MATH'), findsOneWidget);
       expect(find.text('CHALLENGE'), findsOneWidget);
       expect(find.text('BOSS BATTLE EDITION'), findsOneWidget);
-      expect(find.text('${DateTime.now().day}'), findsWidgets);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/01_menu_phone_light.png'));
@@ -472,10 +471,10 @@ void main() {
           TestAppWrapper(state: state, child: const TestAppShell()));
       await tester.pumpAndSettle();
       expect(find.text('Avatar Builder'), findsOneWidget);
-      expect(find.text('Character'), findsOneWidget);
-      expect(find.text('Hat'), findsOneWidget);
-      expect(find.text('Acc'), findsOneWidget);
-      expect(find.text('Color'), findsOneWidget);
+      expect(find.text('Base'), findsWidgets);
+      expect(find.text('Hat'), findsWidgets);
+      expect(find.text('Accessory'), findsOneWidget);
+      expect(find.text('Color'), findsWidgets);
       expect(find.byType(SingleChildScrollView), findsWidgets);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),

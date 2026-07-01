@@ -870,6 +870,9 @@ class _PlayerCard extends StatelessWidget {
                                       padding: const EdgeInsets.only(right: 4),
                                       child: _ActivePlayerPowerUpIcon(
                                         icon: icon,
+                                        pulseTick: icon == '🛡️'
+                                            ? gs.shieldHudPulseTick
+                                            : 0,
                                       ),
                                     ),
                                   )
@@ -892,18 +895,44 @@ class _PlayerCard extends StatelessWidget {
 class _ActivePlayerPowerUpIcon extends StatelessWidget {
   const _ActivePlayerPowerUpIcon({
     required this.icon,
+    required this.pulseTick,
   });
 
   final String icon;
+  final int pulseTick;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    final s = context.watch<SettingsService>();
+    final isShield = icon == '🛡️';
+    final child = SizedBox(
+      key: isShield ? const Key('player-card-shield-active') : null,
       width: 22,
       height: 22,
       child: Center(
         child: Text(icon, style: const TextStyle(fontSize: 15, height: 1)),
       ),
+    );
+    if (!isShield || s.reduceMotion || s.lowPerf) return child;
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('player-card-shield-$pulseTick'),
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: s.duration(360),
+      curve: Curves.easeOutBack,
+      child: child,
+      builder: (_, t, child) {
+        final grow = t.clamp(0.0, 0.7).toDouble() / 0.7;
+        final scale = 0.6 + (0.55 * grow);
+        final settle = t <= 0.7 ? scale : 1.15 - ((t - 0.7) / 0.3 * 0.15);
+        return Opacity(
+          opacity: t.clamp(0, 1).toDouble(),
+          child: Transform.translate(
+            offset: Offset(0, (1 - t) * 8),
+            child: Transform.scale(scale: settle, child: child),
+          ),
+        );
+      },
     );
   }
 }
@@ -1128,6 +1157,9 @@ class _PowerUpHud extends StatelessWidget {
                     gs.isPowerUpBlocked(pu);
                 final color = _powerUpColor(pu);
                 final tile = GestureDetector(
+                  key: pu == PowerUp.shield
+                      ? const Key('powerup-shield-button')
+                      : null,
                   onTap: disabled ? null : () => gs.usePowerUp(pu),
                   child: Stack(
                     clipBehavior: Clip.none,
@@ -1204,8 +1236,15 @@ class _PowerUpHud extends StatelessWidget {
                     ],
                   ),
                 );
+                final pulsedTile = pu == PowerUp.shield
+                    ? _ShieldHudPulse(
+                        tick: gs.shieldHudPulseTick,
+                        s: s,
+                        child: tile,
+                      )
+                    : tile;
                 return _ActivePowerUpGlow(
-                    active: active, s: s, color: color, child: tile);
+                    active: active, s: s, color: color, child: pulsedTile);
               }),
             ),
             if (i != powerUps.length - 1) const SizedBox(width: 4),
@@ -1272,6 +1311,34 @@ class _ActivePowerUpGlow extends StatelessWidget {
                 opacity: active ? 0.72 + (opacity * 0.28) : 1, child: child),
           ],
         );
+      },
+    );
+  }
+}
+
+class _ShieldHudPulse extends StatelessWidget {
+  const _ShieldHudPulse({
+    required this.tick,
+    required this.s,
+    required this.child,
+  });
+
+  final int tick;
+  final SettingsService s;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (tick == 0 || s.reduceMotion || s.lowPerf) return child;
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('shield-hud-pulse-$tick'),
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: s.duration(300),
+      curve: Curves.easeOutBack,
+      child: child,
+      builder: (_, t, child) {
+        final scale = t < 0.5 ? 1 + (t * 0.16) : 1.08 - ((t - 0.5) * 0.16);
+        return Transform.scale(scale: scale, child: child);
       },
     );
   }
@@ -1593,6 +1660,7 @@ class _AnswersGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final q = gs.rt.q;
     if (q == null) return const SizedBox.shrink();
+    final showShieldAbsorb = gs.shieldAbsorbTick > 0;
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.center,
@@ -1671,9 +1739,13 @@ class _AnswersGrid extends StatelessWidget {
         IgnorePointer(
           child: BigEmojiOverlay(
             emoji: gs.bigEmoji,
-            visible: gs.bigEmojiVisible && gs.bigEmoji.isNotEmpty,
+            visible: !showShieldAbsorb &&
+                gs.bigEmojiVisible &&
+                gs.bigEmoji.isNotEmpty,
           ),
         ),
+        if (showShieldAbsorb)
+          _ShieldAbsorbOverlay(tick: gs.shieldAbsorbTick, s: s),
       ],
     );
   }
@@ -1684,5 +1756,76 @@ class _AnswersGrid extends StatelessWidget {
         .toStringAsFixed(2)
         .replaceAll(RegExp(r'0+$'), '')
         .replaceAll(RegExp(r'\.$'), '');
+  }
+}
+
+class _ShieldAbsorbOverlay extends StatefulWidget {
+  const _ShieldAbsorbOverlay({required this.tick, required this.s});
+
+  final int tick;
+  final SettingsService s;
+
+  @override
+  State<_ShieldAbsorbOverlay> createState() => _ShieldAbsorbOverlayState();
+}
+
+class _ShieldAbsorbOverlayState extends State<_ShieldAbsorbOverlay> {
+  bool _done = false;
+
+  @override
+  void didUpdateWidget(covariant _ShieldAbsorbOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tick != widget.tick) _done = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_done) return const SizedBox.shrink();
+    final effectsEnabled = !widget.s.reduceMotion && !widget.s.lowPerf;
+    final shield = IgnorePointer(
+      child: Text(
+        '🛡️',
+        key: const Key('shield-absorb-overlay'),
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 96,
+          height: 1,
+          shadows: [
+            Shadow(
+              color: const Color(GameConfig.sky).withValues(alpha: 0.55),
+              blurRadius: 22,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!effectsEnabled) return shield;
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('shield-absorb-${widget.tick}'),
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: widget.s.duration(680),
+      curve: Curves.easeOutCubic,
+      onEnd: () {
+        if (mounted) setState(() => _done = true);
+      },
+      child: shield,
+      builder: (_, t, child) {
+        final opacity = t < 0.18 ? t / 0.18 : (t > 0.78 ? (1 - t) / 0.22 : 1.0);
+        final growT = (t / 0.45).clamp(0.0, 1.0).toDouble();
+        final settleT = ((t - 0.45) / 0.55).clamp(0.0, 1.0).toDouble();
+        final scale =
+            t < 0.45 ? 0.75 + ((1.2 - 0.75) * growT) : 1.2 - (0.2 * settleT);
+        final dx = math.sin(t * math.pi * 10) * (1 - t) * 5;
+        return Opacity(
+          opacity: opacity.clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(dx, 0),
+            child: Transform.scale(scale: scale, child: child),
+          ),
+        );
+      },
+    );
   }
 }
