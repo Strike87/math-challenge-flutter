@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
+import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/screens/game_screen.dart' as game_screen;
 import 'package:math_challenge/services/audio.dart';
@@ -14,7 +15,7 @@ void main() {
 
   group('RT-020 shield animation parity', () {
     testWidgets(
-        'shield activation shows HUD key, player indicator, and feedback',
+        'shield activation shows pulsing HUD overlay and static player indicator',
         (tester) async {
       final state = await _makeState();
       _startStandard(state);
@@ -30,7 +31,22 @@ void main() {
       expect(state.p[1].pups.where((p) => p == PowerUp.shield), isEmpty);
       expect(
           find.byKey(const Key('player-card-shield-active')), findsOneWidget);
-      expect(find.text('🛡️ Shield activated!'), findsOneWidget);
+      expect(find.byKey(const Key('shield-hud-armed-overlay')), findsOneWidget);
+      expect(find.text('🛡️ Shield activated!'), findsNothing);
+      final initial = tester.widget<Opacity>(
+        find.byKey(const Key('shield-hud-armed-overlay')),
+      );
+      expect(initial.opacity, 0);
+      await tester.pump(const Duration(milliseconds: 700));
+      final peak = tester.widget<Opacity>(
+        find.byKey(const Key('shield-hud-armed-overlay')),
+      );
+      expect(peak.opacity, closeTo(0.34, 0.01));
+      await tester.pump(const Duration(milliseconds: 700));
+      final end = tester.widget<Opacity>(
+        find.byKey(const Key('shield-hud-armed-overlay')),
+      );
+      expect(end.opacity, closeTo(0, 0.01));
       state.rt.timer?.cancel();
     });
 
@@ -52,16 +68,37 @@ void main() {
       expect(state.p[1].shieldActive, isFalse);
       expect(state.rt.survivalLives, livesBefore);
       expect(state.reactionPill, '🛡️ Shield absorbed it!');
+      expect(state.bigEmojiVisible, isFalse);
       expect(find.byKey(const Key('player-card-shield-active')), findsNothing);
-      expect(find.byKey(const Key('shield-absorb-overlay')), findsOneWidget);
-
-      await tester.pump(const Duration(milliseconds: 720));
-      expect(find.byKey(const Key('shield-absorb-overlay')), findsNothing);
-      await tester.pump(const Duration(milliseconds: 700));
+      expect(find.byKey(const Key('shield-hud-armed-overlay')), findsNothing);
+      expect(find.text('🛡️ Shield absorbed it!'), findsOneWidget);
+      final pill = tester.widget<Text>(find.text('🛡️ Shield absorbed it!'));
+      expect(pill.style?.color, const Color(GameConfig.mint));
+      await tester.pump(const Duration(milliseconds: 1400));
       state.rt.timer?.cancel();
     });
 
-    testWidgets('reduce motion still shows a clear absorb indicator',
+    testWidgets('skip and timeout do not consume an armed shield',
+        (tester) async {
+      final state = await _makeState();
+      _startStandard(state);
+      state.p[1].pups = [PowerUp.shield];
+      state.usePowerUp(PowerUp.shield);
+
+      state.skip();
+      expect(state.p[1].shieldActive, isTrue);
+
+      await tester.pump(const Duration(milliseconds: 1400));
+      state.rt.timer?.cancel();
+      state.rt.accepting = true;
+      state.debugTimeoutForTest();
+
+      expect(state.p[1].shieldActive, isTrue);
+      await tester.pump(const Duration(milliseconds: 1400));
+      state.rt.timer?.cancel();
+    });
+
+    testWidgets('reduce motion keeps a static armed indicator and absorb pill',
         (tester) async {
       final state = await _makeState(reduceMotion: true);
       _startStandard(state);
@@ -69,19 +106,50 @@ void main() {
       state.usePowerUp(PowerUp.shield);
 
       await _pumpGame(tester, state);
+      expect(find.byKey(const Key('shield-hud-armed-overlay')), findsOneWidget);
+      final before = tester.widget<Opacity>(
+        find.byKey(const Key('shield-hud-armed-overlay')),
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+      final after = tester.widget<Opacity>(
+        find.byKey(const Key('shield-hud-armed-overlay')),
+      );
+      expect(after.opacity, before.opacity);
       state.onAnswer(_wrongChoices(state).first);
       await tester.pump();
 
       expect(state.p[1].shieldActive, isFalse);
-      expect(find.byKey(const Key('shield-absorb-overlay')), findsOneWidget);
+      expect(find.byKey(const Key('shield-hud-armed-overlay')), findsNothing);
       expect(find.text('🛡️ Shield absorbed it!'), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 1400));
+      state.rt.timer?.cancel();
+    });
+
+    testWidgets('performance mode keeps the armed shield highlight static',
+        (tester) async {
+      final state = await _makeState(lowPerf: true);
+      _startStandard(state);
+      state.p[1].pups = [PowerUp.shield];
+      state.usePowerUp(PowerUp.shield);
+
+      await _pumpGame(tester, state);
+      final before = tester.widget<Opacity>(
+        find.byKey(const Key('shield-hud-armed-overlay')),
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+      final after = tester.widget<Opacity>(
+        find.byKey(const Key('shield-hud-armed-overlay')),
+      );
+      expect(after.opacity, before.opacity);
       state.rt.timer?.cancel();
     });
   });
 }
 
-Future<GameState> _makeState({bool reduceMotion = false}) async {
+Future<GameState> _makeState({
+  bool reduceMotion = false,
+  bool lowPerf = false,
+}) async {
   SharedPreferences.setMockInitialValues({});
   await Storage.init();
   final settings = SettingsService()
@@ -91,7 +159,7 @@ Future<GameState> _makeState({bool reduceMotion = false}) async {
       vibration: false,
       dyslexia: false,
       colorblind: false,
-      lowPerf: false,
+      lowPerf: lowPerf,
       reduceMotion: reduceMotion,
       animSpeed: 1,
     );

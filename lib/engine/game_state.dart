@@ -321,8 +321,6 @@ class GameState extends ChangeNotifier {
   String reactionPill = '';
   String bigEmoji = '';
   bool bigEmojiVisible = false;
-  int shieldHudPulseTick = 0;
-  int shieldAbsorbTick = 0;
   int screenShakeTick = 0;
   CelebrationEvent celebration = const CelebrationEvent.none();
   int _celebrationSeq = 0;
@@ -1335,7 +1333,6 @@ class GameState extends ChangeNotifier {
     _clearAnswerFeedback();
     celebration = const CelebrationEvent.none();
     screenShakeTick = 0;
-    shieldHudPulseTick = 0;
 
     // Reset runtime
     rt = RuntimeState()
@@ -1579,6 +1576,9 @@ class GameState extends ChangeNotifier {
     if (!rt.accepting) return;
     _onAnswer(null, false, true);
   }
+
+  @visibleForTesting
+  void debugTimeoutForTest() => _onTimeout();
 
   // ─── Answer handler ─────────────────────────────────────────
   void onAnswer(num val) {
@@ -1859,12 +1859,7 @@ class GameState extends ChangeNotifier {
 
     if (pl.shieldActive && !isSkip && !isTimeout) {
       pl.shieldActive = false;
-      shieldAbsorbTick++;
       reactionPill = '🛡️ Shield absorbed it!';
-      bigEmoji = '🛡️';
-      bigEmojiVisible = true;
-      audio.vibrateWrong();
-      _shakeScreen(vibrate: false);
       notifyListeners();
       return;
     }
@@ -1980,7 +1975,6 @@ class GameState extends ChangeNotifier {
       bigEmojiVisible = false;
       bigEmoji = '';
       reactionPill = '';
-      shieldAbsorbTick = 0;
       _nextTurn();
     });
   }
@@ -2130,7 +2124,6 @@ class GameState extends ChangeNotifier {
     reactionPill = '';
     bigEmoji = '';
     bigEmojiVisible = false;
-    shieldAbsorbTick = 0;
   }
 
   void replayGame() {
@@ -2387,8 +2380,6 @@ class GameState extends ChangeNotifier {
         break;
       case PowerUp.shield:
         pl.shieldActive = true;
-        shieldHudPulseTick++;
-        reactionPill = '🛡️ Shield activated!';
         break;
       case PowerUp.freeze:
         rt.timer?.cancel();
@@ -2769,8 +2760,6 @@ class GameState extends ChangeNotifier {
     reactionPill = '';
     bigEmoji = '';
     bigEmojiVisible = false;
-    shieldHudPulseTick = 0;
-    shieldAbsorbTick = 0;
     celebration = const CelebrationEvent.none();
     lastUnlockedAchievementCount = 0;
     newlyUnlocked = [];

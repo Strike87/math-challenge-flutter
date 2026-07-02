@@ -39,7 +39,8 @@ void main() {
         state.showModal(GameModal.coinShop);
         await tester.pumpWidget(_modalHost(state));
         await tester.pump();
-        await tester.tap(find.text('Coins'));
+        await tester.ensureVisible(find.byKey(const Key('shopHub_buy')));
+        await tester.tap(find.byKey(const Key('shopHub_buy')));
         await tester.pumpAndSettle();
         final productCard = find.byKey(Key('iapProduct_${product.productId}'));
         await tester.ensureVisible(productCard);
@@ -63,6 +64,10 @@ void main() {
       await tester.pump();
 
       expect(find.text('Grown-up check'), findsOneWidget);
+      expect(
+        find.text('A grown-up should continue\nbefore opening Google Play.'),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('adultGateAnswerField')), findsNothing);
 
       await tester.tap(find.text('Continue'));
@@ -217,6 +222,8 @@ void main() {
       state.showModal(GameModal.coinShop);
       await tester.pumpWidget(_modalHost(state));
       await tester.pump();
+      await tester.tap(find.byKey(const Key('shopHub_avatars')));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Dragon'));
       await tester.pump();
 

@@ -366,8 +366,10 @@ void main() {
       await tester.pumpWidget(
           TestAppWrapper(state: state, child: const TestAppShell()));
       await tester.pumpAndSettle();
-      expect(find.text('Tap to change'), findsNWidgets(2));
-      expect(find.text('🎨 Customize Avatar'), findsNWidgets(2));
+      expect(find.text('Player 1 Setup'), findsOneWidget);
+      expect(find.text('Tap to change'), findsOneWidget);
+      expect(find.text('🎨 Customize Avatar'), findsOneWidget);
+      expect(find.text('Next →'), findsOneWidget);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/07_player_setup_2p.png'));
@@ -490,9 +492,10 @@ void main() {
           TestAppWrapper(state: state, child: const TestAppShell()));
       await tester.pumpAndSettle();
       expect(find.text('Coin Shop'), findsOneWidget);
-      expect(find.text('Items'), findsOneWidget);
-      expect(find.text('Boosts'), findsOneWidget);
-      expect(find.text('Coins'), findsOneWidget);
+      expect(find.byKey(const Key('shopHub_avatars')), findsOneWidget);
+      expect(find.byKey(const Key('shopHub_hats')), findsOneWidget);
+      expect(find.byKey(const Key('shopHub_packs')), findsOneWidget);
+      expect(find.byKey(const Key('shopHub_buy')), findsOneWidget);
       expect(find.byType(SingleChildScrollView), findsWidgets);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
@@ -512,7 +515,8 @@ void main() {
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Player Avatar'), findsOneWidget);
       expect(find.text('Default Avatar'), findsOneWidget);
-      expect(find.text('Tap to change • unlocked emojis only'), findsOneWidget);
+      expect(find.text('Tap to change'), findsOneWidget);
+      expect(find.text('Tap to change • unlocked emojis only'), findsNothing);
       expect(find.byType(SingleChildScrollView), findsWidgets);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),

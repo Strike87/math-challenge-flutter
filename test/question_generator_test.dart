@@ -128,6 +128,62 @@ void main() {
       }
     });
 
+    test('integer signed questions include sign-mismatch distractors', () {
+      var seed = 980;
+      for (final op in _ops) {
+        final qgen = QuestionGenerator(rng: Random(seed++));
+        var checkedSignedQuestion = false;
+        for (var i = 0; i < 700; i++) {
+          final q = qgen.build(
+            type: op,
+            diff: Difficulty.medium,
+            numType: NumberType.integers,
+          );
+          _expectChoicesAreValid(q);
+          if (!q.text.contains('(-') || q.ans == 0) continue;
+          checkedSignedQuestion = true;
+          expect(
+            q.choices.any((choice) => _sameAnswer(choice, -q.ans)),
+            isTrue,
+            reason: '${q.text} should include ${-q.ans} as a sign trap',
+          );
+        }
+        expect(
+          checkedSignedQuestion,
+          isTrue,
+          reason: '${op.name} should generate a signed integer question',
+        );
+      }
+    });
+
+    test('negative times negative includes a negative distractor', () {
+      final qgen = QuestionGenerator(rng: Random(1224));
+      var foundNegativeTimesNegative = false;
+      for (var i = 0; i < 1200; i++) {
+        final q = qgen.build(
+          type: Operation.multiplication,
+          diff: Difficulty.medium,
+          numType: NumberType.integers,
+        );
+        _expectChoicesAreValid(q);
+        final negativeOperandCount = RegExp(r'\(-').allMatches(q.text).length;
+        if (negativeOperandCount < 2 || q.ans <= 0) continue;
+        foundNegativeTimesNegative = true;
+        expect(
+          q.choices.any((choice) => choice < 0),
+          isTrue,
+          reason: '${q.text} should tempt with a negative sign mistake',
+        );
+        expect(
+          q.choices.any((choice) => _sameAnswer(choice, -q.ans)),
+          isTrue,
+          reason: '${q.text} should include ${-q.ans}',
+        );
+      }
+
+      expect(foundNegativeTimesNegative, isTrue);
+    });
+
     test('rational transforms use source decimal precision by difficulty', () {
       var seed = 1200;
       for (final diff in Difficulty.values) {

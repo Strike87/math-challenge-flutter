@@ -401,14 +401,15 @@ class QuestionGenerator {
     double ratRound(num n) => double.parse(n.toStringAsFixed(ratDP));
 
     final choices = <num>{q.ans};
+    final signedInteger = isIntegers && q.text.contains('(-') && q.ans != 0;
     final candidates = <num?>[
+      signedInteger ? -q.ans : null,
       q.ans + 1,
       q.ans - 1,
       q.ans + 10,
       q.ans - 10,
       (q.ans * 1.1).round(),
       (q.ans * 0.9).round(),
-      isIntegers ? -q.ans : null,
       isRationals ? ratRound(q.ans + 0.1) : null,
       isRationals ? ratRound(q.ans - 0.1) : null,
       isRationals ? ratRound(q.ans + 1) : null,

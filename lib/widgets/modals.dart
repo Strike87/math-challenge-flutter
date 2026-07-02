@@ -86,6 +86,7 @@ class ModalShell extends StatelessWidget {
     this.actions = const [],
     this.maxHeight,
     this.iconWidget,
+    this.scrollChild = true,
   });
   final String icon;
   final String title;
@@ -93,6 +94,7 @@ class ModalShell extends StatelessWidget {
   final List<Widget> actions;
   final double? maxHeight;
   final Widget? iconWidget;
+  final bool scrollChild;
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +169,12 @@ class ModalShell extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Flexible(child: SingleChildScrollView(child: child)),
+                  Flexible(
+                    fit: scrollChild ? FlexFit.loose : FlexFit.tight,
+                    child: scrollChild
+                        ? SingleChildScrollView(child: child)
+                        : child,
+                  ),
                   if (actions.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Wrap(
@@ -427,6 +434,7 @@ class _AvatarSettingsTile extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -439,7 +447,7 @@ class _AvatarSettingsTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Tap to change • unlocked emojis only',
+                    'Tap to change',
                     style: TextStyle(
                       color: s.muted,
                       fontSize: 11,
@@ -1569,12 +1577,11 @@ class AvatarBuilderModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-    final pickerHeight =
-        (MediaQuery.of(context).size.height * 0.28).clamp(220.0, 300.0);
     return ModalShell(
       icon: '🎨',
       title: 'Avatar Builder',
       maxHeight: 700,
+      scrollChild: false,
       actions: [
         NeoButton(
             label: 'Save Avatar',
@@ -1591,13 +1598,10 @@ class AvatarBuilderModal extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (gs.players == 2) ...[
-              _AvatarBuilderPlayerTabs(gs: gs),
-              const SizedBox(height: 12),
-            ],
             _AvatarBuilderPreview(gs: gs, settings: s),
             const SizedBox(height: 12),
             Container(
+              key: const Key('avatar-builder-tabs'),
               padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
                 color: s.surface2.withValues(alpha: s.dark ? 0.85 : 0.62),
@@ -1634,132 +1638,45 @@ class AvatarBuilderModal extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              height: pickerHeight,
+            Expanded(
               child: TabBarView(
+                key: const Key('avatar-builder-picker'),
                 children: [
                   _AvatarButtonGrid(
+                    key: const Key('avatar-base-grid'),
                     items: gs.availableAvatarBases,
                     selected: gs.builderAvatar.base,
                     onTap: gs.setBuilderBase,
                   ),
                   _AvatarButtonGrid(
-                    items: gs.availableAvatarHats,
+                    key: const Key('avatar-hat-grid'),
+                    items: [
+                      '',
+                      ...gs.availableAvatarHats.where((hat) => hat.isNotEmpty),
+                    ],
                     selected: gs.builderAvatar.hat,
                     emptyLabel: '🚫',
                     onTap: gs.setBuilderHat,
                   ),
                   _AvatarButtonGrid(
-                    items: GameConfig.avatarAccessories,
+                    key: const Key('avatar-accessory-grid'),
+                    items: [
+                      '',
+                      ...GameConfig.avatarAccessories
+                          .where((accessory) => accessory.isNotEmpty),
+                    ],
                     selected: gs.builderAvatar.accessory,
                     emptyLabel: '🚫',
                     onTap: gs.setBuilderAccessory,
                   ),
-                  _AvatarColorGrid(gs: gs),
+                  _AvatarColorGrid(
+                    key: const Key('avatar-color-grid'),
+                    gs: gs,
+                  ),
                 ],
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AvatarBuilderPlayerTabs extends StatelessWidget {
-  const _AvatarBuilderPlayerTabs({required this.gs});
-
-  final GameState gs;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Flexible(
-          child: _AvatarBuilderPlayerTab(
-            label: '👤 Player 1',
-            active: gs.builderPid == 1,
-            onTap: () => gs.showAvatarBuilder(1),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Flexible(
-          child: _AvatarBuilderPlayerTab(
-            label: '👤 Player 2',
-            active: gs.builderPid == 2,
-            onTap: () => gs.showAvatarBuilder(2),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AvatarBuilderPlayerTab extends StatelessWidget {
-  const _AvatarBuilderPlayerTab({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = context.watch<SettingsService>();
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 140),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: active
-                ? const LinearGradient(
-                    colors: [Color(GameConfig.coral), Color(0xFFD4681A)],
-                  )
-                : null,
-            color: active
-                ? null
-                : s.surface2.withValues(alpha: s.dark ? 0.82 : 0.58),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: active
-                  ? Colors.transparent
-                  : Colors.white.withValues(alpha: 0.82),
-              width: 1.5,
-            ),
-            boxShadow: active
-                ? [
-                    BoxShadow(
-                      color:
-                          const Color(GameConfig.coral).withValues(alpha: 0.22),
-                      blurRadius: 14,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Center(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                label,
-                maxLines: 1,
-                softWrap: false,
-                style: TextStyle(
-                  color: active ? Colors.white : s.text,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  fontFamily: AppFonts.body,
-                ),
-              ),
-            ),
-          ),
         ),
       ),
     );
@@ -1779,68 +1696,10 @@ class _AvatarBuilderPreview extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 380;
-        final previewSize = compact ? 76.0 : 84.0;
-        final preview = Container(
-          width: previewSize,
-          height: previewSize,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color:
-                settings.surface2.withValues(alpha: settings.dark ? 0.90 : 0.7),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-                color: Colors.white.withValues(alpha: 0.92), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.10),
-                blurRadius: 16,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: AvatarWidget(avatar: avatar, size: previewSize - 12),
-        );
-        final details = Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Player ${gs.builderPid} Avatar',
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: settings.text,
-                fontFamily: AppFonts.head,
-                fontSize: compact ? 15 : 17,
-                fontWeight: FontWeight.w900,
-                height: 1.0,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                _AvatarStudioChip(label: 'Base', value: avatar.base),
-                _AvatarStudioChip(
-                    label: 'Hat',
-                    value: avatar.hat.isEmpty ? 'None' : avatar.hat),
-                _AvatarStudioChip(
-                    label: 'Acc',
-                    value:
-                        avatar.accessory.isEmpty ? 'None' : avatar.accessory),
-                _AvatarStudioChip(
-                  label: 'Color',
-                  value: bg == null ? 'None' : 'Selected',
-                  swatch: bg,
-                ),
-              ],
-            ),
-          ],
-        );
+        final slotSize = compact ? 62.0 : 70.0;
 
         return Container(
+          key: const Key('avatar-builder-preview'),
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -1861,11 +1720,57 @@ class _AvatarBuilderPreview extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              preview,
-              SizedBox(width: compact ? 10 : 14),
-              Expanded(child: details),
+              Text(
+                'Player ${gs.builderPid} Avatar',
+                maxLines: 1,
+                softWrap: false,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: settings.text,
+                  fontFamily: AppFonts.head,
+                  fontSize: compact ? 17 : 19,
+                  fontWeight: FontWeight.w900,
+                  height: 1.0,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _AvatarStudioSlot(
+                    size: slotSize,
+                    child: AvatarWidget(avatar: avatar, size: slotSize - 8),
+                  ),
+                  _AvatarStudioSlot(
+                    size: slotSize,
+                    child: Text(avatar.hat.isEmpty ? '🚫' : avatar.hat),
+                  ),
+                  _AvatarStudioSlot(
+                    size: slotSize,
+                    child: Text(
+                      avatar.accessory.isEmpty ? '🚫' : avatar.accessory,
+                    ),
+                  ),
+                  _AvatarStudioSlot(
+                    size: slotSize,
+                    child: bg == null
+                        ? const Text('🚫')
+                        : Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: bg,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
             ],
           ),
         );
@@ -1874,64 +1779,31 @@ class _AvatarBuilderPreview extends StatelessWidget {
   }
 }
 
-class _AvatarStudioChip extends StatelessWidget {
-  const _AvatarStudioChip({
-    required this.label,
-    required this.value,
-    this.swatch,
-  });
+class _AvatarStudioSlot extends StatelessWidget {
+  const _AvatarStudioSlot({required this.size, required this.child});
 
-  final String label;
-  final String value;
-  final Color? swatch;
+  final double size;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-      decoration: BoxDecoration(
-        color: s.dark
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.white.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.70)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$label ',
-            style: TextStyle(
-              color: s.muted,
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          if (swatch != null) ...[
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                color: swatch,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.2),
-              ),
-            ),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            value,
-            maxLines: 1,
-            softWrap: false,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: s.text,
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: s.dark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.white.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.70)),
+        ),
+        child: DefaultTextStyle(
+          style: TextStyle(color: s.text, fontSize: 26, height: 1),
+          child: FittedBox(fit: BoxFit.scaleDown, child: child),
+        ),
       ),
     );
   }
@@ -1969,6 +1841,7 @@ class _AvatarBuilderTabLabel extends StatelessWidget {
 
 class _AvatarButtonGrid extends StatelessWidget {
   const _AvatarButtonGrid({
+    super.key,
     required this.items,
     required this.selected,
     required this.onTap,
@@ -2073,7 +1946,7 @@ class _AvatarChoiceButton extends StatelessWidget {
 }
 
 class _AvatarColorGrid extends StatelessWidget {
-  const _AvatarColorGrid({required this.gs});
+  const _AvatarColorGrid({super.key, required this.gs});
 
   final GameState gs;
 
@@ -2083,6 +1956,10 @@ class _AvatarColorGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 340 ? 6 : 5;
+        final colors = [
+          null,
+          ...GameConfig.avatarColors.whereType<String>(),
+        ];
         return GridView.builder(
           padding: const EdgeInsets.all(4),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -2090,9 +1967,9 @@ class _AvatarColorGrid extends StatelessWidget {
             mainAxisSpacing: 8,
             crossAxisSpacing: 8,
           ),
-          itemCount: GameConfig.avatarColors.length,
+          itemCount: colors.length,
           itemBuilder: (_, i) {
-            final color = GameConfig.avatarColors[i];
+            final color = colors[i];
             final selected = gs.builderAvatar.color == color;
             final parsed = color == null ? null : _avatarBuilderColor(color);
             return GestureDetector(
@@ -2125,14 +2002,7 @@ class _AvatarColorGrid extends StatelessWidget {
                   ],
                 ),
                 child: color == null
-                    ? Text(
-                        'None',
-                        style: TextStyle(
-                          color: s.muted,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      )
+                    ? const Text('🚫', style: TextStyle(fontSize: 22))
                     : selected
                         ? const Icon(Icons.check, color: Colors.white, size: 18)
                         : null,
@@ -2508,15 +2378,25 @@ Color _skillAccuracyColor(double accuracy) {
 // ═══════════════════════════════════════════════════════════════
 // Coin Shop Modal
 // ═══════════════════════════════════════════════════════════════
-class CoinShopModal extends StatelessWidget {
+enum _ShopSection { hub, avatars, hats, packs, buy }
+
+class CoinShopModal extends StatefulWidget {
   const CoinShopModal({super.key, required this.gs});
   final GameState gs;
 
   @override
+  State<CoinShopModal> createState() => _CoinShopModalState();
+}
+
+class _CoinShopModalState extends State<CoinShopModal> {
+  _ShopSection _section = _ShopSection.hub;
+
+  void _open(_ShopSection section) => setState(() => _section = section);
+  void _backToHub() => setState(() => _section = _ShopSection.hub);
+
+  @override
   Widget build(BuildContext context) {
-    final s = context.watch<SettingsService>();
-    final bodyHeight =
-        (MediaQuery.of(context).size.height * 0.58).clamp(410.0, 520.0);
+    final gs = widget.gs;
     return ModalShell(
       icon: '🛍️',
       title: 'Coin Shop',
@@ -2525,197 +2405,240 @@ class CoinShopModal extends StatelessWidget {
         NeoButton(
             label: 'Done', color: GameConfig.coral, onPressed: gs.closeModal),
       ],
-      child: DefaultTabController(
-        length: 3,
-        child: Builder(
-          builder: (context) {
-            final controller = DefaultTabController.of(context);
-            return Column(
-              children: [
-                _ShopBalancePill(coins: gs.coins, s: s),
-                const SizedBox(height: 12),
-                _ShopTabBar(controller: controller, s: s),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: bodyHeight,
-                  child: TabBarView(
-                    children: [
-                      _ShopItemsPanel(gs: gs),
-                      _ShopBoostsPanel(
-                          items: GameConfig.shopItems['packs']!, gs: gs),
-                      _BuyCoinsPanel(gs: gs),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _ShopBalancePill extends StatelessWidget {
-  const _ShopBalancePill({required this.coins, required this.s});
-
-  final int coins;
-  final SettingsService s;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(GameConfig.coin)
-            .withValues(alpha: s.dark ? 0.14 : 0.16),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: const Color(GameConfig.coin).withValues(alpha: 0.35),
-          width: 1.2,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('🪙', style: TextStyle(fontSize: 22)),
-          const SizedBox(width: 8),
-          Text(
-            '$coins coins',
-            maxLines: 1,
-            softWrap: false,
-            style: const TextStyle(
-              color: Color(GameConfig.mango),
-              fontFamily: AppFonts.head,
-              fontSize: 21,
-              fontWeight: FontWeight.w900,
+          if (_section == _ShopSection.hub)
+            _ShopHubPanel(onOpen: _open)
+          else
+            _ShopSectionPanel(
+              section: _section,
+              onBack: _backToHub,
+              child: switch (_section) {
+                _ShopSection.avatars => _ShopCatalogPanel(
+                    items: GameConfig.shopItems['avatars']!,
+                    gs: gs,
+                  ),
+                _ShopSection.hats => _ShopCatalogPanel(
+                    items: GameConfig.shopItems['hats']!,
+                    gs: gs,
+                  ),
+                _ShopSection.packs => _ShopPacksPanel(gs: gs),
+                _ShopSection.buy => _BuyCoinsPanel(gs: gs),
+                _ShopSection.hub => const SizedBox.shrink(),
+              },
             ),
-          ),
         ],
       ),
     );
   }
 }
 
-class _ShopTabBar extends StatelessWidget {
-  const _ShopTabBar({required this.controller, required this.s});
-  final TabController controller;
-  final SettingsService s;
+class _ShopHubPanel extends StatelessWidget {
+  const _ShopHubPanel({required this.onOpen});
+
+  final ValueChanged<_ShopSection> onOpen;
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, child) {
-        return Row(
-          children: [
-            _buildTab(0, '🐾', 'Items'),
-            const SizedBox(width: 8),
-            _buildTab(1, '⚡', 'Boosts'),
-            const SizedBox(width: 8),
-            _buildTab(2, '💳', 'Coins'),
-          ],
-        );
-      },
+    return Column(
+      children: [
+        _ShopHubCard(
+          key: const Key('shopHub_avatars'),
+          icon: '🐾',
+          title: 'Avatars',
+          subtitle: 'Choose your character',
+          onTap: () => onOpen(_ShopSection.avatars),
+        ),
+        _ShopHubCard(
+          key: const Key('shopHub_hats'),
+          icon: '🎩',
+          title: 'Hats',
+          subtitle: 'Customize your look',
+          onTap: () => onOpen(_ShopSection.hats),
+        ),
+        _ShopHubCard(
+          key: const Key('shopHub_packs'),
+          icon: '⚡',
+          title: 'Packs',
+          subtitle: 'Power-ups and daily rewards',
+          onTap: () => onOpen(_ShopSection.packs),
+        ),
+        _ShopHubCard(
+          key: const Key('shopHub_buy'),
+          icon: '💳',
+          title: 'Buy',
+          subtitle: 'Coins and remove ads',
+          onTap: () => onOpen(_ShopSection.buy),
+        ),
+      ],
     );
   }
+}
 
-  Widget _buildTab(int index, String icon, String label) {
-    final active = controller.index == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => controller.animateTo(index),
-        child: Container(
-          height: 58,
-          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
-          decoration: BoxDecoration(
-            gradient: active
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(GameConfig.coral),
-                      Color(0xFFD4681A),
-                    ],
-                  )
-                : null,
-            color: active
-                ? null
-                : (s.dark
-                    ? const Color(0xFF28231E).withValues(alpha: 0.70)
-                    : Colors.white.withValues(alpha: 0.55)),
-            borderRadius: BorderRadius.circular(12),
-            border: active
-                ? null
-                : Border.all(
-                    color: s.dark
-                        ? Colors.white.withValues(alpha: 0.12)
-                        : Colors.white.withValues(alpha: 0.80),
-                    width: 1.5,
-                  ),
-            boxShadow: active
-                ? [
-                    BoxShadow(
-                      color:
-                          const Color(GameConfig.coral).withValues(alpha: 0.30),
-                      blurRadius: 14,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : null,
-          ),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(icon, style: const TextStyle(fontSize: 16)),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  maxLines: 1,
-                  softWrap: false,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    color: active
-                        ? Colors.white
-                        : (s.dark
-                            ? const Color(GameConfig.mutedDark)
-                            : const Color(GameConfig.mutedLight)),
-                    fontFamily: AppFonts.head,
-                  ),
+class _ShopHubCard extends StatelessWidget {
+  const _ShopHubCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final String icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(16),
+        decoration: _shopCardDecoration(s),
+        child: Row(
+          children: [
+            Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(GameConfig.coral), Color(0xFFD4681A)],
                 ),
-              ],
+                borderRadius: BorderRadius.circular(17),
+              ),
+              child: Center(
+                child: Text(icon, style: const TextStyle(fontSize: 28)),
+              ),
             ),
-          ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: s.text,
+                      fontFamily: AppFonts.head,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      height: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: s.muted,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: s.muted, size: 30),
+          ],
         ),
       ),
     );
   }
 }
 
-class _ShopItemsPanel extends StatelessWidget {
-  const _ShopItemsPanel({required this.gs});
+class _ShopSectionPanel extends StatelessWidget {
+  const _ShopSectionPanel({
+    required this.section,
+    required this.onBack,
+    required this.child,
+  });
+
+  final _ShopSection section;
+  final VoidCallback onBack;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = switch (section) {
+      _ShopSection.avatars => 'Avatars',
+      _ShopSection.hats => 'Hats',
+      _ShopSection.packs => 'Packs',
+      _ShopSection.buy => 'Buy',
+      _ShopSection.hub => 'Shop',
+    };
+    final s = context.watch<SettingsService>();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            key: const Key('shopBackToHub'),
+            onPressed: onBack,
+            icon: const Icon(Icons.arrow_back_rounded, size: 18),
+            label: const Text('Back to Shop'),
+            style: TextButton.styleFrom(
+              foregroundColor: s.muted,
+              textStyle: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+        ),
+        Row(
+          children: [
+            Expanded(child: _ShopSectionTitle(title)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        child,
+      ],
+    );
+  }
+}
+
+class _ShopCatalogPanel extends StatelessWidget {
+  const _ShopCatalogPanel({
+    required this.items,
+    required this.gs,
+  });
+
+  final List<ShopItem> items;
+  final GameState gs;
+
+  @override
+  Widget build(BuildContext context) {
+    return _ShopItemGrid(items: items, gs: gs);
+  }
+}
+
+class _ShopPacksPanel extends StatelessWidget {
+  const _ShopPacksPanel({required this.gs});
 
   final GameState gs;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(2, 2, 2, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _ShopSectionTitle('Avatars'),
-          _ShopItemGrid(items: GameConfig.shopItems['avatars']!, gs: gs),
-          const SizedBox(height: 16),
-          _ShopSectionTitle('Hats'),
-          _ShopItemGrid(items: GameConfig.shopItems['hats']!, gs: gs),
+    final items = GameConfig.shopItems['packs']!;
+    return Column(
+      children: [
+        for (final item in items) ...[
+          _ShopActionRow(
+            item: item,
+            gs: gs,
+            onTap: () => gs.buyShopItem(item),
+          ),
+          const SizedBox(height: 10),
         ],
-      ),
+      ],
     );
   }
 }
@@ -2766,7 +2689,7 @@ class _ShopItemGrid extends StatelessWidget {
             for (final item in items)
               SizedBox(
                 width: cardWidth,
-                height: 150,
+                height: 164,
                 child: _ShopItemCard(item: item, gs: gs),
               ),
           ],
@@ -2793,13 +2716,13 @@ class _ShopItemCard extends StatelessWidget {
       child: Opacity(
         opacity: canBuy || owned ? 1 : 0.48,
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(10),
           decoration: _shopCardDecoration(s),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(item.emoji, style: const TextStyle(fontSize: 34)),
-              const SizedBox(height: 8),
+              Text(item.emoji, style: const TextStyle(fontSize: 30)),
+              const SizedBox(height: 5),
               Text(
                 item.name.replaceAll('\n', ' '),
                 maxLines: 1,
@@ -2808,43 +2731,39 @@ class _ShopItemCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: s.text,
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: FontWeight.w900,
                   fontFamily: AppFonts.head,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 4),
+              if (!(owned && !item.consumable)) ...[
+                Text(
+                  '${item.price} coins',
+                  maxLines: 1,
+                  softWrap: false,
+                  style: TextStyle(
+                    color: s.muted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: AppFonts.body,
+                  ),
+                ),
+                const SizedBox(height: 4),
+              ] else
+                const SizedBox(height: 4),
               _ShopPricePill(
-                text: owned && !item.consumable ? 'Owned' : '🪙 ${item.price}',
+                text: owned && !item.consumable
+                    ? 'Owned'
+                    : canAfford
+                        ? 'Buy'
+                        : 'Not enough',
                 owned: owned && !item.consumable,
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ShopBoostsPanel extends StatelessWidget {
-  const _ShopBoostsPanel({required this.items, required this.gs});
-  final List<ShopItem> items;
-  final GameState gs;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(2, 2, 2, 10),
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, i) {
-        final item = items[i];
-        return _ShopActionRow(
-          item: item,
-          gs: gs,
-          onTap: () => gs.buyShopItem(item),
-        );
-      },
     );
   }
 }
@@ -2861,19 +2780,29 @@ class _ShopActionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
     final parts = item.name.split('\n');
+    final title = item.special == 'watch' ? 'Daily Bonus' : parts.first;
     final owned = gs.shopOwned.contains(item.id);
     final dailyBonusClaimed =
         item.special == 'watch' && gs.isDailyCoinsClaimedToday;
     final canAfford = item.special == 'watch' || gs.coins >= item.price;
     final canBuy =
         !((owned && !item.consumable) || dailyBonusClaimed) && canAfford;
-    final priceText = dailyBonusClaimed
-        ? 'Claimed'
+    final actionText = dailyBonusClaimed
+        ? 'Claimed Today'
         : (owned && !item.consumable)
             ? 'Owned'
-            : item.special == 'watch'
-                ? 'Free'
-                : '🪙 ${item.price}';
+            : !canAfford
+                ? 'Not enough'
+                : item.special == 'watch'
+                    ? 'Claim'
+                    : 'Buy';
+    final subtitle = item.special == 'watch'
+        ? '+${GameState.dailyBonusCoins} coins • once per day'
+        : item.id == 'pack_powerups'
+            ? '+5 of every power-up • ${item.price} coins'
+            : item.id == 'pack_lives'
+                ? '+1 Master life • ${item.price} coins'
+                : '${parts.skip(1).join(' ')} • ${item.price} coins';
 
     return GestureDetector(
       onTap: canBuy ? onTap : null,
@@ -2908,7 +2837,7 @@ class _ShopActionRow extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      parts.first,
+                      title,
                       maxLines: 1,
                       softWrap: false,
                       overflow: TextOverflow.ellipsis,
@@ -2919,26 +2848,24 @@ class _ShopActionRow extends StatelessWidget {
                         fontFamily: AppFonts.head,
                       ),
                     ),
-                    if (parts.length > 1) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        parts.skip(1).join(' '),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: s.muted,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          height: 1.2,
-                        ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: s.muted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
               _ShopPricePill(
-                text: priceText,
+                text: actionText,
                 owned: (owned && !item.consumable) || dailyBonusClaimed,
               ),
             ],
@@ -2995,73 +2922,70 @@ class _BuyCoinsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(2, 2, 2, 10),
-      child: Column(
-        children: [
-          _RewardedAdCard(
-            claimed: gs.adsRemoved || gs.isRewardedAdOnCooldown,
-            onTap: () {
-              gs.claimRewardedAdCoins();
-            },
-          ),
-          const SizedBox(height: 10),
-          _IapCard(
-            key: const Key('iapProduct_100_coins'),
-            icon: '🪙',
-            title: '100 Coins',
-            subtitle: 'Starter pack',
-            price: r'$0.99',
-            onTap: () => gs.beginIapPurchase(IapProducts.small),
-          ),
-          _IapCard(
-            key: const Key('iapProduct_500_coins'),
-            icon: '💰',
-            title: '500 Coins',
-            subtitle: '+50 bonus coins!',
-            price: r'$3.99',
-            onTap: () => gs.beginIapPurchase(IapProducts.medium),
-          ),
-          _IapCard(
-            key: const Key('iapProduct_1200_coins'),
-            icon: '🏆',
-            title: '1200 Coins',
-            subtitle: '+200 bonus coins!',
-            price: r'$7.99',
-            onTap: () => gs.beginIapPurchase(IapProducts.large),
-          ),
-          _IapCard(
-            key: const Key('iapProduct_ads_remove'),
-            icon: '🚫',
-            title: 'Remove Ads',
-            subtitle:
-                gs.adsRemoved ? 'Already active' : 'Forever, one-time purchase',
-            price: gs.adsRemoved ? 'Owned' : r'$1.99',
-            onTap: () => gs.beginIapPurchase(IapProducts.removeAds),
-          ),
-          const Text(
-            'Payments processed securely via Google Play.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11, color: Color(GameConfig.mutedLight)),
-          ),
-        ],
-      ),
+    return Column(
+      children: [
+        _RewardedAdCard(
+          disabled: gs.adsRemoved || gs.isRewardedAdOnCooldown,
+          onTap: () {
+            gs.claimRewardedAdCoins();
+          },
+        ),
+        const SizedBox(height: 10),
+        _IapCard(
+          key: const Key('iapProduct_100_coins'),
+          icon: '🪙',
+          title: '100 Coins',
+          subtitle: '+100 coins',
+          price: r'$0.99',
+          onTap: () => gs.beginIapPurchase(IapProducts.small),
+        ),
+        _IapCard(
+          key: const Key('iapProduct_500_coins'),
+          icon: '💰',
+          title: '500 Coins',
+          subtitle: '+550 coins',
+          price: r'$3.99',
+          onTap: () => gs.beginIapPurchase(IapProducts.medium),
+        ),
+        _IapCard(
+          key: const Key('iapProduct_1200_coins'),
+          icon: '🏆',
+          title: '1200 Coins',
+          subtitle: '+1400 coins',
+          price: r'$7.99',
+          onTap: () => gs.beginIapPurchase(IapProducts.large),
+        ),
+        _IapCard(
+          key: const Key('iapProduct_ads_remove'),
+          icon: '🚫',
+          title: 'Remove Ads',
+          subtitle:
+              gs.adsRemoved ? 'Already active' : 'Forever, one-time purchase',
+          price: gs.adsRemoved ? 'Owned' : r'$1.99',
+          onTap: () => gs.beginIapPurchase(IapProducts.removeAds),
+        ),
+        const Text(
+          'Payments processed securely via Google Play.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 11, color: Color(GameConfig.mutedLight)),
+        ),
+      ],
     );
   }
 }
 
 class _RewardedAdCard extends StatelessWidget {
-  const _RewardedAdCard({required this.claimed, required this.onTap});
+  const _RewardedAdCard({required this.disabled, required this.onTap});
 
-  final bool claimed;
+  final bool disabled;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: claimed ? null : onTap,
+      onTap: disabled ? null : onTap,
       child: Opacity(
-        opacity: claimed ? 0.62 : 1,
+        opacity: disabled ? 0.62 : 1,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
@@ -3089,7 +3013,7 @@ class _RewardedAdCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Center(
-                  child: Text('🎬', style: TextStyle(fontSize: 34)),
+                  child: Text('🎥', style: TextStyle(fontSize: 34)),
                 ),
               ),
               const SizedBox(width: 14),
@@ -3098,7 +3022,7 @@ class _RewardedAdCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Watch a Short Ad',
+                      'Watch Ad',
                       maxLines: 1,
                       softWrap: false,
                       overflow: TextOverflow.ellipsis,
@@ -3112,7 +3036,7 @@ class _RewardedAdCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Free coins',
+                      '+${GameState.rewardedAdCoins} coins',
                       style: TextStyle(color: Color(0xFFD7D1EA), fontSize: 12),
                     ),
                   ],
@@ -3129,7 +3053,7 @@ class _RewardedAdCard extends StatelessWidget {
                 child: Column(
                   children: [
                     Text(
-                      claimed ? '✓' : '+10🪙',
+                      disabled ? '✓' : '+10🪙',
                       style: const TextStyle(
                         color: Color(GameConfig.coin),
                         fontWeight: FontWeight.w900,
@@ -3137,7 +3061,7 @@ class _RewardedAdCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      claimed ? 'CLAIMED' : 'WATCH',
+                      disabled ? 'WAIT' : 'WATCH',
                       style: const TextStyle(
                         color: Color(0xFFD7D1EA),
                         fontWeight: FontWeight.w900,
@@ -3425,12 +3349,17 @@ class _AdultGateWarningStep extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Text(
-          'A grown-up should continue before opening Google Play.',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: s.text.withValues(alpha: 0.72),
-            fontWeight: FontWeight.w700,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            'A grown-up should continue\nbefore opening Google Play.',
+            maxLines: 2,
+            softWrap: false,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: s.text.withValues(alpha: 0.72),
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],

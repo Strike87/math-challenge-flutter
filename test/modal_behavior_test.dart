@@ -295,6 +295,12 @@ void main() {
       try {
         state.players = 2;
         state.showAvatarBuilder(1);
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+        expect(find.text('Player 1 Avatar'), findsOneWidget);
+        expect(find.text('👤 Player 1'), findsNothing);
+        expect(find.text('👤 Player 2'), findsNothing);
+
         state.setBuilderBase('🐱');
         state.setBuilderHat('🎓');
         state.setBuilderAccessory('👓');
@@ -311,6 +317,12 @@ void main() {
         expect(state.currentModal, GameModal.none);
 
         state.showAvatarBuilder(2);
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+        expect(find.text('Player 2 Avatar'), findsOneWidget);
+        expect(find.text('👤 Player 1'), findsNothing);
+        expect(find.text('👤 Player 2'), findsNothing);
+
         state.setBuilderBase('🐸');
         state.saveCustomAvatar();
 
@@ -345,8 +357,52 @@ void main() {
       }
     });
 
-    testWidgets('Coin Shop local tabs and placeholders match modal scope',
+    testWidgets(
+        'Avatar Builder keeps preview and tabs fixed above picker grids',
         (tester) async {
+      final state = await _makeState();
+      try {
+        state.showAvatarBuilder(1);
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+
+        expect(find.byKey(const Key('avatar-builder-preview')), findsOneWidget);
+        expect(find.byKey(const Key('avatar-builder-tabs')), findsOneWidget);
+        expect(find.byKey(const Key('avatar-builder-picker')), findsOneWidget);
+        expect(find.byKey(const Key('avatar-base-grid')), findsOneWidget);
+        expect(find.byType(SingleChildScrollView), findsNothing);
+        expect(find.byType(GridView), findsOneWidget);
+        expect(find.text('None'), findsNothing);
+        expect(find.text('🚫'), findsWidgets);
+
+        await tester.tap(find.text('Hat'));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('avatar-hat-grid')), findsOneWidget);
+        await tester.tap(find.text('🚫').first);
+        await tester.pumpAndSettle();
+        expect(state.builderAvatar.hat, '');
+
+        await tester.tap(find.text('Accessory'));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('avatar-accessory-grid')), findsOneWidget);
+        await tester.tap(find.text('🚫').first);
+        await tester.pumpAndSettle();
+        expect(state.builderAvatar.accessory, '');
+
+        await tester.tap(find.text('Color'));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('avatar-color-grid')), findsOneWidget);
+        expect(find.text('None'), findsNothing);
+        await tester.tap(find.text('🚫').first);
+        await tester.pumpAndSettle();
+        expect(state.builderAvatar.color, isNull);
+        expect(tester.takeException(), isNull);
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('Coin Shop hub opens focused shop sections', (tester) async {
       final state = await _makeState();
       try {
         state.coins = 0;
@@ -356,20 +412,50 @@ void main() {
         await tester.pump();
 
         expect(find.text('Coin Shop'), findsOneWidget);
-        expect(find.text('0 coins'), findsOneWidget);
-        for (final label in ['Items', 'Boosts', 'Coins']) {
+        expect(find.text('0 coins'), findsNothing);
+        for (final label in ['Avatars', 'Hats', 'Packs', 'Buy']) {
           expect(find.text(label), findsOneWidget);
         }
+
+        await tester.tap(find.byKey(const Key('shopHub_avatars')));
+        await tester.pumpAndSettle();
         expect(find.text('AVATARS'), findsOneWidget);
-        expect(find.text('HATS'), findsOneWidget);
         expect(find.text('Dragon'), findsOneWidget);
         expect(find.text('Robot'), findsOneWidget);
-
-        await tester.ensureVisible(find.text('Coins'));
-        await tester.tap(find.text('Coins'));
+        expect(find.text('300 coins'), findsOneWidget);
+        expect(find.text('200 coins'), findsWidgets);
+        expect(find.text('Not enough'), findsWidgets);
+        await tester.tap(find.byKey(const Key('shopBackToHub')));
         await tester.pumpAndSettle();
 
-        expect(find.text('Watch a Short Ad'), findsOneWidget);
+        await tester.tap(find.byKey(const Key('shopHub_hats')));
+        await tester.pumpAndSettle();
+        expect(find.text('HATS'), findsOneWidget);
+        expect(find.text('Top Hat'), findsOneWidget);
+        expect(find.text('100 coins'), findsOneWidget);
+        await tester.tap(find.byKey(const Key('shopBackToHub')));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('shopHub_packs')));
+        await tester.pumpAndSettle();
+        expect(find.text('PACKS'), findsOneWidget);
+        expect(find.text('Power Pack'), findsOneWidget);
+        expect(find.text('Extra Life'), findsOneWidget);
+        expect(find.text('Daily Bonus'), findsOneWidget);
+        expect(find.textContaining('+5 of every power-up'), findsOneWidget);
+        expect(find.textContaining('+1 Master life'), findsOneWidget);
+        expect(find.textContaining('500 coins'), findsOneWidget);
+        expect(find.textContaining('450 coins'), findsOneWidget);
+        expect(find.textContaining('+20 coins'), findsOneWidget);
+        await tester.tap(find.byKey(const Key('shopBackToHub')));
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(find.byKey(const Key('shopHub_buy')));
+        await tester.tap(find.byKey(const Key('shopHub_buy')));
+        await tester.pumpAndSettle();
+        expect(find.text('BUY'), findsOneWidget);
+        expect(find.text('Watch Ad'), findsOneWidget);
+        expect(find.text('+10 coins'), findsOneWidget);
         expect(find.text('100 Coins'), findsOneWidget);
         expect(find.text('500 Coins'), findsOneWidget);
         expect(find.text('1200 Coins'), findsOneWidget);
@@ -379,6 +465,33 @@ void main() {
           find.textContaining('Payments processed securely via Google Play.'),
           findsOneWidget,
         );
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('Coin Shop daily bonus is local and once per day',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        state.coins = 0;
+        state.showModal(GameModal.coinShop);
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+
+        await tester.tap(find.byKey(const Key('shopHub_packs')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Daily Bonus'));
+        await tester.pumpAndSettle();
+
+        expect(state.coins, GameState.dailyBonusCoins);
+        expect(state.pendingIapProduct, isNull);
+        expect(state.currentModal, GameModal.coinShop);
+
+        await tester.tap(find.text('Daily Bonus'));
+        await tester.pumpAndSettle();
+
+        expect(state.coins, GameState.dailyBonusCoins);
       } finally {
         state.dispose();
       }

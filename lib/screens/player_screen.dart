@@ -6,13 +6,50 @@ import '../models/player.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
 
-class PlayerSetupScreen extends StatelessWidget {
+class PlayerSetupScreen extends StatefulWidget {
   const PlayerSetupScreen({super.key});
+
+  @override
+  State<PlayerSetupScreen> createState() => _PlayerSetupScreenState();
+}
+
+class _PlayerSetupScreenState extends State<PlayerSetupScreen> {
+  int _setupStep = 0;
+
+  void _goBack(GameState gs) {
+    if (gs.players == 2 && _setupStep == 1) {
+      setState(() => _setupStep = 0);
+      return;
+    }
+    _setupStep = 0;
+    gs.backFromPlayers();
+  }
+
+  void _submit(GameState gs) {
+    if (gs.players == 2 && _setupStep == 0) {
+      setState(() => _setupStep = 1);
+      return;
+    }
+    setState(() => _setupStep = 0);
+    gs.startGame();
+  }
 
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
     final s = context.watch<SettingsService>();
+    if (gs.players != 2 && _setupStep != 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _setupStep = 0);
+      });
+    }
+    final twoPlayer = gs.players == 2 &&
+        gs.rt.challenge.name != 'master' &&
+        gs.rt.challenge.name != 'dailyBoss';
+    final currentPid = twoPlayer && _setupStep == 1 ? 2 : 1;
+    final title = twoPlayer ? 'Player $currentPid Setup' : 'Player Setup';
+    final primaryLabel =
+        twoPlayer && _setupStep == 0 ? 'Next →' : 'Start Game ▶';
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -22,13 +59,14 @@ class PlayerSetupScreen extends StatelessWidget {
             Row(
               children: [
                 IconButton(
+                  key: const Key('player-setup-back'),
                   icon: const Icon(Icons.arrow_back),
                   color: s.text,
-                  onPressed: gs.backFromPlayers,
+                  onPressed: () => _goBack(gs),
                 ),
                 Expanded(
                   child: Text(
-                    'Player Setup',
+                    title,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: s.text,
@@ -42,22 +80,13 @@ class PlayerSetupScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-
-            // Player 1
-            _PlayerSection(pid: 1, gs: gs, s: s),
-            const SizedBox(height: 20),
-
-            // Player 2 (only if 2-player mode)
-            if (gs.players == 2 &&
-                gs.rt.challenge.name != 'master' &&
-                gs.rt.challenge.name != 'dailyBoss')
-              _PlayerSection(pid: 2, gs: gs, s: s),
-
+            _PlayerSection(pid: currentPid, gs: gs, s: s),
             const SizedBox(height: 24),
             NeoButton(
-              label: 'Start Game ▶',
+              key: const Key('player-setup-primary'),
+              label: primaryLabel,
               color: GameConfig.coral,
-              onPressed: gs.startGame,
+              onPressed: () => _submit(gs),
             ),
           ],
         ),
@@ -76,6 +105,7 @@ class _PlayerSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final pl = gs.p[pid];
     return Container(
+      key: Key('player-setup-section-p$pid'),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: s.surface,
@@ -198,6 +228,7 @@ class _PlayerSection extends StatelessWidget {
           Row(
             children: [
               NeoButton(
+                key: Key('player-setup-customize-p$pid'),
                 label: '🎨 Customize Avatar',
                 color: GameConfig.grape,
                 fontSize: 12,
@@ -209,6 +240,7 @@ class _PlayerSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           TextField(
+            key: Key('player-setup-name-p$pid'),
             decoration: InputDecoration(
               prefixIcon: Container(
                 margin: const EdgeInsets.all(8),

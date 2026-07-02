@@ -24,7 +24,7 @@ const _prodBannerAdUnitId = 'ca-app-pub-5674349229505017/3485297513';
 const _prodInterstitialAdUnitId = 'ca-app-pub-5674349229505017/9643207834';
 const _prodRewardedAdUnitId = 'ca-app-pub-5674349229505017/9292157969';
 
-const _testBannerAdUnitId = 'ca-app-pub-3940256099942544/9214589741';
+const _testBannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
 const _testInterstitialAdUnitId = 'ca-app-pub-3940256099942544/1033173712';
 const _testRewardedAdUnitId = 'ca-app-pub-3940256099942544/5224354917';
 

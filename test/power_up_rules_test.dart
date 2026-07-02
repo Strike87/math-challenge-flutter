@@ -189,7 +189,7 @@ void main() {
       expect(state.p[1].shieldActive, isFalse);
       expect(state.rt.survivalLives, 3);
       expect(state.reactionPill, '🛡️ Shield absorbed it!');
-      expect(state.bigEmoji, '🛡️');
+      expect(state.bigEmojiVisible, isFalse);
       await tester.pump(const Duration(milliseconds: 1400));
       state.rt.timer?.cancel();
     });
