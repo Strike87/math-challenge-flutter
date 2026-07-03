@@ -1880,7 +1880,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "gamescreen",
-      "community": 26,
+      "community": 100,
       "norm_label": "gamescreen"
     },
     {
@@ -3630,7 +3630,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_convert",
-      "community": 25,
+      "community": 23,
       "norm_label": "dart:convert"
     },
     {
@@ -4530,7 +4530,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_main_appshell",
-      "community": 23,
+      "community": 11,
       "norm_label": "_appshell"
     },
     {
@@ -4540,7 +4540,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_main_appshellstate",
-      "community": 23,
+      "community": 11,
       "norm_label": "_appshellstate"
     },
     {
@@ -4550,7 +4550,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgetsbindingobserver",
-      "community": 23,
+      "community": 11,
       "norm_label": "widgetsbindingobserver"
     },
     {
@@ -4740,7 +4740,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "engine_game_state_dart",
-      "community": 21,
+      "community": 99,
       "norm_label": "../engine/game_state.dart"
     },
     {
@@ -6110,7 +6110,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "voidcallback",
-      "community": 21,
+      "community": 99,
       "norm_label": "voidcallback"
     },
     {
@@ -6350,7 +6350,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_game_screen_gamescreenstate",
-      "community": 26,
+      "community": 100,
       "norm_label": "_gamescreenstate"
     },
     {
@@ -6370,7 +6370,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_game_screen_screenshake",
-      "community": 6,
+      "community": 3,
       "norm_label": "_screenshake"
     },
     {
@@ -6440,7 +6440,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_game_screen_questiontimerbar",
-      "community": 3,
+      "community": 6,
       "norm_label": "_questiontimerbar"
     },
     {
@@ -6530,7 +6530,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_game_screen_masterinfo",
-      "community": 3,
+      "community": 6,
       "norm_label": "_masterinfo"
     },
     {
@@ -6570,7 +6570,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_game_screen_activepowerupglow",
-      "community": 3,
+      "community": 6,
       "norm_label": "_activepowerupglow"
     },
     {
@@ -6590,7 +6590,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_game_screen_questioncard",
-      "community": 6,
+      "community": 3,
       "norm_label": "_questioncard"
     },
     {
@@ -6660,7 +6660,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "duration",
-      "community": 2,
+      "community": 3,
       "norm_label": "duration"
     },
     {
@@ -7330,7 +7330,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "icondata",
-      "community": 7,
+      "community": 15,
       "norm_label": "icondata?"
     },
     {
@@ -7520,7 +7520,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen",
-      "community": 21,
+      "community": 99,
       "norm_label": "player_screen.dart"
     },
     {
@@ -7530,7 +7530,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_playersetupscreen",
-      "community": 24,
+      "community": 99,
       "norm_label": "playersetupscreen"
     },
     {
@@ -7540,7 +7540,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_playersetupscreenstate",
-      "community": 24,
+      "community": 99,
       "norm_label": "_playersetupscreenstate"
     },
     {
@@ -7550,7 +7550,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_playersection",
-      "community": 21,
+      "community": 99,
       "norm_label": "_playersection"
     },
     {
@@ -7560,7 +7560,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_avataroption",
-      "community": 21,
+      "community": 99,
       "norm_label": "_avataroption"
     },
     {
@@ -7570,7 +7570,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_setupstep",
-      "community": 21,
+      "community": 99,
       "norm_label": "_setupstep"
     },
     {
@@ -7580,7 +7580,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_pid",
-      "community": 21,
+      "community": 99,
       "norm_label": "pid"
     },
     {
@@ -7590,7 +7590,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_gs",
-      "community": 21,
+      "community": 99,
       "norm_label": "gs"
     },
     {
@@ -7600,7 +7600,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_s",
-      "community": 21,
+      "community": 99,
       "norm_label": "s"
     },
     {
@@ -7610,7 +7610,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_avatar",
-      "community": 21,
+      "community": 99,
       "norm_label": "avatar"
     },
     {
@@ -7620,7 +7620,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_selected",
-      "community": 21,
+      "community": 99,
       "norm_label": "selected"
     },
     {
@@ -7630,7 +7630,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_ontap",
-      "community": 21,
+      "community": 99,
       "norm_label": "ontap"
     },
     {
@@ -7640,7 +7640,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_createstate",
-      "community": 21,
+      "community": 99,
       "norm_label": "createstate"
     },
     {
@@ -7650,7 +7650,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_goback",
-      "community": 21,
+      "community": 99,
       "norm_label": "_goback"
     },
     {
@@ -7660,7 +7660,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_submit",
-      "community": 21,
+      "community": 99,
       "norm_label": "_submit"
     },
     {
@@ -7670,7 +7670,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_screens_player_screen_build",
-      "community": 21,
+      "community": 99,
       "norm_label": "build"
     },
     {
@@ -10100,7 +10100,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_shared_preferences_shared_preferences_dart",
-      "community": 25,
+      "community": 20,
       "norm_label": "package:shared_preferences/shared_preferences.dart"
     },
     {
@@ -10430,7 +10430,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_widgets_common_pressablescale",
-      "community": 24,
+      "community": 101,
       "norm_label": "_pressablescale"
     },
     {
@@ -10440,7 +10440,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_widgets_common_pressablescalestate",
-      "community": 24,
+      "community": 101,
       "norm_label": "_pressablescalestate"
     },
     {
@@ -12430,7 +12430,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_flutter_test_flutter_test_dart",
-      "community": 20,
+      "community": 23,
       "norm_label": "package:flutter_test/flutter_test.dart"
     },
     {
@@ -12882,6 +12882,16 @@
       "id": "package_math_challenge_services_iap_dart",
       "community": 20,
       "norm_label": "package:math_challenge/services/iap.dart"
+    },
+    {
+      "label": "Scaffold",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "scaffold",
+      "community": 20,
+      "norm_label": "scaffold"
     },
     {
       "label": "daily_boss_test.dart",
@@ -14000,7 +14010,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_mode_player_eligibility_test",
-      "community": 20,
+      "community": 52,
       "norm_label": "mode_player_eligibility_test.dart"
     },
     {
@@ -14010,7 +14020,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_mode_player_eligibility_test_audioglobalchannel",
-      "community": 20,
+      "community": 52,
       "norm_label": "audioglobalchannel"
     },
     {
@@ -14020,7 +14030,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_mode_player_eligibility_test_audioplayerchannel",
-      "community": 20,
+      "community": 52,
       "norm_label": "audioplayerchannel"
     },
     {
@@ -14030,7 +14040,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_mode_player_eligibility_test_find",
-      "community": 20,
+      "community": 52,
       "norm_label": "find"
     },
     {
@@ -14040,7 +14050,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_mode_player_eligibility_test_settings",
-      "community": 20,
+      "community": 52,
       "norm_label": "settings"
     },
     {
@@ -14050,7 +14060,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_mode_player_eligibility_test_state",
-      "community": 20,
+      "community": 52,
       "norm_label": "state"
     },
     {
@@ -14060,7 +14070,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_mode_player_eligibility_test_main",
-      "community": 20,
+      "community": 52,
       "norm_label": "main"
     },
     {
@@ -14070,7 +14080,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_mode_player_eligibility_test_hasdisabledopacity",
-      "community": 20,
+      "community": 52,
       "norm_label": "_hasdisabledopacity"
     },
     {
@@ -14080,7 +14090,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_mode_player_eligibility_test_makestate",
-      "community": 20,
+      "community": 52,
       "norm_label": "_makestate"
     },
     {
@@ -14090,7 +14100,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_mode_player_eligibility_test_init",
-      "community": 20,
+      "community": 52,
       "norm_label": "init"
     },
     {
@@ -14100,7 +14110,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_mode_player_eligibility_test_load",
-      "community": 20,
+      "community": 52,
       "norm_label": "load"
     },
     {
@@ -14110,7 +14120,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_math_challenge_screens_config_screen_dart",
-      "community": 20,
+      "community": 52,
       "norm_label": "package:math_challenge/screens/config_screen.dart"
     },
     {
@@ -14180,7 +14190,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_persistence_schema_test",
-      "community": 25,
+      "community": 23,
       "norm_label": "persistence_schema_test.dart"
     },
     {
@@ -14190,7 +14200,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_persistence_schema_test_audioglobalchannel",
-      "community": 25,
+      "community": 23,
       "norm_label": "audioglobalchannel"
     },
     {
@@ -14200,7 +14210,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_persistence_schema_test_audioplayerchannel",
-      "community": 25,
+      "community": 23,
       "norm_label": "audioplayerchannel"
     },
     {
@@ -14210,7 +14220,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_persistence_schema_test_main",
-      "community": 25,
+      "community": 23,
       "norm_label": "main"
     },
     {
@@ -14220,7 +14230,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_persistence_schema_test_loadsettingsfromstorage",
-      "community": 25,
+      "community": 23,
       "norm_label": "loadsettingsfromstorage"
     },
     {
@@ -14230,7 +14240,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_persistence_schema_test_makestate",
-      "community": 25,
+      "community": 23,
       "norm_label": "makestate"
     },
     {
@@ -14240,7 +14250,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_persistence_schema_test_todaykey",
-      "community": 25,
+      "community": 23,
       "norm_label": "todaykey"
     },
     {
@@ -14250,7 +14260,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_persistence_schema_test_jsdatestring",
-      "community": 25,
+      "community": 23,
       "norm_label": "jsdatestring"
     },
     {
@@ -14260,7 +14270,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_player_setup_test",
-      "community": 52,
+      "community": 20,
       "norm_label": "player_setup_test.dart"
     },
     {
@@ -14270,7 +14280,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_player_setup_test_audioglobalchannel",
-      "community": 52,
+      "community": 20,
       "norm_label": "audioglobalchannel"
     },
     {
@@ -14280,7 +14290,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_player_setup_test_audioplayerchannel",
-      "community": 52,
+      "community": 20,
       "norm_label": "audioplayerchannel"
     },
     {
@@ -14290,7 +14300,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_player_setup_test_settings",
-      "community": 52,
+      "community": 20,
       "norm_label": "settings"
     },
     {
@@ -14300,7 +14310,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_player_setup_test_state",
-      "community": 52,
+      "community": 20,
       "norm_label": "state"
     },
     {
@@ -14310,7 +14320,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_player_setup_test_main",
-      "community": 52,
+      "community": 20,
       "norm_label": "main"
     },
     {
@@ -14320,7 +14330,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_player_setup_test_makestate",
-      "community": 52,
+      "community": 20,
       "norm_label": "_makestate"
     },
     {
@@ -14330,7 +14340,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_player_setup_test_init",
-      "community": 52,
+      "community": 20,
       "norm_label": "init"
     },
     {
@@ -14340,7 +14350,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_player_setup_test_load",
-      "community": 52,
+      "community": 20,
       "norm_label": "load"
     },
     {
@@ -14350,7 +14360,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_player_setup_test_host",
-      "community": 52,
+      "community": 20,
       "norm_label": "_host"
     },
     {
@@ -14360,8 +14370,18 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_math_challenge_screens_player_screen_dart",
-      "community": 52,
+      "community": 20,
       "norm_label": "package:math_challenge/screens/player_screen.dart"
+    },
+    {
+      "label": "SingleChildScrollView",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "singlechildscrollview",
+      "community": 20,
+      "norm_label": "singlechildscrollview"
     },
     {
       "label": "power_pack_test.dart",
@@ -14570,7 +14590,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_production_safety_config_test",
-      "community": 20,
+      "community": 23,
       "norm_label": "production_safety_config_test.dart"
     },
     {
@@ -14580,7 +14600,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_production_safety_config_test_main",
-      "community": 20,
+      "community": 23,
       "norm_label": "main"
     },
     {
@@ -15390,7 +15410,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_storage_migration_test",
-      "community": 25,
+      "community": 23,
       "norm_label": "storage_migration_test.dart"
     },
     {
@@ -15400,7 +15420,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_storage_migration_test_audioglobalchannel",
-      "community": 25,
+      "community": 23,
       "norm_label": "audioglobalchannel"
     },
     {
@@ -15410,7 +15430,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_storage_migration_test_audioplayerchannel",
-      "community": 25,
+      "community": 23,
       "norm_label": "audioplayerchannel"
     },
     {
@@ -15420,7 +15440,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_storage_migration_test_main",
-      "community": 25,
+      "community": 23,
       "norm_label": "main"
     },
     {
@@ -15430,7 +15450,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_storage_migration_test_loadsettingsfromstorage",
-      "community": 25,
+      "community": 23,
       "norm_label": "loadsettingsfromstorage"
     },
     {
@@ -15440,7 +15460,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_storage_migration_test_makestate",
-      "community": 25,
+      "community": 23,
       "norm_label": "makestate"
     },
     {
@@ -15450,7 +15470,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_storage_migration_test_todaykey",
-      "community": 25,
+      "community": 23,
       "norm_label": "todaykey"
     },
     {
@@ -15460,7 +15480,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_storage_migration_test_jsdatestring",
-      "community": 25,
+      "community": 23,
       "norm_label": "jsdatestring"
     },
     {
@@ -39467,6 +39487,17 @@
       "target": "package_math_challenge_services_iap_dart"
     },
     {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/app_startup_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "type_lookup",
+      "source": "test_app_startup_test",
+      "target": "scaffold"
+    },
+    {
       "relation": "defines",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -40876,6 +40907,17 @@
       "weight": 1.0,
       "source": "test_player_setup_test",
       "target": "package_math_challenge_screens_player_screen_dart"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/player_setup_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "type_lookup",
+      "source": "test_player_setup_test",
+      "target": "singlechildscrollview"
     },
     {
       "relation": "defines",
@@ -46072,5 +46114,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "df16c5b528f22d545c01b0995a11f32d2e096445"
+  "built_at_commit": "8d4ce408ffbcbe7b69b17e2bf789ba8bee8c299f"
 }

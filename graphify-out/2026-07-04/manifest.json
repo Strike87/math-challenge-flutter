@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   ".dart_tool/flutter_build/f0e1b6e6e5e1ca3c92df74b23f104005/outputs.json": {
-    "mtime": 1783117330.7311137,
-    "ast_hash": "69b8e3b0ccbb59e3d5b1d587e58020c6",
+    "mtime": 1783120726.0527658,
+    "ast_hash": "388f7447fa872ed9c0734d9125530a32",
     "semantic_hash": ""
   },
   ".dart_tool/hooks_runner/objective_c/0e709b51b1/dependencies.dependencies_hash_file.json": {
@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "android/app/build.gradle": {
-    "mtime": 1783107735.292464,
-    "ast_hash": "2123b1c819e5dad517d1f4584027cc3e",
+    "mtime": 1783120782.1278944,
+    "ast_hash": "919aa3d4bab500c275de0c29adb6c650",
     "semantic_hash": ""
   },
   "android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java": {
@@ -150,8 +150,8 @@
     "semantic_hash": ""
   },
   "lib/engine/game_state.dart": {
-    "mtime": 1783090220.65127,
-    "ast_hash": "5db13f9e08b575766acbdf46f6f1547e",
+    "mtime": 1783119446.301052,
+    "ast_hash": "4ef3cee9630bcaf95481223a4c4cb53c",
     "semantic_hash": ""
   },
   "lib/engine/question_generator.dart": {
@@ -165,8 +165,8 @@
     "semantic_hash": ""
   },
   "lib/main.dart": {
-    "mtime": 1783116716.135561,
-    "ast_hash": "81e80704504565e7b7ce5eaa5869fcb7",
+    "mtime": 1783119764.9112232,
+    "ast_hash": "c89639c81b044807a5ec42cbf354ce60",
     "semantic_hash": ""
   },
   "lib/models/celebration.dart": {
@@ -215,8 +215,8 @@
     "semantic_hash": ""
   },
   "lib/services/admob.dart": {
-    "mtime": 1783110981.8349543,
-    "ast_hash": "e980e859d04076fc7ab9f272a4657f5a",
+    "mtime": 1783119592.7890768,
+    "ast_hash": "06c4b6d75b9d44fde85a09ae791a07d2",
     "semantic_hash": ""
   },
   "lib/services/audio.dart": {
@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "lib/services/iap.dart": {
-    "mtime": 1782811770.654559,
-    "ast_hash": "df765e011b1c48b910a566dd795d8404",
+    "mtime": 1783119446.298053,
+    "ast_hash": "07f0cfa9971a099136be5d63ff9802c8",
     "semantic_hash": ""
   },
   "lib/services/settings.dart": {
@@ -255,8 +255,8 @@
     "semantic_hash": ""
   },
   "lib/widgets/modals.dart": {
-    "mtime": 1783090220.6612725,
-    "ast_hash": "7748e700eb7332aacb9eefeb00b76201",
+    "mtime": 1783119593.000084,
+    "ast_hash": "31f57b9bc0538d55296975af16791563",
     "semantic_hash": ""
   },
   "test/achievement_trigger_test.dart": {
@@ -270,8 +270,8 @@
     "semantic_hash": ""
   },
   "test/admob_parity_test.dart": {
-    "mtime": 1782913873.4530005,
-    "ast_hash": "d05c891a7a0cbe3992bbf545d279ba26",
+    "mtime": 1783119551.783418,
+    "ast_hash": "3ef9d4a41e59bbdb7c749c9165f91ba2",
     "semantic_hash": ""
   },
   "test/daily_boss_test.dart": {
@@ -285,23 +285,23 @@
     "semantic_hash": ""
   },
   "test/iap_adult_gate_test.dart": {
-    "mtime": 1782941471.17443,
-    "ast_hash": "972d5926a819e182be594765dd571b39",
+    "mtime": 1783119551.7874198,
+    "ast_hash": "4160c4bd4ab29cd717a0d4617ee3ff5b",
     "semantic_hash": ""
   },
   "test/iap_delivery_test.dart": {
-    "mtime": 1782675084.5508375,
-    "ast_hash": "60f7b46a400c440c05bd70ad6c04a7de",
+    "mtime": 1783119506.9878843,
+    "ast_hash": "fffb4d80fcc1f0113779badc68573945",
     "semantic_hash": ""
   },
   "test/iap_restore_native_safety_test.dart": {
-    "mtime": 1782677464.1343515,
-    "ast_hash": "15604cb8d0f5b03d62161c1aaefa089a",
+    "mtime": 1783119506.990887,
+    "ast_hash": "6be534de3667691d68a0d291b81e3877",
     "semantic_hash": ""
   },
   "test/modal_behavior_test.dart": {
-    "mtime": 1783090556.8853428,
-    "ast_hash": "ffbedb2ee125952e000e2ddbe4e706ec",
+    "mtime": 1783119551.7854185,
+    "ast_hash": "cd3cef7850405c0bb45834e61a6f7ace",
     "semantic_hash": ""
   },
   "test/mode_player_eligibility_test.dart": {
@@ -525,8 +525,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1782329893.4574883,
-    "ast_hash": "9337a2710dc034fb83b566f7b6b3468a",
+    "mtime": 1783119789.2396383,
+    "ast_hash": "b18808e035c57ac48a5e8f2fef30f1b6",
     "semantic_hash": ""
   },
   "analysis_options.yaml": {
@@ -1262,6 +1262,11 @@
   "release_white_screen_screenshot_unlocked_attempt.png": {
     "mtime": 1783106908.454497,
     "ast_hash": "21a57e2625229ddaec961ea8fbc6ccca",
+    "semantic_hash": ""
+  },
+  "test/production_safety_config_test.dart": {
+    "mtime": 1783119551.7914166,
+    "ast_hash": "580e4e42c5d46a0bbc43d8415f9b3407",
     "semantic_hash": ""
   }
 }

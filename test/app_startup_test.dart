@@ -24,5 +24,9 @@ void main() {
     expect(find.text('CHALLENGE'), findsOneWidget);
     expect(find.text('Master Challenge'), findsOneWidget);
     expect(find.byType(Scaffold), findsOneWidget);
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold)).resizeToAvoidBottomInset,
+      isFalse,
+    );
   });
 }

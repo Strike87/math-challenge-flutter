@@ -48,11 +48,12 @@ class _PlayerSetupScreenState extends State<PlayerSetupScreen> {
     final currentPid = twoPlayer && _setupStep == 1 ? 2 : 1;
     final title = twoPlayer ? 'Player $currentPid Setup' : 'Player Setup';
     final primaryLabel = twoPlayer && _setupStep == 0 ? 'Next' : 'Start Game';
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     return SafeArea(
       child: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 96 + keyboardInset),
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
               child: Column(

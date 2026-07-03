@@ -168,6 +168,7 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
     final s = context.watch<SettingsService>();
     final banner = state.bannerWidget();
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: s.bg,
       body: Stack(
         children: [

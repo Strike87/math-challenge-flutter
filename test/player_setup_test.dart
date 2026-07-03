@@ -132,6 +132,21 @@ void main() {
       state.dispose();
       await tester.pumpWidget(const SizedBox.shrink());
     });
+
+    testWidgets('adds keyboard inset to scroll padding', (tester) async {
+      final state = await _makeState();
+      state.setOption('players', 1);
+
+      await tester.pumpWidget(_host(state, keyboardInset: 240));
+      await tester.pump();
+
+      final scroll = tester.widget<SingleChildScrollView>(
+        find.byType(SingleChildScrollView),
+      );
+      expect((scroll.padding! as EdgeInsets).bottom, 336);
+      state.dispose();
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
   });
 }
 
@@ -154,14 +169,22 @@ Future<GameState> _makeState() async {
   return state;
 }
 
-Widget _host(GameState state) {
+Widget _host(GameState state, {double keyboardInset = 0}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<GameState>.value(value: state),
       ChangeNotifierProvider<SettingsService>.value(value: state.settings),
     ],
-    child: const MaterialApp(
-      home: Scaffold(body: PlayerSetupScreen()),
+    child: MaterialApp(
+      home: MediaQuery(
+        data: MediaQueryData(
+          viewInsets: EdgeInsets.only(bottom: keyboardInset),
+        ),
+        child: const Scaffold(
+          resizeToAvoidBottomInset: false,
+          body: PlayerSetupScreen(),
+        ),
+      ),
     ),
   );
 }
