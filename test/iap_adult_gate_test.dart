@@ -64,6 +64,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('Grown-up check'), findsOneWidget);
+      expect(find.text('Store price'), findsOneWidget);
       expect(
         find.text('A grown-up should continue\nbefore opening Google Play.'),
         findsOneWidget,
@@ -286,6 +287,9 @@ class _FakeIapPurchaseAdapter implements IapPurchaseAdapter {
   final List<IapProduct> buyCalls = [];
   final List<IapPurchase> completeCalls = [];
   int restoreCalls = 0;
+
+  @override
+  String? priceFor(String productId) => 'Store price';
 
   @override
   Future<void> buyProduct(IapProduct product) async {

@@ -118,6 +118,8 @@ class IapPurchase {
 }
 
 abstract class IapPurchaseAdapter {
+  String? priceFor(String productId);
+
   Future<void> buyProduct(IapProduct product);
   Future<void> completePurchase(IapPurchase purchase);
   Future<List<IapPurchase>> restorePurchases();
@@ -152,6 +154,22 @@ class DevIapPurchaseAdapter implements IapPurchaseAdapter {
       throw const IapUnavailableException(
         'Simulated purchases are disabled on native release',
       );
+    }
+  }
+
+  @override
+  String? priceFor(String productId) {
+    switch (productId) {
+      case IapProducts.smallId:
+        return 'Test price';
+      case IapProducts.mediumId:
+        return 'Test price';
+      case IapProducts.largeId:
+        return 'Test price';
+      case IapProducts.removeAdsId:
+        return 'Test price';
+      default:
+        return null;
     }
   }
 
@@ -194,6 +212,9 @@ class NativeIapPurchaseAdapter implements IapPurchaseAdapter {
     _ensureListening();
     return _purchaseUpdates.stream;
   }
+
+  @override
+  String? priceFor(String productId) => _products[productId]?.price;
 
   Future<void> initialize() async {
     _ensureListening();
@@ -387,6 +408,9 @@ class NativeIapPurchaseAdapter implements IapPurchaseAdapter {
 
 class UnavailableIapPurchaseAdapter implements IapPurchaseAdapter {
   const UnavailableIapPurchaseAdapter();
+
+  @override
+  String? priceFor(String productId) => null;
 
   @override
   Future<void> buyProduct(IapProduct product) {

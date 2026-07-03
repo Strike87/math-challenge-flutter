@@ -1,0 +1,1043 @@
+--------- beginning of main
+07-04 01:36:23.195  7288  7427 E chromium: [ERROR:cc/tiles/tile_manager.cc:1008] WARNING: tile memory limits exceeded, some content may not draw
+07-04 01:36:23.196  7288  7427 E chromium: [ERROR:cc/tiles/tile_manager.cc:1008] WARNING: tile memory limits exceeded, some content may not draw
+--------- beginning of system
+07-04 01:36:23.334  1520  1810 E AppOps  : attributionTag VCN not declared in manifest of android
+07-04 01:36:23.378  1520  1810 E AppOps  : attributionTag VCN not declared in manifest of android
+07-04 01:36:23.425  2039  2237 E UASManager: setTranSchedUxTags fail, mWmShellMainTid =0
+07-04 01:36:23.468  6377  6377 E ActivityThread: performResumeActivity r = ActivityRecord{7008f91 token=android.os.BinderProxy@3c7f4da {com.babydola.launcherios/com.android.launcher3.Launcher}} hideForNow = false
+07-04 01:36:23.470  2013  2013 E SmsApplication: com.transsion.cloudserver does not have system signature
+07-04 01:36:23.519  1520  2527 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms.supervision, role: android.app.role.SYSTEM_SUPERVISION, user: 0
+07-04 01:36:23.527  1520  2527 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms, role: android.app.role.SYSTEM_CALL_STREAMING, user: 0
+07-04 01:36:23.639  1520  2527 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.devicelockcontroller, role: android.app.role.SYSTEM_FINANCED_DEVICE_CONTROLLER, user: 0
+07-04 01:36:23.657  1520  2527 E AppOpService: Blocked setUidMode call for runtime permission app op: uid = 10142, code = FINE_LOCATION, mode = foreground, callingUid = 1000, oldMode = allow
+07-04 01:36:23.657  1520  2527 E AppOpService: java.lang.RuntimeException
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.server.permission.access.appop.AppOpService.setUidMode(AppOpService.kt:268)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsCheckingServiceTracingDecorator.setUidMode(AppOpsCheckingServiceTracingDecorator.java:120)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2119)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2069)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at android.app.AppOpsManager.setUidMode(AppOpsManager.java:8603)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpModeAsUser(Permissions.java:908)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpUidModeAsUser(Permissions.java:885)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantPermissionAndAppOpAsUser(Permissions.java:373)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantSingleAsUser(Permissions.java:247)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantAsUser(Permissions.java:205)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.role.controller.behavior.BrowserRoleBehavior.grantAsUser(BrowserRoleBehavior.java:142)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.role.controller.model.Role.grantAsUser(Role.java:973)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.addRoleHolderInternal(RoleControllerServiceImpl.java:380)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.onGrantDefaultRoles(RoleControllerServiceImpl.java:163)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController.lambda$grantDefaultRoles$1(LocalRoleController.java:56)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController.$r8$lambda$ye-flP7Mf14AbTzwSmiTgndT6Cg(LocalRoleController.java:0)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController$$ExternalSyntheticLambda1.run(R8$$SyntheticClass:0)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at android.os.Handler.handleCallback(Handler.java:959)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at android.os.Looper.loopOnce(Looper.java:311)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at android.os.Looper.loop(Looper.java:408)
+07-04 01:36:23.657  1520  2527 E AppOpService: 	at android.os.HandlerThread.run(HandlerThread.java:85)
+07-04 01:36:23.658  1520  2527 E AppOpService: Blocked setUidMode call for runtime permission app op: uid = 10142, code = COARSE_LOCATION, mode = foreground, callingUid = 1000, oldMode = allow
+07-04 01:36:23.658  1520  2527 E AppOpService: java.lang.RuntimeException
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.server.permission.access.appop.AppOpService.setUidMode(AppOpService.kt:268)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsCheckingServiceTracingDecorator.setUidMode(AppOpsCheckingServiceTracingDecorator.java:120)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2119)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2069)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at android.app.AppOpsManager.setUidMode(AppOpsManager.java:8603)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpModeAsUser(Permissions.java:908)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpUidModeAsUser(Permissions.java:885)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantPermissionAndAppOpAsUser(Permissions.java:373)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantSingleAsUser(Permissions.java:247)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantAsUser(Permissions.java:205)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.role.controller.behavior.BrowserRoleBehavior.grantAsUser(BrowserRoleBehavior.java:142)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.role.controller.model.Role.grantAsUser(Role.java:973)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.addRoleHolderInternal(RoleControllerServiceImpl.java:380)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.onGrantDefaultRoles(RoleControllerServiceImpl.java:163)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController.lambda$grantDefaultRoles$1(LocalRoleController.java:56)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController.$r8$lambda$ye-flP7Mf14AbTzwSmiTgndT6Cg(LocalRoleController.java:0)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController$$ExternalSyntheticLambda1.run(R8$$SyntheticClass:0)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at android.os.Handler.handleCallback(Handler.java:959)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at android.os.Looper.loopOnce(Looper.java:311)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at android.os.Looper.loop(Looper.java:408)
+07-04 01:36:23.658  1520  2527 E AppOpService: 	at android.os.HandlerThread.run(HandlerThread.java:85)
+07-04 01:36:23.891  1520  4790 E ActivityTaskManager: agaresPreload error: activityInfo is null
+07-04 01:36:23.896  1520  4790 E system_server: No package ID 7f found for resource ID 0x7f010000.
+07-04 01:36:23.896  1520  4790 E system_server: No package ID 7f found for resource ID 0x7f020000.
+07-04 01:36:23.896  1520  4790 E system_server: No package ID 7f found for resource ID 0x7f030000.
+07-04 01:36:23.896  1520  4790 E system_server: No package ID 7f found for resource ID 0x7f040000.
+07-04 01:36:23.896  1520  4790 E system_server: No package ID 7f found for resource ID 0x7f050000.
+07-04 01:36:23.935  2039  2237 E UASManager: setTranSchedUxTags fail, mWmShellMainTid =0
+07-04 01:36:24.012  1520  4351 E TranDynamicBarAnimControllerImpl: TranDynamicBarAnimControllerImpl setFromDynamicIslandToWindow pkgName:com.google.android.gms
+07-04 01:36:24.012  1520  4351 E TranDynamicBarAnimControllerImpl: end setFromDynamicIslandToWindow mDynamicIslandPkgName:com.google.android.gms mStartFromDynamicIsland:false
+07-04 01:36:24.351  7288  7427 E chromium: [ERROR:cc/tiles/tile_manager.cc:1008] WARNING: tile memory limits exceeded, some content may not draw
+07-04 01:36:24.352  7288  7427 E chromium: [ERROR:cc/tiles/tile_manager.cc:1008] WARNING: tile memory limits exceeded, some content may not draw
+07-04 01:36:24.367  1520  3623 E AppSearchAppsIndexerAppSearchHelper: Ran into error while indexing apps: [FAILURE(3)]: Key cannot contain a null character '\0'
+07-04 01:36:24.527  6377 27669 E adservices: Failed to find resolveInfo for adServices service. Intent action: android.adservices.MEASUREMENT_SERVICE
+07-04 01:36:24.527  6377 27669 E adservices: Failed to find serviceInfo for adServices service on user 0 using intent android.adservices.MEASUREMENT_SERVICE
+07-04 01:36:24.528  6377 27669 E adservices: Failed binding to measurement service: java.lang.IllegalStateException: Unable to find the service
+07-04 01:36:24.538  1520  6346 E ActivityThread: Failed to find provider info for com.transsion.gamemode.provider
+07-04 01:36:24.620  1520  2527 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms.supervision, role: android.app.role.SYSTEM_SUPERVISION, user: 0
+07-04 01:36:24.622  1520  2527 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms, role: android.app.role.SYSTEM_CALL_STREAMING, user: 0
+07-04 01:36:24.637  2013  2013 E SmsApplication: com.transsion.cloudserver does not have system signature
+07-04 01:36:24.662  1520  2527 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.devicelockcontroller, role: android.app.role.SYSTEM_FINANCED_DEVICE_CONTROLLER, user: 0
+07-04 01:36:24.667  1520  2527 E AppOpService: Blocked setUidMode call for runtime permission app op: uid = 10142, code = FINE_LOCATION, mode = foreground, callingUid = 1000, oldMode = allow
+07-04 01:36:24.667  1520  2527 E AppOpService: java.lang.RuntimeException
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.server.permission.access.appop.AppOpService.setUidMode(AppOpService.kt:268)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsCheckingServiceTracingDecorator.setUidMode(AppOpsCheckingServiceTracingDecorator.java:120)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2119)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2069)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at android.app.AppOpsManager.setUidMode(AppOpsManager.java:8603)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpModeAsUser(Permissions.java:908)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpUidModeAsUser(Permissions.java:885)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantPermissionAndAppOpAsUser(Permissions.java:373)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantSingleAsUser(Permissions.java:247)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantAsUser(Permissions.java:205)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.role.controller.behavior.BrowserRoleBehavior.grantAsUser(BrowserRoleBehavior.java:142)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.role.controller.model.Role.grantAsUser(Role.java:973)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.addRoleHolderInternal(RoleControllerServiceImpl.java:380)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.onGrantDefaultRoles(RoleControllerServiceImpl.java:163)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController.lambda$grantDefaultRoles$1(LocalRoleController.java:56)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController.$r8$lambda$ye-flP7Mf14AbTzwSmiTgndT6Cg(LocalRoleController.java:0)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController$$ExternalSyntheticLambda1.run(R8$$SyntheticClass:0)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at android.os.Handler.handleCallback(Handler.java:959)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at android.os.Looper.loopOnce(Looper.java:311)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at android.os.Looper.loop(Looper.java:408)
+07-04 01:36:24.667  1520  2527 E AppOpService: 	at android.os.HandlerThread.run(HandlerThread.java:85)
+07-04 01:36:24.668  1520  2527 E AppOpService: Blocked setUidMode call for runtime permission app op: uid = 10142, code = COARSE_LOCATION, mode = foreground, callingUid = 1000, oldMode = allow
+07-04 01:36:24.668  1520  2527 E AppOpService: java.lang.RuntimeException
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.server.permission.access.appop.AppOpService.setUidMode(AppOpService.kt:268)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsCheckingServiceTracingDecorator.setUidMode(AppOpsCheckingServiceTracingDecorator.java:120)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2119)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2069)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at android.app.AppOpsManager.setUidMode(AppOpsManager.java:8603)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpModeAsUser(Permissions.java:908)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpUidModeAsUser(Permissions.java:885)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantPermissionAndAppOpAsUser(Permissions.java:373)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantSingleAsUser(Permissions.java:247)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantAsUser(Permissions.java:205)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.role.controller.behavior.BrowserRoleBehavior.grantAsUser(BrowserRoleBehavior.java:142)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.role.controller.model.Role.grantAsUser(Role.java:973)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.addRoleHolderInternal(RoleControllerServiceImpl.java:380)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.onGrantDefaultRoles(RoleControllerServiceImpl.java:163)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController.lambda$grantDefaultRoles$1(LocalRoleController.java:56)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController.$r8$lambda$ye-flP7Mf14AbTzwSmiTgndT6Cg(LocalRoleController.java:0)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController$$ExternalSyntheticLambda1.run(R8$$SyntheticClass:0)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at android.os.Handler.handleCallback(Handler.java:959)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at android.os.Looper.loopOnce(Looper.java:311)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at android.os.Looper.loop(Looper.java:408)
+07-04 01:36:24.668  1520  2527 E AppOpService: 	at android.os.HandlerThread.run(HandlerThread.java:85)
+07-04 01:36:24.755  1520  3623 E AppSearchAppsIndexerAppSearchHelper: Ran into error while indexing apps: [FAILURE(3)]: Key cannot contain a null character '\0'
+07-04 01:36:25.040  1037  1120 E OemNetd : transmitAppUidToNetwork uid=(0)
+07-04 01:36:25.052 10956 11014 E mali_gralloc: Requested R8 format is not supported with this allocator. R8 format is only supported with the AIDL allocator
+07-04 01:36:25.052 10956 11014 E mali_gralloc: ERROR: Unrecognized and/or unsupported format R8 and usage TEXTURE + RENDER + HWC
+07-04 01:36:25.052 10956 11014 E mali_gralloc: ERROR: Unrecognized and/or unsupported format RGBA_10101010 and usage TEXTURE + RENDER + HWC
+07-04 01:36:25.052 10956 11014 E mali_gralloc: Requested R8 format is not supported with this allocator. R8 format is only supported with the AIDL allocator
+07-04 01:36:25.052 10956 11014 E mali_gralloc: ERROR: Unrecognized and/or unsupported format R8 and usage TEXTURE + RENDER + HWC
+07-04 01:36:25.052 10956 11014 E mali_gralloc: ERROR: Unrecognized and/or unsupported format RGBA_10101010 and usage TEXTURE + RENDER + HWC
+07-04 01:36:25.275  2013  2013 E SmsApplication: com.transsion.cloudserver does not have system signature
+07-04 01:36:25.414 30822 30853 E Finsky  : [433] [Counters] attempted to use a non-positive increment for: 4752
+07-04 01:36:25.422 30822 30853 E Finsky  : [433] [Counters] attempted to use a non-positive increment for: 4753
+07-04 01:36:25.524  6065 11124 E phonemaster_log: SuperSaveUtils: Settings.Secure get super_save status fail 
+07-04 01:36:25.526  2815  2815 E os_lock_noti_DatabaseHelper: notifyChangeForOberver: uri = /allowedlist--- observer from = setNotificationData
+07-04 01:36:25.584  2815  2874 E os_noti_center_NotiCenterManager: parseRuleFile: e = java.io.FileNotFoundException: /data/user/0/com.hoffnung/cache/os_noti_center_config.txt: open failed: ENOENT (No such file or directory)
+07-04 01:36:25.584  2815  2874 E os_noti_center_NotiCenterManager: parseRuleFile: Coat time = 8
+07-04 01:36:25.753 30822 30854 E Finsky  : [434] [Counters] attempted to use a non-positive increment for: 4752
+07-04 01:36:25.787 30822 30853 E Finsky  : [433] [Counters] attempted to use a non-positive increment for: 4752
+07-04 01:36:25.800 30822 30853 E Finsky  : [433] [Counters] attempted to use a non-positive increment for: 4753
+07-04 01:36:25.801 30822 30853 E Finsky  : [433] [Counters] attempted to use a non-positive increment for: 4753
+07-04 01:36:26.396 11178 11178 E libc    : SetHeapTaggingLevel: re-enabling tagging after it was disabled is not supported
+07-04 01:36:26.923 10956 11215 E libEGL  : eglQueryStringImpl display is EGL_NO_DISPLAY
+07-04 01:36:26.970 10956 11215 E k.mathchallenge: mali_debug: sprd_gles_wait_last_fence is closed
+07-04 01:36:27.843   444   444 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(1424). errno: Success
+07-04 01:36:27.844   444   444 E TrustyKeymaster: Getting response size (28)
+07-04 01:36:27.850   444   444 E TrustyKeymaster: succeeded to send cmd (8) to com.android.trusty.keymaster with rc(284). errno: Success
+07-04 01:36:27.851   444   444 E TrustyKeymaster: Getting response size (28)
+07-04 01:36:27.852   444   444 E TrustyKeymaster: succeeded to send cmd (12) to com.android.trusty.keymaster with rc(32). errno: Success
+07-04 01:36:27.882   444   444 E TrustyKeymaster: Getting response size (60)
+07-04 01:36:27.922 11126 11270 E Athena  : Athena-Worker, a(b.java:١٥)
+07-04 01:36:27.922 11126 11270 E Athena  : invalid or not registered:{"appid":8638,"event":"page_view"}
+07-04 01:36:27.962   444   444 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(1424). errno: Success
+07-04 01:36:27.963   444   444 E TrustyKeymaster: Getting response size (28)
+07-04 01:36:27.966   444   444 E TrustyKeymaster: succeeded to send cmd (8) to com.android.trusty.keymaster with rc(284). errno: Success
+07-04 01:36:27.966   444   444 E TrustyKeymaster: Getting response size (28)
+07-04 01:36:27.967   444   444 E TrustyKeymaster: succeeded to send cmd (12) to com.android.trusty.keymaster with rc(32). errno: Success
+07-04 01:36:27.997   444   444 E TrustyKeymaster: Getting response size (8)
+07-04 01:36:27.997   444   444 E TrustyKeymaster: Response of size 4 contained error code -1000
+07-04 01:36:27.997   444   444 E trusty_keymaster_hal: Cmd 12 returned error: -1000
+07-04 01:36:27.997   443   443 E keystore2: system/security/keystore2/src/error.rs:171 - system/security/keystore2/src/operation.rs:847: KeystoreOperation::finish
+07-04 01:36:27.997   443   443 E keystore2: 
+07-04 01:36:27.997   443   443 E keystore2: Caused by:
+07-04 01:36:27.997   443   443 E keystore2:     0: system/security/keystore2/src/operation.rs:428: Finish failed.
+07-04 01:36:27.997   443   443 E keystore2:     1: Error::Km(r#UNKNOWN_ERROR)
+07-04 01:36:28.906 11070 11343 E transsnet.store: No package ID 74 found for resource ID 0x740b0013.
+07-04 01:36:29.057 22508 32385 E Ads     : Error waiting for future.
+07-04 01:36:29.057 22508 32385 E Ads     : java.util.concurrent.TimeoutException
+07-04 01:36:29.057 22508 32385 E Ads     : 	at java.util.concurrent.FutureTask.get(FutureTask.java:206)
+07-04 01:36:29.057 22508 32385 E Ads     : 	at com.google.android.gms.ads.nonagon.signals.gmscore.p.call(:com.google.android.gms@262434062@26.24.34 (200400-938041327):47)
+07-04 01:36:29.057 22508 32385 E Ads     : 	at fjil.a(:com.google.android.gms@262434062@26.24.34 (200400-938041327):3)
+07-04 01:36:29.057 22508 32385 E Ads     : 	at fjhl.run(:com.google.android.gms@262434062@26.24.34 (200400-938041327):19)
+07-04 01:36:29.057 22508 32385 E Ads     : 	at fjim.run(:com.google.android.gms@262434062@26.24.34 (200400-938041327):5)
+07-04 01:36:29.057 22508 32385 E Ads     : 	at becd.c(:com.google.android.gms@262434062@26.24.34 (200400-938041327):50)
+07-04 01:36:29.057 22508 32385 E Ads     : 	at becd.run(:com.google.android.gms@262434062@26.24.34 (200400-938041327):66)
+07-04 01:36:29.057 22508 32385 E Ads     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-04 01:36:29.057 22508 32385 E Ads     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-04 01:36:29.057 22508 32385 E Ads     : 	at behr.run(:com.google.android.gms@262434062@26.24.34 (200400-938041327):8)
+07-04 01:36:29.057 22508 32385 E Ads     : 	at java.lang.Thread.run(Thread.java:1572)
+07-04 01:36:29.189   444   444 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(1425). errno: Success
+07-04 01:36:29.190   444   444 E TrustyKeymaster: Getting response size (28)
+07-04 01:36:29.197   444   444 E TrustyKeymaster: succeeded to send cmd (8) to com.android.trusty.keymaster with rc(284). errno: Success
+07-04 01:36:29.199   444   444 E TrustyKeymaster: Getting response size (28)
+07-04 01:36:29.202   444   444 E TrustyKeymaster: succeeded to send cmd (12) to com.android.trusty.keymaster with rc(32). errno: Success
+07-04 01:36:29.233   444   444 E TrustyKeymaster: Getting response size (60)
+07-04 01:36:29.282   444   444 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(1425). errno: Success
+07-04 01:36:29.283   444   444 E TrustyKeymaster: Getting response size (28)
+07-04 01:36:29.293   444   444 E TrustyKeymaster: succeeded to send cmd (8) to com.android.trusty.keymaster with rc(284). errno: Success
+07-04 01:36:29.294   444   444 E TrustyKeymaster: Getting response size (28)
+07-04 01:36:29.299   444   444 E TrustyKeymaster: succeeded to send cmd (12) to com.android.trusty.keymaster with rc(32). errno: Success
+07-04 01:36:29.330   444   444 E TrustyKeymaster: Getting response size (8)
+07-04 01:36:29.330   444   444 E TrustyKeymaster: Response of size 4 contained error code -1000
+07-04 01:36:29.330   444   444 E trusty_keymaster_hal: Cmd 12 returned error: -1000
+07-04 01:36:29.331   443  7838 E keystore2: system/security/keystore2/src/error.rs:171 - system/security/keystore2/src/operation.rs:847: KeystoreOperation::finish
+07-04 01:36:29.331   443  7838 E keystore2: 
+07-04 01:36:29.331   443  7838 E keystore2: Caused by:
+07-04 01:36:29.331   443  7838 E keystore2:     0: system/security/keystore2/src/operation.rs:428: Finish failed.
+07-04 01:36:29.331   443  7838 E keystore2:     1: Error::Km(r#UNKNOWN_ERROR)
+07-04 01:36:29.642 11423 11423 E e_feature: getDyfeatureValue com.transsion.android.dyfeature.DyFeature
+07-04 01:36:29.678 11070 11361 E transsnet.store: Failed to open APK '/data/user_de/0/com.transsnet.store/files/Theme/c5fa85b3-4742-4ffc-80eb-f2267ae644b6@58': Invalid file
+07-04 01:36:29.773 11393 11393 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.773 11393 11393 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.775 11393 11393 E CamAp_ReflectionUtils: instance Exception: java.lang.ClassNotFoundException: com.transsion.camera.analytics.AnalyticsImpl
+07-04 01:36:29.796 11393 11393 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.799 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.809 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.810   444   444 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(269). errno: Success
+07-04 01:36:29.810   444   444 E TrustyKeymaster: Getting response size (56)
+07-04 01:36:29.832   444   444 E TrustyKeymaster: succeeded to send cmd (16) to com.android.trusty.keymaster with rc(12). errno: Success
+07-04 01:36:29.833   444   444 E TrustyKeymaster: Getting response size (8)
+07-04 01:36:29.836 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.837 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.842 11393 11492 E CamAp_ReflectionUtils: instance Exception: java.lang.ClassNotFoundException: com.transsion.camera.feature.bgservice.BGServiceProxy
+07-04 01:36:29.849 11393 11492 E CamAp_ReflectionUtils: instance Exception: java.lang.ClassNotFoundException: com.transsion.camera.feature.vibrate.Vibrator
+07-04 01:36:29.851 11393 11492 E CamAp_ReflectionUtils: instance Exception: java.lang.ClassNotFoundException: com.transsion.camera.feature.isphidl.ISPHidlImpl
+07-04 01:36:29.852 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.861 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.makeup.ui.MakeUpSettingUIEntry
+07-04 01:36:29.862 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.pmaster.ui.PMasterSettingUIEntry
+07-04 01:36:29.862 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.pmaster.ui.FaceBeautyOptionUIEntry
+07-04 01:36:29.863 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.pmaster.ui.MakeUpOptionUIEntry
+07-04 01:36:29.863 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.pmaster.ui.SlimbodyOptionUIEntry
+07-04 01:36:29.863 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.pmaster.ui.MonomerOptionUIEntry
+07-04 01:36:29.863 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.pmaster.ui.StereoOptionUIEntry
+07-04 01:36:29.863 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.pmaster.ui.VipStereoOptionUIEntry
+07-04 01:36:29.863 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.makeup.ui.VideoMakeUpSettingUIEntry
+07-04 01:36:29.863 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.makeup.ui.VideoMakeUpOptionUIEntry
+07-04 01:36:29.863 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.makeup.ui.VideoFaceBeautyOptionUIEntry
+07-04 01:36:29.863 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.makeup.ui.VideoFaceBeautySettingUIEntry
+07-04 01:36:29.867 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.makeup.ui.VideoFaceBeautyMakeupOptionUIEntry
+07-04 01:36:29.867 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.makeup.ui.VideoFaceBeautyMakeupSettingUIEntry
+07-04 01:36:29.875 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.877 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.878 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.funvideo.beauty.ui.FunVideoFaceBeautySettingUIEntry
+07-04 01:36:29.878 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.colorstyle.setting.ui.ColorStyleSettingUIEntry
+07-04 01:36:29.879 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.886 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.supernightfilter.ui.SuperNightFilterUIEntry
+07-04 01:36:29.886 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.longexposure.setting.ui.LongExposureOptionUIEntry
+07-04 01:36:29.887 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.longexposure.setting.ui.LongExposureSettingUIEntry
+07-04 01:36:29.887 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.longexposure.setting.ui.LongExposureTripodUIEntry
+07-04 01:36:29.887 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.transsionfilter.TranssionFilterSettingUIEntry
+07-04 01:36:29.887 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videoportraitspot.VideoPortraitSpotSettingUIEntry
+07-04 01:36:29.887 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videoportraitspot.VideoPortraitSpotOptionUIEntry
+07-04 01:36:29.887 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videoportrait.VideoPortraitSettingUIEntry
+07-04 01:36:29.888 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videoportrait.VideoPortraitSettingOptionUIEntry
+07-04 01:36:29.888 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videoportraitlevel.VideoPortraitLevelSettingUIEntry
+07-04 01:36:29.888 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videosightshock.VideoSightShockSettingUIEntry
+07-04 01:36:29.888 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videosightshock.VideoSightShockOptionUIEntry
+07-04 01:36:29.888 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.transsionfilter.TranssionFilterOptionUIEntry
+07-04 01:36:29.888 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.aigc.setting.ui.AIGCSettingUIEntry
+07-04 01:36:29.888 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.aigc.setting.ui.AIGCOptionUIEntry
+07-04 01:36:29.889 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.antivideo.AntiVideoSettingUIEntry
+07-04 01:36:29.889 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.superantivideo.SuperAntiVideoSettingUIEntry
+07-04 01:36:29.895 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.goldwatermark.GoldWaterMarkSettingUIEntry
+07-04 01:36:29.915 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.prowatermark.ProWatermarkSettingUIEntry
+07-04 01:36:29.916 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.macrotorch.MacroTorchSettingUIEntry
+07-04 01:36:29.916 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.lenscorrection.LensCorrectionSettingUIEntry
+07-04 01:36:29.916 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.comvideohdr.ComVideoHDRSettingUIEntry
+07-04 01:36:29.916 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.dolvideohdr.DolVideoHDRSettingUIEntry
+07-04 01:36:29.916 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.picturesize.TpPictureSizeSettingUIEntry
+07-04 01:36:29.917 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.portraitarchitecture.PortraitArchitectureSettingUIEntry
+07-04 01:36:29.917 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.recordingeffect.RecordingEffectSettingUIEntry
+07-04 01:36:29.917 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.stereo.StereoSettingUIEntry
+07-04 01:36:29.917 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.shuttersoundoptional.ShutterSoundOptionalSettingUIEntry
+07-04 01:36:29.917 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.secondaryscreen.SecondaryScreenSettingUIEntry
+07-04 01:36:29.917 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.distortioncorrection.DistortionCorrectionSettingUIEntry
+07-04 01:36:29.918 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.superdefinition.SuperDefinitionSettingUIEntry
+07-04 01:36:29.918 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videofps.VideoFPSSettingUIEntry
+07-04 01:36:29.918 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videospeed.VideoSpeedSettingUIEntry
+07-04 01:36:29.918 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.automacroswitch.AutoMacroSwitchSettingUIEntry
+07-04 01:36:29.918 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.aishutter.AiShutterSwitchSettingUIEntry
+07-04 01:36:29.921 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videofacebeauty.VideoFaceBeautySettingOptionUIEntry
+07-04 01:36:29.921 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videosupernight.VideoSuperNightSettingUIEntry
+07-04 01:36:29.921 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videoenhance.VideoEnhanceSettingUIEntry
+07-04 01:36:29.921 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videoenhanceyuv.VideoEnhanceYUVSettingUIEntry
+07-04 01:36:29.921 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videoasd.VideoAsdSettingUIEntry
+07-04 01:36:29.921 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.aigroupphoto.AIGroupPhotoSettingUIEntry
+07-04 01:36:29.922 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.horizonswitchwide.HorizonSwitchWideSettingUIEntry
+07-04 01:36:29.922 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videosupernight.VideoSuperNightYUVSettingUIEntry
+07-04 01:36:29.922 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.smiledetection.SmileDetectionSettingUIEntry
+07-04 01:36:29.922 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.gesturedetection.GestureDetectionSettingUIEntry
+07-04 01:36:29.922 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.telecamera.TeleCameraSettingUIEntry
+07-04 01:36:29.923 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.bwportrait.BWPortraitSettingUIEntry
+07-04 01:36:29.923 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.dualcambwportrait.DualCamBWPortraitSettingUIEntry
+07-04 01:36:29.923 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.timelapsephotosettingoption.TimelapsePhotoSettingUIEntry
+07-04 01:36:29.923 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.smartmodeorder.SmartModeOrderSettingUIEntry
+07-04 01:36:29.928 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.asdenhance.ui.ASDEnhanceSettingUIEntry
+07-04 01:36:29.928 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.imagestyle.ui.ImageStyleSettingUIEntry
+07-04 01:36:29.929 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.929 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.streetphotostyle.StreetPhotoStyleSettingUIEntry
+07-04 01:36:29.929 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.humaneffect.HumanEffectSettingUIEntry
+07-04 01:36:29.929 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.BarcodeSettingUIEntry
+07-04 01:36:29.929 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.moondetection.MoonDetectionSettingUIEntry
+07-04 01:36:29.929 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.micropantiltcalibration.MicroPanTiltCalibrationUIEntry
+07-04 01:36:29.929 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.periscopecamera.PeriscopeCameraSettingUIEntry
+07-04 01:36:29.929 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.magicsky.MagicSkySettingUIEntry
+07-04 01:36:29.929 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.autovideofps.AutoVideoFPSSettingUIEntry
+07-04 01:36:29.930 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.hevcencorder.HEVCEncorderSettingUIEntry
+07-04 01:36:29.934 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.videopreisp.VideoPreispSettingUIEntry
+07-04 01:36:29.934 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.supernightlite.SuperNightLiteSettingUIEntry
+07-04 01:36:29.935 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.portraitflare.PortraitFlareSettingUIEntry
+07-04 01:36:29.936 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.dv_template.filter_icon.DVTemplateFilterIconOptionUIEntry
+07-04 01:36:29.936 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.dv_template.DVTemplateSettingUIEntry
+07-04 01:36:29.937 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.dv_template.entrance.DVTemplateEntranceSettingUIEntry
+07-04 01:36:29.937 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.dv_template.entrance.DVTemplateEntranceSettingOptionUIEntry
+07-04 01:36:29.937 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.motiondetectswitch.MotionDetectSwitchUIEntry
+07-04 01:36:29.937 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.tuning.setting.entrance.TuningFeatureEntranceSettingUIEntry
+07-04 01:36:29.937 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.focusdistance.FocusDistanceSettingUIEntry
+07-04 01:36:29.938 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.oneclickefficiency.OneClickEfficiencySettingUIEntry
+07-04 01:36:29.938 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.ui.setting.groupcapture.GroupCaptureSettingUIEntry
+07-04 01:36:29.939 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.antivideo.AntiVideoEntry
+07-04 01:36:29.940 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.superantivideo.SuperAntiVideoEntry
+07-04 01:36:29.940 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.macrotorch.MacroTorchEntry
+07-04 01:36:29.940 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.comvideohdr.ComVideoHDREntry
+07-04 01:36:29.940 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videohdr.setting.VideoHDREntry
+07-04 01:36:29.940 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.dolvideohdr.DolVideoHDREntry
+07-04 01:36:29.940 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.recordingeffect.RecordingEffectEntry
+07-04 01:36:29.940 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.skinoptimization.SkinOptimizationEntry
+07-04 01:36:29.940 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.makeup.MakeUpSettingEntry
+07-04 01:36:29.940 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.makeup.MuStereoSettingEntry
+07-04 01:36:29.940 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.makeup.VipStereoSettingEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.makeup.MuMonomerSettingEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.makeup.VideoMakeUpSettingEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.makeup.VideoMakeUpStyleSettingEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.makeup.VideoFaceBeautyMakeupOptionEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.makeup.VideoFaceBeautyMakeupSettingEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.makeup.MuSlimBodySettingEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.makeup.MuFaceBeautySettingEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.portraitflare.PortraitFlareEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.portraitarchitecture.PortraitArchitectureEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.shuttersoundoptional.ShutterSoundOptionalEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.secondaryscreen.SecondaryScreenEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.lenscorrection.LensCorrectionEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.stereo.StereoEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.goldwatermark.GoldWaterMarkEntry
+07-04 01:36:29.941 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.prowatermark.ProWatermarkEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.widecamera.WideCameraEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.widecamera.FrontWideCameraEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.plugin.TranssionPluginEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.distortioncorrection.DistortionCorrectionEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.macro.MacroEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.aishutter.AiShutterEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.aishutter.AiShutterSwitchEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videofilter.VideoFilterStyleEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videofilter.VideoFilterEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videoeffect.VideoEffectStyleEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videoeffect.VideoEffectEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videoframe.VideoFrameStyleEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videoframe.VideoFrameEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videosightshock.VideoSightShockEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videoportraitspot.VideoPortraitSpotEntry
+07-04 01:36:29.942 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videospot.VideoSpotEntry
+07-04 01:36:29.943 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videospotlevel.VideoSpotLevelEntry
+07-04 01:36:29.943 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videoportrait.VideoPortraitEntry
+07-04 01:36:29.943 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videoportraitlevel.VideoPortraitLevelEntry
+07-04 01:36:29.943 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.supernightfilter.setting.SuperNightFilterEntry
+07-04 01:36:29.943 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.superdefinition.SuperDefinitionEntry
+07-04 01:36:29.943 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videointerpolation.VideoInterpolationEntry
+07-04 01:36:29.943 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videofps.VideoFPSEntry
+07-04 01:36:29.943 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videospeed.VideoSpeedEntry
+07-04 01:36:29.945 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videofacebeauty.VideoFaceBeautyEntry
+07-04 01:36:29.945 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videosupernight.VideoSuperNightEntry
+07-04 01:36:29.945 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videosupernightyuv.VideoSuperNightYUVEntry
+07-04 01:36:29.945 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videoenhance.VideoEnhanceEntry
+07-04 01:36:29.945 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videoenhanceyuv.VideoEnhanceYUVEntry
+07-04 01:36:29.946 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videoasd.VideoAsdEntry
+07-04 01:36:29.946 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.dxoscenedetection.DxoSceneDetectionEntry
+07-04 01:36:29.946 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.aigroupphoto.AIGroupPhotoEntry
+07-04 01:36:29.946 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.horizonswitchwide.HorizonSwitchWideEntry
+07-04 01:36:29.946 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.algorithmmigrate.AlgorithmMigrateEntry
+07-04 01:36:29.946 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.smartdenoise.SmartDenoiseEntry
+07-04 01:36:29.947 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.automacroswitch.AutoMacroSwitchEntry
+07-04 01:36:29.947 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.autovideofps.AutoVideoFPSEntry
+07-04 01:36:29.947 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.hevcencorder.HEVCEncorderEntry
+07-04 01:36:29.947 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.smiledetection.SmileDetectionEntry
+07-04 01:36:29.947 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.gesturedetection.GestureDetectionEntry
+07-04 01:36:29.947 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.telecamera.TeleCameraEntry
+07-04 01:36:29.947 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.bwportrait.BWPortraitEntry
+07-04 01:36:29.948 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.dualcambwportrait.DualCamBWPortraitEntry
+07-04 01:36:29.948 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.timelapsephotointerval.TimelapsePhotoIntervalEntry
+07-04 01:36:29.948 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.timelapsephotoduration.TimelapsePhotoDurationEntry
+07-04 01:36:29.948 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.smartmodeorder.SmartModeOrderEntry
+07-04 01:36:29.948 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.humaneffect.HumanEffectEntry
+07-04 01:36:29.948 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.barcode.BarcodeEntry
+07-04 01:36:29.952 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.954 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.magicsky.MagicSkyEntry
+07-04 01:36:29.954 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.asdenhance.ASDEnhanceEntry
+07-04 01:36:29.954 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.imagestyle.ImageStyleEntry
+07-04 01:36:29.955 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.moondetection.MoonDetectionEntry
+07-04 01:36:29.955 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.micropantiltcalibration.MicroPanTiltCalibrationEntry
+07-04 01:36:29.955 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.periscopecamera.PeriscopeCameraEntry
+07-04 01:36:29.955 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.muterecoder.MuteRecoderEntry
+07-04 01:36:29.955 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.fusion.FusionEntry
+07-04 01:36:29.955 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.longexposure.setting.LongExposureEntry
+07-04 01:36:29.955 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.longexposure.setting.LongExposureTripodEntry
+07-04 01:36:29.955 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.longexposure.setting.LongExposureCaptureStateEntry
+07-04 01:36:29.955 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.longexposure.setting.LongExposureOptionEntry
+07-04 01:36:29.955 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.streamflip.StreamFlipSettingEntry
+07-04 01:36:29.955 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videopreisp.VideoPreIspEntry
+07-04 01:36:29.955 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.airemosaic.AIRemosaicEntry
+07-04 01:36:29.955 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.foldcolumn.FoldColumnEntry
+07-04 01:36:29.955 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.foldswitchpreview.FoldSwitchPreviewEntry
+07-04 01:36:29.956 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.aigc.setting.AIGCOptionEntry
+07-04 01:36:29.956 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.aigc.setting.AIGCEffectEntry
+07-04 01:36:29.956 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.aigc.setting.AIGCHairStyleEntry
+07-04 01:36:29.956 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.aigc.setting.AIGCClothingEntry
+07-04 01:36:29.956 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.aigc.setting.AIGCPortraitEntry
+07-04 01:36:29.956 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.supernightlite.SuperNightLiteEntry
+07-04 01:36:29.956 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.airaw.AIRawEntry
+07-04 01:36:29.956 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.facebeauty.FaceBeautyModeEntry
+07-04 01:36:29.956 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.makeup.MakeUpModeEntry
+07-04 01:36:29.956 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.pmaster.PMasterModeEntry
+07-04 01:36:29.970 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.971 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.972 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.973 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.977 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.vsdof.SdofPhotoModeEntry
+07-04 01:36:29.977 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.armode.ARModeEntry
+07-04 01:36:29.978 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.980 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:29.985 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.funvideo.mode.FunVideoModeEntry
+07-04 01:36:29.985 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.video.SlowMotionModeEntry
+07-04 01:36:29.985 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.arcore.ARCoreModeEntry
+07-04 01:36:29.985 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.ar_drawline.ARDrawlineModeEntry
+07-04 01:36:29.985 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.bwportrait.BWPortraitModeEntry
+07-04 01:36:29.986 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.timelapsemode.TimelapsePhotoModeEntry
+07-04 01:36:29.986 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.movie.MovieModeEntry
+07-04 01:36:29.986 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.highdefinition.HighDefinitionModeEntry
+07-04 01:36:29.986 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.supermoon.SuperMoonModeEntry
+07-04 01:36:29.986 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.supernightfilter.mode.SuperNightFilterModeEntry
+07-04 01:36:29.986 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.magicsky.MagicSkyModeEntry
+07-04 01:36:29.986 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.hdrmode.HdrModeEntry
+07-04 01:36:29.987 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.normalnight.NormalNightModeEntry
+07-04 01:36:29.987 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.aigc.AIGCModeEntry
+07-04 01:36:29.987 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.longexposure.LongExposureModeEntry
+07-04 01:36:29.987 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.vlog.VlogModeEntry
+07-04 01:36:29.987 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.vlog.setting.FrameSelectEntry
+07-04 01:36:29.987 11070 11361 E AconfigFlags: Failed to read Aconfig values from /vendor/etc/aconfig_flags.pb
+07-04 01:36:29.987 11070 11361 E AconfigFlags: java.io.FileNotFoundException: /vendor/etc/aconfig_flags.pb: open failed: ENOENT (No such file or directory)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at libcore.io.IoBridge.open(IoBridge.java:574)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at java.io.FileInputStream.<init>(FileInputStream.java:179)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at java.io.FileInputStream.<init>(FileInputStream.java:133)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at com.android.internal.pm.pkg.component.AconfigFlags.<init>(AconfigFlags.java:84)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at com.android.internal.pm.pkg.parsing.ParsingPackageUtils.<clinit>(ParsingPackageUtils.java:305)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at com.android.internal.pm.parsing.PackageParser2.<init>(PackageParser2.java:99)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at android.content.pm.PackageManager.getPackageArchiveInfo(PackageManager.java:8843)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at android.content.pm.PackageManager.getPackageArchiveInfo(PackageManager.java:8816)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at gy.a.e(source.java:23)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at gy.a.a(source.java:1)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at cy.c.m(source.java:37)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at cy.c.U(source.java:37)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at cy.c.<init>(source.java:16)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at cy.i.f(source.java:91)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at cy.i.a(source.java:74)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at cy.d.d(source.java:20)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at com.afmobi.palmplay.cloudfolder.CloudFolderRemoteController$analysisNeedParseTheme$1.invokeSuspend(source.java:101)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(source.java:12)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at kotlinx.coroutines.z0.run(source.java:126)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at k50.j$a.run(source.java:4)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at m50.h.run(source.java:3)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at kotlinx.coroutines.scheduling.CoroutineScheduler.F(source.java:1)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$c.b(source.java:34)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$c.m(source.java:29)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at kotlinx.coroutines.scheduling.CoroutineScheduler$c.run(source.java:1)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: Caused by: android.system.ErrnoException: open failed: ENOENT (No such file or directory)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at libcore.io.Linux.open(Native Method)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at libcore.io.ForwardingOs.open(ForwardingOs.java:579)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at libcore.io.BlockGuardOs.open(BlockGuardOs.java:274)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at libcore.io.ForwardingOs.open(ForwardingOs.java:579)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at android.app.ActivityThread$AndroidOs.open(ActivityThread.java:9048)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	at libcore.io.IoBridge.open(IoBridge.java:560)
+07-04 01:36:29.987 11070 11361 E AconfigFlags: 	... 24 more
+07-04 01:36:29.987 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.dv_template.DVTemplateSettingEntry
+07-04 01:36:29.987 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.dv_template.filter_icon.DVTemplateFilterIconEntry
+07-04 01:36:29.987 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.dv_template.entrance.DVTemplateEntranceSettingOptionEntry
+07-04 01:36:29.988 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.video.DVVideoModeEntry
+07-04 01:36:29.988 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.gopro.GoProModeEntry
+07-04 01:36:29.988 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.motioncapture.MotionCaptureModeEntry
+07-04 01:36:29.988 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.motiondetectswitch.MotionDetectSwitchEntry
+07-04 01:36:29.988 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.mode.streetphoto.StreetPhotoModeEntry
+07-04 01:36:29.988 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.focusdistance.FocusDistanceEntry
+07-04 01:36:29.988 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.oneclickefficiency.OneClickEfficiencyEntry
+07-04 01:36:29.988 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.streetphotostyle.StreetPhotoStyleEntry
+07-04 01:36:29.988 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.colorstyle.setting.ColorStyleEntry
+07-04 01:36:29.989 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.zoomeis.ZoomEisEntry
+07-04 01:36:29.989 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.groupcapture.GroupCaptureEntry
+07-04 01:36:29.993 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.bgservice.BGServiceProxy
+07-04 01:36:30.015 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:30.015 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.024 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.asdenhance.ASDEnhance
+07-04 01:36:30.024 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.featurelibs.makeup.MakeUpAlgorithm
+07-04 01:36:30.026 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.027 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.027 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.027 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.029 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.030 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.030 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.030 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.030 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.031 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.032 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.032 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.032 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.033 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.videohdr.preview.VideoHDRPreview
+07-04 01:36:30.033 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.analytics.AnalyticsImpl
+07-04 01:36:30.033 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.033 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.supernightfilter.setting.SuperNightFilterInfo
+07-04 01:36:30.033 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.superdefinition.SuperDefinitionRestriction
+07-04 01:36:30.033 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.033 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.034 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.034 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.034 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.039 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.040 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.059 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.widecamera.WideCameraRestriction
+07-04 01:36:30.064 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.065 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.065 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.075 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.075 11393 11492 E CamAp_ReflectionUtils: findClass ClassNotFoundException: com.transsion.camera.feature.setting.macro.MacroRestriction
+07-04 01:36:30.090 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.090 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.090 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.091 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.091 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:30.091 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.091 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.091 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.092 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.092 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.092 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.092 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.093 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.093 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.093 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.094 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.094 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.097 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.101 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:30.103 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.146 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:30.147 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.148 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.148 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.149 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.149 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.149 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.149 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.149 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.149 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.150 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.150 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.150 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.150 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.151 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.151 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.151 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.151 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.152 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.152 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.152 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.152 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.152 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.210 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.212 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.213 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.214 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.221 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:30.222 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.223 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.223 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.223 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.223 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.224 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.224 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.225 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.225 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.225 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.226 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.227 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.227 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.228 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.228 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.229 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.229 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.230 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.236 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.236 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.237 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.237 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.237 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.237 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.237 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.237 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.237 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.237 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.237 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.237 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.237 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.237 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.238 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.238 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.238 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.238 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.238 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.238 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.238 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.238 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.243 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.246 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.250 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.263 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.282 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.282 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.283 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.283 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.283 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.283 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.283 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.283 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.283 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.283 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.283 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.283 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.283 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.284 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.284 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.284 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.284 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.284 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.284 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.284 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.287 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.288 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.288 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.288 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.289 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.289 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.289 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.289 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.289 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.289 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.294 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.297 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.298 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.298 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.299 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.299 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.300 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.300 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.300 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.300 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.301 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.301 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.311 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.312 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.313 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.313 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.313 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.313 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.313 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.313 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.314 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.323 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.324 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.324 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.324 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.324 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.324 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.324 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.324 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.325 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.325 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.325 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.325 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.325 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.331 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.331 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.332 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.332 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.332 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.332 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.333 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.333 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.333 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.333 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.334 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.334 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.334 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.334 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.335 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.335 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.335 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.336 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.336 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.336 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.336 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.336 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.336 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.334 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.339 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.341 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.342 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.342 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.342 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.343 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.343 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.343 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.343 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.344 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.344 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.344 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.344 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.345 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.345 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.345 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.345 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.345 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.346 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.346 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.346 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.346 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.346 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.353 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.358 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.359 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.361 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.361 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.362 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.362 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.362 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.362 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.362 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.362 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.363 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.363 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.363 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.363 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.363 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.363 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.363 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.363 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.363 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.364 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.364 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.364 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.364 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.364 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.369 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.370 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.373 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.374 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.374 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.374 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.384 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.384 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.384 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.384 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.385 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.385 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.385 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.385 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.385 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.385 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.385 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.385 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.385 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.386 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.386 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.386 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.386 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.388 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.388 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.388 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.389 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.389 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.389 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.389 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.389 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.389 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.389 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.389 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.389 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.389 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.389 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.389 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.390 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.390 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.390 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.390 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.390 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.390 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.390 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.390 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.390 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.393 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.394 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.394 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.394 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.394 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.394 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.394 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.394 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.394 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.394 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.395 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.395 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.395 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.395 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.395 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.395 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.395 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.395 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.395 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.395 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.395 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.395 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.405 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.406 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.407 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.411 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.412 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.412 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.412 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.413 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.413 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.413 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.414 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.414 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.414 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.416 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.416 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.417 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.417 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.418 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.418 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.418 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.418 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.418 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.421 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.423 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.428 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.429 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.429 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.429 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.429 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.429 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.429 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.429 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.431 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.433 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.434 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.437 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.439 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.439 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.439 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.439 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.440 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.440 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.440 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.441 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.441 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.441 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.441 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.441 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.441 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.446 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAiDetectMode' does not exist.
+07-04 01:36:30.447 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableAisMotionResult' does not exist.
+07-04 01:36:30.447 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fovcrop' does not exist.
+07-04 01:36:30.447 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'highlightStrengthenEn' does not exist.
+07-04 01:36:30.447 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'fakeSensorMode' does not exist.
+07-04 01:36:30.447 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraMode' does not exist.
+07-04 01:36:30.447 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiCameraID' does not exist.
+07-04 01:36:30.447 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'sprdMultiFnumberRange' does not exist.
+07-04 01:36:30.447 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'micromode' does not exist.
+07-04 01:36:30.447 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.447 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableHighResolution' does not exist.
+07-04 01:36:30.448 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableslimbodyMode' does not exist.
+07-04 01:36:30.448 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'slimbodyFeaturesize' does not exist.
+07-04 01:36:30.448 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranCtsInterpolationSize' does not exist.
+07-04 01:36:30.448 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranAvailableVideoEIS' does not exist.
+07-04 01:36:30.448 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'aePreCapFlowSupport' does not exist.
+07-04 01:36:30.448 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableVideoSuperNightYuvMode' does not exist.
+07-04 01:36:30.448 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableFilterType' does not exist.
+07-04 01:36:30.448 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsMaxResolutions' does not exist.
+07-04 01:36:30.448 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableHfpsModes' does not exist.
+07-04 01:36:30.448 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'availableMaxMagicskyType' does not exist.
+07-04 01:36:30.449 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSupport' does not exist.
+07-04 01:36:30.449 11393 11486 E VendorTagDescriptor: lookupTag: Tag name 'tranRearPortrait8MSize' does not exist.
+07-04 01:36:30.449 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:30.453 11393 11491 E ranssion.camera: Invalid resource ID 0x00000000.
+07-04 01:36:30.453  1076  1076 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 01:36:30.461 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.475 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.484 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.490 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.497 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.498 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.500 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.502 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.504 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.505 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.506 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.508 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.509 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.509 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.513 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.513 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.514 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.517 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.519 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.521 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.522 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.523 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.524 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.525 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.526 11423 11423 E ProcessManagerImpl: getUidByPackageName fail
+07-04 01:36:30.527 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.529 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.531 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.535 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.540 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.545 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.549 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.554 11393 11486 E CamAp_SPRD-PlatformCam: isSupportedSuperDefinition false
+07-04 01:36:30.634 11070 11551 E chromium: [0704/013630.633956:ERROR:android_webview/browser/variations/variations_seed_loader.cc:39] Seed missing signature.
+07-04 01:36:30.763 11563 11563 E libc    : SetHeapTaggingLevel: re-enabling tagging after it was disabled is not supported
+07-04 01:36:31.663 11070 11636 E libEGL  : eglQueryStringImpl display is EGL_NO_DISPLAY
+07-04 01:36:31.776 11070 11636 E transsnet.store: mali_debug: sprd_gles_wait_last_fence is closed
+07-04 01:36:31.941   358   379 E lowmemorykiller: process_mrelease 10930 failed: No such process
+07-04 01:36:32.449   358   379 E lowmemorykiller: process_mrelease 11057 failed: No such process
+07-04 01:36:32.505   358   378 E lowmemorykiller: process_mrelease 8770 failed: No such process
+07-04 01:36:32.952 10956 10956 E Ads     : JS: Refused to get unsafe header "X-Afma-Gcache-IsGcacheHit" (https://imasdk.googleapis.com/admob/sdkloader/gma_vast_video_player_20260625_00.0/simid_player_core.js:508)
+07-04 01:36:33.019 10956 10956 E Ads     : JS: Refused to get unsafe header "X-Afma-Gcache-IsGcacheHit" (https://imasdk.googleapis.com/admob/sdkloader/gma_vast_video_player_20260625_00.0/simid_player_core.js:508)
+07-04 01:36:33.059  1089 11468 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 01:36:33.063  1089  3003 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 01:36:33.064  1089  3003 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 01:36:33.076  1089  3003 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 01:36:33.077  1089  3003 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 01:36:33.078  1089  3003 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 01:36:33.104  1089  3003 I APM_AudioPolicyManager: isFadeWhiteListApp() packageName:
+07-04 01:36:33.115  1089  3003 D APM_AudioPolicyManager: getOutputForAttrInt() attributes={ Content type: AUDIO_CONTENT_TYPE_MUSIC Usage: AUDIO_USAGE_MEDIA Source: AUDIO_SOURCE_DEFAULT Flags: 0x200 Tags:  } stream=AUDIO_STREAM_MUSIC session 8121 selectedDeviceId 0
+07-04 01:36:33.116  1089  3003 I APM_AudioPolicyManager: getOutputForAttrInt() device {AUDIO_DEVICE_OUT_SPEAKER, @:}, sampling rate 44100, format 0x5, channel mask 0x3, flags 0x8 stream AUDIO_STREAM_MUSIC
+07-04 01:36:33.123  1089  3003 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 2 2 
+07-04 01:36:33.123  1089  3003 D APM_AudioPolicyManager: selectOutput new bestOutput 21 criteria 0 100 0 0 0 1 3 0 
+07-04 01:36:33.123  1089  3003 D APM_AudioPolicyManager: getOutputForAttrInt returns output 21 selectedDeviceId 3
+07-04 01:36:33.123  1089  3003 I APM_AudioPolicyManager: getOutputForAttr() returns output 21 requestedPortId 0 selectedDeviceId 3 for port ID 1085
+07-04 01:36:33.170  1089  3003 I APM_AudioPolicyManager: startOutput portId 1085
+07-04 01:36:33.170  1089  3003 I APM_AudioPolicyManager: startOutput() output 21, stream 3, session 8121
+07-04 01:36:33.176  1089  3003 D APM_AudioPolicyManager: getNewOutputDevices selected devices {AUDIO_DEVICE_OUT_SPEAKER, @:}
+07-04 01:36:33.178  1089  3003 I APM_AudioPolicyManager: setOutputDevices caller startSource[[portId:5][io:21, deep_buffer]] device {AUDIO_DEVICE_OUT_SPEAKER, @:} delayMs 0
+07-04 01:36:33.184  1089  3003 E audioserver: addTrack UX is 0
+07-04 01:36:33.186 10956 11200 E AudioSystem: funcName or pkg should not be null
+07-04 01:36:33.408  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.412  1058 11760 E VSP     : read_uncompressed_header, 762, -10
+07-04 01:36:33.413  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.416  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.429  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.439  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.442  1292  1327 E ThermalActionCommon: charge has been turn off
+07-04 01:36:33.444  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.447  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.451  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.454  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.456  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.460  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.465  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.470  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.478  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.481  1058 11761 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.530 10956 11200 E AudioSystem: funcName or pkg should not be null
+07-04 01:36:33.581  1292  1292 E ThermalActionCommon: charge has been turn off
+07-04 01:36:33.596 10956 10956 E Ads     : JS: Refused to get unsafe header "X-Afma-Gcache-IsGcacheHit" (https://imasdk.googleapis.com/admob/sdkloader/gma_vast_video_player_20260625_00.0/simid_player_core.js:508)
+07-04 01:36:33.663 10956 10956 E Ads     : JS: Refused to get unsafe header "X-Afma-Gcache-IsGcacheHit" (https://imasdk.googleapis.com/admob/sdkloader/gma_vast_video_player_20260625_00.0/simid_player_core.js:508)
+07-04 01:36:33.668  1089 11468 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 01:36:33.669  1089  3003 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 01:36:33.671  1089  3003 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 01:36:33.760  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.762  1058 11805 E VSP     : read_uncompressed_header, 762, -10
+07-04 01:36:33.763  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.768  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.773  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.777  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.781  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.787  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.790  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.793  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.796  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.799  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.804  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.805  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.806  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.807  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.808  1058 11806 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 01:36:33.866  1089  1434 E audioserver: removeTrack UX is 0
+07-04 01:36:33.866  1089  1283 I APM_AudioPolicyManager: stopOutput portId 1085
+07-04 01:36:33.866  1089  1283 I APM_AudioPolicyManager: stopOutput() output 21, stream 3, session 8121
+07-04 01:36:33.867  1089  1283 D APM_AudioPolicyManager: getNewOutputDevices selected devices AUDIO_DEVICE_NONE
+07-04 01:36:33.867  1089  1283 I APM_AudioPolicyManager: setOutputDevices caller stopSource[[portId:5][io:21, deep_buffer]] device AUDIO_DEVICE_NONE delayMs 320
+07-04 01:36:33.868  1089  1283 D APM_AudioPolicyManager: getNewOutputDevices selected devices AUDIO_DEVICE_NONE
+07-04 01:36:33.868  1089  1283 I APM_AudioPolicyManager: setOutputDevices caller stopSource[[portId:1][io:13, primary output]] device AUDIO_DEVICE_NONE delayMs 320
+07-04 01:36:33.869  1089  1283 I APM_AudioPolicyManager: setOutputDevices caller stopSource[[portId:1][io:13, primary output]] changing device to AUDIO_DEVICE_NONE
+07-04 01:36:33.872  1089  1283 D APM_AudioPolicyManager: getNewOutputDevices selected devices AUDIO_DEVICE_NONE
+07-04 01:36:33.872  1089  1283 I APM_AudioPolicyManager: setOutputDevices caller stopSource[[portId:7][io:29, fast output]] device AUDIO_DEVICE_NONE delayMs 320
+07-04 01:36:33.873  1089  1283 I APM_AudioPolicyManager: setOutputDevices caller stopSource[[portId:7][io:29, fast output]] changing device to AUDIO_DEVICE_NONE
+07-04 01:36:34.083   843  1635 E msys    : E[N mns:DGWClient]_OnResolverSuccess(359)=>Cache refresh succeeded with system DNS resolver. IP count: 1
+07-04 01:36:34.085   843  1435 E MQTTBypassDGWStreamGroupCallbacks.cpp: onStreamGroupError TransientError domain: MNSQUICConnection code: 1 detail: Local error: 0x40000015: 35 seconds timeout
+07-04 01:36:34.118  1076  1076 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 01:36:34.124  1076  1076 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 01:36:35.176   358   379 E lowmemorykiller: process_mrelease 11423 failed: No such process
+07-04 01:36:35.821 11856 11874 E libEGL  : eglQueryStringImpl display is EGL_NO_DISPLAY
+07-04 01:36:35.879 11824 11875 E mali_gralloc: initIonKernelMemtrack open device:/dev/systemheap failed, 13(Permission denied)
+07-04 01:36:35.904 11787 11830 E FilePhenotypeFlags: Config package com.google.android.gms.auth_account_client#com.android.chrome cannot use FILE backing without declarative registration. See go/phenotype-android-integration#phenotype for more information. This will lead to stale flags.
+07-04 01:36:35.982  1520  1701 E TranDynamicBarAnimControllerImpl: TranDynamicBarAnimControllerImpl setFromDynamicIslandToWindow pkgName:android
+07-04 01:36:35.982  1520  1701 E TranDynamicBarAnimControllerImpl: start setFromDynamicIslandToWindow startFromDynamicIsland:false
+07-04 01:36:35.982  1520  1701 E TranDynamicBarAnimControllerImpl: end setFromDynamicIslandToWindow mDynamicIslandPkgName:android mStartFromDynamicIsland:false
+07-04 01:36:35.984  1520  1701 E TranDynamicBarAnimControllerImpl: TranDynamicBarAnimControllerImpl setFromDynamicIslandToWindow pkgName:com.google.android.gms
+07-04 01:36:35.984  1520  1701 E TranDynamicBarAnimControllerImpl: start setFromDynamicIslandToWindow startFromDynamicIsland:false
+07-04 01:36:35.984  1520  1701 E TranDynamicBarAnimControllerImpl: end setFromDynamicIslandToWindow mDynamicIslandPkgName:com.google.android.gms mStartFromDynamicIsland:false
+07-04 01:36:36.260  1076  1076 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 01:36:37.038  1520  1520 E system_server: No package ID 7f found for resource ID 0x7f010000.
+07-04 01:36:37.051  1520  1520 E system_server: No package ID 7f found for resource ID 0x7f020000.
+07-04 01:36:37.051  1520  1520 E system_server: No package ID 7f found for resource ID 0x7f030000.
+07-04 01:36:37.051  1520  1520 E system_server: No package ID 7f found for resource ID 0x7f040000.
+07-04 01:36:37.051  1520  1520 E system_server: No package ID 7f found for resource ID 0x7f050000.
+07-04 01:36:37.057 12001 12001 E libc    : SetHeapTaggingLevel: re-enabling tagging after it was disabled is not supported
+07-04 01:36:37.130   358   379 E lowmemorykiller: process_mrelease 11070 failed: No such process
+07-04 01:36:37.444  1520  1606 E KernelCpuSpeedReader: Failed to read cpu-freq: /sys/devices/system/cpu/cpu٠/cpufreq/stats/time_in_state: open failed: ENOENT (No such file or directory)
+07-04 01:36:37.444  1520  1606 E KernelCpuSpeedReader: Failed to read cpu-freq: /sys/devices/system/cpu/cpu٦/cpufreq/stats/time_in_state: open failed: ENOENT (No such file or directory)
+07-04 01:36:37.450  1520  1606 E system_server: updateValue is called with a value 45, which is lower than the previous value 281
+07-04 01:36:38.335  1227  1227 E uas-service: ioclt error: fd=3 cmd=1075336211 ux_data->pid=2325 ux_data->ux_tags=0x100420
+07-04 01:36:38.521  1050  1130 E a2dp_offload: audio_extn_a2dp_set_parameters: No supported encoders identified,ignoring A2DP setparam
+07-04 01:36:38.751  1520  1603 D tranpm/BehaviorManager: onMemPressureChange : level 2
+07-04 01:36:38.751  2039  2039 D ModeController: isSmartPanelState: setPackageName:, smartPanelState:false
+07-04 01:36:38.753  2039  2039 D TrCloudNotificationSupportController: containCloudNotificationSupportApp: com.alldocument.hubhubnot in the cloud list
+07-04 01:36:38.753  2039  2039 D TrCloudNotificationSupportController: containLocalNotificationSupportApp: com.alldocument.hubhubnot in the local list

@@ -542,6 +542,11 @@ void main() {
         expect(find.text('500 Coins'), findsOneWidget);
         expect(find.text('1200 Coins'), findsOneWidget);
         expect(find.text('Remove Ads'), findsOneWidget);
+        expect(find.text('Price unavailable'), findsWidgets);
+        expect(find.text(r'$0.99'), findsNothing);
+        expect(find.text(r'$3.99'), findsNothing);
+        expect(find.text(r'$7.99'), findsNothing);
+        expect(find.text(r'$1.99'), findsNothing);
         expect(find.text('Restore Purchases'), findsNothing);
         expect(find.text('Not enough'), findsNothing);
         expect(

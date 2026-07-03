@@ -252,6 +252,9 @@ class _FakeIapPurchaseAdapter implements IapPurchaseAdapter {
   int restoreCalls = 0;
 
   @override
+  String? priceFor(String productId) => 'Store price';
+
+  @override
   Future<void> buyProduct(IapProduct product) async {
     buyCalls.add(product);
   }

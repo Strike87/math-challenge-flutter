@@ -1,0 +1,9 @@
+--------- beginning of main
+07-03 23:00:54.818 31831 31874 E mali_gralloc: Requested R8 format is not supported with this allocator. R8 format is only supported with the AIDL allocator
+07-03 23:00:54.818 31831 31874 E mali_gralloc: ERROR: Unrecognized and/or unsupported format R8 and usage TEXTURE + RENDER + HWC
+07-03 23:00:54.818 31831 31874 E mali_gralloc: ERROR: Unrecognized and/or unsupported format RGBA_10101010 and usage TEXTURE + RENDER + HWC
+07-03 23:00:54.818 31831 31874 E mali_gralloc: Requested R8 format is not supported with this allocator. R8 format is only supported with the AIDL allocator
+07-03 23:00:54.818 31831 31874 E mali_gralloc: ERROR: Unrecognized and/or unsupported format R8 and usage TEXTURE + RENDER + HWC
+07-03 23:00:54.818 31831 31874 E mali_gralloc: ERROR: Unrecognized and/or unsupported format RGBA_10101010 and usage TEXTURE + RENDER + HWC
+07-03 23:00:57.763 31831 32105 E libEGL  : eglQueryStringImpl display is EGL_NO_DISPLAY
+07-03 23:00:57.806 31831 32105 E k.mathchallenge: mali_debug: sprd_gles_wait_last_fence is closed

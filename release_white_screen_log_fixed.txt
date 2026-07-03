@@ -1,0 +1,217 @@
+--------- beginning of main
+07-03 23:00:52.873  1050  1050 E a2dp_offload: audio_extn_a2dp_set_parameters: No supported encoders identified,ignoring A2DP setparam
+07-03 23:00:52.875  1520  3623 E AppSearchAppsIndexerAppSearchHelper: Ran into error while indexing apps: [FAILURE(3)]: Key cannot contain a null character '\0'
+07-03 23:00:52.883  1050  1050 E a2dp_offload: audio_extn_a2dp_set_parameters: No supported encoders identified,ignoring A2DP setparam
+--------- beginning of system
+07-03 23:00:53.128  1520  1666 E ActivityTaskManager: agaresPreload error: activityInfo is null
+07-03 23:00:53.134  1520  1666 E system_server: No package ID 7f found for resource ID 0x7f010000.
+07-03 23:00:53.134  1520  1666 E system_server: No package ID 7f found for resource ID 0x7f020000.
+07-03 23:00:53.134  1520  1666 E system_server: No package ID 7f found for resource ID 0x7f030000.
+07-03 23:00:53.134  1520  1666 E system_server: No package ID 7f found for resource ID 0x7f040000.
+07-03 23:00:53.135  1520  1666 E system_server: No package ID 7f found for resource ID 0x7f050000.
+07-03 23:00:53.157   444   444 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(286). errno: Success
+07-03 23:00:53.158   444   444 E TrustyKeymaster: Getting response size (52)
+07-03 23:00:53.162   444   444 E TrustyKeymaster: succeeded to send cmd (8) to com.android.trusty.keymaster with rc(4717). errno: Success
+07-03 23:00:53.163   444   444 E TrustyKeymaster: Getting response size (4717)
+07-03 23:00:53.165   444   444 E TrustyKeymaster: succeeded to send cmd (12) to com.android.trusty.keymaster with rc(32). errno: Success
+07-03 23:00:53.166   444   444 E TrustyKeymaster: Getting response size (40)
+07-03 23:00:53.183  2039  2237 E UASManager: setTranSchedUxTags fail, mWmShellMainTid =0
+07-03 23:00:53.232  1520  1604 E libprocessgroup: set_timerslack_ns write failed: Permission denied
+07-03 23:00:53.708  1520  6346 E ActivityThread: Failed to find provider info for com.transsion.gamemode.provider
+07-03 23:00:53.739  6377 30164 E adservices: Failed to find resolveInfo for adServices service. Intent action: android.adservices.MEASUREMENT_SERVICE
+07-03 23:00:53.739  6377 30164 E adservices: Failed to find serviceInfo for adServices service on user 0 using intent android.adservices.MEASUREMENT_SERVICE
+07-03 23:00:53.740  6377 30164 E adservices: Failed binding to measurement service: java.lang.IllegalStateException: Unable to find the service
+07-03 23:00:54.232  1037  3499 E OemNetd : transmitAppUidToNetwork uid=(0)
+07-03 23:00:54.635  2013  2013 E SmsApplication: com.transsion.cloudserver does not have system signature
+07-03 23:00:54.650  1520  2527 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms.supervision, role: android.app.role.SYSTEM_SUPERVISION, user: 0
+07-03 23:00:54.653  1520  2527 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms, role: android.app.role.SYSTEM_CALL_STREAMING, user: 0
+07-03 23:00:54.709  1520  2527 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.devicelockcontroller, role: android.app.role.SYSTEM_FINANCED_DEVICE_CONTROLLER, user: 0
+07-03 23:00:54.716  1520  2527 E AppOpService: Blocked setUidMode call for runtime permission app op: uid = 10142, code = FINE_LOCATION, mode = foreground, callingUid = 1000, oldMode = allow
+07-03 23:00:54.716  1520  2527 E AppOpService: java.lang.RuntimeException
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.server.permission.access.appop.AppOpService.setUidMode(AppOpService.kt:268)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsCheckingServiceTracingDecorator.setUidMode(AppOpsCheckingServiceTracingDecorator.java:120)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2119)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2069)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at android.app.AppOpsManager.setUidMode(AppOpsManager.java:8603)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpModeAsUser(Permissions.java:908)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpUidModeAsUser(Permissions.java:885)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantPermissionAndAppOpAsUser(Permissions.java:373)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantSingleAsUser(Permissions.java:247)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantAsUser(Permissions.java:205)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.role.controller.behavior.BrowserRoleBehavior.grantAsUser(BrowserRoleBehavior.java:142)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.role.controller.model.Role.grantAsUser(Role.java:973)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.addRoleHolderInternal(RoleControllerServiceImpl.java:380)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.onGrantDefaultRoles(RoleControllerServiceImpl.java:163)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController.lambda$grantDefaultRoles$1(LocalRoleController.java:56)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController.$r8$lambda$ye-flP7Mf14AbTzwSmiTgndT6Cg(LocalRoleController.java:0)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController$$ExternalSyntheticLambda1.run(R8$$SyntheticClass:0)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at android.os.Handler.handleCallback(Handler.java:959)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at android.os.Looper.loopOnce(Looper.java:311)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at android.os.Looper.loop(Looper.java:408)
+07-03 23:00:54.716  1520  2527 E AppOpService: 	at android.os.HandlerThread.run(HandlerThread.java:85)
+07-03 23:00:54.717  1520  2527 E AppOpService: Blocked setUidMode call for runtime permission app op: uid = 10142, code = COARSE_LOCATION, mode = foreground, callingUid = 1000, oldMode = allow
+07-03 23:00:54.717  1520  2527 E AppOpService: java.lang.RuntimeException
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.server.permission.access.appop.AppOpService.setUidMode(AppOpService.kt:268)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsCheckingServiceTracingDecorator.setUidMode(AppOpsCheckingServiceTracingDecorator.java:120)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2119)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2069)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at android.app.AppOpsManager.setUidMode(AppOpsManager.java:8603)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpModeAsUser(Permissions.java:908)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpUidModeAsUser(Permissions.java:885)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantPermissionAndAppOpAsUser(Permissions.java:373)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantSingleAsUser(Permissions.java:247)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.role.controller.model.Permissions.grantAsUser(Permissions.java:205)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.role.controller.behavior.BrowserRoleBehavior.grantAsUser(BrowserRoleBehavior.java:142)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.role.controller.model.Role.grantAsUser(Role.java:973)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.addRoleHolderInternal(RoleControllerServiceImpl.java:380)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.onGrantDefaultRoles(RoleControllerServiceImpl.java:163)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController.lambda$grantDefaultRoles$1(LocalRoleController.java:56)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController.$r8$lambda$ye-flP7Mf14AbTzwSmiTgndT6Cg(LocalRoleController.java:0)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at com.android.role.LocalRoleController$$ExternalSyntheticLambda1.run(R8$$SyntheticClass:0)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at android.os.Handler.handleCallback(Handler.java:959)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at android.os.Looper.loopOnce(Looper.java:311)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at android.os.Looper.loop(Looper.java:408)
+07-03 23:00:54.717  1520  2527 E AppOpService: 	at android.os.HandlerThread.run(HandlerThread.java:85)
+07-03 23:00:54.818 31831 31874 E mali_gralloc: Requested R8 format is not supported with this allocator. R8 format is only supported with the AIDL allocator
+07-03 23:00:54.818 31831 31874 E mali_gralloc: ERROR: Unrecognized and/or unsupported format R8 and usage TEXTURE + RENDER + HWC
+07-03 23:00:54.818 31831 31874 E mali_gralloc: ERROR: Unrecognized and/or unsupported format RGBA_10101010 and usage TEXTURE + RENDER + HWC
+07-03 23:00:54.818 31831 31874 E mali_gralloc: Requested R8 format is not supported with this allocator. R8 format is only supported with the AIDL allocator
+07-03 23:00:54.818 31831 31874 E mali_gralloc: ERROR: Unrecognized and/or unsupported format R8 and usage TEXTURE + RENDER + HWC
+07-03 23:00:54.818 31831 31874 E mali_gralloc: ERROR: Unrecognized and/or unsupported format RGBA_10101010 and usage TEXTURE + RENDER + HWC
+07-03 23:00:54.866 30822 30854 E Finsky  : [434] [Counters] attempted to use a non-positive increment for: 4752
+07-03 23:00:54.878 30822 30854 E Finsky  : [434] [Counters] attempted to use a non-positive increment for: 4753
+07-03 23:00:54.944 30822 30853 E Finsky  : [433] [Counters] attempted to use a non-positive increment for: 4752
+07-03 23:00:54.947 30822 30853 E Finsky  : [433] [Counters] attempted to use a non-positive increment for: 4753
+07-03 23:00:55.233 30822 30854 E Finsky  : [434] [Counters] attempted to use a non-positive increment for: 4752
+07-03 23:00:55.235 30822 30851 E Finsky  : [432] [Counters] attempted to use a non-positive increment for: 4753
+07-03 23:00:55.246 30822 30850 E Finsky  : [431] [Counters] attempted to use a non-positive increment for: 4752
+07-03 23:00:55.247 30822 30850 E Finsky  : [431] [Counters] attempted to use a non-positive increment for: 4753
+07-03 23:00:55.801 31156 31998 E phonemaster_log: SuperSaveUtils: Settings.Secure get super_save status fail 
+07-03 23:00:55.828  2815  2815 E os_lock_noti_DatabaseHelper: notifyChangeForOberver: uri = /allowedlist--- observer from = setNotificationData
+07-03 23:00:55.900  2815  2874 E os_noti_center_NotiCenterManager: parseRuleFile: e = java.io.FileNotFoundException: /data/user/0/com.hoffnung/cache/os_noti_center_config.txt: open failed: ENOENT (No such file or directory)
+07-03 23:00:55.900  2815  2874 E os_noti_center_NotiCenterManager: parseRuleFile: Coat time = 7
+07-03 23:00:56.065  1076  1076 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-03 23:00:56.678  2013  3304 E DatabaseUtils: Writing exception to parcel
+07-03 23:00:56.678  2013  3304 E DatabaseUtils: java.lang.SecurityException: No permission to access APN settings
+07-03 23:00:56.678  2013  3304 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.checkPermissionForApnTable(TelephonyProvider.java:5655)
+07-03 23:00:56.678  2013  3304 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.checkPermission(TelephonyProvider.java:5627)
+07-03 23:00:56.678  2013  3304 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.checkPermissionCompat(TelephonyProvider.java:5672)
+07-03 23:00:56.678  2013  3304 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.query(TelephonyProvider.java:4473)
+07-03 23:00:56.678  2013  3304 E DatabaseUtils: 	at android.content.ContentProvider.query(ContentProvider.java:1674)
+07-03 23:00:56.678  2013  3304 E DatabaseUtils: 	at android.content.ContentProvider.query(ContentProvider.java:1770)
+07-03 23:00:56.678  2013  3304 E DatabaseUtils: 	at android.content.ContentProvider$Transport.query(ContentProvider.java:301)
+07-03 23:00:56.678  2013  3304 E DatabaseUtils: 	at android.content.ContentProviderNative.onTransact(ContentProviderNative.java:107)
+07-03 23:00:56.678  2013  3304 E DatabaseUtils: 	at android.os.Binder.execTransactInternal(Binder.java:1525)
+07-03 23:00:56.678  2013  3304 E DatabaseUtils: 	at android.os.Binder.execTransact(Binder.java:1460)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: Could not get APN after (but including) LollipopMr1: 
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: java.lang.SecurityException: No permission to access APN settings
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at android.os.Parcel.createExceptionOrNull(Parcel.java:3241)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at android.os.Parcel.createException(Parcel.java:3225)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at android.os.Parcel.readException(Parcel.java:3208)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at android.database.DatabaseUtils.readExceptionFromParcel(DatabaseUtils.java:203)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at android.database.DatabaseUtils.readExceptionFromParcel(DatabaseUtils.java:155)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at android.content.ContentProviderProxy.query(ContentProviderNative.java:495)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at android.content.ContentResolver.query(ContentResolver.java:1229)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at android.content.ContentResolver.query(ContentResolver.java:1161)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at android.content.ContentResolver.query(ContentResolver.java:1117)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at bnbz.b(PG:113)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at bnbz.a(PG:137)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at bmxy.a(PG:88)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at bmxx.s(PG:52)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at bmxx.n(PG:329)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at rgq.call(PG:435)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at bpjl.a(PG:3)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at bpiq.run(PG:19)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at bpjm.run(PG:5)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at whd.run(PG:662)
+07-03 23:00:56.684 30822 30854 E RequestContextBuilder: 	at java.lang.Thread.run(Thread.java:1572)
+07-03 23:00:56.702  2013  3304 E DatabaseUtils: Writing exception to parcel
+07-03 23:00:56.702  2013  3304 E DatabaseUtils: java.lang.SecurityException: No permission to access APN settings
+07-03 23:00:56.702  2013  3304 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.checkPermissionForApnTable(TelephonyProvider.java:5655)
+07-03 23:00:56.702  2013  3304 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.checkPermission(TelephonyProvider.java:5627)
+07-03 23:00:56.702  2013  3304 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.checkPermissionCompat(TelephonyProvider.java:5672)
+07-03 23:00:56.702  2013  3304 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.query(TelephonyProvider.java:4473)
+07-03 23:00:56.702  2013  3304 E DatabaseUtils: 	at android.content.ContentProvider.query(ContentProvider.java:1674)
+07-03 23:00:56.702  2013  3304 E DatabaseUtils: 	at android.content.ContentProvider.query(ContentProvider.java:1770)
+07-03 23:00:56.702  2013  3304 E DatabaseUtils: 	at android.content.ContentProvider$Transport.query(ContentProvider.java:301)
+07-03 23:00:56.702  2013  3304 E DatabaseUtils: 	at android.content.ContentProviderNative.onTransact(ContentProviderNative.java:107)
+07-03 23:00:56.702  2013  3304 E DatabaseUtils: 	at android.os.Binder.execTransactInternal(Binder.java:1525)
+07-03 23:00:56.702  2013  3304 E DatabaseUtils: 	at android.os.Binder.execTransact(Binder.java:1460)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: Could not get APN after (but including) LollipopMr1: 
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: java.lang.SecurityException: No permission to access APN settings
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at android.os.Parcel.createExceptionOrNull(Parcel.java:3241)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at android.os.Parcel.createException(Parcel.java:3225)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at android.os.Parcel.readException(Parcel.java:3208)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at android.database.DatabaseUtils.readExceptionFromParcel(DatabaseUtils.java:203)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at android.database.DatabaseUtils.readExceptionFromParcel(DatabaseUtils.java:155)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at android.content.ContentProviderProxy.query(ContentProviderNative.java:495)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at android.content.ContentResolver.query(ContentResolver.java:1229)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at android.content.ContentResolver.query(ContentResolver.java:1161)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at android.content.ContentResolver.query(ContentResolver.java:1117)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at bnbz.b(PG:113)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at bnbz.a(PG:137)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at bmxy.a(PG:88)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at bmxx.s(PG:52)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at bmxx.n(PG:329)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at rgq.call(PG:435)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at bpjl.a(PG:3)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at bpiq.run(PG:19)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at bpjm.run(PG:5)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at whd.run(PG:662)
+07-03 23:00:56.704 30822 30854 E RequestContextBuilder: 	at java.lang.Thread.run(Thread.java:1572)
+07-03 23:00:56.881 32054 32054 E libc    : SetHeapTaggingLevel: re-enabling tagging after it was disabled is not supported
+07-03 23:00:57.019   444   444 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(269). errno: Success
+07-03 23:00:57.021   444   444 E TrustyKeymaster: Getting response size (56)
+07-03 23:00:57.176   444   444 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(1424). errno: Success
+07-03 23:00:57.178   444   444 E TrustyKeymaster: Getting response size (28)
+07-03 23:00:57.182   444   444 E TrustyKeymaster: succeeded to send cmd (8) to com.android.trusty.keymaster with rc(284). errno: Success
+07-03 23:00:57.183   444   444 E TrustyKeymaster: Getting response size (28)
+07-03 23:00:57.184   444   444 E TrustyKeymaster: succeeded to send cmd (12) to com.android.trusty.keymaster with rc(32). errno: Success
+07-03 23:00:57.215   444   444 E TrustyKeymaster: Getting response size (60)
+07-03 23:00:57.236   444   444 E TrustyKeymaster: succeeded to send cmd (16) to com.android.trusty.keymaster with rc(12). errno: Success
+07-03 23:00:57.237   444   444 E TrustyKeymaster: Getting response size (8)
+07-03 23:00:57.410   444   444 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(1424). errno: Success
+07-03 23:00:57.411   444   444 E TrustyKeymaster: Getting response size (28)
+07-03 23:00:57.413   444   444 E TrustyKeymaster: succeeded to send cmd (8) to com.android.trusty.keymaster with rc(284). errno: Success
+07-03 23:00:57.414   444   444 E TrustyKeymaster: Getting response size (28)
+07-03 23:00:57.416   444   444 E TrustyKeymaster: succeeded to send cmd (12) to com.android.trusty.keymaster with rc(32). errno: Success
+07-03 23:00:57.446   444   444 E TrustyKeymaster: Getting response size (8)
+07-03 23:00:57.446   444   444 E TrustyKeymaster: Response of size 4 contained error code -1000
+07-03 23:00:57.446   444   444 E trusty_keymaster_hal: Cmd 12 returned error: -1000
+07-03 23:00:57.446   443  9300 E keystore2: system/security/keystore2/src/error.rs:171 - system/security/keystore2/src/operation.rs:847: KeystoreOperation::finish
+07-03 23:00:57.446   443  9300 E keystore2: 
+07-03 23:00:57.446   443  9300 E keystore2: Caused by:
+07-03 23:00:57.446   443  9300 E keystore2:     0: system/security/keystore2/src/operation.rs:428: Finish failed.
+07-03 23:00:57.446   443  9300 E keystore2:     1: Error::Km(r#UNKNOWN_ERROR)
+07-03 23:00:57.503 32007 32086 E Athena  : Athena-Worker, a(b.java:١٥)
+07-03 23:00:57.504 32007 32086 E Athena  : invalid or not registered:{"appid":8638,"event":"page_view"}
+07-03 23:00:57.763 31831 32105 E libEGL  : eglQueryStringImpl display is EGL_NO_DISPLAY
+07-03 23:00:57.806 31831 32105 E k.mathchallenge: mali_debug: sprd_gles_wait_last_fence is closed
+07-03 23:00:58.933   444   444 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(286). errno: Success
+07-03 23:00:58.934   444   444 E TrustyKeymaster: Getting response size (52)
+07-03 23:00:58.936   444   444 E TrustyKeymaster: succeeded to send cmd (8) to com.android.trusty.keymaster with rc(4698). errno: Success
+07-03 23:00:58.938   444   444 E TrustyKeymaster: Getting response size (4698)
+07-03 23:00:58.939   444   444 E TrustyKeymaster: succeeded to send cmd (12) to com.android.trusty.keymaster with rc(32). errno: Success
+07-03 23:00:58.940   444   444 E TrustyKeymaster: Getting response size (40)
+07-03 23:01:00.018  1520  1701 E TranDynamicBarAnimControllerImpl: TranDynamicBarAnimControllerImpl setFromDynamicIslandToWindow pkgName:com.ayman.widget
+07-03 23:01:00.018  1520  1701 E TranDynamicBarAnimControllerImpl: start setFromDynamicIslandToWindow startFromDynamicIsland:false
+07-03 23:01:00.019  1520  1701 E TranDynamicBarAnimControllerImpl: end setFromDynamicIslandToWindow mDynamicIslandPkgName:com.ayman.widget mStartFromDynamicIsland:false
+07-03 23:01:00.867 32255 32320 E om.ayman.widget: No package ID 74 found for resource ID 0x740b0013.
+07-03 23:01:02.297 30822 30822 E Finsky  : [2] Failed to load an Item com.android.vending, no data available.
+07-03 23:01:02.297 30822 30822 E Finsky  : [2] Required items [com.android.vending]
+07-03 23:01:02.297 30822 30822 E Finsky  : [2] Requested items [[com.android.vending]]
+07-03 23:01:02.297 30822 30822 E Finsky  : [2] Retrieved items []
+07-03 23:01:02.664  1076  1076 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-03 23:01:03.175   444   444 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(286). errno: Success
+07-03 23:01:03.176   444   444 E TrustyKeymaster: Getting response size (52)
+07-03 23:01:03.178   444   444 E TrustyKeymaster: succeeded to send cmd (8) to com.android.trusty.keymaster with rc(4704). errno: Success
+07-03 23:01:03.179   444   444 E TrustyKeymaster: Getting response size (4704)
+07-03 23:01:03.180   444   444 E TrustyKeymaster: succeeded to send cmd (12) to com.android.trusty.keymaster with rc(32). errno: Success
+07-03 23:01:03.180   444   444 E TrustyKeymaster: Getting response size (40)
+07-03 23:01:04.275 32340 32346 E mali_gralloc: initIonKernelMemtrack open device:/dev/systemheap failed, 13(Permission denied)

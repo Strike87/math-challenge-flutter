@@ -20,34 +20,24 @@ import 'theme.dart';
 import 'widgets/celebration_overlay.dart';
 import 'widgets/modals.dart';
 
-const _prodBannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
-const _prodInterstitialAdUnitId = 'ca-app-pub-3940256099942544/1033173712';
-const _prodRewardedAdUnitId = 'ca-app-pub-3940256099942544/5224354917';
-
-const _testBannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
-const _testInterstitialAdUnitId = 'ca-app-pub-3940256099942544/1033173712';
-const _testRewardedAdUnitId = 'ca-app-pub-3940256099942544/5224354917';
+const _adMobUseTestAds = bool.fromEnvironment(
+  'ADMOB_USE_TEST_ADS',
+  defaultValue: !kReleaseMode,
+);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Storage.init();
+  final adUnitIds = AdMobUnitIds.resolve(useTestAds: _adMobUseTestAds);
   final adService = GoogleMobileAdsService(
-    bannerAdUnitId: const String.fromEnvironment(
-      'ADMOB_BANNER_AD_UNIT_ID',
-      defaultValue: kReleaseMode ? _prodBannerAdUnitId : _testBannerAdUnitId,
-    ),
-    interstitialAdUnitId: const String.fromEnvironment(
-      'ADMOB_INTERSTITIAL_AD_UNIT_ID',
-      defaultValue:
-          kReleaseMode ? _prodInterstitialAdUnitId : _testInterstitialAdUnitId,
-    ),
-    rewardedAdUnitId: const String.fromEnvironment(
-      'ADMOB_REWARDED_AD_UNIT_ID',
-      defaultValue:
-          kReleaseMode ? _prodRewardedAdUnitId : _testRewardedAdUnitId,
-    ),
+    bannerAdUnitId: adUnitIds.banner,
+    interstitialAdUnitId: adUnitIds.interstitial,
+    rewardedAdUnitId: adUnitIds.rewarded,
   );
-  await adService.initialize();
+  // ponytail: release without prod ad units leaves ads unavailable; no test fallback.
+  if (_adMobUseTestAds || adUnitIds.hasAll) {
+    await adService.initialize();
+  }
   final iapAdapter = NativeIapPurchaseAdapter();
   unawaited(iapAdapter.initialize().catchError((_) {}));
   runApp(MathChallengeApp(adService: adService, iapAdapter: iapAdapter));

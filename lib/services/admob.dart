@@ -3,6 +3,40 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+class AdMobUnitIds {
+  const AdMobUnitIds({
+    required this.banner,
+    required this.interstitial,
+    required this.rewarded,
+  });
+
+  static const test = AdMobUnitIds(
+    banner: 'ca-app-pub-3940256099942544/6300978111',
+    interstitial: 'ca-app-pub-3940256099942544/1033173712',
+    rewarded: 'ca-app-pub-3940256099942544/5224354917',
+  );
+
+  static const fromEnvironment = AdMobUnitIds(
+    banner: String.fromEnvironment('ADMOB_BANNER_ID'),
+    interstitial: String.fromEnvironment('ADMOB_INTERSTITIAL_ID'),
+    rewarded: String.fromEnvironment('ADMOB_REWARDED_ID'),
+  );
+
+  final String banner;
+  final String interstitial;
+  final String rewarded;
+
+  bool get hasAll =>
+      banner.isNotEmpty && interstitial.isNotEmpty && rewarded.isNotEmpty;
+
+  static AdMobUnitIds resolve({
+    required bool useTestAds,
+    AdMobUnitIds testIds = test,
+    AdMobUnitIds productionIds = fromEnvironment,
+  }) =>
+      useTestAds ? testIds : productionIds;
+}
+
 class AdMobRequestPolicy {
   final bool childDirected;
   final bool nonPersonalizedAds;

@@ -1016,6 +1016,9 @@ class GameState extends ChangeNotifier {
   @visibleForTesting
   AdMobRequestPolicy get debugAdRequestPolicy => adService.requestPolicy;
 
+  String iapPriceFor(IapProduct product) =>
+      iapAdapter.priceFor(product.productId) ?? 'Price unavailable';
+
   bool isBannerEligibleFor(GameScreen screen) =>
       !adsRemoved &&
       currentModal == GameModal.none &&

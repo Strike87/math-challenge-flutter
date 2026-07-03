@@ -253,6 +253,43 @@ void main() {
       expect(policy.nonPersonalizedAds, isTrue);
       expect(policy.maxAdContentRating, 'G');
     });
+
+    test('AdMob ID resolver separates test and production IDs', () {
+      const prod = AdMobUnitIds(
+        banner: 'prod-banner',
+        interstitial: 'prod-interstitial',
+        rewarded: 'prod-rewarded',
+      );
+
+      final testIds = AdMobUnitIds.resolve(
+        useTestAds: true,
+        productionIds: prod,
+      );
+      expect(testIds.banner, AdMobUnitIds.test.banner);
+      expect(testIds.interstitial, AdMobUnitIds.test.interstitial);
+      expect(testIds.rewarded, AdMobUnitIds.test.rewarded);
+
+      final prodIds = AdMobUnitIds.resolve(
+        useTestAds: false,
+        productionIds: prod,
+      );
+      expect(prodIds.banner, 'prod-banner');
+      expect(prodIds.interstitial, 'prod-interstitial');
+      expect(prodIds.rewarded, 'prod-rewarded');
+
+      const missingProd = AdMobUnitIds(
+        banner: '',
+        interstitial: '',
+        rewarded: '',
+      );
+      expect(
+        AdMobUnitIds.resolve(
+          useTestAds: false,
+          productionIds: missingProd,
+        ).hasAll,
+        isFalse,
+      );
+    });
   });
 }
 

@@ -148,19 +148,18 @@ flutter build appbundle --release
 # Output: build/app/outputs/bundle/release/app-release.aab
 ```
 
-### Generate a Release Keystore (one-time, before Play Store upload)
-```bash
-keytool -genkey -v -keystore ~/math-challenge.jks \
-  -keyalg RSA -keysize 2048 -validity 10000 -alias math-challenge
-```
-Then add to `android/key.properties`:
+### Release Signing
+Use the existing Play upload keystore for `com.mohamedk.mathchallenge`.
+Do not generate a new keystore for Play updates.
+
+Add this uncommitted file at `android/key.properties`:
 ```
 storePassword=*****
 keyPassword=*****
-keyAlias=math-challenge
-storeFile=/Users/you/math-challenge.jks
+keyAlias=mathchallenge
+storeFile=C:/path/to/mathchallenge.keystore
 ```
-And reference it in `android/app/build.gradle` under `signingConfigs`.
+`android/key.properties`, `*.keystore`, and `*.jks` are ignored by git.
 
 ---
 
@@ -185,29 +184,25 @@ This Flutter port is **faster than the original HTML version** for these reasons
 
 ## AdMob Setup
 
-The manifest is pre-configured with Google's **test** AdMob App ID
-(`ca-app-pub-3940256099942544~3347511713`). To enable ads in the v1.1 update:
+Debug builds use Google's test ad unit IDs by default. Release builds do not
+fall back to test ad units.
 
-1. Add `google_mobile_ads: ^5.0.0` to `pubspec.yaml` under `dependencies:`.
-2. Run `flutter pub get`.
-3. Create a real AdMob account and register the app.
-4. Replace the test ID in `AndroidManifest.xml`:
-   ```xml
-   <meta-data
-       android:name="com.google.android.gms.ads.APPLICATION_ID"
-       android:value="ca-app-pub-YOUR-PUB-ID~YOUR-APP-ID"/>
-   ```
-5. Create banner + rewarded ad units in AdMob and wire them via
-   the `google_mobile_ads` plugin in `lib/services/`.
+Add the real AdMob app ID to `android/local.properties`:
+```
+adMob.applicationId=ca-app-pub-YOUR-PUB-ID~YOUR-APP-ID
+```
 
-> The current build does NOT call `MobileAds.initialize()` on startup
-> — the game is fully playable without ads. Add the call in `main.dart`
-> when you're ready to monetize.
+Build production ads with:
+```bash
+flutter build apk --release \
+  --dart-define=ADMOB_USE_TEST_ADS=false \
+  --dart-define=ADMOB_BANNER_ID=ca-app-pub-YOUR-PUB-ID/YOUR-BANNER-ID \
+  --dart-define=ADMOB_INTERSTITIAL_ID=ca-app-pub-YOUR-PUB-ID/YOUR-INTERSTITIAL-ID \
+  --dart-define=ADMOB_REWARDED_ID=ca-app-pub-YOUR-PUB-ID/YOUR-REWARDED-ID
+```
 
-> **Note**: `google_mobile_ads` and `confetti` were intentionally
-> removed from the initial `pubspec.yaml` to keep the dependency
-> footprint small and the build fast. Add them back when wiring up
-> the corresponding features.
+Without production ad unit IDs, release ads stay unavailable instead of using
+Google test units.
 
 ---
 

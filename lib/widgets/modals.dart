@@ -2967,7 +2967,7 @@ class _BuyCoinsPanel extends StatelessWidget {
           icon: '🪙',
           title: '100 Coins',
           subtitle: 'Starter pack',
-          price: r'$0.99',
+          price: gs.iapPriceFor(IapProducts.small),
           onTap: () => gs.beginIapPurchase(IapProducts.small),
         ),
         _IapCard(
@@ -2975,7 +2975,7 @@ class _BuyCoinsPanel extends StatelessWidget {
           icon: '💰',
           title: '500 Coins',
           subtitle: '+50 bonus coins!',
-          price: r'$3.99',
+          price: gs.iapPriceFor(IapProducts.medium),
           onTap: () => gs.beginIapPurchase(IapProducts.medium),
         ),
         _IapCard(
@@ -2983,7 +2983,7 @@ class _BuyCoinsPanel extends StatelessWidget {
           icon: '🏆',
           title: '1200 Coins',
           subtitle: '+200 bonus coins!',
-          price: r'$7.99',
+          price: gs.iapPriceFor(IapProducts.large),
           onTap: () => gs.beginIapPurchase(IapProducts.large),
         ),
         _IapCard(
@@ -2992,7 +2992,8 @@ class _BuyCoinsPanel extends StatelessWidget {
           title: 'Remove Ads',
           subtitle:
               gs.adsRemoved ? 'Already active' : 'Forever, one-time purchase',
-          price: gs.adsRemoved ? 'Owned' : r'$1.99',
+          price:
+              gs.adsRemoved ? 'Owned' : gs.iapPriceFor(IapProducts.removeAds),
           onTap: () => gs.beginIapPurchase(IapProducts.removeAds),
         ),
         const Text(
@@ -3278,7 +3279,7 @@ class _AdultGateModalState extends State<AdultGateModal> {
     final gs = widget.gs;
     final challenge = gs.adultGateChallenge;
     final product = gs.pendingIapProduct;
-    final price = _iapDisplayPrice(product);
+    final price = product == null ? '' : gs.iapPriceFor(product);
 
     return ModalShell(
       icon: '🔐',
@@ -3314,21 +3315,6 @@ class _AdultGateModalState extends State<AdultGateModal> {
             )
           : _AdultGateWarningStep(product: product, price: price),
     );
-  }
-
-  String _iapDisplayPrice(IapProduct? product) {
-    switch (product?.productId) {
-      case IapProducts.smallId:
-        return r'$0.99';
-      case IapProducts.mediumId:
-        return r'$3.99';
-      case IapProducts.largeId:
-        return r'$7.99';
-      case IapProducts.removeAdsId:
-        return r'$1.99';
-      default:
-        return '';
-    }
   }
 }
 
