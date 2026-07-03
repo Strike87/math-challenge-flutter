@@ -65,7 +65,7 @@ void main() {
         expect(find.text('15 correct answers'), findsOneWidget);
         expect(find.text('3 hearts'), findsOneWidget);
         expect(find.text('7s each'), findsOneWidget);
-        expect(find.text('65 coins'), findsOneWidget);
+        expect(find.text('🪙 65'), findsOneWidget);
         expect(find.text('Ready to fight'), findsOneWidget);
         expect(find.text("Fight Today's Boss"), findsOneWidget);
 
@@ -130,6 +130,30 @@ void main() {
       }
     });
 
+    testWidgets('Settings performance toggle preserves modal scroll offset',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        state.showModal(GameModal.settings);
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+
+        final scrollable = find.byType(Scrollable).first;
+        final beforeState = tester.state<ScrollableState>(scrollable);
+        await tester.drag(scrollable, const Offset(0, -260));
+        await tester.pump();
+        final before = beforeState.position.pixels;
+
+        await tester.tap(find.byType(Checkbox).at(2));
+        await tester.pump();
+
+        final after = tester.state<ScrollableState>(scrollable).position.pixels;
+        expect(after, closeTo(before, 1));
+      } finally {
+        state.dispose();
+      }
+    });
+
     testWidgets('Stage Cleared modal uses stage-specific victory story',
         (tester) async {
       final state = await _makeState();
@@ -146,13 +170,17 @@ void main() {
           }
         }
 
+        expect(state.currentModal, GameModal.none);
+        await tester.pump(const Duration(milliseconds: 1300));
+        expect(state.currentModal, GameModal.none);
+        await tester.pump(const Duration(milliseconds: 1250));
         expect(state.currentModal, GameModal.stageCleared);
         await tester.pumpWidget(_modalHost(state));
         await tester.pump();
 
         expect(find.text('${stage.name} Cleared! 🌟'), findsOneWidget);
         expect(find.text(stage.story), findsOneWidget);
-        expect(find.text('Enter ${next.name} →'), findsOneWidget);
+        expect(find.text('Enter ${next.name}'), findsOneWidget);
         expect(find.textContaining('Next'), findsNothing);
       } finally {
         state.dispose();
@@ -243,6 +271,33 @@ void main() {
         ]) {
           expect(find.text(label), findsOneWidget);
         }
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('Daily Boss report hides replay only after a win',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        state.players = 1;
+        state.rt.challenge = Operation.dailyBoss;
+        state.rt.dailyBossWon = true;
+        state.resultTitle = 'Boss Defeated!';
+        state.showModal(GameModal.win);
+
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+
+        expect(find.text('Replay'), findsNothing);
+        expect(find.text('Main Menu'), findsOneWidget);
+
+        state.rt.dailyBossWon = false;
+        state.showModal(GameModal.win);
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+
+        expect(find.text('Replay'), findsOneWidget);
       } finally {
         state.dispose();
       }
@@ -413,8 +468,17 @@ void main() {
 
         expect(find.text('Coin Shop'), findsOneWidget);
         expect(find.text('0 coins'), findsNothing);
+        expect(find.text('Not enough'), findsNothing);
         for (final label in ['Avatars', 'Hats', 'Packs', 'Buy']) {
           expect(find.text(label), findsOneWidget);
+        }
+        for (final subtitle in [
+          'Choose your character',
+          'Customize your look',
+          'Power-ups and daily rewards',
+          'Coins and remove ads',
+        ]) {
+          expect(find.text(subtitle), findsNothing);
         }
 
         await tester.tap(find.byKey(const Key('shopHub_avatars')));
@@ -422,49 +486,90 @@ void main() {
         expect(find.text('AVATARS'), findsOneWidget);
         expect(find.text('Dragon'), findsOneWidget);
         expect(find.text('Robot'), findsOneWidget);
-        expect(find.text('300 coins'), findsOneWidget);
-        expect(find.text('200 coins'), findsWidgets);
-        expect(find.text('Not enough'), findsWidgets);
+        expect(find.text('🪙 300'), findsOneWidget);
+        expect(find.text('🪙 200'), findsWidgets);
+        expect(find.text('Not enough'), findsNothing);
+        await tester.tap(find.text('Dragon'));
+        await tester.pumpAndSettle();
+        expect(state.shopOwned, isNot(contains('av_dragon')));
+        expect(state.toastMessage, isNot('Not enough 🪙'));
         await tester.tap(find.byKey(const Key('shopBackToHub')));
         await tester.pumpAndSettle();
+        expect(find.text('Not enough'), findsNothing);
 
         await tester.tap(find.byKey(const Key('shopHub_hats')));
         await tester.pumpAndSettle();
         expect(find.text('HATS'), findsOneWidget);
         expect(find.text('Top Hat'), findsOneWidget);
-        expect(find.text('100 coins'), findsOneWidget);
+        expect(find.text('🪙 100'), findsOneWidget);
+        expect(find.text('Not enough'), findsNothing);
+        await tester.tap(find.text('Top Hat'));
+        await tester.pumpAndSettle();
+        expect(state.shopOwned, isNot(contains('hat_cap')));
+        expect(state.toastMessage, isNot('Not enough 🪙'));
         await tester.tap(find.byKey(const Key('shopBackToHub')));
         await tester.pumpAndSettle();
+        expect(find.text('Not enough'), findsNothing);
 
         await tester.tap(find.byKey(const Key('shopHub_packs')));
         await tester.pumpAndSettle();
         expect(find.text('PACKS'), findsOneWidget);
         expect(find.text('Power Pack'), findsOneWidget);
         expect(find.text('Extra Life'), findsOneWidget);
-        expect(find.text('Daily Bonus'), findsOneWidget);
-        expect(find.textContaining('+5 of every power-up'), findsOneWidget);
-        expect(find.textContaining('+1 Master life'), findsOneWidget);
-        expect(find.textContaining('500 coins'), findsOneWidget);
-        expect(find.textContaining('450 coins'), findsOneWidget);
-        expect(find.textContaining('+20 coins'), findsOneWidget);
+        expect(find.text('+20 Coins'), findsOneWidget);
+        expect(find.textContaining('x5 of each power-up'), findsOneWidget);
+        expect(find.textContaining('For Master mode'), findsOneWidget);
+        expect(find.text('🪙 500'), findsOneWidget);
+        expect(find.text('🪙 450'), findsOneWidget);
+        expect(find.textContaining('Daily bonus'), findsOneWidget);
+        expect(find.text('Free Daily'), findsOneWidget);
+        expect(find.text('Not enough'), findsNothing);
+        expect(state.coins, 0);
+        expect(state.toastMessage, isNot('Not enough 🪙'));
         await tester.tap(find.byKey(const Key('shopBackToHub')));
         await tester.pumpAndSettle();
+        expect(find.text('Not enough'), findsNothing);
 
         await tester.ensureVisible(find.byKey(const Key('shopHub_buy')));
         await tester.tap(find.byKey(const Key('shopHub_buy')));
         await tester.pumpAndSettle();
         expect(find.text('BUY'), findsOneWidget);
         expect(find.text('Watch Ad'), findsOneWidget);
-        expect(find.text('+10 coins'), findsOneWidget);
+        expect(find.text('Watch a Short Ad'), findsNothing);
+        expect(find.text('Free coins - no purchase needed'), findsNothing);
+        expect(find.text('+10 🪙'), findsOneWidget);
         expect(find.text('100 Coins'), findsOneWidget);
         expect(find.text('500 Coins'), findsOneWidget);
         expect(find.text('1200 Coins'), findsOneWidget);
         expect(find.text('Remove Ads'), findsOneWidget);
         expect(find.text('Restore Purchases'), findsNothing);
+        expect(find.text('Not enough'), findsNothing);
         expect(
           find.textContaining('Payments processed securely via Google Play.'),
           findsOneWidget,
         );
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('Coin Shop owned permanent items show owned state, not price',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        state.coins = 0;
+        state.shopOwned.add('av_dragon');
+        state.showModal(GameModal.coinShop);
+
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('shopHub_avatars')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Dragon'), findsOneWidget);
+        expect(find.text('Owned'), findsOneWidget);
+        expect(find.text('🪙 300'), findsNothing);
+        expect(find.text('Not enough'), findsNothing);
       } finally {
         state.dispose();
       }
@@ -481,17 +586,18 @@ void main() {
 
         await tester.tap(find.byKey(const Key('shopHub_packs')));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Daily Bonus'));
+        await tester.tap(find.text('+20 Coins'));
         await tester.pumpAndSettle();
 
         expect(state.coins, GameState.dailyBonusCoins);
         expect(state.pendingIapProduct, isNull);
         expect(state.currentModal, GameModal.coinShop);
 
-        await tester.tap(find.text('Daily Bonus'));
+        await tester.tap(find.text('+20 Coins'));
         await tester.pumpAndSettle();
 
         expect(state.coins, GameState.dailyBonusCoins);
+        expect(find.text('Claimed'), findsOneWidget);
       } finally {
         state.dispose();
       }

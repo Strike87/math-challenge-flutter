@@ -369,7 +369,7 @@ void main() {
       expect(find.text('Player 1 Setup'), findsOneWidget);
       expect(find.text('Tap to change'), findsOneWidget);
       expect(find.text('🎨 Customize Avatar'), findsOneWidget);
-      expect(find.text('Next →'), findsOneWidget);
+      expect(find.text('Next'), findsOneWidget);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/07_player_setup_2p.png'));

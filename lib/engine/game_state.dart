@@ -314,6 +314,8 @@ class GameState extends ChangeNotifier {
   bool toastVisible = false;
   Timer? _toastTimer;
   Timer? _bigEmojiHideTimer;
+  Timer? _postFeedbackTimer;
+  Timer? _delayedResultModalTimer;
   final List<String> _toastQueue = [];
   int builderPid = 1;
   AvatarCustom builderAvatar = AvatarCustom();
@@ -335,6 +337,7 @@ class GameState extends ChangeNotifier {
   bool adultGateBusy = false;
   GameModal _adultGateReturnModal = GameModal.none;
   int _turnSeq = 0;
+  bool _disposed = false;
 
   MasterLevel? get clearedMasterLevel {
     final idx = _masterLevel - 1;
@@ -397,11 +400,15 @@ class GameState extends ChangeNotifier {
 
   @override
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
     _turnSeq++;
     rt.gameActive = false;
     _iapPurchaseSub?.cancel();
     _toastTimer?.cancel();
     _bigEmojiHideTimer?.cancel();
+    _postFeedbackTimer?.cancel();
+    _delayedResultModalTimer?.cancel();
     _toastQueue.clear();
     rt.timer?.cancel();
     super.dispose();
@@ -1311,6 +1318,9 @@ class GameState extends ChangeNotifier {
 
   // ─── Game lifecycle ─────────────────────────────────────────
   void startGame() {
+    _postFeedbackTimer?.cancel();
+    _delayedResultModalTimer?.cancel();
+
     // Safety: block 2P games in single-player-only modes.
     if (!GameMode.isAvailableForPlayers(mode, players)) {
       mode = GameMode.standard;
@@ -1532,7 +1542,8 @@ class GameState extends ChangeNotifier {
     final timerDiff = adaptive && rt.q?.diff != null ? rt.q!.diff! : diff;
     final baseMs = GameConfig.timerBaseMs[timerDiff.name] ??
         GameConfig.timerBaseMs['hard']!;
-    final penalty = (adaptLvl ~/ GameConfig.timerPenaltyStep) * 1000;
+    final penalty =
+        adaptive ? (adaptLvl ~/ GameConfig.timerPenaltyStep) * 1000 : 0;
     return max(GameConfig.timerMinMs, baseMs - penalty);
   }
 
@@ -1594,6 +1605,7 @@ class GameState extends ChangeNotifier {
     if (!rt.accepting || rt.state == 'paused') return;
     rt.accepting = false;
     if (mode != GameMode.blitz && mode != GameMode.combo) {
+      _freezeQuestionTimer();
       rt.timer?.cancel();
     }
 
@@ -1626,7 +1638,16 @@ class GameState extends ChangeNotifier {
     }
 
     rt.totalTurns++;
+    _checkStandardTurnLimit();
     _scheduleNextTurn();
+  }
+
+  void _freezeQuestionTimer() {
+    if (rt.timerDurationMs <= 0 || rt.timerStart <= 0) return;
+    final elapsed = DateTime.now().millisecondsSinceEpoch - rt.timerStart;
+    rt.timerDurationMs =
+        (rt.timerDurationMs - elapsed).clamp(0, rt.timerDurationMs).toInt();
+    rt.timerStart = 0;
   }
 
   void _onCorrect(PlayerState pl, int pid, int timeTaken) {
@@ -1691,8 +1712,12 @@ class GameState extends ChangeNotifier {
         rt.challenge != Operation.master &&
         rt.challenge != Operation.dailyBoss &&
         ![GameMode.combo, GameMode.survival].contains(mode);
-    if (eligibleForPU &&
-        pl.correct > 0 &&
+    if (eligibleForPU && pl.correct == 1) {
+      pl.pups.addAll(PowerUp.values);
+      audio.playPowerUp();
+      showToast('🎁 Got one of each power-up!');
+    } else if (eligibleForPU &&
+        pl.correct > 1 &&
         pl.correct % GameConfig.puRewardInterval == 0) {
       final pu = PowerUp.values[_rng.nextInt(PowerUp.values.length)];
       pl.pups.add(pu);
@@ -1803,18 +1828,11 @@ class GameState extends ChangeNotifier {
         if (_masterLevel >= GameConfig.masterLevels.length) {
           // Beat the game!
           unlockAch('math_legend');
-          _endGame(true, false);
+          _endGameAfterFeedback(true, false);
         } else {
-          // Show stage cleared modal
           if (_masterLevel >= 3) unlockAch('math_wizard');
           _updateDailyProgress('master_stage');
-          _celebrate(
-            CelebrationKind.stageClear,
-            emoji: lvl.boss,
-            message: 'Stage cleared!',
-          );
-          rt.state = 'paused';
-          showModal(GameModal.stageCleared);
+          _showStageClearedAfterFeedback(lvl);
         }
       }
     } else if (isBoss) {
@@ -1835,15 +1853,21 @@ class GameState extends ChangeNotifier {
           rt.dailyBossRewardEarned = 0;
         }
         isDailyBossClaimedToday = true;
-        _endGame(true, false);
+        _endGameAfterFeedback(true, false);
       }
-    } else {
-      // Standard modes: check max turns
-      if (rt.totalTurns + 1 >= rt.maxTurns) {
-        _endGame(true, false);
-      } else if (players == 2) {
-        rt.activePlayer = rt.activePlayer == 1 ? 2 : 1;
-      }
+    }
+  }
+
+  void _checkStandardTurnLimit() {
+    if (rt.challenge == Operation.master ||
+        rt.challenge == Operation.dailyBoss ||
+        rt.maxTurns == 99999) {
+      return;
+    }
+    if (rt.totalTurns >= rt.maxTurns) {
+      _endGameAfterFeedback(true, false);
+    } else if (players == 2 && mode == GameMode.standard) {
+      rt.activePlayer = rt.activePlayer == 1 ? 2 : 1;
     }
   }
 
@@ -1860,6 +1884,8 @@ class GameState extends ChangeNotifier {
     if (pl.shieldActive && !isSkip && !isTimeout) {
       pl.shieldActive = false;
       reactionPill = '🛡️ Shield absorbed it!';
+      bigEmoji = '🛡️';
+      bigEmojiVisible = true;
       notifyListeners();
       return;
     }
@@ -1958,7 +1984,7 @@ class GameState extends ChangeNotifier {
 
   void _scheduleNextTurn() {
     if (!rt.gameActive) return;
-    if (rt.state == 'paused') return;
+    if (rt.state != 'playing') return;
     const delay = 1300;
     final seq = ++_turnSeq;
     _bigEmojiHideTimer?.cancel();
@@ -1980,6 +2006,66 @@ class GameState extends ChangeNotifier {
   }
 
   // ─── End game ───────────────────────────────────────────────
+  void _endGameAfterFeedback(bool win, bool loss) {
+    if (!rt.gameActive) return;
+    rt.state = 'ending';
+    rt.timer?.cancel();
+    const delay = 1300;
+    final seq = ++_turnSeq;
+    _bigEmojiHideTimer?.cancel();
+    if (bigEmojiVisible) {
+      _bigEmojiHideTimer = Timer(const Duration(milliseconds: 900), () {
+        if (seq != _turnSeq || !rt.gameActive || rt.state != 'ending') return;
+        bigEmojiVisible = false;
+        notifyListeners();
+      });
+    }
+    _postFeedbackTimer?.cancel();
+    _postFeedbackTimer = Timer(const Duration(milliseconds: delay), () {
+      if (seq != _turnSeq || !rt.gameActive || rt.state != 'ending') return;
+      _bigEmojiHideTimer?.cancel();
+      bigEmojiVisible = false;
+      bigEmoji = '';
+      reactionPill = '';
+      _endGame(win, loss);
+    });
+  }
+
+  void _showStageClearedAfterFeedback(MasterLevel lvl) {
+    if (!rt.gameActive) return;
+    rt.state = 'ending';
+    rt.timer?.cancel();
+    const delay = 1300;
+    final seq = ++_turnSeq;
+    _bigEmojiHideTimer?.cancel();
+    if (bigEmojiVisible) {
+      _bigEmojiHideTimer = Timer(const Duration(milliseconds: 900), () {
+        if (seq != _turnSeq || !rt.gameActive || rt.state != 'ending') return;
+        bigEmojiVisible = false;
+        notifyListeners();
+      });
+    }
+    _postFeedbackTimer?.cancel();
+    _postFeedbackTimer = Timer(const Duration(milliseconds: delay), () {
+      if (seq != _turnSeq || !rt.gameActive || rt.state != 'ending') return;
+      _bigEmojiHideTimer?.cancel();
+      bigEmojiVisible = false;
+      bigEmoji = '';
+      reactionPill = '';
+      _celebrate(
+        CelebrationKind.stageClear,
+        emoji: lvl.boss,
+        message: 'Stage cleared!',
+      );
+      _delayedResultModalTimer?.cancel();
+      _delayedResultModalTimer = Timer(const Duration(milliseconds: 1250), () {
+        if (seq != _turnSeq || !rt.gameActive || rt.state != 'ending') return;
+        rt.state = 'paused';
+        showModal(GameModal.stageCleared);
+      });
+    });
+  }
+
   void _endGame(bool win, bool loss) {
     rt.gameActive = false;
     rt.state = 'ended';
@@ -2024,8 +2110,8 @@ class GameState extends ChangeNotifier {
 
     _prepareResultSummary(win: win, loss: loss);
 
+    final isBossWin = win && rt.dailyBossWon;
     if (win) {
-      final isBossWin = rt.dailyBossWon;
       final isMasterWin = rt.challenge == Operation.master;
       if (isBossWin || isMasterWin || perfect) {
         _celebrate(
@@ -2049,7 +2135,16 @@ class GameState extends ChangeNotifier {
     }
 
     save();
-    showModal(GameModal.win);
+    if (isBossWin) {
+      _delayedResultModalTimer?.cancel();
+      _delayedResultModalTimer = Timer(const Duration(milliseconds: 1250), () {
+        if (rt.state == 'ended' && currentModal == GameModal.none) {
+          showModal(GameModal.win);
+        }
+      });
+    } else {
+      showModal(GameModal.win);
+    }
   }
 
   void _prepareResultSummary({required bool win, required bool loss}) {
@@ -2128,6 +2223,12 @@ class GameState extends ChangeNotifier {
 
   void replayGame() {
     closeModal();
+    if (rt.challenge == Operation.master) {
+      _masterLevel = 0;
+      _masterProgress = 0;
+      _masterLives = 3 + Storage.getInt('mc_livesBonus', 0);
+      Storage.setInt('mc_livesBonus', 0);
+    }
     startGame();
   }
 
@@ -2790,7 +2891,7 @@ class GameState extends ChangeNotifier {
   }
 
   void setPlayerName(int pid, String name) {
-    p[pid].name = name.isEmpty ? 'Player $pid' : name;
+    p[pid].name = name;
     notifyListeners();
   }
 }

@@ -192,12 +192,13 @@ class ModalShell extends StatelessWidget {
       ),
     );
 
-    if (s.lowPerf) return modal;
-
     return ClipRRect(
       borderRadius: radius,
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+        filter: ImageFilter.blur(
+          sigmaX: s.lowPerf ? 0 : 28,
+          sigmaY: s.lowPerf ? 0 : 28,
+        ),
         child: modal,
       ),
     );
@@ -914,7 +915,7 @@ class DailyBossModal extends StatelessWidget {
                 'Reward',
                 gs.isDailyBossClaimedToday
                     ? 'Reward claimed today'
-                    : '${b.reward} coins',
+                    : '🪙 ${b.reward}',
               ),
               _ReportRow(
                 'Status',
@@ -1078,7 +1079,7 @@ class StageClearedModal extends StatelessWidget {
       title: cleared == null ? 'Stage Cleared!' : '${cleared.name} Cleared! 🌟',
       actions: [
         NeoButton(
-            label: next == null ? 'Continue →' : 'Enter ${next.name} →',
+            label: next == null ? 'Continue' : 'Enter ${next.name}',
             color: GameConfig.coral,
             onPressed: gs.advanceStage),
       ],
@@ -1102,15 +1103,18 @@ class WinModal extends StatelessWidget {
   Widget build(BuildContext context) {
     final p1 = gs.p[1];
     final p2 = gs.p[2];
+    final canReplay =
+        !(gs.rt.challenge == Operation.dailyBoss && gs.rt.dailyBossWon);
     return ModalShell(
       icon: gs.resultIcon,
       title: gs.resultTitle,
       actions: [
-        NeoButton(
-          label: 'Replay',
-          color: GameConfig.mint,
-          onPressed: gs.replayGame,
-        ),
+        if (canReplay)
+          NeoButton(
+            label: 'Replay',
+            color: GameConfig.mint,
+            onPressed: gs.replayGame,
+          ),
         NeoButton(
           label: 'Main Menu',
           outlined: true,
@@ -2447,28 +2451,24 @@ class _ShopHubPanel extends StatelessWidget {
           key: const Key('shopHub_avatars'),
           icon: '🐾',
           title: 'Avatars',
-          subtitle: 'Choose your character',
           onTap: () => onOpen(_ShopSection.avatars),
         ),
         _ShopHubCard(
           key: const Key('shopHub_hats'),
           icon: '🎩',
           title: 'Hats',
-          subtitle: 'Customize your look',
           onTap: () => onOpen(_ShopSection.hats),
         ),
         _ShopHubCard(
           key: const Key('shopHub_packs'),
           icon: '⚡',
           title: 'Packs',
-          subtitle: 'Power-ups and daily rewards',
           onTap: () => onOpen(_ShopSection.packs),
         ),
         _ShopHubCard(
           key: const Key('shopHub_buy'),
           icon: '💳',
           title: 'Buy',
-          subtitle: 'Coins and remove ads',
           onTap: () => onOpen(_ShopSection.buy),
         ),
       ],
@@ -2481,13 +2481,11 @@ class _ShopHubCard extends StatelessWidget {
     super.key,
     required this.icon,
     required this.title,
-    required this.subtitle,
     required this.onTap,
   });
 
   final String icon;
   final String title;
-  final String subtitle;
   final VoidCallback onTap;
 
   @override
@@ -2532,17 +2530,6 @@ class _ShopHubCard extends StatelessWidget {
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
                       height: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: s.muted,
-                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
@@ -2738,28 +2725,16 @@ class _ShopItemCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               if (!(owned && !item.consumable)) ...[
-                Text(
-                  '${item.price} coins',
-                  maxLines: 1,
-                  softWrap: false,
-                  style: TextStyle(
-                    color: s.muted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    fontFamily: AppFonts.body,
-                  ),
-                ),
+                _CoinPriceBadge(price: item.price),
                 const SizedBox(height: 4),
               ] else
                 const SizedBox(height: 4),
-              _ShopPricePill(
-                text: owned && !item.consumable
-                    ? 'Owned'
-                    : canAfford
-                        ? 'Buy'
-                        : 'Not enough',
-                owned: owned && !item.consumable,
-              ),
+              if (owned && !item.consumable)
+                const _ShopPricePill(text: 'Owned', owned: true)
+              else if (canAfford)
+                const _ShopPricePill(text: 'Buy', owned: false)
+              else
+                const SizedBox(height: 30),
             ],
           ),
         ),
@@ -2780,7 +2755,9 @@ class _ShopActionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
     final parts = item.name.split('\n');
-    final title = item.special == 'watch' ? 'Daily Bonus' : parts.first;
+    final title = item.special == 'watch'
+        ? '+${GameState.dailyBonusCoins} Coins'
+        : parts.first;
     final owned = gs.shopOwned.contains(item.id);
     final dailyBonusClaimed =
         item.special == 'watch' && gs.isDailyCoinsClaimedToday;
@@ -2788,41 +2765,33 @@ class _ShopActionRow extends StatelessWidget {
     final canBuy =
         !((owned && !item.consumable) || dailyBonusClaimed) && canAfford;
     final actionText = dailyBonusClaimed
-        ? 'Claimed Today'
+        ? 'Claimed'
         : (owned && !item.consumable)
             ? 'Owned'
-            : !canAfford
-                ? 'Not enough'
-                : item.special == 'watch'
-                    ? 'Claim'
-                    : 'Buy';
+            : item.special == 'watch'
+                ? 'Free Daily'
+                : '🪙 ${item.price}';
     final subtitle = item.special == 'watch'
-        ? '+${GameState.dailyBonusCoins} coins • once per day'
+        ? 'Daily bonus'
         : item.id == 'pack_powerups'
-            ? '+5 of every power-up • ${item.price} coins'
+            ? 'x5 of each power-up'
             : item.id == 'pack_lives'
-                ? '+1 Master life • ${item.price} coins'
-                : '${parts.skip(1).join(' ')} • ${item.price} coins';
+                ? 'For Master mode'
+                : parts.skip(1).join(' ');
 
     return GestureDetector(
+      key: Key('shopPack_${item.id}'),
       onTap: canBuy ? onTap : null,
       child: Opacity(
         opacity: canBuy || owned || dailyBonusClaimed ? 1 : 0.48,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 96),
-          padding: const EdgeInsets.all(14),
+          constraints: const BoxConstraints(minHeight: 88),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: _shopCardDecoration(s),
           child: Row(
             children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: s.dark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : Colors.white.withValues(alpha: 0.70),
-                  borderRadius: BorderRadius.circular(16),
-                ),
+              SizedBox(
+                width: 44,
                 child: Center(
                   child: item.id == 'pack_lives'
                       ? const Icon(Icons.favorite_rounded,
@@ -2830,43 +2799,57 @@ class _ShopActionRow extends StatelessWidget {
                       : Text(item.emoji, style: const TextStyle(fontSize: 32)),
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: s.text,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        fontFamily: AppFonts.head,
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: TextStyle(
+                            color: s.text,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                            fontFamily: AppFonts.head,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: s.muted,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        height: 1.2,
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          subtitle,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: TextStyle(
+                            color: item.special == 'watch'
+                                ? const Color(GameConfig.mint)
+                                : s.muted,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            height: 1.2,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               _ShopPricePill(
                 text: actionText,
                 owned: (owned && !item.consumable) || dailyBonusClaimed,
+                outlined: true,
               ),
             ],
           ),
@@ -2876,25 +2859,75 @@ class _ShopActionRow extends StatelessWidget {
   }
 }
 
-class _ShopPricePill extends StatelessWidget {
-  const _ShopPricePill({required this.text, required this.owned});
+class _CoinPriceBadge extends StatelessWidget {
+  const _CoinPriceBadge({required this.price});
 
-  final String text;
-  final bool owned;
+  final int price;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 30, minWidth: 74),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      constraints: const BoxConstraints(minHeight: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        gradient: owned
+        color: const Color(GameConfig.coin).withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(
+          color: const Color(GameConfig.coin).withValues(alpha: 0.55),
+        ),
+      ),
+      child: Text(
+        '🪙 $price',
+        maxLines: 1,
+        softWrap: false,
+        style: const TextStyle(
+          color: Color(0xFF8A6200),
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+          fontFamily: AppFonts.body,
+        ),
+      ),
+    );
+  }
+}
+
+class _ShopPricePill extends StatelessWidget {
+  const _ShopPricePill({
+    required this.text,
+    required this.owned,
+    this.outlined = false,
+  });
+
+  final String text;
+  final bool owned;
+  final bool outlined;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(
+        minHeight: outlined ? 38 : 30,
+        minWidth: outlined ? 78 : 74,
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: outlined ? 10 : 12,
+        vertical: outlined ? 8 : 7,
+      ),
+      decoration: BoxDecoration(
+        gradient: owned || outlined
             ? null
             : const LinearGradient(
                 colors: [Color(GameConfig.coral), Color(0xFFD4681A)],
               ),
-        color:
-            owned ? const Color(GameConfig.mint).withValues(alpha: 0.16) : null,
+        color: owned || outlined
+            ? const Color(GameConfig.coin).withValues(alpha: 0.10)
+            : null,
+        border: outlined
+            ? Border.all(
+                color: const Color(GameConfig.coin).withValues(alpha: 0.50),
+                width: 1.5,
+              )
+            : null,
         borderRadius: BorderRadius.circular(99),
       ),
       child: FittedBox(
@@ -2904,8 +2937,8 @@ class _ShopPricePill extends StatelessWidget {
           maxLines: 1,
           softWrap: false,
           style: TextStyle(
-            color: owned ? const Color(GameConfig.mint) : Colors.white,
-            fontSize: 13,
+            color: owned || outlined ? const Color(0xFFB78300) : Colors.white,
+            fontSize: outlined ? 13 : 13,
             fontWeight: FontWeight.w900,
             fontFamily: AppFonts.head,
           ),
@@ -2935,7 +2968,7 @@ class _BuyCoinsPanel extends StatelessWidget {
           key: const Key('iapProduct_100_coins'),
           icon: '🪙',
           title: '100 Coins',
-          subtitle: '+100 coins',
+          subtitle: 'Starter pack',
           price: r'$0.99',
           onTap: () => gs.beginIapPurchase(IapProducts.small),
         ),
@@ -2943,7 +2976,7 @@ class _BuyCoinsPanel extends StatelessWidget {
           key: const Key('iapProduct_500_coins'),
           icon: '💰',
           title: '500 Coins',
-          subtitle: '+550 coins',
+          subtitle: '+50 bonus coins!',
           price: r'$3.99',
           onTap: () => gs.beginIapPurchase(IapProducts.medium),
         ),
@@ -2951,7 +2984,7 @@ class _BuyCoinsPanel extends StatelessWidget {
           key: const Key('iapProduct_1200_coins'),
           icon: '🏆',
           title: '1200 Coins',
-          subtitle: '+1400 coins',
+          subtitle: '+200 bonus coins!',
           price: r'$7.99',
           onTap: () => gs.beginIapPurchase(IapProducts.large),
         ),
@@ -2990,7 +3023,7 @@ class _RewardedAdCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
             color: const Color(0xFF211C3D),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: const Color(GameConfig.grape).withValues(alpha: 0.5),
               width: 1.5,
@@ -3005,55 +3038,52 @@ class _RewardedAdCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
+              const SizedBox(
                 width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Center(
-                  child: Text('🎥', style: TextStyle(fontSize: 34)),
+                child: Center(
+                  child: Text('🎬', style: TextStyle(fontSize: 42)),
                 ),
               ),
               const SizedBox(width: 14),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Watch Ad',
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontFamily: AppFonts.head,
-                        fontSize: 18,
-                        height: 1,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'Watch Ad',
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontFamily: AppFonts.head,
+                          fontSize: 20,
+                          height: 1,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '+${GameState.rewardedAdCoins} coins',
-                      style: TextStyle(color: Color(0xFFD7D1EA), fontSize: 12),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
               Container(
+                constraints: const BoxConstraints(minWidth: 88, minHeight: 58),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.13),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      disabled ? '✓' : '+10🪙',
+                      disabled ? '✓' : '+${GameState.rewardedAdCoins} 🪙',
+                      maxLines: 1,
+                      softWrap: false,
                       style: const TextStyle(
                         color: Color(GameConfig.coin),
                         fontWeight: FontWeight.w900,
@@ -3062,6 +3092,8 @@ class _RewardedAdCard extends StatelessWidget {
                     ),
                     Text(
                       disabled ? 'WAIT' : 'WATCH',
+                      maxLines: 1,
+                      softWrap: false,
                       style: const TextStyle(
                         color: Color(0xFFD7D1EA),
                         fontWeight: FontWeight.w900,
@@ -3103,61 +3135,65 @@ class _IapCard extends StatelessWidget {
       child: Container(
         width: double.infinity,
         margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         decoration: _shopCardDecoration(s),
         child: Row(
           children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: s.dark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.white.withValues(alpha: 0.70),
-                borderRadius: BorderRadius.circular(16),
-              ),
+            SizedBox(
+              width: 44,
               child: Center(
-                child: Text(icon, style: const TextStyle(fontSize: 34)),
+                child: Text(icon, style: const TextStyle(fontSize: 32)),
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: s.text,
-                      fontWeight: FontWeight.w900,
-                      fontFamily: AppFonts.head,
-                      fontSize: 18,
-                      height: 1.0,
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          color: s.text,
+                          fontWeight: FontWeight.w900,
+                          fontFamily: AppFonts.head,
+                          fontSize: 17,
+                          height: 1.0,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(GameConfig.mint),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
-                      height: 1.15,
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        subtitle,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: const TextStyle(
+                          color: Color(GameConfig.mint),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 11,
+                          height: 1.15,
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Container(
-              constraints: const BoxConstraints(minWidth: 80),
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+              constraints: const BoxConstraints(minWidth: 76, minHeight: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
@@ -3167,7 +3203,7 @@ class _IapCard extends StatelessWidget {
                     Color(0xFFFF6B2A),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
                     color:
@@ -3177,14 +3213,19 @@ class _IapCard extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Text(
-                price,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(GameConfig.textLight),
-                  fontWeight: FontWeight.w900,
-                  fontFamily: AppFonts.head,
-                  fontSize: 16,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  price,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: const TextStyle(
+                    color: Color(GameConfig.textLight),
+                    fontWeight: FontWeight.w900,
+                    fontFamily: AppFonts.head,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             ),

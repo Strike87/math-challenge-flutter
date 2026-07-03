@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
 import '../game_config.dart';
-import '../models/player.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
 
@@ -48,11 +47,10 @@ class _PlayerSetupScreenState extends State<PlayerSetupScreen> {
         gs.rt.challenge.name != 'dailyBoss';
     final currentPid = twoPlayer && _setupStep == 1 ? 2 : 1;
     final title = twoPlayer ? 'Player $currentPid Setup' : 'Player Setup';
-    final primaryLabel =
-        twoPlayer && _setupStep == 0 ? 'Next →' : 'Start Game ▶';
+    final primaryLabel = twoPlayer && _setupStep == 0 ? 'Next' : 'Start Game';
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -133,8 +131,9 @@ class _PlayerSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Tappable avatar card — opens full picker with ~50 emojis
+          // Tappable avatar card — same emoji picker used by Settings.
           GestureDetector(
+            key: Key('player-setup-avatar-tile-p$pid'),
             onTap: () async {
               final current = pl.avatar is String ? pl.avatar as String : '🐶';
               final selected = await showDialog<String>(
@@ -182,9 +181,7 @@ class _PlayerSection extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          pl.avatar is AvatarCustom
-                              ? 'Custom avatar'
-                              : 'Tap to change',
+                          'Tap to change',
                           style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             fontFamily: AppFonts.body,
@@ -239,8 +236,9 @@ class _PlayerSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          TextField(
+          TextFormField(
             key: Key('player-setup-name-p$pid'),
+            initialValue: pl.name,
             decoration: InputDecoration(
               prefixIcon: Container(
                 margin: const EdgeInsets.all(8),
@@ -264,7 +262,6 @@ class _PlayerSection extends StatelessWidget {
                     const BorderSide(color: Color(GameConfig.coral), width: 2),
               ),
             ),
-            controller: TextEditingController(text: pl.name),
             maxLength: 20,
             onChanged: (v) => gs.setPlayerName(pid, v),
           ),

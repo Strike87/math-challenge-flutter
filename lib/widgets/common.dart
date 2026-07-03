@@ -117,12 +117,14 @@ class NeoButton extends StatelessWidget {
     if (icon == null) {
       return Text(
         label,
+        maxLines: 1,
+        softWrap: false,
       );
     }
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(icon, size: fontSize + 2),
       const SizedBox(width: 8),
-      Text(label),
+      Text(label, maxLines: 1, softWrap: false),
     ]);
   }
 }

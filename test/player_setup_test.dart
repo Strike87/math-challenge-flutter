@@ -39,8 +39,8 @@ void main() {
       expect(find.text('Player Setup'), findsOneWidget);
       expect(find.byKey(const Key('player-setup-section-p1')), findsOneWidget);
       expect(find.byKey(const Key('player-setup-section-p2')), findsNothing);
-      expect(find.text('Start Game ▶'), findsOneWidget);
-      expect(find.text('Next →'), findsNothing);
+      expect(find.text('Start Game'), findsOneWidget);
+      expect(find.text('Next'), findsNothing);
 
       await tester.tap(find.byKey(const Key('player-setup-primary')));
       await tester.pump();
@@ -62,9 +62,15 @@ void main() {
       expect(find.text('Player 1 Setup'), findsOneWidget);
       expect(find.byKey(const Key('player-setup-section-p1')), findsOneWidget);
       expect(find.byKey(const Key('player-setup-section-p2')), findsNothing);
-      expect(find.text('Next →'), findsOneWidget);
+      expect(find.text('Next'), findsOneWidget);
       expect(state.isBannerEligibleFor(state.currentScreen), isTrue);
 
+      await tester.enterText(
+        find.byKey(const Key('player-setup-name-p1')),
+        'Ada',
+      );
+      await tester.enterText(find.byKey(const Key('player-setup-name-p1')), '');
+      expect(state.p[1].name, '');
       await tester.enterText(
         find.byKey(const Key('player-setup-name-p1')),
         'Ada',
@@ -75,6 +81,14 @@ void main() {
       expect(state.p[2].name, isNot('Ada'));
       expect(state.builderPid, 1);
       state.closeModal();
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('player-setup-avatar-tile-p1')));
+      await tester.pump();
+      expect(state.builderPid, 1);
+      expect(find.text('Pick your avatar'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pump();
 
       await tester.tap(find.byKey(const Key('player-setup-primary')));
       await tester.pump();
@@ -82,7 +96,7 @@ void main() {
       expect(find.text('Player 2 Setup'), findsOneWidget);
       expect(find.byKey(const Key('player-setup-section-p1')), findsNothing);
       expect(find.byKey(const Key('player-setup-section-p2')), findsOneWidget);
-      expect(find.text('Start Game ▶'), findsOneWidget);
+      expect(find.text('Start Game'), findsOneWidget);
       expect(state.isBannerEligibleFor(state.currentScreen), isTrue);
 
       await tester.enterText(
@@ -95,6 +109,14 @@ void main() {
       expect(state.p[2].name, 'Ben');
       expect(state.builderPid, 2);
       state.closeModal();
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('player-setup-avatar-tile-p2')));
+      await tester.pump();
+      expect(state.builderPid, 2);
+      expect(find.text('Pick your avatar'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pump();
 
       await tester.tap(find.byKey(const Key('player-setup-back')));
       await tester.pump();

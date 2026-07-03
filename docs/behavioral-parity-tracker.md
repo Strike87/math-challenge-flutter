@@ -37,6 +37,15 @@ These are intentional product decisions. Do not remove them during parity work u
 | Custom header layout | `lib\screens\menu_screen.dart:165`, `lib\screens\menu_screen.dart:178` | IMPLEMENTED NOT VERIFIED | Needs verification | Keep stacked `MATH` / `CHALLENGE`, equal-sign icon beside them, and `BOSS BATTLE EDITION` in one row. Needs visual QA for alignment. |
 | Main menu footer Daily day-calendar icon | `lib\screens\menu_screen.dart:94` | VERIFIED | Confirmed | Approved addition. Preserve the calendar-style icon for the footer Daily tab while cloning the rest of the footer behavior and styling. |
 
+## UI Polish Freeze Notes
+
+```text
+UI-POLISH-007 Two-step 2P Player Setup flow — VERIFIED / Frozen for scoped player setup UI flow slice
+UI-POLISH-008 Single-target Avatar Builder cleanup — VERIFIED / Frozen for scoped Avatar Builder flow slice
+UI-POLISH-009 Avatar Builder None-option consistency — VERIFIED / Frozen for scoped Avatar Builder UI polish slice
+UI-POLISH-010 Coin Shop price visibility + compact shop header — VERIFIED / Frozen for scoped shop UI polish slice
+```
+
 ## Difficulty Model Rule
 
 Manual UI difficulty choices are only:

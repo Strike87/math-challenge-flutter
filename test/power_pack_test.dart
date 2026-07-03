@@ -94,7 +94,7 @@ void main() {
       }
 
       for (final pu in PowerUp.values) {
-        expect(counts[pu], 6, reason: '${pu.name} should be base 1 + bonus 5');
+        expect(counts[pu], 5, reason: '${pu.name} should be bonus 5');
       }
 
       final cleared = jsonDecode(Storage.getString('mc_puBonus', '{}')) as Map;

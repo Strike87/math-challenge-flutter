@@ -217,7 +217,7 @@ void main() {
         counts[pu] = (counts[pu] ?? 0) + 1;
       }
       for (final pu in PowerUp.values) {
-        expect(counts[pu], 6, reason: '${pu.name} should be base 1 + bonus 5');
+        expect(counts[pu], 5, reason: '${pu.name} should be bonus 5');
       }
     });
   });

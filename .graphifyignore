@@ -1,0 +1,9 @@
+# Block everything by default
+*
+*.*
+
+# Allow deep folder traversal
+!*/
+
+# Explicitly only allow Flutter code files
+!*.dart

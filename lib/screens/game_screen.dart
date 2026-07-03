@@ -314,7 +314,8 @@ class _QuitPill extends StatelessWidget {
 
 int _timerRemainingMs(GameState gs) {
   final rt = gs.rt;
-  if (rt.timerDurationMs <= 0 || rt.timerStart <= 0) return 0;
+  if (rt.timerDurationMs <= 0) return 0;
+  if (rt.timerStart <= 0) return rt.timerDurationMs;
   final elapsed = DateTime.now().millisecondsSinceEpoch - rt.timerStart;
   return (rt.timerDurationMs - elapsed).clamp(0, rt.timerDurationMs).toInt();
 }
@@ -558,11 +559,12 @@ class _ScoreProgress extends StatelessWidget {
         gs.rt.challenge != Operation.dailyBoss;
     if (!isBoss && !isStandard) return const SizedBox(height: 8);
 
-    final current = isBoss ? gs.rt.dailyBossProgress : gs.p[1].correct;
     final target = isBoss
         ? (gs.rt.dailyBoss?.goal ?? 1)
         : (gs.rt.maxTurns == 99999 ? gs.questionCount : gs.rt.maxTurns);
     final clampedTarget = target <= 0 ? 1 : target;
+    final current =
+        isBoss ? gs.rt.dailyBossProgress : _questionNumber(gs, clampedTarget);
     final value = (current / clampedTarget).clamp(0.0, 1.0);
 
     return Padding(
@@ -872,32 +874,37 @@ class _PlayerCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        Text(
-                          '${pl.score}',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            color: Color(GameConfig.coral),
-                            fontFamily: AppFonts.head,
-                            height: 1,
-                          ),
-                        ),
-                        if (activePowerUps.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 3),
-                            child: Row(
-                              children: activePowerUps
-                                  .map(
-                                    (icon) => Padding(
-                                      padding: const EdgeInsets.only(right: 4),
-                                      child: _ActivePlayerPowerUpIcon(
-                                        icon: icon,
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
+                        Row(
+                          children: [
+                            Text(
+                              '${pl.score}',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                color: Color(GameConfig.coral),
+                                fontFamily: AppFonts.head,
+                                height: 1,
+                              ),
                             ),
-                          ),
+                            if (activePowerUps.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  for (final icon in activePowerUps) ...[
+                                    _ActivePlayerPowerUpIcon(
+                                      icon: icon,
+                                      pid: pid,
+                                      active: active,
+                                    ),
+                                    if (icon != activePowerUps.last)
+                                      const SizedBox(width: 5),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -914,22 +921,83 @@ class _PlayerCard extends StatelessWidget {
 class _ActivePlayerPowerUpIcon extends StatelessWidget {
   const _ActivePlayerPowerUpIcon({
     required this.icon,
+    required this.pid,
+    required this.active,
   });
 
   final String icon;
+  final int pid;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
     final isShield = icon == '🛡️';
-    final child = SizedBox(
-      key: isShield ? const Key('player-card-shield-active') : null,
+    final badge = SizedBox(
       width: 22,
       height: 22,
       child: Center(
         child: Text(icon, style: const TextStyle(fontSize: 15, height: 1)),
       ),
     );
-    return child;
+    if (!isShield) return badge;
+    return _FloatingShieldBadge(
+      key: Key('player-card-shield-active-p$pid'),
+      active: active,
+      child: badge,
+    );
+  }
+}
+
+class _FloatingShieldBadge extends StatefulWidget {
+  const _FloatingShieldBadge(
+      {super.key, required this.active, required this.child});
+
+  final bool active;
+  final Widget child;
+
+  @override
+  State<_FloatingShieldBadge> createState() => _FloatingShieldBadgeState();
+}
+
+class _FloatingShieldBadgeState extends State<_FloatingShieldBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _float;
+
+  @override
+  void initState() {
+    super.initState();
+    _float = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    );
+  }
+
+  @override
+  void dispose() {
+    _float.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final effectsEnabled = widget.active && !s.reduceMotion && !s.lowPerf;
+    if (effectsEnabled) {
+      if (!_float.isAnimating) _float.repeat();
+    } else {
+      _float.stop();
+      _float.value = 0;
+    }
+
+    return AnimatedBuilder(
+      animation: _float,
+      child: widget.child,
+      builder: (_, child) {
+        final dy =
+            effectsEnabled ? math.sin(_float.value * math.pi * 2) * -4.5 : 0.0;
+        return Transform.translate(offset: Offset(0, dy), child: child);
+      },
+    );
   }
 }
 
@@ -1261,11 +1329,7 @@ bool _shouldShowPowerUpHud(GameState gs) {
       gs.rt.challenge == Operation.dailyBoss) {
     return false;
   }
-  final pl = gs.p[gs.rt.activePlayer];
-  return pl.pups.isNotEmpty ||
-      pl.shieldActive ||
-      pl.doubleActive ||
-      gs.rt.frozen;
+  return gs.rt.q != null;
 }
 
 class _ActivePowerUpGlow extends StatelessWidget {
@@ -1344,7 +1408,7 @@ class _ShieldArmedPulse extends StatelessWidget {
               child: IgnorePointer(
                 child: Opacity(
                   key: const Key('shield-hud-armed-overlay'),
-                  opacity: effectsEnabled ? pulse * 0.34 : 0.16,
+                  opacity: effectsEnabled ? pulse : 0.5,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -1457,7 +1521,7 @@ class _QuestionCard extends StatelessWidget {
                             fit: BoxFit.scaleDown,
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              'Q ${gs.rt.totalTurns + 1} / ${gs.rt.maxTurns == 99999 ? '∞' : gs.rt.maxTurns}',
+                              'Q ${_questionNumber(gs, gs.rt.maxTurns)} / ${gs.rt.maxTurns == 99999 ? '∞' : gs.rt.maxTurns}',
                               maxLines: 1,
                               softWrap: false,
                               style: TextStyle(
@@ -1666,6 +1730,12 @@ class _QuestionCard extends StatelessWidget {
     }
     return spans;
   }
+}
+
+int _questionNumber(GameState gs, int target) {
+  if (target == 99999) return gs.rt.totalTurns + 1;
+  final current = gs.rt.accepting ? gs.rt.totalTurns + 1 : gs.rt.totalTurns;
+  return current.clamp(1, target).toInt();
 }
 
 class _AnswersGrid extends StatelessWidget {

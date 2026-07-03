@@ -78,9 +78,7 @@ class PlayerState {
     streak = 0;
     maxStreak = 0;
     history = [];
-    // Only single-player non-boss Standard mode awards all 6 starting power-ups.
-    pups =
-        (isSinglePlayer && !isMasterOrBoss) ? [...PowerUp.values] : <PowerUp>[];
+    pups = <PowerUp>[];
     doubleActive = false;
     shieldActive = false;
   }

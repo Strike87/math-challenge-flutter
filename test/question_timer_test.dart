@@ -107,6 +107,24 @@ void main() {
       expect(combo.rt.timerDurationMs, comboDuration);
     });
 
+    test('standard timer freezes immediately after an answer', () async {
+      final state = await makeState();
+      state.players = 1;
+      state.mode = GameMode.standard;
+      state.adaptive = false;
+      state.diff = Difficulty.easy;
+      state.rt.challenge = Operation.addition;
+      state.startGame();
+
+      expect(state.debugQuestionTimerDurationMs(), 10000);
+      state.onAnswer(state.rt.q!.choices.first);
+
+      expect(state.rt.timer?.isActive, isFalse);
+      expect(state.rt.timerStart, 0);
+      expect(state.debugQuestionTimerDurationMs(), lessThanOrEqualTo(10000));
+      expect(state.debugQuestionTimerDurationMs(), greaterThan(0));
+    });
+
     test('uses adaptive generated difficulty instead of setup difficulty',
         () async {
       final state = await makeState();
@@ -171,6 +189,22 @@ void main() {
         state.debugQuestionTimerDurationMs(),
         GameConfig.timerBaseMs[Difficulty.hard.name],
       );
+    });
+
+    test('non-adaptive easy timer is not reduced by saved adaptive level',
+        () async {
+      final state = await makeState();
+      state.players = 1;
+      state.mode = GameMode.standard;
+      state.adaptive = false;
+      state.diff = Difficulty.easy;
+      state.rt.challenge = Operation.addition;
+      state.adaptLvl = 3;
+      state.adaptLvlRaw = 3;
+
+      state.startGame();
+
+      expect(state.debugQuestionTimerDurationMs(), 10000);
     });
 
     test('survival uses phase timer instead of generated difficulty timer',

@@ -19,18 +19,26 @@ void main() {
         (tester) async {
       final state = await _makeState();
       _startStandard(state);
-      state.p[1].pups = [PowerUp.shield];
-
       await _pumpGame(tester, state);
+
+      expect(find.byKey(const Key('powerup-shield-button')), findsOneWidget);
+      expect(find.text('0'), findsWidgets);
+
+      final armedState = await _makeState();
+      _startStandard(armedState);
+      armedState.p[1].pups = [PowerUp.shield];
+      await _pumpGame(tester, armedState);
       expect(find.byKey(const Key('powerup-shield-button')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('powerup-shield-button')));
       await tester.pump();
 
-      expect(state.p[1].shieldActive, isTrue);
-      expect(state.p[1].pups.where((p) => p == PowerUp.shield), isEmpty);
+      expect(armedState.p[1].shieldActive, isTrue);
+      expect(armedState.p[1].pups.where((p) => p == PowerUp.shield), isEmpty);
+      expect(find.byKey(const Key('player-card-shield-active-p1')),
+          findsOneWidget);
       expect(
-          find.byKey(const Key('player-card-shield-active')), findsOneWidget);
+          find.byKey(const Key('player-card-shield-active-p2')), findsNothing);
       expect(find.byKey(const Key('shield-hud-armed-overlay')), findsOneWidget);
       expect(find.text('🛡️ Shield activated!'), findsNothing);
       final initial = tester.widget<Opacity>(
@@ -41,12 +49,13 @@ void main() {
       final peak = tester.widget<Opacity>(
         find.byKey(const Key('shield-hud-armed-overlay')),
       );
-      expect(peak.opacity, closeTo(0.34, 0.01));
+      expect(peak.opacity, closeTo(1.0, 0.01));
       await tester.pump(const Duration(milliseconds: 700));
       final end = tester.widget<Opacity>(
         find.byKey(const Key('shield-hud-armed-overlay')),
       );
       expect(end.opacity, closeTo(0, 0.01));
+      armedState.rt.timer?.cancel();
       state.rt.timer?.cancel();
     });
 
@@ -58,8 +67,8 @@ void main() {
       state.usePowerUp(PowerUp.shield);
 
       await _pumpGame(tester, state);
-      expect(
-          find.byKey(const Key('player-card-shield-active')), findsOneWidget);
+      expect(find.byKey(const Key('player-card-shield-active-p1')),
+          findsOneWidget);
 
       final livesBefore = state.rt.survivalLives;
       state.onAnswer(_wrongChoices(state).first);
@@ -68,13 +77,31 @@ void main() {
       expect(state.p[1].shieldActive, isFalse);
       expect(state.rt.survivalLives, livesBefore);
       expect(state.reactionPill, '🛡️ Shield absorbed it!');
-      expect(state.bigEmojiVisible, isFalse);
-      expect(find.byKey(const Key('player-card-shield-active')), findsNothing);
+      expect(state.bigEmoji, '🛡️');
+      expect(state.bigEmojiVisible, isTrue);
+      expect(
+          find.byKey(const Key('player-card-shield-active-p1')), findsNothing);
       expect(find.byKey(const Key('shield-hud-armed-overlay')), findsNothing);
       expect(find.text('🛡️ Shield absorbed it!'), findsOneWidget);
       final pill = tester.widget<Text>(find.text('🛡️ Shield absorbed it!'));
       expect(pill.style?.color, const Color(GameConfig.mint));
       await tester.pump(const Duration(milliseconds: 1400));
+      state.rt.timer?.cancel();
+    });
+
+    testWidgets('question counter waits for the next question', (tester) async {
+      final state = await _makeState();
+      _startStandard(state);
+      await _pumpGame(tester, state);
+
+      expect(find.text('Q 1 / 10'), findsOneWidget);
+
+      state.onAnswer(_wrongChoices(state).first);
+      await tester.pump();
+      expect(find.text('Q 1 / 10'), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 1300));
+      expect(find.text('Q 2 / 10'), findsOneWidget);
       state.rt.timer?.cancel();
     });
 

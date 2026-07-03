@@ -20,9 +20,9 @@ import 'theme.dart';
 import 'widgets/celebration_overlay.dart';
 import 'widgets/modals.dart';
 
-const _prodBannerAdUnitId = 'ca-app-pub-5674349229505017/3485297513';
-const _prodInterstitialAdUnitId = 'ca-app-pub-5674349229505017/9643207834';
-const _prodRewardedAdUnitId = 'ca-app-pub-5674349229505017/9292157969';
+const _prodBannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
+const _prodInterstitialAdUnitId = 'ca-app-pub-3940256099942544/1033173712';
+const _prodRewardedAdUnitId = 'ca-app-pub-3940256099942544/5224354917';
 
 const _testBannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
 const _testInterstitialAdUnitId = 'ca-app-pub-3940256099942544/1033173712';
@@ -141,14 +141,37 @@ class _MotionSettingsBridgeState extends State<_MotionSettingsBridge> {
   Widget build(BuildContext context) => widget.child;
 }
 
-class _AppShell extends StatelessWidget {
+class _AppShell extends StatefulWidget {
   const _AppShell();
+
+  @override
+  State<_AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || !mounted) return;
+    unawaited(context.read<gs.GameState>().syncBannerForCurrentScreen());
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<gs.GameState>();
     final s = context.watch<SettingsService>();
-    final banner = state.bannerWidget();
+    final banner = state.adService.bannerWidget();
     return Scaffold(
       backgroundColor: s.bg,
       body: Stack(

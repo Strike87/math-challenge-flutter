@@ -236,35 +236,39 @@ void main() {
     testWidgets('reward can be claimed only once per local day',
         (tester) async {
       final state = await makeState();
-      const boss = DailyBoss(
-        name: 'Test Boss',
-        icon: '🐲',
-        type: 'addition',
-        diff: 'easy',
-        goal: 1,
-        time: 10,
-        numType: 'natural',
-        reward: 50,
-        theme: 'test',
-        desc: 'Fast deterministic reward test.',
-      );
-      state.dailyBoss = boss;
+      try {
+        const boss = DailyBoss(
+          name: 'Test Boss',
+          icon: '🐲',
+          type: 'addition',
+          diff: 'easy',
+          goal: 1,
+          time: 10,
+          numType: 'natural',
+          reward: 50,
+          theme: 'test',
+          desc: 'Fast deterministic reward test.',
+        );
+        state.dailyBoss = boss;
 
-      state.startDailyBoss();
-      state.startGame();
-      await beatDailyBoss(state, tester);
+        state.startDailyBoss();
+        state.startGame();
+        await beatDailyBoss(state, tester);
 
-      expect(state.rt.dailyBossWon, isTrue);
-      expect(state.coins, boss.reward);
-      expect(state.isDailyBossClaimedToday, isTrue);
-      expect(Storage.getString('mc_dailyBossClaimed', ''), isNotEmpty);
+        expect(state.rt.dailyBossWon, isTrue);
+        expect(state.coins, boss.reward);
+        expect(state.isDailyBossClaimedToday, isTrue);
+        expect(Storage.getString('mc_dailyBossClaimed', ''), isNotEmpty);
 
-      state.startDailyBoss();
-      state.startGame();
-      await beatDailyBoss(state, tester);
+        state.startDailyBoss();
+        state.startGame();
+        await beatDailyBoss(state, tester);
 
-      expect(state.rt.dailyBossWon, isTrue);
-      expect(state.coins, boss.reward);
+        expect(state.rt.dailyBossWon, isTrue);
+        expect(state.coins, boss.reward);
+      } finally {
+        state.dispose();
+      }
     });
   });
 }

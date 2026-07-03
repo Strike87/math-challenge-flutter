@@ -81,6 +81,29 @@ void main() {
       }
     });
 
+    testWidgets('configured question count ends after a wrong final answer',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        _startStandard(state, questionCount: 1);
+        final wrongChoice = state.rt.q!.choices.firstWhere(
+          (choice) => (choice - state.rt.q!.ans).abs() > 1e-9,
+        );
+
+        state.onAnswer(wrongChoice);
+
+        expect(state.rt.totalTurns, 1);
+        expect(state.bigEmojiVisible, isTrue);
+        expect(state.currentModal, GameModal.none);
+        await tester.pump(const Duration(milliseconds: 1300));
+
+        expect(state.currentModal, GameModal.win);
+        expect(state.p[1].total, 1);
+      } finally {
+        state.dispose();
+      }
+    });
+
     testWidgets(
         'new games clear cached reaction emoji and stale turn callbacks',
         (tester) async {
@@ -195,8 +218,15 @@ void main() {
         _startStandard(win, questionCount: 1);
         win.onAnswer(win.rt.q!.ans);
 
+        expect(win.bigEmojiVisible, isTrue);
+        expect(win.currentModal, GameModal.none);
+        await tester.pump(const Duration(milliseconds: 900));
+        expect(win.bigEmojiVisible, isFalse);
+        expect(win.currentModal, GameModal.none);
+        await tester.pump(const Duration(milliseconds: 400));
         expect(win.celebration.kind, CelebrationKind.perfect);
         expect(win.celebration.message, 'Perfect score!');
+        expect(win.currentModal, GameModal.win);
       } finally {
         win.dispose();
       }
@@ -214,9 +244,14 @@ void main() {
           }
         }
 
-        expect(master.currentModal, GameModal.stageCleared);
+        expect(master.bigEmojiVisible, isTrue);
+        expect(master.currentModal, GameModal.none);
+        await tester.pump(const Duration(milliseconds: 1300));
         expect(master.celebration.kind, CelebrationKind.stageClear);
         expect(master.celebration.message, 'Stage cleared!');
+        expect(master.currentModal, GameModal.none);
+        await tester.pump(const Duration(milliseconds: 1250));
+        expect(master.currentModal, GameModal.stageCleared);
       } finally {
         master.dispose();
       }
@@ -236,8 +271,14 @@ void main() {
         }
 
         expect(dailyBoss.rt.dailyBossWon, isTrue);
+        expect(dailyBoss.bigEmojiVisible, isTrue);
+        expect(dailyBoss.currentModal, GameModal.none);
+        await tester.pump(const Duration(milliseconds: 1300));
         expect(dailyBoss.celebration.kind, CelebrationKind.bossClear);
         expect(dailyBoss.celebration.message, 'Daily Boss defeated!');
+        expect(dailyBoss.currentModal, GameModal.none);
+        await tester.pump(const Duration(milliseconds: 1250));
+        expect(dailyBoss.currentModal, GameModal.win);
       } finally {
         dailyBoss.dispose();
       }
@@ -262,6 +303,32 @@ void main() {
         await tester.pump(const Duration(milliseconds: 1300));
       } finally {
         survival.dispose();
+      }
+    });
+
+    testWidgets('master replay after loss restarts from the first stage',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        state.debugSetMasterStage(2);
+        state.startGame();
+
+        for (var i = 0; i < 3; i++) {
+          final wrongChoice = state.rt.q!.choices.firstWhere(
+            (choice) => (choice - state.rt.q!.ans).abs() > 1e-9,
+          );
+          state.onAnswer(wrongChoice);
+          await tester.pump(const Duration(milliseconds: 1300));
+        }
+
+        expect(state.currentModal, GameModal.win);
+        state.replayGame();
+
+        expect(state.masterLevel, 0);
+        expect(state.currentMasterLevel, GameConfig.masterLevels.first);
+        expect(state.rt.gameActive, isTrue);
+      } finally {
+        state.dispose();
       }
     });
 

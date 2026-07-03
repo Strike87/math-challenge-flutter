@@ -30,23 +30,30 @@ void main() {
   });
 
   group('RT-010 power-up rules', () {
-    testWidgets('power-ups are granted every 3 correct answers',
+    testWidgets('power-ups start at zero and are earned by correct answers',
         (tester) async {
       final state = await _makeState();
       _startStandard(state);
 
-      expect(state.p[1].pups.length, PowerUp.values.length);
+      expect(state.p[1].pups, isEmpty);
+      expect(_count(state, PowerUp.shield), 0);
+      state.usePowerUp(PowerUp.shield);
+      expect(state.p[1].shieldActive, isFalse);
+      expect(state.rt.puUsed, 0);
 
       await _answerCorrect(state, tester);
+
+      expect(state.p[1].correct, 1);
+      for (final pu in PowerUp.values) {
+        expect(_count(state, pu), 1);
+      }
+      final afterStarter = state.p[1].pups.length;
+
       await _answerCorrect(state, tester);
-
-      expect(state.p[1].pups.length, PowerUp.values.length);
+      expect(state.p[1].pups.length, afterStarter);
 
       await _answerCorrect(state, tester);
-      await tester.pump(const Duration(milliseconds: 2600));
-
-      expect(state.p[1].correct, 3);
-      expect(state.p[1].pups.length, PowerUp.values.length + 1);
+      expect(state.p[1].pups.length, afterStarter + 1);
       state.rt.timer?.cancel();
     });
 
@@ -55,7 +62,9 @@ void main() {
         () async {
       final standard = await _makeState();
       _startStandard(standard);
-      expect(standard.p[1].pups, containsAll(PowerUp.values));
+      expect(standard.p[1].pups, isEmpty);
+      standard.onAnswer(standard.rt.q!.ans);
+      expect(standard.p[1].pups.length, PowerUp.values.length);
 
       final twoPlayer = await _makeState();
       twoPlayer.players = 2;
@@ -78,6 +87,20 @@ void main() {
       dailyBoss.rt.challenge = Operation.dailyBoss;
       dailyBoss.startGame();
       expect(dailyBoss.p[1].pups, isEmpty);
+    });
+
+    test('2P does not gain normal power-ups from correct answers', () async {
+      final twoPlayer = await _makeState();
+      twoPlayer.players = 2;
+      twoPlayer.mode = GameMode.standard;
+      twoPlayer.rt.challenge = Operation.addition;
+      twoPlayer.startGame();
+
+      twoPlayer.onAnswer(twoPlayer.rt.q!.ans);
+
+      expect(twoPlayer.p[1].pups, isEmpty);
+      expect(twoPlayer.p[2].pups, isEmpty);
+      twoPlayer.rt.timer?.cancel();
     });
 
     test('time and freeze are rejected in Blitz and Combo before consuming',
@@ -120,6 +143,7 @@ void main() {
 
       final beforeDuration = state.rt.timerDurationMs;
       final beforeLimit = state.rt.qTimerLimit;
+      state.p[1].pups = [PowerUp.time];
       final beforeCount = _count(state, PowerUp.time);
 
       state.usePowerUp(PowerUp.time);
@@ -133,6 +157,7 @@ void main() {
     test('fifty removes exactly 2 wrong answers', () async {
       final state = await _makeState();
       _startStandard(state);
+      state.p[1].pups = [PowerUp.fifty];
 
       expect(state.rt.q!.choices.length, 4);
       expect(_wrongChoices(state).length, 3);
@@ -162,7 +187,7 @@ void main() {
       expect(state.p[1].doubleActive, isTrue);
 
       state.onAnswer(state.rt.q!.ans);
-      await tester.pump(const Duration(milliseconds: 1400));
+      await tester.pump(const Duration(milliseconds: 2600));
 
       expect(state.p[1].score, 44);
       expect(state.p[1].bonus, 0);
@@ -189,7 +214,8 @@ void main() {
       expect(state.p[1].shieldActive, isFalse);
       expect(state.rt.survivalLives, 3);
       expect(state.reactionPill, '🛡️ Shield absorbed it!');
-      expect(state.bigEmojiVisible, isFalse);
+      expect(state.bigEmoji, '🛡️');
+      expect(state.bigEmojiVisible, isTrue);
       await tester.pump(const Duration(milliseconds: 1400));
       state.rt.timer?.cancel();
     });
@@ -198,6 +224,7 @@ void main() {
       final state = await _makeState();
       _startStandard(state);
 
+      state.p[1].pups = [PowerUp.freeze];
       final beforeCount = _count(state, PowerUp.freeze);
       expect(state.rt.timer?.isActive, isTrue);
 
@@ -283,7 +310,7 @@ void _startStandard(GameState state) {
 
 Future<void> _answerCorrect(GameState state, WidgetTester tester) async {
   state.onAnswer(state.rt.q!.ans);
-  await tester.pump(const Duration(milliseconds: 1400));
+  await tester.pump(const Duration(milliseconds: 2600));
 }
 
 int _count(GameState state, PowerUp pu) {

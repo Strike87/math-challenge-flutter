@@ -152,6 +152,9 @@ class GoogleMobileAdsService implements AdMobService {
   final String rewardedAdUnitId;
   bool _initialized = false;
   bool _bannerRequested = false;
+  Future<void>? _bannerShowFuture;
+  RewardedAd? _rewardedAd;
+  Future<RewardedAd?>? _rewardedLoadFuture;
 
   @override
   AdMobRequestPolicy get requestPolicy => AdMobRequestPolicy.familiesSafe;
@@ -170,6 +173,7 @@ class GoogleMobileAdsService implements AdMobService {
       );
       await MobileAds.instance.initialize();
       _initialized = true;
+      unawaited(_ensureRewardedLoaded());
     } catch (_) {
       _initialized = false;
     }
@@ -178,7 +182,12 @@ class GoogleMobileAdsService implements AdMobService {
   @override
   Future<void> showBanner() async {
     if (!_initialized || bannerAdUnitId.isEmpty) return;
+    final pending = _bannerShowFuture;
+    if (pending != null) return pending;
     _bannerRequested = true;
+    _bannerShowFuture =
+        Future<void>.value().whenComplete(() => _bannerShowFuture = null);
+    return _bannerShowFuture!;
   }
 
   @override
@@ -221,55 +230,95 @@ class GoogleMobileAdsService implements AdMobService {
   @override
   Future<bool> showRewarded() async {
     if (!_initialized || rewardedAdUnitId.isEmpty) return false;
+    final ad = _rewardedAd ?? await _ensureRewardedLoaded();
+    if (ad == null) return false;
+    _rewardedAd = null;
     final completer = Completer<bool>();
-    RewardedAd.load(
-      adUnitId: rewardedAdUnitId,
-      request: adRequest,
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) {
-              ad.dispose();
-              if (!completer.isCompleted) {
-                completer.completeError(
-                  const AdMobException(
-                    AdMobErrorCode.rewardNotEarned,
-                    'Rewarded ad closed before reward.',
-                  ),
-                );
-              }
-            },
-            onAdFailedToShowFullScreenContent: (ad, error) {
-              ad.dispose();
-              if (!completer.isCompleted) completer.complete(false);
-            },
+
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        unawaited(_ensureRewardedLoaded());
+        if (!completer.isCompleted) {
+          completer.completeError(
+            const AdMobException(
+              AdMobErrorCode.rewardNotEarned,
+              'Rewarded ad closed before reward.',
+            ),
           );
-          ad.show(
-            onUserEarnedReward: (ad, reward) {
-              if (!completer.isCompleted) completer.complete(true);
-            },
-          );
-        },
-        onAdFailedToLoad: (_) {
-          if (!completer.isCompleted) completer.complete(false);
-        },
-      ),
+        }
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        ad.dispose();
+        unawaited(_ensureRewardedLoaded());
+        if (!completer.isCompleted) completer.complete(false);
+      },
     );
+
+    try {
+      await ad.show(
+        onUserEarnedReward: (ad, reward) {
+          if (!completer.isCompleted) completer.complete(true);
+        },
+      );
+    } catch (_) {
+      ad.dispose();
+      unawaited(_ensureRewardedLoaded());
+      if (!completer.isCompleted) completer.complete(false);
+    }
     return completer.future.timeout(
       const Duration(seconds: 30),
       onTimeout: () => false,
     );
   }
 
+  Future<RewardedAd?> _ensureRewardedLoaded() {
+    if (!_initialized || rewardedAdUnitId.isEmpty) {
+      return Future<RewardedAd?>.value(null);
+    }
+    final ad = _rewardedAd;
+    if (ad != null) return Future<RewardedAd?>.value(ad);
+    final pending = _rewardedLoadFuture;
+    if (pending != null) return pending;
+
+    final completer = Completer<RewardedAd?>();
+    _rewardedLoadFuture = completer.future
+        .timeout(const Duration(seconds: 8), onTimeout: () => null)
+        .whenComplete(() => _rewardedLoadFuture = null);
+    try {
+      unawaited(
+        RewardedAd.load(
+          adUnitId: rewardedAdUnitId,
+          request: adRequest,
+          rewardedAdLoadCallback: RewardedAdLoadCallback(
+            onAdLoaded: (ad) {
+              _rewardedAd = ad;
+              if (!completer.isCompleted) completer.complete(ad);
+            },
+            onAdFailedToLoad: (_) {
+              if (!completer.isCompleted) completer.complete(null);
+            },
+          ),
+        ).catchError((_) {
+          if (!completer.isCompleted) completer.complete(null);
+        }),
+      );
+    } catch (_) {
+      if (!completer.isCompleted) completer.complete(null);
+    }
+    return _rewardedLoadFuture!;
+  }
+
   @override
   Widget? bannerWidget() {
-    if (!_initialized || !_bannerRequested || bannerAdUnitId.isEmpty) {
+    if (!_initialized || bannerAdUnitId.isEmpty) {
       return null;
     }
     return _GoogleBannerAd(
       key: ValueKey('banner-$bannerAdUnitId'),
       adUnitId: bannerAdUnitId,
       request: adRequest,
+      visible: _bannerRequested,
     );
   }
 }
@@ -279,10 +328,12 @@ class _GoogleBannerAd extends StatefulWidget {
     super.key,
     required this.adUnitId,
     required this.request,
+    required this.visible,
   });
 
   final String adUnitId;
   final AdRequest request;
+  final bool visible;
 
   @override
   State<_GoogleBannerAd> createState() => _GoogleBannerAdState();
@@ -378,11 +429,19 @@ class _GoogleBannerAdState extends State<_GoogleBannerAd> {
   @override
   Widget build(BuildContext context) {
     final ad = _ad;
-    if (!_loaded || ad == null) return const SizedBox.shrink();
-    return SizedBox(
-      width: ad.size.width.toDouble(),
-      height: ad.size.height.toDouble(),
-      child: AdWidget(ad: ad),
+    final child = !_loaded || ad == null
+        ? const SizedBox.shrink()
+        : SizedBox(
+            width: ad.size.width.toDouble(),
+            height: ad.size.height.toDouble(),
+            child: AdWidget(ad: ad),
+          );
+    return Visibility(
+      visible: widget.visible,
+      maintainState: true,
+      maintainAnimation: true,
+      maintainSize: true,
+      child: child,
     );
   }
 }
