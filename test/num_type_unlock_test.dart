@@ -119,7 +119,8 @@ void main() {
       expect(Storage.getInt('mc_numTypeUnlocked_integers', 0), 0);
       expect(state.numType, NumberType.natural);
       expect(state.currentScreen, GameScreen.menu);
-      expect(state.toastMessage, 'Need 500 🪙 to unlock Integers');
+      expect(state.numTypeUnlockFeedback, 'integers');
+      expect(state.toastVisible, isFalse);
     });
 
     test('insufficient coins do not unlock rationals or make balance negative',
@@ -134,7 +135,8 @@ void main() {
       expect(Storage.getInt('mc_numTypeUnlocked_rationals', 0), 0);
       expect(state.numType, NumberType.natural);
       expect(state.currentScreen, GameScreen.menu);
-      expect(state.toastMessage, 'Need 1200 🪙 to unlock Rationals');
+      expect(state.numTypeUnlockFeedback, 'rationals');
+      expect(state.toastVisible, isFalse);
     });
 
     test('reset and migration contracts remain compatible with unlock flags',

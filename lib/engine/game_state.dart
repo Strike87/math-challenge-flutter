@@ -312,6 +312,7 @@ class GameState extends ChangeNotifier {
   GameModal currentModal = GameModal.none;
   String toastMessage = '';
   bool toastVisible = false;
+  String numTypeUnlockFeedback = '';
   Timer? _toastTimer;
   Timer? _bigEmojiHideTimer;
   Timer? _postFeedbackTimer;
@@ -1220,7 +1221,8 @@ class GameState extends ChangeNotifier {
     if (nt == NumberType.integers && numTypeUnlocked['integers']! < 1) {
       // Match the original HTML economy.
       if (coins < 500) {
-        showToast('Need 500 🪙 to unlock Integers');
+        numTypeUnlockFeedback = 'integers';
+        notifyListeners();
         return;
       }
       addCoins(-500);
@@ -1228,12 +1230,14 @@ class GameState extends ChangeNotifier {
     } else if (nt == NumberType.rationals &&
         numTypeUnlocked['rationals']! < 1) {
       if (coins < 1200) {
-        showToast('Need 1200 🪙 to unlock Rationals');
+        numTypeUnlockFeedback = 'rationals';
+        notifyListeners();
         return;
       }
       addCoins(-1200);
       numTypeUnlocked['rationals'] = 1;
     }
+    numTypeUnlockFeedback = '';
     numType = nt;
     await save();
     showScreen(GameScreen.config);

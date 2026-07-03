@@ -553,6 +553,40 @@ void main() {
       }
     });
 
+    testWidgets('Coin Shop affordable avatar and hat cards omit buy pills',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        state.coins = 1000;
+        state.showModal(GameModal.coinShop);
+
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+
+        await tester.tap(find.byKey(const Key('shopHub_avatars')));
+        await tester.pumpAndSettle();
+        expect(find.text('Dragon'), findsOneWidget);
+        expect(find.text('🪙 300'), findsOneWidget);
+        expect(find.text('Buy'), findsNothing);
+        await tester.tap(find.text('Dragon'));
+        await tester.pumpAndSettle();
+        expect(state.shopOwned, contains('av_dragon'));
+
+        await tester.tap(find.byKey(const Key('shopBackToHub')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('shopHub_hats')));
+        await tester.pumpAndSettle();
+        expect(find.text('Crown'), findsOneWidget);
+        expect(find.text('🪙 150'), findsOneWidget);
+        expect(find.text('Buy'), findsNothing);
+        await tester.tap(find.text('Crown'));
+        await tester.pumpAndSettle();
+        expect(state.shopOwned, contains('hat_crown'));
+      } finally {
+        state.dispose();
+      }
+    });
+
     testWidgets('Coin Shop owned permanent items show owned state, not price',
         (tester) async {
       final state = await _makeState();

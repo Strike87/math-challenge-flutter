@@ -14,126 +14,134 @@ class ConfigScreen extends StatelessWidget {
     final gs = context.watch<GameState>();
     final s = context.watch<SettingsService>();
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _SetupHeader(
-              s: s,
-              title: 'Game Setup',
-              onBack: () => gs.showScreen(GameScreen.numType),
-            ),
-            const SizedBox(height: 8),
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _SetupHeader(
+                  s: s,
+                  title: 'Game Setup',
+                  onBack: () => gs.showScreen(GameScreen.numType),
+                ),
+                const SizedBox(height: 8),
 
-            // Players
-            _SectionTitle('Players', s),
-            _ToggleRow(
-              options: [
-                _ToggleOpt('👤 1 Player', 1, s.accent(GameConfig.sky)),
-                _ToggleOpt('👥 2 Players', 2, s.accent(GameConfig.punch)),
-              ],
-              active: gs.players,
-              onPick: (v) => gs.setOption('players', v),
-            ),
-            const SizedBox(height: 16),
+                // Players
+                _SectionTitle('Players', s),
+                _ToggleRow(
+                  options: [
+                    _ToggleOpt('👤 1 Player', 1, s.accent(GameConfig.sky)),
+                    _ToggleOpt('👥 2 Players', 2, s.accent(GameConfig.punch)),
+                  ],
+                  active: gs.players,
+                  onPick: (v) => gs.setOption('players', v),
+                ),
+                const SizedBox(height: 16),
 
-            // Mode
-            _SectionTitle('Game Mode', s),
-            _ModeTabs(
-              active: gs.mode,
-              players: gs.players,
-              onPick: (m) => gs.setOption('mode', m.name),
-            ),
-            const SizedBox(height: 8),
-            _ModeInfoCard(mode: gs.mode, s: s),
-            const SizedBox(height: 16),
+                // Mode
+                _SectionTitle('Game Mode', s),
+                _ModeTabs(
+                  active: gs.mode,
+                  players: gs.players,
+                  onPick: (m) => gs.setOption('mode', m.name),
+                ),
+                const SizedBox(height: 8),
+                _ModeInfoCard(mode: gs.mode, s: s),
+                const SizedBox(height: 16),
 
-            // Difficulty
-            _SectionTitle('Difficulty', s),
-            _ToggleRow(
-              options: [
-                _ToggleOpt('🌱 Easy', 'easy', s.accent(GameConfig.mint)),
-                _ToggleOpt('🔥 Medium', 'medium', s.accent(GameConfig.mango)),
-                _ToggleOpt('💥 Hard', 'hard', s.accent(GameConfig.punch)),
-              ],
-              active: gs.diff.name,
-              onPick: (v) => gs.setOption('diff', v),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _diffDesc(gs.diff),
-              style: TextStyle(
-                  color: s.muted, fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 16),
+                // Difficulty
+                _SectionTitle('Difficulty', s),
+                _ToggleRow(
+                  options: [
+                    _ToggleOpt('🌱 Easy', 'easy', s.accent(GameConfig.mint)),
+                    _ToggleOpt(
+                        '🔥 Medium', 'medium', s.accent(GameConfig.mango)),
+                    _ToggleOpt('💥 Hard', 'hard', s.accent(GameConfig.punch)),
+                  ],
+                  active: gs.diff.name,
+                  onPick: (v) => gs.setOption('diff', v),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _diffDesc(gs.diff),
+                  style: TextStyle(
+                      color: s.muted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 16),
 
-            // Question count
-            _SectionTitle('Number of Questions', s),
-            _ToggleRow(
-              options: [
-                _ToggleOpt('10', 10, s.accent(GameConfig.sky)),
-                _ToggleOpt('15', 15, s.accent(GameConfig.sky)),
-                _ToggleOpt('20', 20, s.accent(GameConfig.sky)),
-                _ToggleOpt('25', 25, s.accent(GameConfig.sky)),
-              ],
-              active: gs.questionCount,
-              onPick: (v) => gs.setOption('q', v),
-            ),
-            const SizedBox(height: 16),
+                // Question count
+                _SectionTitle('Number of Questions', s),
+                _ToggleRow(
+                  options: [
+                    _ToggleOpt('10', 10, s.accent(GameConfig.sky)),
+                    _ToggleOpt('15', 15, s.accent(GameConfig.sky)),
+                    _ToggleOpt('20', 20, s.accent(GameConfig.sky)),
+                    _ToggleOpt('25', 25, s.accent(GameConfig.sky)),
+                  ],
+                  active: gs.questionCount,
+                  onPick: (v) => gs.setOption('q', v),
+                ),
+                const SizedBox(height: 16),
 
-            // Adaptive toggle
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: s.surface,
-                borderRadius: BorderRadius.circular(24),
-                border:
-                    Border.all(color: const Color(GameConfig.borderMdLight)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 4),
+                // Adaptive toggle
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: s.surface,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                        color: const Color(GameConfig.borderMdLight)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Adaptive Difficulty',
-                          style: TextStyle(
-                            color: s.text,
-                            fontWeight: FontWeight.w800,
-                          ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Adaptive Difficulty',
+                              style: TextStyle(
+                                color: s.text,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              'Auto-adjusts to your skill level',
+                              style: TextStyle(color: s.muted, fontSize: 11),
+                            ),
+                          ],
                         ),
-                        Text(
-                          'Auto-adjusts to your skill level',
-                          style: TextStyle(color: s.muted, fontSize: 11),
-                        ),
-                      ],
-                    ),
+                      ),
+                      Switch.adaptive(
+                        value: gs.adaptive,
+                        activeThumbColor: s.accent(GameConfig.coral),
+                        onChanged: gs.setAdaptive,
+                      ),
+                    ],
                   ),
-                  Switch.adaptive(
-                    value: gs.adaptive,
-                    activeThumbColor: s.accent(GameConfig.coral),
-                    onChanged: gs.setAdaptive,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
+                ),
+                const SizedBox(height: 24),
 
-            NeoButton(
-              label: 'Next: Player Setup →',
-              color: GameConfig.coral,
-              onPressed: gs.goToPlayerSetup,
+                NeoButton(
+                  label: 'Next: Player Setup →',
+                  color: GameConfig.coral,
+                  onPressed: gs.goToPlayerSetup,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

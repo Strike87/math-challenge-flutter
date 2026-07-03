@@ -49,45 +49,52 @@ class _PlayerSetupScreenState extends State<PlayerSetupScreen> {
     final title = twoPlayer ? 'Player $currentPid Setup' : 'Player Setup';
     final primaryLabel = twoPlayer && _setupStep == 0 ? 'Next' : 'Start Game';
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  key: const Key('player-setup-back'),
-                  icon: const Icon(Icons.arrow_back),
-                  color: s.text,
-                  onPressed: () => _goBack(gs),
-                ),
-                Expanded(
-                  child: Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: s.text,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      fontFamily: AppFonts.head,
-                    ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      IconButton(
+                        key: const Key('player-setup-back'),
+                        icon: const Icon(Icons.arrow_back),
+                        color: s.text,
+                        onPressed: () => _goBack(gs),
+                      ),
+                      Expanded(
+                        child: Text(
+                          title,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: s.text,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            fontFamily: AppFonts.head,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 48),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 48),
-              ],
+                  const SizedBox(height: 16),
+                  _PlayerSection(pid: currentPid, gs: gs, s: s),
+                  const SizedBox(height: 24),
+                  NeoButton(
+                    key: const Key('player-setup-primary'),
+                    label: primaryLabel,
+                    color: GameConfig.coral,
+                    onPressed: () => _submit(gs),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            _PlayerSection(pid: currentPid, gs: gs, s: s),
-            const SizedBox(height: 24),
-            NeoButton(
-              key: const Key('player-setup-primary'),
-              label: primaryLabel,
-              color: GameConfig.coral,
-              onPressed: () => _submit(gs),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

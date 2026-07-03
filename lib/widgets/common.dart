@@ -115,16 +115,24 @@ class NeoButton extends StatelessWidget {
 
   Widget _content() {
     if (icon == null) {
-      return Text(
-        label,
-        maxLines: 1,
-        softWrap: false,
+      return FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          label,
+          maxLines: 1,
+          softWrap: false,
+        ),
       );
     }
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Icon(icon, size: fontSize + 2),
       const SizedBox(width: 8),
-      Text(label, maxLines: 1, softWrap: false),
+      Flexible(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(label, maxLines: 1, softWrap: false),
+        ),
+      ),
     ]);
   }
 }

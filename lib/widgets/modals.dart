@@ -2731,8 +2731,6 @@ class _ShopItemCard extends StatelessWidget {
                 const SizedBox(height: 4),
               if (owned && !item.consumable)
                 const _ShopPricePill(text: 'Owned', owned: true)
-              else if (canAfford)
-                const _ShopPricePill(text: 'Buy', owned: false)
               else
                 const SizedBox(height: 30),
             ],

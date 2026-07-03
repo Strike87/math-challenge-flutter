@@ -36,6 +36,7 @@ class SettingsService extends ChangeNotifier {
     required bool lowPerf,
     required bool reduceMotion,
     required double animSpeed,
+    bool notify = true,
   }) {
     _dark = dark;
     _sound = sound;
@@ -45,7 +46,7 @@ class SettingsService extends ChangeNotifier {
     _lowPerf = lowPerf;
     _reduceMotion = reduceMotion;
     _animSpeed = animSpeed;
-    notifyListeners();
+    if (notify) notifyListeners();
   }
 
   void toggleDark() {

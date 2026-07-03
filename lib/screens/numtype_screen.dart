@@ -38,9 +38,11 @@ class NumTypeScreen extends StatelessWidget {
             _NumTypeCard(
               icon: '±',
               label: 'Integers',
-              desc: gs.numTypeUnlocked['integers']! > 0
-                  ? 'Includes negatives: −3, 0, 5, …'
-                  : '🔒 Unlock for 🪙 500',
+              desc: gs.numTypeUnlockFeedback == 'integers'
+                  ? 'Need 🪙 500'
+                  : gs.numTypeUnlocked['integers']! > 0
+                      ? 'Includes negatives: −3, 0, 5, …'
+                      : '🔒 Unlock for 🪙 500',
               color: const Color(GameConfig.sky),
               locked: gs.numTypeUnlocked['integers']! == 0,
               onTap: () {
@@ -52,9 +54,11 @@ class NumTypeScreen extends StatelessWidget {
             _NumTypeCard(
               icon: '💧',
               label: 'Rationals / Decimals',
-              desc: gs.numTypeUnlocked['rationals']! > 0
-                  ? '1.5, 2.7, 0.3, …'
-                  : '🔒 Unlock for 🪙 1200',
+              desc: gs.numTypeUnlockFeedback == 'rationals'
+                  ? 'Need 🪙 1200'
+                  : gs.numTypeUnlocked['rationals']! > 0
+                      ? '1.5, 2.7, 0.3, …'
+                      : '🔒 Unlock for 🪙 1200',
               color: const Color(GameConfig.punch),
               locked: gs.numTypeUnlocked['rationals']! == 0,
               onTap: () {

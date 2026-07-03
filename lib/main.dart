@@ -61,7 +61,7 @@ class MathChallengeApp extends StatelessWidget {
   });
 
   final AdMobService adService;
-  final NativeIapPurchaseAdapter iapAdapter;
+  final IapPurchaseAdapter iapAdapter;
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +79,7 @@ class MathChallengeApp extends StatelessWidget {
             lowPerf: Storage.getBool('mc_lowPerf', false),
             reduceMotion: Storage.getBool('mc_reduceMotion', false),
             animSpeed: Storage.getDouble('mc_animSpeed', 1.0),
+            notify: false,
           );
           return AudioService(s);
         }),
@@ -90,7 +91,9 @@ class MathChallengeApp extends StatelessWidget {
             audio: a,
             adService: adService,
             iapAdapter: iapAdapter,
-            iapPurchaseStream: iapAdapter.purchaseStream,
+            iapPurchaseStream: iapAdapter is NativeIapPurchaseAdapter
+                ? (iapAdapter as NativeIapPurchaseAdapter).purchaseStream
+                : null,
           );
           state.load();
           return state;
@@ -132,9 +135,11 @@ class _MotionSettingsBridgeState extends State<_MotionSettingsBridge> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final mq = MediaQuery.of(context);
-    widget.settings.setPlatformReduceMotion(
-      mq.disableAnimations || mq.accessibleNavigation,
-    );
+    final reduceMotion = mq.disableAnimations || mq.accessibleNavigation;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.settings.setPlatformReduceMotion(reduceMotion);
+    });
   }
 
   @override
@@ -171,7 +176,7 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final state = context.watch<gs.GameState>();
     final s = context.watch<SettingsService>();
-    final banner = state.adService.bannerWidget();
+    final banner = state.bannerWidget();
     return Scaffold(
       backgroundColor: s.bg,
       body: Stack(
@@ -208,7 +213,7 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
             ),
           ),
           // Foreground screens
-          _screenFor(state.currentScreen),
+          Positioned.fill(child: _screenFor(state.currentScreen)),
           if (banner != null)
             Positioned(
               left: 0,

@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   ".dart_tool/flutter_build/f0e1b6e6e5e1ca3c92df74b23f104005/outputs.json": {
-    "mtime": 1783027854.8772433,
-    "ast_hash": "69b8e3b0ccbb59e3d5b1d587e58020c6",
+    "mtime": 1783085997.716461,
+    "ast_hash": "388f7447fa872ed9c0734d9125530a32",
     "semantic_hash": ""
   },
   ".dart_tool/hooks_runner/objective_c/0e709b51b1/dependencies.dependencies_hash_file.json": {
@@ -50,8 +50,8 @@
     "semantic_hash": ""
   },
   ".dart_tool/hooks_runner/objective_c/8e04c28b44/dependencies.dependencies_hash_file.json": {
-    "mtime": 1783032469.8374693,
-    "ast_hash": "fe5d325ae43b620a0453e744cf9f7cb4",
+    "mtime": 1783090385.6774619,
+    "ast_hash": "b5b6fafd14b7b871abdb21f1cb743a51",
     "semantic_hash": ""
   },
   ".dart_tool/hooks_runner/objective_c/8e04c28b44/hook.dependencies_hash_file.json": {
@@ -60,13 +60,13 @@
     "semantic_hash": ""
   },
   ".dart_tool/hooks_runner/objective_c/8e04c28b44/input.json": {
-    "mtime": 1783032467.918455,
-    "ast_hash": "bfd70aa2d1ab7a45a8c234f9ad178693",
+    "mtime": 1783090384.6537528,
+    "ast_hash": "c783fa5f734818917cf7c1af35c277f6",
     "semantic_hash": ""
   },
   ".dart_tool/hooks_runner/objective_c/8e04c28b44/output.json": {
-    "mtime": 1783032469.4214625,
-    "ast_hash": "2195e20170ae264b192806c374ba3e6f",
+    "mtime": 1783090385.4987535,
+    "ast_hash": "65fa516e3a8819e089d6345ad445c58c",
     "semantic_hash": ""
   },
   ".dart_tool/hooks_runner/objective_c/aaabec192e/dependencies.dependencies_hash_file.json": {
@@ -155,8 +155,8 @@
     "semantic_hash": ""
   },
   "lib/engine/game_state.dart": {
-    "mtime": 1783026273.5380616,
-    "ast_hash": "d03f0ee9bfed6ad692ed7de93684db0e",
+    "mtime": 1783090220.65127,
+    "ast_hash": "5db13f9e08b575766acbdf46f6f1547e",
     "semantic_hash": ""
   },
   "lib/engine/question_generator.dart": {
@@ -170,8 +170,8 @@
     "semantic_hash": ""
   },
   "lib/main.dart": {
-    "mtime": 1783023924.3950305,
-    "ast_hash": "c80323379dbf78430de7ea102bedaaba",
+    "mtime": 1783090220.6242647,
+    "ast_hash": "51f56e90d3fbc1e45239841e3d3c408e",
     "semantic_hash": ""
   },
   "lib/models/celebration.dart": {
@@ -195,13 +195,13 @@
     "semantic_hash": ""
   },
   "lib/screens/config_screen.dart": {
-    "mtime": 1782858193.901146,
-    "ast_hash": "145ab1269c658fc202d633157e8eab09",
+    "mtime": 1783090234.9589922,
+    "ast_hash": "814654158076c318e14f0a1492a5da8b",
     "semantic_hash": ""
   },
   "lib/screens/game_screen.dart": {
-    "mtime": 1783023976.6562443,
-    "ast_hash": "13864e08080078ee0e5e25f059448c4b",
+    "mtime": 1783084622.684488,
+    "ast_hash": "db72ab7f66397cc075a466b07d705a31",
     "semantic_hash": ""
   },
   "lib/screens/menu_screen.dart": {
@@ -210,13 +210,13 @@
     "semantic_hash": ""
   },
   "lib/screens/numtype_screen.dart": {
-    "mtime": 1783023953.2690663,
-    "ast_hash": "3104da7c4ba0f3610651d832bb5ca04b",
+    "mtime": 1783090235.0939946,
+    "ast_hash": "9efde50d63e50ff3497ebc442dbc23f9",
     "semantic_hash": ""
   },
   "lib/screens/player_screen.dart": {
-    "mtime": 1783034273.2393684,
-    "ast_hash": "0c2fb389bf59cd0e48be520db7fdd20d",
+    "mtime": 1783090220.628264,
+    "ast_hash": "e2fa781d6bd955bc5be682649dd390c2",
     "semantic_hash": ""
   },
   "lib/services/admob.dart": {
@@ -255,13 +255,13 @@
     "semantic_hash": ""
   },
   "lib/widgets/common.dart": {
-    "mtime": 1783025344.9610107,
-    "ast_hash": "c7e748097ea7a5050d3cf008c7b4f4df",
+    "mtime": 1783090220.6572664,
+    "ast_hash": "2867669f89730746e1e6e63eed6edeee",
     "semantic_hash": ""
   },
   "lib/widgets/modals.dart": {
-    "mtime": 1783032239.4506812,
-    "ast_hash": "2f3285758d2391179d42317cbdce4233",
+    "mtime": 1783090220.6612725,
+    "ast_hash": "7748e700eb7332aacb9eefeb00b76201",
     "semantic_hash": ""
   },
   "test/achievement_trigger_test.dart": {
@@ -305,8 +305,8 @@
     "semantic_hash": ""
   },
   "test/modal_behavior_test.dart": {
-    "mtime": 1783032383.1012478,
-    "ast_hash": "be07f5fb0453b17dc2c4a9a332712cc4",
+    "mtime": 1783090556.8853428,
+    "ast_hash": "ffbedb2ee125952e000e2ddbe4e706ec",
     "semantic_hash": ""
   },
   "test/mode_player_eligibility_test.dart": {
@@ -315,8 +315,8 @@
     "semantic_hash": ""
   },
   "test/num_type_unlock_test.dart": {
-    "mtime": 1782569659.3521862,
-    "ast_hash": "52b7b4412917f973115e6e167b8e5e6c",
+    "mtime": 1783090367.3409145,
+    "ast_hash": "8d4e87c552fda04d2fc51e96d0bbd9d2",
     "semantic_hash": ""
   },
   "test/persistence_schema_test.dart": {
@@ -325,8 +325,8 @@
     "semantic_hash": ""
   },
   "test/player_setup_test.dart": {
-    "mtime": 1783032767.030271,
-    "ast_hash": "5908258943894194caeb97b62f660a64",
+    "mtime": 1783084594.2474825,
+    "ast_hash": "f2042f83ab71faf3508606d78b0bac6c",
     "semantic_hash": ""
   },
   "test/power_pack_test.dart": {
@@ -345,8 +345,8 @@
     "semantic_hash": ""
   },
   "test/question_timer_test.dart": {
-    "mtime": 1783024076.12934,
-    "ast_hash": "6d05721e2ddd03ae949e2ca0ff8ca8bd",
+    "mtime": 1783084594.252491,
+    "ast_hash": "20b903ff004c4c14c71985236eaae6e5",
     "semantic_hash": ""
   },
   "test/reset_parity_test.dart": {
@@ -360,8 +360,8 @@
     "semantic_hash": ""
   },
   "test/shield_animation_test.dart": {
-    "mtime": 1783002214.80418,
-    "ast_hash": "9c6e9fceca0ac3d9791d006fef358bf0",
+    "mtime": 1783085093.1270168,
+    "ast_hash": "c2adb1c13003c55813de44125ba8eb34",
     "semantic_hash": ""
   },
   "test/shop_ownership_test.dart": {
@@ -490,13 +490,13 @@
     "semantic_hash": ""
   },
   ".dart_tool/hooks_runner/objective_c/8e04c28b44/stderr.txt": {
-    "mtime": 1783032467.9254594,
+    "mtime": 1783090384.661756,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   ".dart_tool/hooks_runner/objective_c/8e04c28b44/stdout.txt": {
-    "mtime": 1783032468.0504577,
-    "ast_hash": "d6bbc09fc7a0c225ada12e8b7c3b3c4b",
+    "mtime": 1783090384.6897542,
+    "ast_hash": "9768cf7c439dd88b5cb989ad5c163a25",
     "semantic_hash": ""
   },
   ".dart_tool/hooks_runner/objective_c/aaabec192e/stderr.txt": {

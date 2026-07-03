@@ -1,4 +1,4 @@
-package com.example.math_challenge
+package com.mohamedk.mathchallenge
 
 import io.flutter.embedding.android.FlutterActivity
 
