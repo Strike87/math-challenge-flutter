@@ -1,7 +1,0 @@
---------- beginning of main
-07-03 23:07:24.975 31831 31831 D TextSelection: onUseCache cache=false
-07-03 23:07:38.103 31831 31831 D TextSelection: onUseCache cache=false
-07-03 23:07:51.264 31831 31831 D TextSelection: onUseCache cache=false
-07-03 23:08:04.291 31831 31831 D TextSelection: onUseCache cache=false
-07-03 23:08:13.221 31831 31831 D TextSelection: onUseCache cache=false
-07-03 23:08:23.383 31831 31831 D TextSelection: onUseCache cache=false

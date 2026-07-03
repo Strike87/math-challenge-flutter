@@ -1,7 +1,0 @@
---------- beginning of main
-07-04 00:57:39.100 20823 20887 E mali_gralloc: Requested R8 format is not supported with this allocator. R8 format is only supported with the AIDL allocator
-07-04 00:57:39.100 20823 20887 E mali_gralloc: ERROR: Unrecognized and/or unsupported format R8 and usage TEXTURE + RENDER + HWC
-07-04 00:57:39.100 20823 20887 E mali_gralloc: ERROR: Unrecognized and/or unsupported format RGBA_10101010 and usage TEXTURE + RENDER + HWC
-07-04 00:57:39.100 20823 20887 E mali_gralloc: Requested R8 format is not supported with this allocator. R8 format is only supported with the AIDL allocator
-07-04 00:57:39.100 20823 20887 E mali_gralloc: ERROR: Unrecognized and/or unsupported format R8 and usage TEXTURE + RENDER + HWC
-07-04 00:57:39.100 20823 20887 E mali_gralloc: ERROR: Unrecognized and/or unsupported format RGBA_10101010 and usage TEXTURE + RENDER + HWC
