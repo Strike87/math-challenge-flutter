@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../game_config.dart';
-import '../services/settings.dart';
+import 'game_config.dart';
+import 'services/settings.dart';
 
 /// App-wide theme + colour helpers driven by [SettingsService].
 class AppTheme {

@@ -260,8 +260,7 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
                 ),
               ),
             ),
-          // Modal layer
-          const ModalRouter(),
+          const Positioned.fill(child: ModalRouter()),
           CelebrationOverlay(state: state, settings: s),
         ],
       ),

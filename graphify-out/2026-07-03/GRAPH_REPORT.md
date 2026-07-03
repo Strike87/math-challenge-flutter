@@ -1,11 +1,11 @@
 # Graph Report - math_challenge_flutter  (2026-07-03)
 
 ## Corpus Check
-- 108 files · ~461,434 words
+- 109 files · ~461,514 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1963 nodes · 2563 edges · 96 communities (82 shown, 14 thin omitted)
+- 1966 nodes · 2571 edges · 97 communities (83 shown, 14 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -107,7 +107,8 @@
 - [[_COMMUNITY_CLAUDE|CLAUDE.md]]
 - [[_COMMUNITY_CLAUDE|CLAUDE.md]]
 - [[_COMMUNITY_extraction-spec|extraction-spec.md]]
-- [[_COMMUNITY_settings.gradle|settings.gradle]]
+- [[_COMMUNITY_extraction-spec|extraction-spec.md]]
+- [[_COMMUNITY_String|String?]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `SettingsService` - 73 edges
@@ -136,7 +137,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (96 total, 14 thin omitted)
+## Communities (97 total, 14 thin omitted)
 
 ### Community 0 - "game_state.dart"
 Cohesion: 0.01
@@ -148,7 +149,7 @@ Nodes (86): CustomPainter, double?, a, accuracy, actions, active, _answerControl
 
 ### Community 2 - "iap.dart"
 Cohesion: 0.03
-Nodes (74): Completer, _, DateTime, Duration, InAppPurchase, accepts, AdultGateChallenge, all (+66 more)
+Nodes (73): Completer, _, DateTime, InAppPurchase, accepts, AdultGateChallenge, all, answer (+65 more)
 
 ### Community 3 - "game_screen.dart"
 Cohesion: 0.03
@@ -156,11 +157,11 @@ Nodes (58): AdRequest, AdRequest get, BannerAd?, Future, _ad, AdMobErrorCode, Ad
 
 ### Community 4 - "game_config.dart"
 Cohesion: 0.03
-Nodes (64): Animation, AnimationController, active, _ActivePlayerPowerUpIcon, _ActivePowerUpGlow, _AnswersGrid, _buildOpacity, child (+56 more)
+Nodes (65): Animation, AnimationController, Duration, active, _ActivePlayerPowerUpIcon, _ActivePowerUpGlow, _AnswersGrid, _buildOpacity (+57 more)
 
 ### Community 5 - "admob.dart"
-Cohesion: 0.06
-Nodes (54): MathChallengeApp, _PlayerCard, SettingsService, _AccessibilityPanel, AchievementsModal, _AdultGateQuestionStep, _AdultGateWarningStep, _AdventureRule (+46 more)
+Cohesion: 0.05
+Nodes (57): MathChallengeApp, _PlayerCard, SettingsService, BigEmojiOverlay, NeoButton, NeoCard, _AccessibilityPanel, AchievementsModal (+49 more)
 
 ### Community 6 - "common.dart"
 Cohesion: 0.04
@@ -168,19 +169,19 @@ Nodes (56): achievementsDef, avatarAccessories, avatarBases, avatarColors, avata
 
 ### Community 7 - "game_data.dart"
 Cohesion: 0.04
-Nodes (49): ../constants/avatars.dart, dart:ui, EdgeInsets?, AppFonts, availableAvatars, avatar, AvatarSelectorTile, AvatarWidget (+41 more)
+Nodes (46): ../constants/avatars.dart, dart:ui, EdgeInsets?, AppFonts, availableAvatars, avatar, AvatarSelectorTile, AvatarWidget (+38 more)
 
 ### Community 8 - "player.dart"
 Cohesion: 0.05
-Nodes (40): Achievement, boss, confidence, consumable, correct, count, DailyBoss, DailyChallenge (+32 more)
+Nodes (38): adService, _AppShell, _AppShellState, build, child, createState, didChangeAppLifecycleState, didChangeDependencies (+30 more)
 
 ### Community 9 - "StatelessWidget"
 Cohesion: 0.05
-Nodes (39): enums.dart, accessory, accuracy, ans, avatar, avgMs, base, bonus (+31 more)
+Nodes (40): Achievement, boss, confidence, consumable, correct, count, DailyBoss, DailyChallenge (+32 more)
 
 ### Community 10 - "settings.dart"
-Cohesion: 0.06
-Nodes (35): adService, build, child, createState, didChangeAppLifecycleState, didChangeDependencies, dispose, iapAdapter (+27 more)
+Cohesion: 0.05
+Nodes (39): enums.dart, accessory, accuracy, ans, avatar, avgMs, base, bonus (+31 more)
 
 ### Community 11 - "celebration_overlay.dart"
 Cohesion: 0.05
@@ -196,17 +197,13 @@ Nodes (43): @pragma, AudioPlayer, dart:io, _PluginRegistrant, register, dart:typ
 
 ### Community 14 - "question_generator_test.dart"
 Cohesion: 0.07
-Nodes (28): active, color, compact, _diffDesc, disabled, firstSpace, icon, label (+20 more)
+Nodes (26): IconData?, _brandWordStyle, _CampaignCard, color, _DailyNavBtn, _EqualBrandBar, _EqualBrandIcon, gs (+18 more)
 
 ### Community 15 - "config_screen.dart"
 Cohesion: 0.07
-Nodes (26): IconData?, _brandWordStyle, _CampaignCard, color, _DailyNavBtn, _EqualBrandBar, _EqualBrandIcon, gs (+18 more)
+Nodes (28): active, color, compact, _diffDesc, disabled, firstSpace, icon, label (+20 more)
 
 ### Community 16 - "menu_screen.dart"
-Cohesion: 0.06
-Nodes (54): dart:convert, package:flutter/services.dart, package:flutter_test/flutter_test.dart, package:math_challenge/engine/game_state.dart, package:math_challenge/models/game_data.dart, package:math_challenge/services/audio.dart, package:math_challenge/services/settings.dart, package:math_challenge/services/storage.dart (+46 more)
-
-### Community 17 - "enums.dart"
 Cohesion: 0.10
 Nodes (20): division,
   mixed,
@@ -218,6 +215,10 @@ Nodes (20): division,
   double,
   shield,
   freeze,, combo, Difficulty, fromString, GameMode, insane (+12 more)
+
+### Community 17 - "enums.dart"
+Cohesion: 0.15
+Nodes (20): GameScreen, _MotionSettingsBridge, _MotionSettingsBridgeState, _BossCircle, _BossCircleState, _FloatingShieldBadge, _FloatingShieldBadgeState, GameScreen (+12 more)
 
 ### Community 18 - "storage.dart"
 Cohesion: 0.11
@@ -232,24 +233,24 @@ Cohesion: 0.11
 Nodes (17): all, AvatarCategory, AvatarPool, birds, bugs, _buildAll, categories, emojis (+9 more)
 
 ### Community 21 - "avatars.dart"
-Cohesion: 0.13
-Nodes (23): GameScreen, _AppShell, _AppShellState, _MotionSettingsBridge, _MotionSettingsBridgeState, _BossCircle, _BossCircleState, _FloatingShieldBadge (+15 more)
+Cohesion: 0.08
+Nodes (24): Color?, ../game_config.dart, build, color, desc, icon, label, locked (+16 more)
 
 ### Community 22 - "player_screen.dart"
-Cohesion: 0.08
-Nodes (26): ../engine/game_state.dart, ../game_config.dart, avatar, _AvatarOption, build, createState, _goBack, gs (+18 more)
+Cohesion: 0.12
+Nodes (17): ../engine/game_state.dart, avatar, _AvatarOption, build, createState, _goBack, gs, onTap (+9 more)
 
 ### Community 23 - "GameState"
-Cohesion: 0.08
-Nodes (26): ChangeNotifier, Color?, GameState, build, ConfigScreen, build, build, MenuScreen (+18 more)
-
-### Community 24 - "@visibleForTesting"
 Cohesion: 0.15
 Nodes (13): @visibleForTesting, debugGenerateDailyBoss, debugGetAdaptDiff, debugQuestionTimerDurationMs, debugRecordAdaptiveAnswer, debugRecordCompletedGameForAds, debugRestartQuestionTimer, debugSetMasterStage (+5 more)
 
+### Community 24 - "@visibleForTesting"
+Cohesion: 0.09
+Nodes (22): package:flutter/material.dart, package:math_challenge/main.dart, package:math_challenge/screens/config_screen.dart, package:math_challenge/services/admob.dart, package:math_challenge/services/iap.dart, package:math_challenge/widgets/common.dart, package:provider/provider.dart, package:shared_preferences/shared_preferences.dart (+14 more)
+
 ### Community 25 - "mode_player_eligibility_test.dart"
-Cohesion: 0.08
-Nodes (23): package:flutter/material.dart, package:math_challenge/screens/config_screen.dart, package:math_challenge/screens/player_screen.dart, return, audioGlobalChannel, audioPlayerChannel, find, _hasDisabledOpacity (+15 more)
+Cohesion: 0.18
+Nodes (11): ChangeNotifier, GameState, build, ConfigScreen, build, build, MenuScreen, build (+3 more)
 
 ### Community 27 - "IapPurchaseAdapter"
 Cohesion: 0.40
@@ -260,10 +261,14 @@ Cohesion: 0.29
 Nodes (7): DevIapPurchaseAdapter, IapPurchaseAdapter, NativeIapPurchaseAdapter, UnavailableIapPurchaseAdapter, _FakeIapPurchaseAdapter, _FakeIapPurchaseAdapter, _FakeIapPurchaseAdapter
 
 ### Community 29 - "AdMobException"
+Cohesion: 0.07
+Nodes (45): package:flutter/services.dart, package:flutter_test/flutter_test.dart, package:math_challenge/engine/game_state.dart, package:math_challenge/game_config.dart, package:math_challenge/models/celebration.dart, package:math_challenge/models/enums.dart, package:math_challenge/services/audio.dart, package:math_challenge/services/settings.dart (+37 more)
+
+### Community 30 - "Feature Parity Matrix"
 Cohesion: 0.05
 Nodes (41): package:math_challenge/engine/question_generator.dart, _additionRanges, _answerIndex, audioGlobalChannel, audioPlayerChannel, _containsNegative, direct, dividend (+33 more)
 
-### Community 30 - "Feature Parity Matrix"
+### Community 31 - "_GoogleBannerAd"
 Cohesion: 0.05
 Nodes (37): 10. Achievements, 11. Shop, Economy, IAP, And Ads, 12. Avatar Builder, Emoji, And Icons, 13. Confetti, Celebration, Audio, And Haptics, 14. Visual Theme And Responsive Layout, 15. Persistence And Migration, 16. Release Services And Android Integration, 1. Navigation And Screen Flow (+29 more)
 
@@ -278,40 +283,40 @@ Nodes (31): package:math_challenge/screens/menu_screen.dart, package:math_challe
 
 ### Community 34 - "Math Challenge Flutter v1.1 Roadmap"
 Cohesion: 0.07
-Nodes (29): AdMobRequestPolicy get, AdMobService? adService,
-  int, package:flutter/widgets.dart, package:math_challenge/services/admob.dart, audioGlobalChannel, audioPlayerChannel, bannerHides, bannerShows (+21 more)
+Nodes (28): AdMobRequestPolicy get, AdMobService? adService,
+  int, package:flutter/widgets.dart, audioGlobalChannel, audioPlayerChannel, bannerHides, bannerShows, bannerWidget (+20 more)
 
 ### Community 35 - "visual_parity_test.dart"
 Cohesion: 0.07
-Nodes (26): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+18 more)
+Nodes (26): AvatarCustom, package:math_challenge/models/game_data.dart, package:math_challenge/models/player.dart, package:math_challenge/widgets/modals.dart, ScrollableState, answerCorrect, audioGlobalChannel, audioPlayerChannel (+18 more)
 
 ### Community 36 - "admob_parity_test.dart"
-Cohesion: 0.08
-Nodes (24): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+16 more)
+Cohesion: 0.07
+Nodes (26): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+18 more)
 
 ### Community 37 - "package:flutter/services.dart"
 Cohesion: 0.08
-Nodes (23): package:confetti/confetti.dart, package:math_challenge/widgets/celebration_overlay.dart, Set, audioGlobalChannel, audioPlayerChannel, _classBlock, _correctEmojiSet, init (+15 more)
+Nodes (24): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+16 more)
 
 ### Community 38 - "What You Must Do When Invoked"
-Cohesion: 0.09
-Nodes (22): Approved Clone Additions, Behavior Freeze, Behavior Tracker, Behavioral Parity Tracker (BPT), BPT-001 Purchase Contract, BPT-001A: Adult Gate / Purchase Entry, BPT-001B: Product Constants / Purchase Launch, BPT-001C: Delivery / Duplicate Protection / Acknowledgement (+14 more)
+Cohesion: 0.08
+Nodes (23): package:confetti/confetti.dart, package:math_challenge/widgets/celebration_overlay.dart, Set, audioGlobalChannel, audioPlayerChannel, _classBlock, _correctEmojiSet, init (+15 more)
 
 ### Community 39 - "What You Must Do When Invoked"
 Cohesion: 0.09
-Nodes (21): Accessibility, Add Custom Fonts (Optional but Recommended), AdMob Setup, Build a Debug APK, Build a Release APK (for sideloading), Build an AAB (for Google Play Store upload), Build Instructions (Android APK / AAB), Credits (+13 more)
+Nodes (22): Approved Clone Additions, Behavior Freeze, Behavior Tracker, Behavioral Parity Tracker (BPT), BPT-001 Purchase Contract, BPT-001A: Adult Gate / Purchase Entry, BPT-001B: Product Constants / Purchase Launch, BPT-001C: Delivery / Duplicate Protection / Acknowledgement (+14 more)
 
 ### Community 40 - "feedback_layer_test.dart"
+Cohesion: 0.09
+Nodes (21): Accessibility, Add Custom Fonts (Optional but Recommended), AdMob Setup, Build a Debug APK, Build a Release APK (for sideloading), Build an AAB (for Google Play Store upload), Build Instructions (Android APK / AAB), Credits (+13 more)
+
+### Community 41 - "Behavioral Parity Tracker (BPT)"
 Cohesion: 0.10
 Nodes (20): audioGlobalChannel, audioPlayerChannel, buyCalls, buyProduct, _ChallengeSequence, completeCalls, completePurchase, _index (+12 more)
 
-### Community 41 - "Behavioral Parity Tracker (BPT)"
-Cohesion: 0.11
-Nodes (18): 0. Locked architectural decisions — do not revisit these, 10. What "done" means for this task, 1. Core game loop & question generation (per mode), 2. Power-ups, 3. Achievements, 4. Daily challenges, 5. Coin economy & shop, 6. Settings & accessibility (+10 more)
-
 ### Community 42 - "Math Challenge: Boss Battle Edition — Flutter Port"
 Cohesion: 0.11
-Nodes (18): Map, audioGlobalChannel, audioPlayerChannel, buyCalls, buyError, buyProduct, completeCalls, completePurchase (+10 more)
+Nodes (18): 0. Locked architectural decisions — do not revisit these, 10. What "done" means for this task, 1. Core game loop & question generation (per mode), 2. Power-ups, 3. Achievements, 4. Daily challenges, 5. Coin economy & shop, 6. Settings & accessibility (+10 more)
 
 ### Community 43 - "iap_adult_gate_test.dart"
 Cohesion: 0.11
@@ -319,43 +324,43 @@ Nodes (17): 10. What this spec does NOT cover (intentionally), 11. How to use th
 
 ### Community 44 - "Math Challenge — Full 1:1 Behavioral Port Master Prompt (Flutter)"
 Cohesion: 0.11
-Nodes (17): Opacity, package:math_challenge/screens/game_screen.dart, init, load, lowPerf, main, _makeState, pump (+9 more)
+Nodes (17): Map, audioGlobalChannel, audioPlayerChannel, buyCalls, buyProduct, completeCalls, completePurchase, init (+9 more)
 
 ### Community 45 - "iap_restore_native_safety_test.dart"
 Cohesion: 0.11
-Nodes (17): package:math_challenge/services/iap.dart, audioGlobalChannel, audioPlayerChannel, buyCalls, buyProduct, completeCalls, completePurchase, init (+9 more)
+Nodes (17): Opacity, package:math_challenge/screens/game_screen.dart, init, load, lowPerf, main, _makeState, pump (+9 more)
 
 ### Community 46 - "Math Challenge — Visual Identity Spec for Flutter Implementation"
-Cohesion: 0.12
-Nodes (16): AvatarCustom, package:math_challenge/widgets/modals.dart, ScrollableState, audioGlobalChannel, audioPlayerChannel, _dailyChallengesHost, init, load (+8 more)
+Cohesion: 0.11
+Nodes (17): audioGlobalChannel, audioPlayerChannel, buyCalls, buyError, buyProduct, completeCalls, completePurchase, init (+9 more)
 
 ### Community 47 - "shield_animation_test.dart"
-Cohesion: 0.13
-Nodes (14): 10. Daily challenges — exact full list (6 total), 11. Power-ups — exact 6 types, 13. Avatar customization options, 14. In-app purchase products — exact 4 products, 15. AdMob — exact cadence numbers, 17. Persisted storage keys (corrected, ~40+ confirmed), 18. How this document relates to the other two, 2. Number type transforms (applied after base generation) (+6 more)
+Cohesion: 0.12
+Nodes (15): dart:convert, audioGlobalChannel, audioPlayerChannel, jsDateString, loadSettingsFromStorage, main, makeState, todayKey (+7 more)
 
 ### Community 48 - "iap_delivery_test.dart"
 Cohesion: 0.13
-Nodes (14): Boss Collection, Config Screen Changes, Current Code Anchors, Goal, Math Challenge Flutter v1.1 Technical Blueprint, Mistake Review, New Files, Non-Negotiables (+6 more)
+Nodes (14): 10. Daily challenges — exact full list (6 total), 11. Power-ups — exact 6 types, 13. Avatar customization options, 14. In-app purchase products — exact 4 products, 15. AdMob — exact cadence numbers, 17. Persisted storage keys (corrected, ~40+ confirmed), 18. How this document relates to the other two, 2. Number type transforms (applied after base generation) (+6 more)
 
 ### Community 49 - "persistence_schema_test.dart"
-Cohesion: 0.14
-Nodes (13): package:math_challenge/game_config.dart, package:math_challenge/models/celebration.dart, package:math_challenge/models/enums.dart, package:math_challenge/widgets/common.dart, package:provider/provider.dart, _emojiHost, main, makeSettings (+5 more)
+Cohesion: 0.13
+Nodes (14): Boss Collection, Config Screen Changes, Current Code Anchors, Goal, Math Challenge Flutter v1.1 Technical Blueprint, Mistake Review, New Files, Non-Negotiables (+6 more)
 
 ### Community 50 - "modal_behavior_test.dart"
 Cohesion: 0.13
 Nodes (14): _answerCorrect, audioGlobalChannel, audioPlayerChannel, _count, init, load, main, _makeState (+6 more)
 
 ### Community 51 - "Math Challenge — Complete Game Data & Behavior Reference"
-Cohesion: 0.20
-Nodes (9): bool get, CelebrationEvent, CelebrationKind, emoji, id, isActive, kind, message (+1 more)
+Cohesion: 0.17
+Nodes (11): package:math_challenge/screens/player_screen.dart, return, audioGlobalChannel, audioPlayerChannel, _host, init, load, main (+3 more)
 
 ### Community 52 - "Math Challenge Flutter v1.1 Technical Blueprint"
 Cohesion: 0.20
-Nodes (10): 16. Accessibility & display settings — exact behavior per toggle, Animation speed, Colorblind-safe palette, Dark mode, Dyslexia-friendly font, Performance / low-power mode, Reduce motion, Reset All Data (+2 more)
+Nodes (9): bool get, CelebrationEvent, CelebrationKind, emoji, id, isActive, kind, message (+1 more)
 
 ### Community 53 - "power_up_rules_test.dart"
 Cohesion: 0.20
-Nodes (9): package:math_challenge/models/player.dart, answerCorrect, audioGlobalChannel, audioPlayerChannel, beatDailyBoss, expectBoss, main, makeState (+1 more)
+Nodes (10): 16. Accessibility & display settings — exact behavior per toggle, Animation speed, Colorblind-safe palette, Dark mode, Dyslexia-friendly font, Performance / low-power mode, Reduce motion, Reset All Data (+2 more)
 
 ### Community 54 - "celebration.dart"
 Cohesion: 0.22
@@ -466,24 +471,24 @@ Cohesion: 0.67
 Nodes (3): `GameState`, `RuntimeState`, State Changes
 
 ## Knowledge Gaps
-- **1473 isolated node(s):** `build_start`, `build_end`, `dependencies`, `code_assets`, `data_assets` (+1468 more)
+- **1474 isolated node(s):** `build_start`, `build_end`, `dependencies`, `code_assets`, `data_assets` (+1469 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `SettingsService` connect `admob.dart` to `game_state.dart`, `modals.dart`, `visual_parity_test.dart`, `game_config.dart`, `game_data.dart`, `settings.dart`, `celebration_overlay.dart`, `main.dart`, `audio.dart`, `question_generator_test.dart`, `config_screen.dart`, `avatars.dart`, `player_screen.dart`, `GameState`?**
-  _High betweenness centrality (0.062) - this node is a cross-community bridge._
-- **Why does `GameState` connect `GameState` to `game_state.dart`, `modals.dart`, `visual_parity_test.dart`, `game_config.dart`, `settings.dart`, `main.dart`, `question_generator_test.dart`, `config_screen.dart`, `avatars.dart`, `player_screen.dart`?**
-  _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **Why does `Operation` connect `State` to `game_state.dart`, `enums.dart`, `StatelessWidget`, `modals.dart`?**
+- **Why does `SettingsService` connect `admob.dart` to `game_state.dart`, `modals.dart`, `visual_parity_test.dart`, `game_config.dart`, `game_data.dart`, `player.dart`, `celebration_overlay.dart`, `main.dart`, `audio.dart`, `question_generator_test.dart`, `config_screen.dart`, `enums.dart`, `avatars.dart`, `player_screen.dart`, `mode_player_eligibility_test.dart`?**
+  _High betweenness centrality (0.064) - this node is a cross-community bridge._
+- **Why does `GameState` connect `mode_player_eligibility_test.dart` to `game_state.dart`, `modals.dart`, `visual_parity_test.dart`, `game_config.dart`, `player.dart`, `main.dart`, `question_generator_test.dart`, `config_screen.dart`, `enums.dart`, `avatars.dart`, `player_screen.dart`?**
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+- **Why does `Operation` connect `State` to `game_state.dart`, `menu_screen.dart`, `settings.dart`, `modals.dart`?**
   _High betweenness centrality (0.012) - this node is a cross-community bridge._
 - **What connects `build_start`, `build_end`, `dependencies` to the rest of the system?**
-  _1473 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1474 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `game_state.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.007380073800738007 - nodes in this community are weakly interconnected._
 - **Should `modals.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.022988505747126436 - nodes in this community are weakly interconnected._
 - **Should `iap.dart` be split into smaller, more focused modules?**
-  _Cohesion score 0.02666666666666667 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02702702702702703 - nodes in this community are weakly interconnected._

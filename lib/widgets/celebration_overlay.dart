@@ -136,7 +136,9 @@ class _CelebrationOverlayState extends State<CelebrationOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_event.isActive && !_showBadge) return const SizedBox.shrink();
+    if (!_event.isActive && !_showBadge) {
+      return const Positioned.fill(child: SizedBox.shrink());
+    }
 
     final fadeDuration = widget.settings.duration(180);
     final popDuration = widget.settings.duration(260);
