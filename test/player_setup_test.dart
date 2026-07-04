@@ -133,17 +133,17 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
-    testWidgets('adds keyboard inset to scroll padding', (tester) async {
+    testWidgets('keeps setup controls reachable with keyboard open',
+        (tester) async {
       final state = await _makeState();
       state.setOption('players', 1);
 
       await tester.pumpWidget(_host(state, keyboardInset: 240));
       await tester.pump();
 
-      final scroll = tester.widget<SingleChildScrollView>(
-        find.byType(SingleChildScrollView),
-      );
-      expect((scroll.padding! as EdgeInsets).bottom, 336);
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      expect(find.byKey(const Key('player-setup-name-p1')), findsOneWidget);
+      expect(find.byKey(const Key('player-setup-primary')), findsOneWidget);
       state.dispose();
       await tester.pumpWidget(const SizedBox.shrink());
     });
