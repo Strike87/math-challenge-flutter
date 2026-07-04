@@ -631,12 +631,37 @@ void main() {
         expect(state.coins, GameState.dailyBonusCoins);
         expect(state.pendingIapProduct, isNull);
         expect(state.currentModal, GameModal.coinShop);
+        expect(find.text('PACKS'), findsOneWidget);
+        expect(find.byKey(const Key('shopBackToHub')), findsOneWidget);
 
         await tester.tap(find.text('+20 Coins'));
         await tester.pumpAndSettle();
 
         expect(state.coins, GameState.dailyBonusCoins);
         expect(find.text('Claimed'), findsOneWidget);
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('Coin Shop reward actions stay in the active section',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        state.showModal(GameModal.coinShop);
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+
+        await tester.ensureVisible(find.byKey(const Key('shopHub_buy')));
+        await tester.tap(find.byKey(const Key('shopHub_buy')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Watch Ad'));
+        await tester.pumpAndSettle();
+
+        expect(state.currentModal, GameModal.coinShop);
+        expect(find.text('BUY'), findsOneWidget);
+        expect(find.byKey(const Key('shopBackToHub')), findsOneWidget);
+        expect(find.byKey(const Key('shopHub_buy')), findsNothing);
       } finally {
         state.dispose();
       }

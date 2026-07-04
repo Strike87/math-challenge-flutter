@@ -17,9 +17,18 @@ class AdMobUnitIds {
   );
 
   static const fromEnvironment = AdMobUnitIds(
-    banner: String.fromEnvironment('ADMOB_BANNER_ID'),
-    interstitial: String.fromEnvironment('ADMOB_INTERSTITIAL_ID'),
-    rewarded: String.fromEnvironment('ADMOB_REWARDED_ID'),
+    banner: String.fromEnvironment(
+      'ADMOB_BANNER_ID',
+      defaultValue: 'ca-app-pub-5674349229505017/3485297513',
+    ),
+    interstitial: String.fromEnvironment(
+      'ADMOB_INTERSTITIAL_ID',
+      defaultValue: 'ca-app-pub-5674349229505017/9643207834',
+    ),
+    rewarded: String.fromEnvironment(
+      'ADMOB_REWARDED_ID',
+      defaultValue: 'ca-app-pub-5674349229505017/9292157969',
+    ),
   );
 
   final String banner;
@@ -85,7 +94,7 @@ abstract class AdMobService {
 
   Future<bool> showRewarded();
 
-  Widget? bannerWidget();
+  Widget? bannerWidget({bool forceHidden = false});
 }
 
 class UnavailableAdMobService implements AdMobService {
@@ -110,7 +119,7 @@ class UnavailableAdMobService implements AdMobService {
   Future<bool> showRewarded() async => false;
 
   @override
-  Widget? bannerWidget() => null;
+  Widget? bannerWidget({bool forceHidden = false}) => null;
 }
 
 class DevAdMobService implements AdMobService {
@@ -162,7 +171,8 @@ class DevAdMobService implements AdMobService {
   }
 
   @override
-  Widget? bannerWidget() => nativeRelease ? null : const SizedBox.shrink();
+  Widget? bannerWidget({bool forceHidden = false}) =>
+      nativeRelease ? null : const SizedBox.shrink();
 
   void _guardNativeReleaseSimulation() {
     if (nativeRelease) {
@@ -241,14 +251,16 @@ class GoogleMobileAdsService implements AdMobService {
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
           ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) => ad.dispose(),
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              if (!completer.isCompleted) completer.complete(true);
+            },
             onAdFailedToShowFullScreenContent: (ad, error) {
               ad.dispose();
               if (!completer.isCompleted) completer.complete(false);
             },
           );
           ad.show();
-          if (!completer.isCompleted) completer.complete(true);
         },
         onAdFailedToLoad: (_) {
           if (!completer.isCompleted) completer.complete(false);
@@ -268,19 +280,25 @@ class GoogleMobileAdsService implements AdMobService {
     if (ad == null) return false;
     _rewardedAd = null;
     final completer = Completer<bool>();
+    var earned = false;
 
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
         unawaited(_ensureRewardedLoaded());
-        if (!completer.isCompleted) {
+        Future<void>.delayed(const Duration(milliseconds: 300), () {
+          if (completer.isCompleted) return;
+          if (earned) {
+            completer.complete(true);
+            return;
+          }
           completer.completeError(
             const AdMobException(
               AdMobErrorCode.rewardNotEarned,
               'Rewarded ad closed before reward.',
             ),
           );
-        }
+        });
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
         ad.dispose();
@@ -292,7 +310,7 @@ class GoogleMobileAdsService implements AdMobService {
     try {
       await ad.show(
         onUserEarnedReward: (ad, reward) {
-          if (!completer.isCompleted) completer.complete(true);
+          earned = true;
         },
       );
     } catch (_) {
@@ -300,10 +318,7 @@ class GoogleMobileAdsService implements AdMobService {
       unawaited(_ensureRewardedLoaded());
       if (!completer.isCompleted) completer.complete(false);
     }
-    return completer.future.timeout(
-      const Duration(seconds: 30),
-      onTimeout: () => false,
-    );
+    return completer.future;
   }
 
   Future<RewardedAd?> _ensureRewardedLoaded() {
@@ -344,7 +359,7 @@ class GoogleMobileAdsService implements AdMobService {
   }
 
   @override
-  Widget? bannerWidget() {
+  Widget? bannerWidget({bool forceHidden = false}) {
     if (!_initialized || bannerAdUnitId.isEmpty) {
       return null;
     }
@@ -352,7 +367,7 @@ class GoogleMobileAdsService implements AdMobService {
       key: ValueKey('banner-$bannerAdUnitId'),
       adUnitId: bannerAdUnitId,
       request: adRequest,
-      visible: _bannerRequested,
+      visible: _bannerRequested && !forceHidden,
     );
   }
 }
@@ -473,8 +488,6 @@ class _GoogleBannerAdState extends State<_GoogleBannerAd> {
     return Visibility(
       visible: widget.visible,
       maintainState: true,
-      maintainAnimation: true,
-      maintainSize: true,
       child: child,
     );
   }

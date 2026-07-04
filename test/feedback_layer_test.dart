@@ -104,6 +104,32 @@ void main() {
       }
     });
 
+    testWidgets('2P active player changes when the next question appears',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        state.players = 2;
+        state.mode = GameMode.standard;
+        state.adaptive = false;
+        state.questionCount = 10;
+        state.rt.challenge = Operation.addition;
+        state.startGame();
+        final firstQuestion = state.rt.q;
+
+        state.onAnswer(firstQuestion!.ans);
+
+        expect(state.rt.activePlayer, 1);
+        await tester.pump(const Duration(milliseconds: 1299));
+        expect(state.rt.activePlayer, 1);
+
+        await tester.pump(const Duration(milliseconds: 1));
+        expect(state.rt.activePlayer, 2);
+        expect(state.rt.q, isNot(same(firstQuestion)));
+      } finally {
+        state.dispose();
+      }
+    });
+
     testWidgets(
         'new games clear cached reaction emoji and stale turn callbacks',
         (tester) async {
@@ -322,7 +348,7 @@ void main() {
         }
 
         expect(state.currentModal, GameModal.win);
-        state.replayGame();
+        await state.replayGame();
 
         expect(state.masterLevel, 0);
         expect(state.currentMasterLevel, GameConfig.masterLevels.first);
@@ -438,6 +464,35 @@ void main() {
 
         expect(state.audio.debugTonePlayCount, 2);
         expect(state.audio.debugVibrationCount, 2);
+      } finally {
+        state.dispose();
+      }
+    });
+
+    test('rapid sound effects are queued instead of dropping the correct tone',
+        () async {
+      final state = await _makeState(sound: true);
+      try {
+        await state.audio.playPowerUp();
+        await state.audio.playCorrect();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        expect(state.audio.debugTonePlayCount, 2);
+      } finally {
+        state.dispose();
+      }
+    });
+
+    test('automatic power-up rewards do not play the power-up sound', () async {
+      final state = await _makeState(sound: true);
+      try {
+        _startStandard(state);
+        final before = state.audio.debugTonePlayCount;
+
+        state.onAnswer(state.rt.q!.ans);
+
+        expect(state.p[1].pups, containsAll(PowerUp.values));
+        expect(state.audio.debugTonePlayCount, before + 1);
       } finally {
         state.dispose();
       }

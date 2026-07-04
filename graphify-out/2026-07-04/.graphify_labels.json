@@ -51,13 +51,11 @@
   "49": "persistence_schema_test.dart",
   "50": "modal_behavior_test.dart",
   "51": "Math Challenge — Complete Game Data & Behavior Reference",
-  "52": "Math Challenge Flutter v1.1 Technical Blueprint",
   "53": "power_up_rules_test.dart",
   "54": "celebration.dart",
   "55": "16. Accessibility & display settings — exact behavior per toggle",
   "56": "graphify reference: extra exports and benchmark",
   "57": "graphify reference: extra exports and benchmark",
-  "58": "3. Timer system",
   "59": "Persistence Schema Audit",
   "60": "Phase Checklist",
   "61": "GeneratedPluginRegistrant",
@@ -97,5 +95,7 @@
   "95": "settings.gradle",
   "96": "String?",
   "97": "dart_build_result.json",
-  "98": "_GameScreenState"
+  "98": "_SkillRadarPainter",
+  "99": "dart_build_result.json",
+  "100": "_PressableScaleState"
 }

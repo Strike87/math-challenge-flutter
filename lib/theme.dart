@@ -18,7 +18,8 @@ class AppTheme {
     final text = isDark
         ? const Color(GameConfig.textDark)
         : const Color(GameConfig.textLight);
-    final bodyFamily = bodyFont;
+    final bodyFamily = s.dyslexia ? dyslexiaFont : bodyFont;
+    final headFamily = s.dyslexia ? dyslexiaFont : headFont;
 
     return ThemeData(
       useMaterial3: true,
@@ -55,17 +56,17 @@ class AppTheme {
         titleLarge: TextStyle(
           color: text,
           fontWeight: FontWeight.w900,
-          fontFamily: headFont,
+          fontFamily: headFamily,
         ),
         titleMedium: TextStyle(
           color: text,
           fontWeight: FontWeight.w800,
-          fontFamily: headFont,
+          fontFamily: headFamily,
         ),
         titleSmall: TextStyle(
           color: text,
           fontWeight: FontWeight.w800,
-          fontFamily: headFont,
+          fontFamily: headFamily,
         ),
       ),
       fontFamily: bodyFamily,
@@ -84,4 +85,5 @@ class AppTheme {
   /// Headline font (Baloo 2 in original).
   static const String headFont = 'Baloo2';
   static const String bodyFont = 'PlusJakartaSans';
+  static const String dyslexiaFont = 'OpenDyslexic';
 }

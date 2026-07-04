@@ -306,6 +306,7 @@ class GameState extends ChangeNotifier {
   List<String> iapDeliveredTxs = [];
   int adGameCount = 0;
   int lastRewardedAt = 0;
+  bool _pendingInterstitialAd = false;
 
   // ─── UI routing ─────────────────────────────────────────────
   GameScreen currentScreen = GameScreen.menu;
@@ -1024,8 +1025,11 @@ class GameState extends ChangeNotifier {
       currentModal == GameModal.none &&
       (screen == GameScreen.numType || screen == GameScreen.player);
 
-  Widget? bannerWidget() =>
-      isBannerEligibleFor(currentScreen) ? adService.bannerWidget() : null;
+  Widget? bannerWidget() => adsRemoved
+      ? null
+      : adService.bannerWidget(
+          forceHidden: !isBannerEligibleFor(currentScreen),
+        );
 
   int rewardedCooldownRemainingMs({int? nowMillis}) {
     if (lastRewardedAt <= 0) return 0;
@@ -1049,22 +1053,33 @@ class GameState extends ChangeNotifier {
 
   Future<void> _recordCompletedGameForAds() async {
     if (adsRemoved) {
+      _pendingInterstitialAd = false;
       await _hideAdsSafely();
       return;
     }
     adGameCount++;
-    await Storage.setInt('mc_adGameCount', adGameCount);
-    if (adGameCount % interstitialCadenceGames != 0) return;
-
-    try {
-      await adService.showInterstitial();
-    } catch (_) {
-      // No-fill or service errors are deliberately silent.
+    if (adGameCount % interstitialCadenceGames == 0) {
+      _pendingInterstitialAd = true;
     }
+    await Storage.setInt('mc_adGameCount', adGameCount);
   }
 
   @visibleForTesting
   Future<void> debugRecordCompletedGameForAds() => _recordCompletedGameForAds();
+
+  @visibleForTesting
+  bool get debugPendingInterstitialAd => _pendingInterstitialAd;
+
+  Future<void> _showPendingInterstitialAd() async {
+    if (!_pendingInterstitialAd) return;
+    _pendingInterstitialAd = false;
+    if (adsRemoved || rt.gameActive || rt.state == 'playing') return;
+    try {
+      await adService.showInterstitial();
+    } on AdMobException {
+      // Ad no-fill/service errors should not interrupt result dismissal.
+    }
+  }
 
   Future<bool> claimRewardedAdCoins({int? nowMillis}) async {
     if (adsRemoved) {
@@ -1398,6 +1413,9 @@ class GameState extends ChangeNotifier {
 
   void _nextTurn() {
     if (!rt.gameActive) return;
+    if (players == 2 && mode == GameMode.standard && rt.totalTurns > 0) {
+      rt.activePlayer = rt.activePlayer == 1 ? 2 : 1;
+    }
 
     // Warm-up: first 3 questions in standard mode
     if (rt.isWarmUp && rt.warmUpCount < 3) {
@@ -1721,14 +1739,12 @@ class GameState extends ChangeNotifier {
         ![GameMode.combo, GameMode.survival].contains(mode);
     if (eligibleForPU && pl.correct == 1) {
       pl.pups.addAll(PowerUp.values);
-      audio.playPowerUp();
       showToast('🎁 Got one of each power-up!');
     } else if (eligibleForPU &&
         pl.correct > 1 &&
         pl.correct % GameConfig.puRewardInterval == 0) {
       final pu = PowerUp.values[_rng.nextInt(PowerUp.values.length)];
       pl.pups.add(pu);
-      audio.playPowerUp();
       showToast('🎁 Got: ${pu.label}!');
     }
 
@@ -1873,8 +1889,6 @@ class GameState extends ChangeNotifier {
     }
     if (rt.totalTurns >= rt.maxTurns) {
       _endGameAfterFeedback(true, false);
-    } else if (players == 2 && mode == GameMode.standard) {
-      rt.activePlayer = rt.activePlayer == 1 ? 2 : 1;
     }
   }
 
@@ -1970,6 +1984,8 @@ class GameState extends ChangeNotifier {
         audio.playWrong();
         audio.vibrateWrong();
         _shakeScreen(vibrate: false);
+      } else {
+        audio.playWrong();
       }
       // Follow-up
       if (!isSkip &&
@@ -2228,8 +2244,10 @@ class GameState extends ChangeNotifier {
     bigEmojiVisible = false;
   }
 
-  void replayGame() {
+  Future<void> replayGame() async {
+    final dismissedResult = currentModal == GameModal.win;
     closeModal();
+    if (dismissedResult) await _showPendingInterstitialAd();
     if (rt.challenge == Operation.master) {
       _masterLevel = 0;
       _masterProgress = 0;
@@ -2239,8 +2257,10 @@ class GameState extends ChangeNotifier {
     startGame();
   }
 
-  void quitToMenu() {
+  Future<void> quitToMenu() async {
+    final dismissedResult = currentModal == GameModal.win;
     closeModal();
+    if (dismissedResult) await _showPendingInterstitialAd();
     rt.gameActive = false;
     rt.state = 'idle';
     rt.timer?.cancel();
@@ -2846,6 +2866,7 @@ class GameState extends ChangeNotifier {
     adsRemoved = false;
     iapDeliveredTxs = [];
     adGameCount = 0;
+    _pendingInterstitialAd = false;
     lastRewardedAt = 0;
     p = [
       PlayerState(),

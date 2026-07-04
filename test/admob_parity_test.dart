@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,10 +39,12 @@ void main() {
       expect(state.isBannerEligibleFor(GameScreen.menu), isFalse);
       expect(state.isBannerEligibleFor(GameScreen.config), isFalse);
       expect(state.isBannerEligibleFor(GameScreen.game), isFalse);
+      expect(state.bannerWidget(), isNotNull);
 
       state.adsRemoved = true;
       expect(state.isBannerEligibleFor(GameScreen.numType), isFalse);
       expect(state.isBannerEligibleFor(GameScreen.player), isFalse);
+      expect(state.bannerWidget(), isNull);
     });
 
     test('banner sync shows only eligible screens and hides elsewhere',
@@ -71,12 +75,14 @@ void main() {
 
       state.showModal(GameModal.coinShop);
       await Future<void>.delayed(Duration.zero);
-      expect(state.bannerWidget(), isNull);
+      expect(state.bannerWidget(), isNotNull);
+      expect(ads.bannerForceHidden, isTrue);
       expect(ads.bannerHides, 1);
 
       state.closeModal();
       await Future<void>.delayed(Duration.zero);
       expect(state.bannerWidget(), isNotNull);
+      expect(ads.bannerForceHidden, isFalse);
       expect(ads.bannerShows, 2);
     });
 
@@ -115,7 +121,18 @@ void main() {
       );
     });
 
-    test('completed games persist counter and request interstitial every third',
+    test('interstitial is not requested during active gameplay', () async {
+      final ads = _FakeAdMobService();
+      final state = await _makeState(adService: ads);
+      state.currentScreen = GameScreen.game;
+      state.startGame();
+
+      expect(state.rt.gameActive, isTrue);
+      expect(ads.interstitialShows, 0);
+      expect(state.debugPendingInterstitialAd, isFalse);
+    });
+
+    test('completed games persist counter and pend interstitial every third',
         () async {
       final ads = _FakeAdMobService();
       final state = await _makeState(adService: ads);
@@ -123,11 +140,89 @@ void main() {
       await state.debugRecordCompletedGameForAds();
       await state.debugRecordCompletedGameForAds();
       expect(ads.interstitialShows, 0);
+      expect(state.debugPendingInterstitialAd, isFalse);
 
       await state.debugRecordCompletedGameForAds();
-      expect(ads.interstitialShows, 1);
+      expect(ads.interstitialShows, 0);
+      expect(state.debugPendingInterstitialAd, isTrue);
       expect(state.adGameCount, 3);
       expect(Storage.getInt('mc_adGameCount', 0), 3);
+    });
+
+    test('dismissing result modal shows pending interstitial', () async {
+      final ads = _FakeAdMobService();
+      final state = await _makeState(adService: ads);
+
+      await state.debugRecordCompletedGameForAds();
+      await state.debugRecordCompletedGameForAds();
+      await state.debugRecordCompletedGameForAds();
+      state.showModal(GameModal.win);
+
+      await state.quitToMenu();
+
+      expect(ads.interstitialShows, 1);
+      expect(state.debugPendingInterstitialAd, isFalse);
+    });
+
+    test('replay waits for pending interstitial before gameplay resumes',
+        () async {
+      final interstitialStarted = Completer<void>();
+      final interstitialDismissed = Completer<void>();
+      final ads = _FakeAdMobService()
+        ..onShowInterstitial = () async {
+          interstitialStarted.complete();
+          await interstitialDismissed.future;
+          return true;
+        };
+      final state = await _makeState(adService: ads);
+
+      await state.debugRecordCompletedGameForAds();
+      await state.debugRecordCompletedGameForAds();
+      await state.debugRecordCompletedGameForAds();
+      state.showModal(GameModal.win);
+
+      final replay = state.replayGame();
+      await interstitialStarted.future;
+      expect(state.rt.gameActive, isFalse);
+
+      interstitialDismissed.complete();
+      await replay;
+
+      expect(state.rt.gameActive, isTrue);
+      expect(ads.interstitialShows, 1);
+      expect(state.debugPendingInterstitialAd, isFalse);
+    });
+
+    test('pending interstitial is cleared instead of shown during gameplay',
+        () async {
+      final ads = _FakeAdMobService();
+      final state = await _makeState(adService: ads);
+
+      await state.debugRecordCompletedGameForAds();
+      await state.debugRecordCompletedGameForAds();
+      await state.debugRecordCompletedGameForAds();
+      state.rt.gameActive = true;
+      state.rt.state = 'playing';
+      state.showModal(GameModal.win);
+
+      await state.quitToMenu();
+
+      expect(ads.interstitialShows, 0);
+      expect(state.debugPendingInterstitialAd, isFalse);
+    });
+
+    test('interstitial cadence remains every three completed games', () async {
+      final ads = _FakeAdMobService();
+      final state = await _makeState(adService: ads);
+
+      for (var i = 0; i < 6; i++) {
+        await state.debugRecordCompletedGameForAds();
+        state.showModal(GameModal.win);
+        await state.quitToMenu();
+      }
+
+      expect(ads.interstitialShows, 2);
+      expect(state.adGameCount, 6);
     });
 
     test('adsRemoved disables interstitial requests', () async {
@@ -143,6 +238,24 @@ void main() {
 
       expect(state.adGameCount, 0);
       expect(ads.interstitialShows, 0);
+    });
+
+    test('adsRemoved before result dismissal clears pending interstitial',
+        () async {
+      final ads = _FakeAdMobService();
+      final state = await _makeState(adService: ads);
+
+      await state.debugRecordCompletedGameForAds();
+      await state.debugRecordCompletedGameForAds();
+      await state.debugRecordCompletedGameForAds();
+      state.adsRemoved = true;
+      state.showModal(GameModal.win);
+
+      await state.quitToMenu();
+
+      expect(ads.interstitialShows, 0);
+      expect(state.debugPendingInterstitialAd, isFalse);
+      expect(state.adGameCount, 3);
     });
 
     test('rewarded success grants exactly 10 coins and persists cooldown',
@@ -289,6 +402,19 @@ void main() {
         ).hasAll,
         isFalse,
       );
+
+      expect(
+        AdMobUnitIds.resolve(useTestAds: false).banner,
+        'ca-app-pub-5674349229505017/3485297513',
+      );
+      expect(
+        AdMobUnitIds.resolve(useTestAds: false).interstitial,
+        'ca-app-pub-5674349229505017/9643207834',
+      );
+      expect(
+        AdMobUnitIds.resolve(useTestAds: false).rewarded,
+        'ca-app-pub-5674349229505017/9292157969',
+      );
     });
   });
 }
@@ -330,10 +456,12 @@ class _FakeAdMobService implements AdMobService {
   bool rewardedResult;
   bool throwRewarded = false;
   AdMobException? rewardedException;
+  Future<bool> Function()? onShowInterstitial;
   int bannerShows = 0;
   int bannerHides = 0;
   int interstitialShows = 0;
   int rewardedShows = 0;
+  bool bannerForceHidden = false;
 
   @override
   AdMobRequestPolicy get requestPolicy => AdMobRequestPolicy.familiesSafe;
@@ -352,12 +480,19 @@ class _FakeAdMobService implements AdMobService {
   }
 
   @override
-  Widget? bannerWidget() => const SizedBox(key: Key('fakeBanner'));
+  Widget? bannerWidget({bool forceHidden = false}) {
+    bannerForceHidden = forceHidden;
+    return forceHidden
+        ? const SizedBox.shrink()
+        : const SizedBox(key: Key('fakeBanner'));
+  }
 
   @override
   Future<bool> showInterstitial() async {
     interstitialShows++;
-    return true;
+    final show = onShowInterstitial;
+    if (show == null) return true;
+    return show();
   }
 
   @override

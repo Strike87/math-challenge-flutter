@@ -48,7 +48,7 @@ class NeoButton extends StatelessWidget {
             border: Border.all(color: c.withValues(alpha: 0.75), width: 1.5),
           ),
           child: DefaultTextStyle(
-            style: _labelStyle(c),
+            style: _labelStyle(c, settings),
             child: IconTheme(
               data: IconThemeData(color: c, size: fontSize + 2),
               child: _content(),
@@ -87,7 +87,7 @@ class NeoButton extends StatelessWidget {
           ],
         ),
         child: DefaultTextStyle(
-          style: _labelStyle(textColor),
+          style: _labelStyle(textColor, settings),
           child: IconTheme(
             data: IconThemeData(color: textColor, size: fontSize + 2),
             child: _content(),
@@ -97,12 +97,12 @@ class NeoButton extends StatelessWidget {
     );
   }
 
-  TextStyle _labelStyle(Color color) {
+  TextStyle _labelStyle(Color color, SettingsService settings) {
     return TextStyle(
       color: color,
       fontWeight: FontWeight.w800,
       fontSize: fontSize,
-      fontFamily: AppFonts.head,
+      fontFamily: AppFonts.headFor(settings),
       letterSpacing: 0.5,
       height: 1.05,
     );
@@ -185,6 +185,13 @@ class _PressableScaleState extends State<_PressableScale> {
 class AppFonts {
   static const String head = 'Baloo2';
   static const String body = 'PlusJakartaSans';
+  static const String dyslexia = 'OpenDyslexic';
+
+  static String headFor(SettingsService settings) =>
+      settings.dyslexia ? dyslexia : head;
+
+  static String bodyFor(SettingsService settings) =>
+      settings.dyslexia ? dyslexia : body;
 }
 
 /// Renders an avatar — either an emoji string or a [AvatarCustom] stack.

@@ -29,4 +29,41 @@ void main() {
       isFalse,
     );
   });
+
+  testWidgets('modal keeps settings visible without blanking app',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await Storage.init();
+
+    await tester.pumpWidget(const MathChallengeApp(
+      adService: UnavailableAdMobService(),
+      iapAdapter: DevIapPurchaseAdapter(isNativeRelease: false),
+    ));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('MATH'), findsOneWidget);
+    expect(find.byType(Scaffold), findsOneWidget);
+  });
+
+  testWidgets('reduce motion renders modal immediately', (tester) async {
+    SharedPreferences.setMockInitialValues({'mc_reduceMotion': true});
+    await Storage.init();
+
+    await tester.pumpWidget(const MathChallengeApp(
+      adService: UnavailableAdMobService(),
+      iapAdapter: DevIapPurchaseAdapter(isNativeRelease: false),
+    ));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('MATH'), findsOneWidget);
+    expect(find.byType(Scaffold), findsOneWidget);
+  });
 }

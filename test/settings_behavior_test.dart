@@ -4,6 +4,7 @@ import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
+import 'package:math_challenge/theme.dart';
 import 'package:math_challenge/widgets/common.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -80,6 +81,30 @@ void main() {
         isNot(const Color(GameConfig.coral)));
     expect(settings.opColor(Operation.addition),
         isNot(const Color(GameConfig.mint)));
+  });
+
+  test('dyslexia mode switches theme typography to OpenDyslexic', () async {
+    final settings = makeSettings();
+
+    var theme = AppTheme.light(settings);
+    expect(theme.textTheme.bodyMedium?.fontFamily, AppTheme.bodyFont);
+    expect(theme.textTheme.titleLarge?.fontFamily, AppTheme.headFont);
+    expect(
+        theme.textTheme.bodyMedium?.fontFamily, isNot(AppTheme.dyslexiaFont));
+
+    settings.load(
+      dark: false,
+      sound: true,
+      vibration: true,
+      dyslexia: true,
+      colorblind: false,
+      lowPerf: false,
+      reduceMotion: false,
+      animSpeed: 1.0,
+    );
+    theme = AppTheme.light(settings);
+    expect(theme.textTheme.bodyMedium?.fontFamily, AppTheme.dyslexiaFont);
+    expect(theme.textTheme.titleLarge?.fontFamily, AppTheme.dyslexiaFont);
   });
 
   testWidgets('reduce motion hides big answer emoji reactions', (tester) async {

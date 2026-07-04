@@ -1,0 +1,96 @@
+6:07-04 16:05:10.502   437   437 E TrustyKeymaster: Getting response size (28)
+8:07-04 16:05:10.504   437   437 E TrustyKeymaster: Getting response size (28)
+10:07-04 16:05:10.537   437   437 E TrustyKeymaster: Getting response size (8)
+11:07-04 16:05:10.537   437   437 E TrustyKeymaster: Response of size 4 contained error code -1000
+16:07-04 16:05:10.538   436   436 E keystore2:     0: system/security/keystore2/src/operation.rs:428: Finish failed.
+30:07-04 16:05:15.021  1163  1277 E libprocessgroup: set_timerslack_ns write failed: Permission denied
+33:07-04 16:05:15.309   356   370 E lowmemorykiller: process_mrelease 7122 failed: No such process
+34:07-04 16:05:15.349   356   371 E lowmemorykiller: process_mrelease 10549 failed: No such process
+35:07-04 16:05:15.377   356   370 E lowmemorykiller: process_mrelease 8991 failed: No such process
+36:07-04 16:05:15.414   356   371 E lowmemorykiller: process_mrelease 10716 failed: No such process
+38:07-04 16:05:15.442   356   370 E lowmemorykiller: process_mrelease 10783 failed: No such process
+39:07-04 16:05:15.468   356   371 E lowmemorykiller: process_mrelease 5304 failed: No such process
+40:07-04 16:05:15.518   356   370 E lowmemorykiller: process_mrelease 10682 failed: No such process
+41:07-04 16:05:15.551   356   371 E lowmemorykiller: process_mrelease 10746 failed: No such process
+42:07-04 16:05:15.803   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+43:07-04 16:05:15.805   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+44:07-04 16:05:15.822   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+45:07-04 16:05:15.823   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+46:07-04 16:05:15.847   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+47:07-04 16:05:15.849   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+48:07-04 16:05:16.110  1163  4552 E ActivityThread: Failed to find provider info for com.transsion.gamemode.provider
+110:07-04 16:05:19.355 11047 11237 E ActivityThread: Failed to find provider info for com.xiaomi.market.provider.DirectMailProvider
+112:07-04 16:05:19.698 11047 11255 E document.hubhub: hiddenapi: Accessing hidden field Landroid/webkit/WebViewFactory;->sDataDirectorySuffix:Ljava/lang/String; (runtime_flags=0, domain=platform, api=max-target-o) from Lcom/bytedance/sdk/openadsdk/multipro/QEh; (domain=app, TargetSdkVersion=35) using reflection: denied
+128:07-04 16:05:22.133 11047 11047 E cr_VariationsSeedLoader: Failed loading variations seed. Variations disabled.
+139:07-04 16:05:25.488   356   370 E lowmemorykiller: process_mrelease 10579 failed: No such process
+140:07-04 16:05:25.565   356   371 E lowmemorykiller: process_mrelease 11414 failed: No such process
+141:07-04 16:05:25.632   356   370 E lowmemorykiller: process_mrelease 5057 failed: No such process
+142:07-04 16:05:25.775   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+143:07-04 16:05:25.777   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+144:07-04 16:05:25.794  1163  1279 E KernelCpuSpeedReader: Failed to read cpu-freq: /sys/devices/system/cpu/cpu٠/cpufreq/stats/time_in_state: open failed: ENOENT (No such file or directory)
+145:07-04 16:05:25.794  1163  1279 E KernelCpuSpeedReader: Failed to read cpu-freq: /sys/devices/system/cpu/cpu٦/cpufreq/stats/time_in_state: open failed: ENOENT (No such file or directory)
+146:07-04 16:05:25.826   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+147:07-04 16:05:25.827   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+148:07-04 16:05:25.838   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+149:07-04 16:05:25.842   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+164:07-04 16:05:26.863 11181 11181 E SlowAppComponent: 1046ms: ThreadsDbPropertiesContentProvider instantiating…
+179:07-04 16:05:27.266   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+180:07-04 16:05:27.407 30883 11504 E Ads     : Error waiting for future.
+181:07-04 16:05:27.407 30883 11504 E Ads     : java.util.concurrent.TimeoutException
+182:07-04 16:05:27.407 30883 11504 E Ads     : 	at java.util.concurrent.FutureTask.get(FutureTask.java:206)
+183:07-04 16:05:27.407 30883 11504 E Ads     : 	at com.google.android.gms.ads.nonagon.signals.gmscore.p.call(:com.google.android.gms@262434062@26.24.34 (200400-938041327):47)
+184:07-04 16:05:27.407 30883 11504 E Ads     : 	at fjil.a(:com.google.android.gms@262434062@26.24.34 (200400-938041327):3)
+185:07-04 16:05:27.407 30883 11504 E Ads     : 	at fjhl.run(:com.google.android.gms@262434062@26.24.34 (200400-938041327):19)
+186:07-04 16:05:27.407 30883 11504 E Ads     : 	at fjim.run(:com.google.android.gms@262434062@26.24.34 (200400-938041327):5)
+187:07-04 16:05:27.407 30883 11504 E Ads     : 	at becd.c(:com.google.android.gms@262434062@26.24.34 (200400-938041327):50)
+188:07-04 16:05:27.407 30883 11504 E Ads     : 	at becd.run(:com.google.android.gms@262434062@26.24.34 (200400-938041327):66)
+189:07-04 16:05:27.407 30883 11504 E Ads     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+190:07-04 16:05:27.407 30883 11504 E Ads     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+191:07-04 16:05:27.407 30883 11504 E Ads     : 	at behr.run(:com.google.android.gms@262434062@26.24.34 (200400-938041327):8)
+192:07-04 16:05:27.407 30883 11504 E Ads     : 	at java.lang.Thread.run(Thread.java:1572)
+200:07-04 16:05:27.977 11181 11659 E MlockOptimization: mlock 0x7ccb9f9000 ٧٣١٥٨٦٥٦ failed for 7ccb9f9000-7cd4583000 rw-p 00000000 fe:4a 338697                         /data/app/~~fBAHPcNZyAOhrYwJVcRdNw==/com.facebook.katana-iBkjVXd5fjF9TxsnhfKvtQ==/oat/arm64/base.vdex
+201:07-04 16:05:28.784 11181 11703 E facebook.katana: No implementation found for int com.facebook.soloader.MergedSoMapping$Invoke_JNI_OnLoad.libelfconfig_so() (tried Java_com_facebook_soloader_MergedSoMapping_00024Invoke_1JNI_1OnLoad_libelfconfig_1so and Java_com_facebook_soloader_MergedSoMapping_00024Invoke_1JNI_1OnLoad_libelfconfig_1so__) - is the library loaded, e.g. System.loadLibrary?
+275:07-04 16:05:29.637 11032 11032 E Ads     : JS: Refused to get unsafe header "X-Afma-Gcache-IsGcacheHit" (https://www.gstatic.com/mysidia/18f82a7e858a826fb1ec350454dac03b.js?tag=addon/rewarded_video:422)
+277:07-04 16:05:29.683   437   437 E TrustyKeymaster: Getting response size (56)
+278:07-04 16:05:29.722 11032 11032 E Ads     : JS: Refused to get unsafe header "X-Afma-Gcache-IsGcacheHit" (https://www.gstatic.com/mysidia/18f82a7e858a826fb1ec350454dac03b.js?tag=addon/rewarded_video:422)
+283:07-04 16:05:30.028   437   437 E TrustyKeymaster: Getting response size (8)
+303:07-04 16:05:31.352   356   371 E lowmemorykiller: process_mrelease 10705 failed: No such process
+351:07-04 16:05:31.850 11181 11703 E facebook.katana: No implementation found for void com.facebook.quicklog.QuickPerformanceLoggerNativeProvider.nativeUpdateQPLInstance() (tried Java_com_facebook_quicklog_QuickPerformanceLoggerNativeProvider_nativeUpdateQPLInstance and Java_com_facebook_quicklog_QuickPerformanceLoggerNativeProvider_nativeUpdateQPLInstance__) - is the library loaded, e.g. System.loadLibrary?
+397:07-04 16:05:36.599  4262  4262 E Finsky  : [2] Setup::DSE: Failed to sync Phenotype experiments, time out after PT0.001S (Waited 1 milliseconds (plus 236385 nanoseconds delay) for jsj@c5ba4f3[status=PENDING, info=[tag=[jsh@63975b0]]])
+400:07-04 16:05:39.274   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+401:07-04 16:05:39.277   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+402:07-04 16:05:39.618   356   370 E lowmemorykiller: process_mrelease 11047 failed: No such process
+403:07-04 16:05:39.805   356   371 E lowmemorykiller: process_mrelease 11430 failed: No such process
+404:07-04 16:05:39.846   356   370 E lowmemorykiller: process_mrelease 10512 failed: No such process
+406:07-04 16:05:39.963  1163  1279 E KernelCpuSpeedReader: Failed to read cpu-freq: /sys/devices/system/cpu/cpu٠/cpufreq/stats/time_in_state: open failed: ENOENT (No such file or directory)
+407:07-04 16:05:39.964  1163  1279 E KernelCpuSpeedReader: Failed to read cpu-freq: /sys/devices/system/cpu/cpu٦/cpufreq/stats/time_in_state: open failed: ENOENT (No such file or directory)
+411:07-04 16:05:41.042   356   371 E lowmemorykiller: process_mrelease 16201 failed: No such process
+413:07-04 16:05:43.104 12068 12085 E AconfigFlags: Failed to read Aconfig values from /vendor/etc/aconfig_flags.pb
+414:07-04 16:05:43.104 12068 12085 E AconfigFlags: java.io.FileNotFoundException: /vendor/etc/aconfig_flags.pb: open failed: ENOENT (No such file or directory)
+435:07-04 16:05:43.104 12068 12085 E AconfigFlags: Caused by: android.system.ErrnoException: open failed: ENOENT (No such file or directory)
+444:07-04 16:05:43.215   437   437 E TrustyKeymaster: Getting response size (28)
+446:07-04 16:05:43.222   437   437 E TrustyKeymaster: Getting response size (28)
+448:07-04 16:05:43.254   437   437 E TrustyKeymaster: Getting response size (60)
+450:07-04 16:05:43.256   437   437 E TrustyKeymaster: Getting response size (28)
+452:07-04 16:05:43.260   437   437 E TrustyKeymaster: Getting response size (28)
+454:07-04 16:05:43.294   437   437 E TrustyKeymaster: Getting response size (56)
+456:07-04 16:05:43.332   437   437 E TrustyKeymaster: Getting response size (28)
+458:07-04 16:05:43.337   437   437 E TrustyKeymaster: Getting response size (28)
+460:07-04 16:05:43.369   437   437 E TrustyKeymaster: Getting response size (88)
+464:07-04 16:05:44.698   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+465:07-04 16:05:44.701   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+467:07-04 16:05:44.731   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+468:07-04 16:05:44.744   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+469:07-04 16:05:44.791   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+473:07-04 16:05:50.001   356   370 E lowmemorykiller: process_mrelease 11923 failed: No such process
+474:07-04 16:05:50.070   356   371 E lowmemorykiller: process_mrelease 12008 failed: No such process
+475:07-04 16:05:50.130   356   370 E lowmemorykiller: process_mrelease 11737 failed: No such process
+478:07-04 16:05:50.206  1163  1279 E KernelCpuSpeedReader: Failed to read cpu-freq: /sys/devices/system/cpu/cpu٠/cpufreq/stats/time_in_state: open failed: ENOENT (No such file or directory)
+479:07-04 16:05:50.206  1163  1279 E KernelCpuSpeedReader: Failed to read cpu-freq: /sys/devices/system/cpu/cpu٦/cpufreq/stats/time_in_state: open failed: ENOENT (No such file or directory)
+503:07-04 16:05:57.953  4262  4262 E Finsky  : [2] Setup::DSE: Failed to sync Phenotype experiments, time out after PT0.001S (Waited 1 milliseconds (plus 435269 nanoseconds delay) for jsj@8d1a2a5[status=PENDING, info=[tag=[jsh@16eb67a]]])
+509:07-04 16:06:00.017   356   371 E lowmemorykiller: process_mrelease 11181 failed: No such process
+522:07-04 16:06:03.194   356   370 E lowmemorykiller: process_mrelease 12387 failed: No such process
+523:07-04 16:06:03.269   356   371 E lowmemorykiller: process_mrelease 26870 failed: No such process
+525:07-04 16:06:03.623   437   437 E TrustyKeymaster: Getting response size (52)
+527:07-04 16:06:03.642   437   437 E TrustyKeymaster: Getting response size (162)
+529:07-04 16:06:03.644   437   437 E TrustyKeymaster: Getting response size (40)

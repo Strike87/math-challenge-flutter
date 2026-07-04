@@ -18,6 +18,7 @@ void main() {
     expect(gradle, isNot(contains('com.example.')));
     expect(gradle, contains('minifyEnabled = false'));
     expect(gradle, contains('shrinkResources = false'));
+    expect(gradle, contains('ca-app-pub-5674349229505017~2144672982'));
     expect(main, contains('ADMOB_USE_TEST_ADS'));
     expect(main, isNot(contains('ADMOB_BANNER_AD_UNIT_ID')));
     expect(main, isNot(contains('ca-app-pub-3940256099942544/')));

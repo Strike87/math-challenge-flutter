@@ -65,7 +65,7 @@ class ModalRouter extends StatelessWidget {
       case GameModal.skillDashboard:
         return SkillDashboardModal(gs: gs);
       case GameModal.coinShop:
-        return CoinShopModal(gs: gs);
+        return CoinShopModal(key: const ValueKey('coinShopModal'), gs: gs);
       case GameModal.adultGate:
         return AdultGateModal(gs: gs);
       case GameModal.dailyChallenges:
@@ -86,6 +86,7 @@ class ModalShell extends StatelessWidget {
     this.actions = const [],
     this.maxHeight,
     this.iconWidget,
+    this.header,
     this.scrollChild = true,
   });
   final String icon;
@@ -94,6 +95,7 @@ class ModalShell extends StatelessWidget {
   final List<Widget> actions;
   final double? maxHeight;
   final Widget? iconWidget;
+  final Widget? header;
   final bool scrollChild;
 
   @override
@@ -146,28 +148,32 @@ class ModalShell extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  iconWidget ??
-                      Text(icon, style: const TextStyle(fontSize: 44)),
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        title,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        softWrap: false,
-                        style: TextStyle(
-                          color: s.text,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          fontFamily: AppFonts.head,
-                          height: 1.0,
+                  if (header != null)
+                    header!
+                  else ...[
+                    iconWidget ??
+                        Text(icon, style: const TextStyle(fontSize: 44)),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          title,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: TextStyle(
+                            color: s.text,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            fontFamily: AppFonts.headFor(s),
+                            height: 1.0,
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                   const SizedBox(height: 16),
                   Flexible(
                     fit: scrollChild ? FlexFit.loose : FlexFit.tight,
@@ -2049,7 +2055,8 @@ class SkillDashboardModal extends StatelessWidget {
     return ModalShell(
       icon: '📈',
       title: 'Skill Dashboard',
-      maxHeight: 600,
+      maxHeight: 680,
+      header: _SkillDashboardHeader(settings: s),
       actions: [
         NeoButton(
             label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
@@ -2057,79 +2064,66 @@ class SkillDashboardModal extends StatelessWidget {
       child: Column(
         children: [
           SizedBox(
-            width: 240,
-            height: 240,
+            width: 300,
+            height: 300,
             child: CustomPaint(
               painter: _SkillRadarPainter(skills: skills, settings: s),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
           LayoutBuilder(
             builder: (context, constraints) {
-              final itemWidth = (constraints.maxWidth - 6) / 2;
+              final itemWidth = (constraints.maxWidth - 14) / 2;
               return Wrap(
-                spacing: 6,
-                runSpacing: 6,
+                spacing: 14,
+                runSpacing: 12,
                 children: skills
                     .map((item) => SizedBox(
                           width: itemWidth,
-                          height: 38,
+                          height: 52,
                           child: _SkillLabelItem(item: item, settings: s),
                         ))
                     .toList(),
               );
             },
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Container(
             width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             decoration: BoxDecoration(
               color: s.surface2.withValues(alpha: s.dark ? 0.9 : 0.7),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(color: s.border, width: 1.5),
             ),
-            clipBehavior: Clip.antiAlias,
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: Text.rich(
+              TextSpan(
                 children: [
-                  Container(width: 3, color: const Color(GameConfig.sky)),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 9),
-                      child: Text.rich(
-                        TextSpan(
-                          children: weakest == null
-                              ? const [
-                                  TextSpan(
-                                    text:
-                                        'Keep practicing! Focus on your weaker areas to become a Math Master! 🌟',
-                                  ),
-                                ]
-                              : [
-                                  const TextSpan(text: '💡 Focus on '),
-                                  TextSpan(
-                                    text: weakest.op.name,
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w900),
-                                  ),
-                                  TextSpan(
-                                    text:
-                                        ' (${weakest.accuracy.round()}% accuracy) to improve your overall score!',
-                                  ),
-                                ],
-                        ),
-                        style: TextStyle(
-                          color: s.text2,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          height: 1.25,
-                        ),
-                      ),
+                  const TextSpan(text: '💡 '),
+                  if (weakest == null)
+                    const TextSpan(
+                      text:
+                          'Keep practicing! Focus on your weaker areas to become a Math Master! 🌟',
+                    )
+                  else ...[
+                    const TextSpan(text: 'Focus on '),
+                    TextSpan(
+                      text: weakest.op.name,
+                      style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
-                  ),
+                    TextSpan(
+                      text:
+                          ' (${weakest.accuracy.round()}% accuracy) to improve your overall score!',
+                    ),
+                  ],
                 ],
+              ),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: s.text2,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                height: 1.35,
               ),
             ),
           ),
@@ -2139,13 +2133,45 @@ class SkillDashboardModal extends StatelessWidget {
   }
 }
 
+class _SkillDashboardHeader extends StatelessWidget {
+  const _SkillDashboardHeader({required this.settings});
+
+  final SettingsService settings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text('📈', style: TextStyle(fontSize: 44)),
+        const SizedBox(width: 12),
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              'Skill Dashboard',
+              maxLines: 1,
+              softWrap: false,
+              style: TextStyle(
+                color: settings.text,
+                fontSize: 30,
+                fontWeight: FontWeight.w900,
+                fontFamily: AppFonts.headFor(settings),
+                height: 1.0,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SkillSnapshot {
   const _SkillSnapshot(this.op, this.data);
 
   final Operation op;
   final SkillData data;
-
-  double get mastery => data.mastery.clamp(0, 100).toDouble();
 
   double get accuracy =>
       data.count == 0 ? 0 : (data.correct / data.count * 100).clamp(0, 100);
@@ -2253,19 +2279,18 @@ class _SkillRadarPainter extends CustomPainter {
       canvas.drawLine(center, edge, axisPaint);
     }
 
-    final hasData = skills.any((item) => item.data.count > 0);
     final dataPath = _polygonPath(
       center,
       radius,
       n,
-      (i) => hasData ? skills[i].mastery / 100 : 0.1,
+      (i) => skills[i].accuracy / 100,
     )..close();
     canvas.drawPath(dataPath, dataFill);
     canvas.drawPath(dataPath, dataStroke);
 
     for (var i = 0; i < n; i++) {
       final item = skills[i];
-      final value = hasData ? item.mastery / 100 : 0.1;
+      final value = item.accuracy / 100;
       final dot = _point(center, radius * value, i, n);
       final dotColor = value >= 0.8
           ? const Color(GameConfig.mint)
@@ -2281,19 +2306,6 @@ class _SkillRadarPainter extends CustomPainter {
           ..style = PaintingStyle.fill,
       );
       canvas.drawCircle(dot, 4.6, Paint()..color = dotColor);
-
-      if (item.data.count > 0) {
-        final label = _point(center, radius * value + 16, i, n);
-        _drawText(
-          canvas,
-          '${item.accuracy.round()}%',
-          label,
-          dotColor,
-          9,
-          FontWeight.w900,
-          centered: true,
-        );
-      }
 
       final axisLabel = _point(center, radius + 22, i, n);
       _drawText(
@@ -3191,8 +3203,8 @@ class _IapCard extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Container(
-              constraints: const BoxConstraints(minWidth: 76, minHeight: 40),
-              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+              constraints: const BoxConstraints(minWidth: 68, minHeight: 34),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
@@ -3202,13 +3214,13 @@ class _IapCard extends StatelessWidget {
                     Color(0xFFFF6B2A),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
                     color:
                         const Color(GameConfig.mango).withValues(alpha: 0.22),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
@@ -3223,7 +3235,7 @@ class _IapCard extends StatelessWidget {
                     color: Color(GameConfig.textLight),
                     fontWeight: FontWeight.w900,
                     fontFamily: AppFonts.head,
-                    fontSize: 15,
+                    fontSize: 14,
                   ),
                 ),
               ),

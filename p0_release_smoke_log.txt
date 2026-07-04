@@ -1,0 +1,89 @@
+--------- beginning of system
+07-04 03:28:55.147  1172  1374 E TranDynamicBarAnimControllerImpl: TranDynamicBarAnimControllerImpl setFromDynamicIslandToWindow pkgName:com.google.android.gms
+07-04 03:28:55.147  1172  1374 E TranDynamicBarAnimControllerImpl: start setFromDynamicIslandToWindow startFromDynamicIsland:false
+07-04 03:28:55.147  1172  1374 E TranDynamicBarAnimControllerImpl: end setFromDynamicIslandToWindow mDynamicIslandPkgName:com.google.android.gms mStartFromDynamicIsland:false
+--------- beginning of main
+07-04 03:28:56.635  1172 11153 E UnisocWatchdog: UnisocWatchdogImpl sendMessage:12
+07-04 03:28:56.636  1172 11153 E UnisocWatchdog: sendMessage wait ok 
+07-04 03:28:56.639  1172 11153 E UnisocWatchdog: monkeyStatus update:false
+07-04 03:28:56.756  1172 11153 E ActivityTaskManager: agaresPreload error: activityInfo is null
+07-04 03:28:56.799  1172 11153 E system_server: No package ID 7f found for resource ID 0x7f010000.
+07-04 03:28:56.799  1172 11153 E system_server: No package ID 7f found for resource ID 0x7f020000.
+07-04 03:28:56.799  1172 11153 E system_server: No package ID 7f found for resource ID 0x7f030000.
+07-04 03:28:56.799  1172 11153 E system_server: No package ID 7f found for resource ID 0x7f040000.
+07-04 03:28:56.799  1172 11153 E system_server: No package ID 7f found for resource ID 0x7f050000.
+07-04 03:28:56.882  1678  1880 E UASManager: setTranSchedUxTags fail, mWmShellMainTid =0
+07-04 03:28:56.890  1172 11153 E UnisocWatchdog: UnisocWatchdogImpl sendMessage:12
+07-04 03:28:56.890  1172 11153 E UnisocWatchdog: sendMessage wait ok 
+07-04 03:28:56.890  1172 11153 E UnisocWatchdog: monkeyStatus update:false
+07-04 03:28:56.915  1172  1283 E libprocessgroup: set_timerslack_ns write failed: Permission denied
+07-04 03:28:57.428  1172  5736 E ActivityThread: Failed to find provider info for com.transsion.gamemode.provider
+07-04 03:28:57.722 28936 28964 E mali_gralloc: Requested R8 format is not supported with this allocator. R8 format is only supported with the AIDL allocator
+07-04 03:28:57.722 28936 28964 E mali_gralloc: ERROR: Unrecognized and/or unsupported format R8 and usage TEXTURE + RENDER + HWC
+07-04 03:28:57.722 28936 28964 E mali_gralloc: ERROR: Unrecognized and/or unsupported format RGBA_10101010 and usage TEXTURE + RENDER + HWC
+07-04 03:28:57.722 28936 28964 E mali_gralloc: Requested R8 format is not supported with this allocator. R8 format is only supported with the AIDL allocator
+07-04 03:28:57.722 28936 28964 E mali_gralloc: ERROR: Unrecognized and/or unsupported format R8 and usage TEXTURE + RENDER + HWC
+07-04 03:28:57.722 28936 28964 E mali_gralloc: ERROR: Unrecognized and/or unsupported format RGBA_10101010 and usage TEXTURE + RENDER + HWC
+07-04 03:28:57.932   637   765 E OemNetd : transmitAppUidToNetwork uid=(0)
+07-04 03:28:58.159  1172  2082 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms.supervision, role: android.app.role.SYSTEM_SUPERVISION, user: 0
+07-04 03:28:58.163  1172  2082 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms, role: android.app.role.SYSTEM_CALL_STREAMING, user: 0
+07-04 03:28:58.166  1639  1639 E SmsApplication: com.transsion.cloudserver does not have system signature
+07-04 03:28:58.286  1172  2082 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.devicelockcontroller, role: android.app.role.SYSTEM_FINANCED_DEVICE_CONTROLLER, user: 0
+07-04 03:28:58.301  1172  2082 E AppOpService: Blocked setUidMode call for runtime permission app op: uid = 10142, code = FINE_LOCATION, mode = foreground, callingUid = 1000, oldMode = allow
+07-04 03:28:58.301  1172  2082 E AppOpService: java.lang.RuntimeException
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.server.permission.access.appop.AppOpService.setUidMode(AppOpService.kt:268)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.server.appop.AppOpsCheckingServiceTracingDecorator.setUidMode(AppOpsCheckingServiceTracingDecorator.java:120)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2119)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2069)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at android.app.AppOpsManager.setUidMode(AppOpsManager.java:8603)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpModeAsUser(Permissions.java:908)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpUidModeAsUser(Permissions.java:885)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.role.controller.model.Permissions.grantPermissionAndAppOpAsUser(Permissions.java:373)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.role.controller.model.Permissions.grantSingleAsUser(Permissions.java:247)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.role.controller.model.Permissions.grantAsUser(Permissions.java:205)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.role.controller.behavior.BrowserRoleBehavior.grantAsUser(BrowserRoleBehavior.java:142)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.role.controller.model.Role.grantAsUser(Role.java:973)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.addRoleHolderInternal(RoleControllerServiceImpl.java:380)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.onGrantDefaultRoles(RoleControllerServiceImpl.java:163)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.role.LocalRoleController.lambda$grantDefaultRoles$1(LocalRoleController.java:56)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.role.LocalRoleController.$r8$lambda$ye-flP7Mf14AbTzwSmiTgndT6Cg(LocalRoleController.java:0)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at com.android.role.LocalRoleController$$ExternalSyntheticLambda1.run(R8$$SyntheticClass:0)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at android.os.Handler.handleCallback(Handler.java:959)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at android.os.Looper.loopOnce(Looper.java:311)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at android.os.Looper.loop(Looper.java:408)
+07-04 03:28:58.301  1172  2082 E AppOpService: 	at android.os.HandlerThread.run(HandlerThread.java:85)
+07-04 03:28:58.303  1172  2082 E AppOpService: Blocked setUidMode call for runtime permission app op: uid = 10142, code = COARSE_LOCATION, mode = foreground, callingUid = 1000, oldMode = allow
+07-04 03:28:58.303  1172  2082 E AppOpService: java.lang.RuntimeException
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.server.permission.access.appop.AppOpService.setUidMode(AppOpService.kt:268)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.server.appop.AppOpsCheckingServiceTracingDecorator.setUidMode(AppOpsCheckingServiceTracingDecorator.java:120)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2119)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2069)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at android.app.AppOpsManager.setUidMode(AppOpsManager.java:8603)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpModeAsUser(Permissions.java:908)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpUidModeAsUser(Permissions.java:885)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.role.controller.model.Permissions.grantPermissionAndAppOpAsUser(Permissions.java:373)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.role.controller.model.Permissions.grantSingleAsUser(Permissions.java:247)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.role.controller.model.Permissions.grantAsUser(Permissions.java:205)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.role.controller.behavior.BrowserRoleBehavior.grantAsUser(BrowserRoleBehavior.java:142)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.role.controller.model.Role.grantAsUser(Role.java:973)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.addRoleHolderInternal(RoleControllerServiceImpl.java:380)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.onGrantDefaultRoles(RoleControllerServiceImpl.java:163)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.role.LocalRoleController.lambda$grantDefaultRoles$1(LocalRoleController.java:56)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.role.LocalRoleController.$r8$lambda$ye-flP7Mf14AbTzwSmiTgndT6Cg(LocalRoleController.java:0)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at com.android.role.LocalRoleController$$ExternalSyntheticLambda1.run(R8$$SyntheticClass:0)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at android.os.Handler.handleCallback(Handler.java:959)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at android.os.Looper.loopOnce(Looper.java:311)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at android.os.Looper.loop(Looper.java:408)
+07-04 03:28:58.303  1172  2082 E AppOpService: 	at android.os.HandlerThread.run(HandlerThread.java:85)
+07-04 03:28:58.665   679   679 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 03:28:58.819  1172  2662 E ShortcutService: Invalid icon type in shortcut 142812007936051@lid. Bitmaps are not allowed in long-lived shortcuts. Use Resource icons, or Uri-based icons instead.
+07-04 03:28:59.298   440   440 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(269). errno: Success
+07-04 03:28:59.299   440   440 E TrustyKeymaster: Getting response size (56)
+07-04 03:28:59.329   440   440 E TrustyKeymaster: succeeded to send cmd (16) to com.android.trusty.keymaster with rc(12). errno: Success
+07-04 03:28:59.329   440   440 E TrustyKeymaster: Getting response size (8)
+07-04 03:29:00.004  1172  1374 E TranDynamicBarAnimControllerImpl: TranDynamicBarAnimControllerImpl setFromDynamicIslandToWindow pkgName:com.ayman.widget
+07-04 03:29:00.004  1172  1374 E TranDynamicBarAnimControllerImpl: start setFromDynamicIslandToWindow startFromDynamicIsland:false
+07-04 03:29:00.004  1172  1374 E TranDynamicBarAnimControllerImpl: end setFromDynamicIslandToWindow mDynamicIslandPkgName:com.ayman.widget mStartFromDynamicIsland:false
+07-04 03:29:05.569 29041 29043 E mali_gralloc: initIonKernelMemtrack open device:/dev/systemheap failed, 13(Permission denied)

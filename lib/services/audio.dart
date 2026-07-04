@@ -20,6 +20,7 @@ class AudioService {
   final SettingsService _settings;
   final AudioPlayer _player = AudioPlayer();
   final Map<String, String> _toneFiles = {};
+  Future<void> _toneQueue = Future<void>.value();
   bool _initialised = false;
   int _debugTonePlayCount = 0;
   int _debugVibrationCount = 0;
@@ -54,7 +55,10 @@ class AudioService {
     if (!_settings.sound) return;
     _debugTonePlayCount++;
     final bytes = _wavFromTones(tones);
-    unawaited(_playBytes(bytes, _toneKey(tones)));
+    _toneQueue = _toneQueue
+        .catchError((_) {})
+        .then((_) => _playBytes(bytes, _toneKey(tones)));
+    unawaited(_toneQueue);
   }
 
   Future<void> _playBytes(Uint8List bytes, String key) async {
@@ -84,14 +88,15 @@ class AudioService {
   }
 
   Future<void> playCorrect() => playTones([
-        [523, 0.08, 0.0],
-        [659, 0.08, 0.06],
-        [784, 0.10, 0.12],
+        [523, 0.12, 0.0],
+        [659, 0.12, 0.09],
+        [784, 0.16, 0.18],
       ]);
 
   Future<void> playWrong() => playTones([
-        [220, 0.15, 0.0],
-        [180, 0.20, 0.10],
+        [294, 0.18, 0.0],
+        [220, 0.24, 0.10],
+        [196, 0.18, 0.28],
       ]);
 
   Future<void> playStart() => playTones([
@@ -107,7 +112,7 @@ class AudioService {
 
   Uint8List _wavFromTones(List<List<double>> tones) {
     const sampleRate = 22050;
-    const volume = 0.38;
+    const targetVolume = 0.38;
     var totalSeconds = 0.0;
     for (final tone in tones) {
       final delay = tone.length > 2 ? tone[2] : 0.0;
@@ -125,9 +130,15 @@ class AudioService {
       for (var i = 0; i < count && start + i < sampleCount; i++) {
         final fade = 1.0 - (i / math.max(1, count));
         samples[start + i] +=
-            math.sin(2 * math.pi * freq * i / sampleRate) * volume * fade;
+            math.sin(2 * math.pi * freq * i / sampleRate) * fade;
       }
     }
+
+    final peak = samples.fold<double>(
+      0,
+      (max, sample) => math.max(max, sample.abs()),
+    );
+    final gain = peak == 0 ? 1.0 : targetVolume / peak;
 
     final data = ByteData(44 + sampleCount * 2);
     void ascii(int offset, String text) {
@@ -151,7 +162,7 @@ class AudioService {
     data.setUint32(40, sampleCount * 2, Endian.little);
 
     for (var i = 0; i < sampleCount; i++) {
-      final s = samples[i].clamp(-1.0, 1.0);
+      final s = (samples[i] * gain).clamp(-1.0, 1.0);
       data.setInt16(44 + i * 2, (s * 32767).round(), Endian.little);
     }
     return data.buffer.asUint8List();

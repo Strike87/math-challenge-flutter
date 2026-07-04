@@ -42,3 +42,6 @@ flutter:
         - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
         - asset: assets/fonts/PlusJakartaSans-Bold.ttf
         - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
+    - family: OpenDyslexic
+      fonts:
+        - asset: assets/fonts/OpenDyslexic-Regular.otf

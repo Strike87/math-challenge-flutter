@@ -1,0 +1,533 @@
+--------- beginning of system
+07-04 16:05:10.158   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ANOMALY' not found
+07-04 16:05:10.158   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ERRCODE' not found
+--------- beginning of main
+07-04 16:05:10.501   437   437 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(1425). errno: Success
+07-04 16:05:10.502   437   437 E TrustyKeymaster: Getting response size (28)
+07-04 16:05:10.504   437   437 E TrustyKeymaster: succeeded to send cmd (8) to com.android.trusty.keymaster with rc(284). errno: Success
+07-04 16:05:10.504   437   437 E TrustyKeymaster: Getting response size (28)
+07-04 16:05:10.506   437   437 E TrustyKeymaster: succeeded to send cmd (12) to com.android.trusty.keymaster with rc(32). errno: Success
+07-04 16:05:10.537   437   437 E TrustyKeymaster: Getting response size (8)
+07-04 16:05:10.537   437   437 E TrustyKeymaster: Response of size 4 contained error code -1000
+07-04 16:05:10.537   437   437 E trusty_keymaster_hal: Cmd 12 returned error: -1000
+07-04 16:05:10.538   436   436 E keystore2: system/security/keystore2/src/error.rs:171 - system/security/keystore2/src/operation.rs:847: KeystoreOperation::finish
+07-04 16:05:10.538   436   436 E keystore2: 
+07-04 16:05:10.538   436   436 E keystore2: Caused by:
+07-04 16:05:10.538   436   436 E keystore2:     0: system/security/keystore2/src/operation.rs:428: Finish failed.
+07-04 16:05:10.538   436   436 E keystore2:     1: Error::Km(r#UNKNOWN_ERROR)
+07-04 16:05:14.098  1163  7520 E UnisocWatchdog: UnisocWatchdogImpl sendMessage:12
+07-04 16:05:14.098  1163  7520 E UnisocWatchdog: sendMessage wait ok 
+07-04 16:05:14.104  1163  7520 E UnisocWatchdog: monkeyStatus update:false
+07-04 16:05:14.368  1163  7520 E ActivityTaskManager: agaresPreload error: activityInfo is null
+07-04 16:05:14.598  1163  7520 E system_server: No package ID 7f found for resource ID 0x7f010000.
+07-04 16:05:14.598  1163  7520 E system_server: No package ID 7f found for resource ID 0x7f020000.
+07-04 16:05:14.598  1163  7520 E system_server: No package ID 7f found for resource ID 0x7f030000.
+07-04 16:05:14.599  1163  7520 E system_server: No package ID 7f found for resource ID 0x7f040000.
+07-04 16:05:14.599  1163  7520 E system_server: No package ID 7f found for resource ID 0x7f050000.
+07-04 16:05:15.016  1163  3574 E UnisocWatchdog: UnisocWatchdogImpl sendMessage:12
+07-04 16:05:15.017  1163  3574 E UnisocWatchdog: sendMessage wait ok 
+07-04 16:05:15.017  1163  3574 E UnisocWatchdog: monkeyStatus update:false
+07-04 16:05:15.021  1163  1277 E libprocessgroup: set_timerslack_ns write failed: Permission denied
+07-04 16:05:15.167   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ANOMALY' not found
+07-04 16:05:15.167   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ERRCODE' not found
+07-04 16:05:15.309   356   370 E lowmemorykiller: process_mrelease 7122 failed: No such process
+07-04 16:05:15.349   356   371 E lowmemorykiller: process_mrelease 10549 failed: No such process
+07-04 16:05:15.377   356   370 E lowmemorykiller: process_mrelease 8991 failed: No such process
+07-04 16:05:15.414   356   371 E lowmemorykiller: process_mrelease 10716 failed: No such process
+07-04 16:05:15.427  1667  1838 E UASManager: setTranSchedUxTags fail, mWmShellMainTid =0
+07-04 16:05:15.442   356   370 E lowmemorykiller: process_mrelease 10783 failed: No such process
+07-04 16:05:15.468   356   371 E lowmemorykiller: process_mrelease 5304 failed: No such process
+07-04 16:05:15.518   356   370 E lowmemorykiller: process_mrelease 10682 failed: No such process
+07-04 16:05:15.551   356   371 E lowmemorykiller: process_mrelease 10746 failed: No such process
+07-04 16:05:15.803   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:15.805   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:15.822   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:15.823   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:15.847   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:15.849   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:16.110  1163  4552 E ActivityThread: Failed to find provider info for com.transsion.gamemode.provider
+07-04 16:05:16.507  1636  1636 E SmsApplication: com.transsion.cloudserver does not have system signature
+07-04 16:05:16.559  1163  6721 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms.supervision, role: android.app.role.SYSTEM_SUPERVISION, user: 0
+07-04 16:05:16.561  1163  6721 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms, role: android.app.role.SYSTEM_CALL_STREAMING, user: 0
+07-04 16:05:16.620  1163  6721 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.devicelockcontroller, role: android.app.role.SYSTEM_FINANCED_DEVICE_CONTROLLER, user: 0
+07-04 16:05:16.679  1163  6721 E AppOpService: Blocked setUidMode call for runtime permission app op: uid = 10142, code = FINE_LOCATION, mode = foreground, callingUid = 1000, oldMode = allow
+07-04 16:05:16.679  1163  6721 E AppOpService: java.lang.RuntimeException
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.server.permission.access.appop.AppOpService.setUidMode(AppOpService.kt:268)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.server.appop.AppOpsCheckingServiceTracingDecorator.setUidMode(AppOpsCheckingServiceTracingDecorator.java:120)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2119)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2069)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at android.app.AppOpsManager.setUidMode(AppOpsManager.java:8603)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpModeAsUser(Permissions.java:908)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpUidModeAsUser(Permissions.java:885)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.role.controller.model.Permissions.grantPermissionAndAppOpAsUser(Permissions.java:373)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.role.controller.model.Permissions.grantSingleAsUser(Permissions.java:247)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.role.controller.model.Permissions.grantAsUser(Permissions.java:205)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.role.controller.behavior.BrowserRoleBehavior.grantAsUser(BrowserRoleBehavior.java:142)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.role.controller.model.Role.grantAsUser(Role.java:973)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.addRoleHolderInternal(RoleControllerServiceImpl.java:380)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.onGrantDefaultRoles(RoleControllerServiceImpl.java:163)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.role.LocalRoleController.lambda$grantDefaultRoles$1(LocalRoleController.java:56)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.role.LocalRoleController.$r8$lambda$ye-flP7Mf14AbTzwSmiTgndT6Cg(LocalRoleController.java:0)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at com.android.role.LocalRoleController$$ExternalSyntheticLambda1.run(R8$$SyntheticClass:0)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at android.os.Handler.handleCallback(Handler.java:959)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at android.os.Looper.loopOnce(Looper.java:311)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at android.os.Looper.loop(Looper.java:408)
+07-04 16:05:16.679  1163  6721 E AppOpService: 	at android.os.HandlerThread.run(HandlerThread.java:85)
+07-04 16:05:16.680  1163  6721 E AppOpService: Blocked setUidMode call for runtime permission app op: uid = 10142, code = COARSE_LOCATION, mode = foreground, callingUid = 1000, oldMode = allow
+07-04 16:05:16.680  1163  6721 E AppOpService: java.lang.RuntimeException
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.server.permission.access.appop.AppOpService.setUidMode(AppOpService.kt:268)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.server.appop.AppOpsCheckingServiceTracingDecorator.setUidMode(AppOpsCheckingServiceTracingDecorator.java:120)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2119)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.server.appop.AppOpsService.setUidMode(AppOpsService.java:2069)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at android.app.AppOpsManager.setUidMode(AppOpsManager.java:8603)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpModeAsUser(Permissions.java:908)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.role.controller.model.Permissions.setAppOpUidModeAsUser(Permissions.java:885)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.role.controller.model.Permissions.grantPermissionAndAppOpAsUser(Permissions.java:373)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.role.controller.model.Permissions.grantSingleAsUser(Permissions.java:247)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.role.controller.model.Permissions.grantAsUser(Permissions.java:205)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.role.controller.behavior.BrowserRoleBehavior.grantAsUser(BrowserRoleBehavior.java:142)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.role.controller.model.Role.grantAsUser(Role.java:973)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.addRoleHolderInternal(RoleControllerServiceImpl.java:380)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.role.controller.service.RoleControllerServiceImpl.onGrantDefaultRoles(RoleControllerServiceImpl.java:163)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.role.LocalRoleController.lambda$grantDefaultRoles$1(LocalRoleController.java:56)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.role.LocalRoleController.$r8$lambda$ye-flP7Mf14AbTzwSmiTgndT6Cg(LocalRoleController.java:0)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at com.android.role.LocalRoleController$$ExternalSyntheticLambda1.run(R8$$SyntheticClass:0)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at android.os.Handler.handleCallback(Handler.java:959)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at android.os.Looper.loopOnce(Looper.java:311)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at android.os.Looper.loop(Looper.java:408)
+07-04 16:05:16.680  1163  6721 E AppOpService: 	at android.os.HandlerThread.run(HandlerThread.java:85)
+07-04 16:05:16.777 11032 11077 E mali_gralloc: Requested R8 format is not supported with this allocator. R8 format is only supported with the AIDL allocator
+07-04 16:05:16.778 11032 11077 E mali_gralloc: ERROR: Unrecognized and/or unsupported format R8 and usage TEXTURE + RENDER + HWC
+07-04 16:05:16.778 11032 11077 E mali_gralloc: ERROR: Unrecognized and/or unsupported format RGBA_10101010 and usage TEXTURE + RENDER + HWC
+07-04 16:05:16.788 11032 11077 E mali_gralloc: Requested R8 format is not supported with this allocator. R8 format is only supported with the AIDL allocator
+07-04 16:05:16.788 11032 11077 E mali_gralloc: ERROR: Unrecognized and/or unsupported format R8 and usage TEXTURE + RENDER + HWC
+07-04 16:05:16.788 11032 11077 E mali_gralloc: ERROR: Unrecognized and/or unsupported format RGBA_10101010 and usage TEXTURE + RENDER + HWC
+07-04 16:05:17.040   632  2815 E OemNetd : transmitAppUidToNetwork uid=(0)
+07-04 16:05:18.828 11047 11162 E document.hubhub: No package ID 74 found for resource ID 0x740b0013.
+07-04 16:05:18.977 11047 11221 E C9      : Network error
+07-04 16:05:19.355 11047 11237 E ActivityThread: Failed to find provider info for com.xiaomi.market.provider.DirectMailProvider
+07-04 16:05:19.651 11279 11279 E libc    : SetHeapTaggingLevel: re-enabling tagging after it was disabled is not supported
+07-04 16:05:19.698 11047 11255 E document.hubhub: hiddenapi: Accessing hidden field Landroid/webkit/WebViewFactory;->sDataDirectorySuffix:Ljava/lang/String; (runtime_flags=0, domain=platform, api=max-target-o) from Lcom/bytedance/sdk/openadsdk/multipro/QEh; (domain=app, TargetSdkVersion=35) using reflection: denied
+07-04 16:05:20.175   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ANOMALY' not found
+07-04 16:05:20.175   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ERRCODE' not found
+07-04 16:05:20.208 11047 11221 E C9      : Network error
+07-04 16:05:20.519  1163  1163 E system_server: No package ID 7f found for resource ID 0x7f010000.
+07-04 16:05:20.530  1163  1163 E system_server: No package ID 7f found for resource ID 0x7f020000.
+07-04 16:05:20.530  1163  1163 E system_server: No package ID 7f found for resource ID 0x7f030000.
+07-04 16:05:20.531  1163  1163 E system_server: No package ID 7f found for resource ID 0x7f040000.
+07-04 16:05:20.531  1163  1163 E system_server: No package ID 7f found for resource ID 0x7f050000.
+07-04 16:05:20.536  1163  1163 E system_server: No package ID 7f found for resource ID 0x7f010000.
+07-04 16:05:20.537  1163  1163 E system_server: No package ID 7f found for resource ID 0x7f020000.
+07-04 16:05:20.537  1163  1163 E system_server: No package ID 7f found for resource ID 0x7f030000.
+07-04 16:05:20.537  1163  1163 E system_server: No package ID 7f found for resource ID 0x7f040000.
+07-04 16:05:20.537  1163  1163 E system_server: No package ID 7f found for resource ID 0x7f050000.
+07-04 16:05:20.723 11032 11338 E libEGL  : eglQueryStringImpl display is EGL_NO_DISPLAY
+07-04 16:05:20.834 11032 11338 E k.mathchallenge: mali_debug: sprd_gles_wait_last_fence is closed
+07-04 16:05:22.133 11047 11047 E cr_VariationsSeedLoader: Failed loading variations seed. Variations disabled.
+07-04 16:05:22.163 11047 11406 E chromium: [ERROR:android_webview/browser/variations/variations_seed_loader.cc:39] Seed missing signature.
+07-04 16:05:22.192 11414 11414 E libc    : SetHeapTaggingLevel: re-enabling tagging after it was disabled is not supported
+07-04 16:05:23.039  1163  1244 E UnisocWatchdog: UnisocWatchdogImpl sendMessage:0
+07-04 16:05:23.039  1163  1244 E UnisocWatchdog: sendMessage wait ok 
+07-04 16:05:23.039  1163  1336 E UnisocWatchdog: UNISOCWATCHDOG_MESSAGE_TIMER30 trigger
+07-04 16:05:23.095 11047 11508 E libEGL  : eglQueryStringImpl display is EGL_NO_DISPLAY
+07-04 16:05:23.353 11047 11508 E document.hubhub: mali_debug: sprd_gles_wait_last_fence is closed
+07-04 16:05:23.893 11181 11193 E FdLeakLice: unexpected error for fdleak java.lang.NullPointerException: Attempt to invoke virtual method 'android.content.Context android.app.Application.getApplicationContext()' on a null object reference
+07-04 16:05:25.177   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ANOMALY' not found
+07-04 16:05:25.177   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ERRCODE' not found
+07-04 16:05:25.488   356   370 E lowmemorykiller: process_mrelease 10579 failed: No such process
+07-04 16:05:25.565   356   371 E lowmemorykiller: process_mrelease 11414 failed: No such process
+07-04 16:05:25.632   356   370 E lowmemorykiller: process_mrelease 5057 failed: No such process
+07-04 16:05:25.775   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:25.777   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:25.794  1163  1279 E KernelCpuSpeedReader: Failed to read cpu-freq: /sys/devices/system/cpu/cpu٠/cpufreq/stats/time_in_state: open failed: ENOENT (No such file or directory)
+07-04 16:05:25.794  1163  1279 E KernelCpuSpeedReader: Failed to read cpu-freq: /sys/devices/system/cpu/cpu٦/cpufreq/stats/time_in_state: open failed: ENOENT (No such file or directory)
+07-04 16:05:25.826   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:25.827   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:25.838   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:25.842   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:26.314 11047 11047 E chromium: [ERROR:android_webview/browser/aw_browser_terminator.cc:175] Renderer process (11414) crash detected (code -1).
+07-04 16:05:26.354 11661 11661 E libc    : SetHeapTaggingLevel: re-enabling tagging after it was disabled is not supported
+07-04 16:05:26.863 11181 11181 E SlowAppComponent: 0ms: FacebookApplication instantiating…
+07-04 16:05:26.863 11181 11181 E SlowAppComponent: 674ms: FirebaseInitCustomProvider instantiating…
+07-04 16:05:26.863 11181 11181 E SlowAppComponent: 675ms: SecureMessagingKeyContentProvider instantiating…
+07-04 16:05:26.863 11181 11181 E SlowAppComponent: 675ms: LastUsedTimestampProvider instantiating…
+07-04 16:05:26.863 11181 11181 E SlowAppComponent: 675ms: FirstPartyUserValuesLiteProvider instantiating…
+07-04 16:05:26.863 11181 11181 E SlowAppComponent: 764ms: FbContactsContentProvider instantiating…
+07-04 16:05:26.863 11181 11181 E SlowAppComponent: 764ms: FileProvider instantiating…
+07-04 16:05:26.863 11181 11181 E SlowAppComponent: 1045ms: FirstPartyUserValuesProvider instantiating…
+07-04 16:05:26.863 11181 11181 E SlowAppComponent: 1045ms: MessagesDbContentProvider instantiating…
+07-04 16:05:26.863 11181 11181 E SlowAppComponent: 1045ms: UsdidValuesProvider instantiating…
+07-04 16:05:26.863 11181 11181 E SlowAppComponent: 1045ms: InstallReferrerProvider instantiating…
+07-04 16:05:26.863 11181 11181 E SlowAppComponent: 1045ms: AppManagerSsoProvider instantiating…
+07-04 16:05:26.863 11181 11181 E SlowAppComponent: 1046ms: ThreadsDbPropertiesContentProvider instantiating…
+07-04 16:05:26.864 11181 11181 E SlowAppComponent: 1046ms: ClientMessagePushDedupInfoProvider instantiating…
+07-04 16:05:26.864 11181 11181 E SlowAppComponent: 1046ms: PlatformProviderBase instantiating…
+07-04 16:05:26.864 11181 11181 E SlowAppComponent: 1046ms: DeferredDeeplinkProvider instantiating…
+07-04 16:05:26.864 11181 11181 E SlowAppComponent: 1046ms: ContactsConnectionsProvider instantiating…
+07-04 16:05:26.864 11181 11181 E SlowAppComponent: 1046ms: FeO2InAppContentProvider instantiating…
+07-04 16:05:26.864 11181 11181 E SlowAppComponent: 1046ms: UserValuesProvider instantiating…
+07-04 16:05:26.864 11181 11181 E SlowAppComponent: 1046ms: SecureFileProvider instantiating…
+07-04 16:05:26.864 11181 11181 E SlowAppComponent: 1277ms: InitializationProvider instantiating…
+07-04 16:05:26.864 11181 11181 E SlowAppComponent: 1847ms: PhotosProvider instantiating…
+07-04 16:05:26.864 11181 11181 E SlowAppComponent: 1848ms: AttributionIdProvider instantiating…
+07-04 16:05:26.864 11181 11181 E SlowAppComponent: 1848ms: QuickExperimentContentProvider instantiating…
+07-04 16:05:26.864 11181 11181 E SlowAppComponent: 1848ms: TamAttachmentProvider instantiating…
+07-04 16:05:26.864 11181 11181 E SlowAppComponent: 1848ms: CacheProvider instantiating…
+07-04 16:05:26.864 11181 11181 E SlowAppComponent: Main thread was blocked for 1890ms in the foreground starting with FacebookApplication
+07-04 16:05:27.266   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:27.407 30883 11504 E Ads     : Error waiting for future.
+07-04 16:05:27.407 30883 11504 E Ads     : java.util.concurrent.TimeoutException
+07-04 16:05:27.407 30883 11504 E Ads     : 	at java.util.concurrent.FutureTask.get(FutureTask.java:206)
+07-04 16:05:27.407 30883 11504 E Ads     : 	at com.google.android.gms.ads.nonagon.signals.gmscore.p.call(:com.google.android.gms@262434062@26.24.34 (200400-938041327):47)
+07-04 16:05:27.407 30883 11504 E Ads     : 	at fjil.a(:com.google.android.gms@262434062@26.24.34 (200400-938041327):3)
+07-04 16:05:27.407 30883 11504 E Ads     : 	at fjhl.run(:com.google.android.gms@262434062@26.24.34 (200400-938041327):19)
+07-04 16:05:27.407 30883 11504 E Ads     : 	at fjim.run(:com.google.android.gms@262434062@26.24.34 (200400-938041327):5)
+07-04 16:05:27.407 30883 11504 E Ads     : 	at becd.c(:com.google.android.gms@262434062@26.24.34 (200400-938041327):50)
+07-04 16:05:27.407 30883 11504 E Ads     : 	at becd.run(:com.google.android.gms@262434062@26.24.34 (200400-938041327):66)
+07-04 16:05:27.407 30883 11504 E Ads     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-04 16:05:27.407 30883 11504 E Ads     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-04 16:05:27.407 30883 11504 E Ads     : 	at behr.run(:com.google.android.gms@262434062@26.24.34 (200400-938041327):8)
+07-04 16:05:27.407 30883 11504 E Ads     : 	at java.lang.Thread.run(Thread.java:1572)
+07-04 16:05:27.603 11181 11708 E rtvip   : error 10 (0xd503245f)
+07-04 16:05:27.603 11181 11708 E rtvip   : error 2
+07-04 16:05:27.682 11181 11695 E libEGL  : call to OpenGL ES API with no current context (logged once per thread)
+07-04 16:05:27.682 11181 11695 E libEGL  : call to OpenGL ES API with no current context (logged once per thread)
+07-04 16:05:27.682 11181 11695 E libEGL  : call to OpenGL ES API with no current context (logged once per thread)
+07-04 16:05:27.730 11181 11695 E libEGL  : call to OpenGL ES API with no current context (logged once per thread)
+07-04 16:05:27.738 11181 11695 E facebook.katana: mali_debug: sprd_gles_wait_last_fence is closed
+07-04 16:05:27.977 11181 11659 E MlockOptimization: mlock 0x7ccb9f9000 ٧٣١٥٨٦٥٦ failed for 7ccb9f9000-7cd4583000 rw-p 00000000 fe:4a 338697                         /data/app/~~fBAHPcNZyAOhrYwJVcRdNw==/com.facebook.katana-iBkjVXd5fjF9TxsnhfKvtQ==/oat/arm64/base.vdex
+07-04 16:05:28.784 11181 11703 E facebook.katana: No implementation found for int com.facebook.soloader.MergedSoMapping$Invoke_JNI_OnLoad.libelfconfig_so() (tried Java_com_facebook_soloader_MergedSoMapping_00024Invoke_1JNI_1OnLoad_libelfconfig_1so and Java_com_facebook_soloader_MergedSoMapping_00024Invoke_1JNI_1OnLoad_libelfconfig_1so__) - is the library loaded, e.g. System.loadLibrary?
+07-04 16:05:29.037  1636  1824 E DatabaseUtils: Writing exception to parcel
+07-04 16:05:29.037  1636  1824 E DatabaseUtils: java.lang.SecurityException: No permission to access APN settings
+07-04 16:05:29.037  1636  1824 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.checkPermissionForApnTable(TelephonyProvider.java:5655)
+07-04 16:05:29.037  1636  1824 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.checkPermission(TelephonyProvider.java:5627)
+07-04 16:05:29.037  1636  1824 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.checkPermissionCompat(TelephonyProvider.java:5672)
+07-04 16:05:29.037  1636  1824 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.query(TelephonyProvider.java:4473)
+07-04 16:05:29.037  1636  1824 E DatabaseUtils: 	at android.content.ContentProvider.query(ContentProvider.java:1674)
+07-04 16:05:29.037  1636  1824 E DatabaseUtils: 	at android.content.ContentProvider.query(ContentProvider.java:1770)
+07-04 16:05:29.037  1636  1824 E DatabaseUtils: 	at android.content.ContentProvider$Transport.query(ContentProvider.java:301)
+07-04 16:05:29.037  1636  1824 E DatabaseUtils: 	at android.content.ContentProviderNative.onTransact(ContentProviderNative.java:107)
+07-04 16:05:29.037  1636  1824 E DatabaseUtils: 	at android.os.Binder.execTransactInternal(Binder.java:1525)
+07-04 16:05:29.037  1636  1824 E DatabaseUtils: 	at android.os.Binder.execTransact(Binder.java:1460)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: Could not get APN after (but including) LollipopMr1: 
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: java.lang.SecurityException: No permission to access APN settings
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at android.os.Parcel.createExceptionOrNull(Parcel.java:3241)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at android.os.Parcel.createException(Parcel.java:3225)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at android.os.Parcel.readException(Parcel.java:3208)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at android.database.DatabaseUtils.readExceptionFromParcel(DatabaseUtils.java:203)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at android.database.DatabaseUtils.readExceptionFromParcel(DatabaseUtils.java:155)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at android.content.ContentProviderProxy.query(ContentProviderNative.java:495)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at android.content.ContentResolver.query(ContentResolver.java:1229)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at android.content.ContentResolver.query(ContentResolver.java:1161)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at android.content.ContentResolver.query(ContentResolver.java:1117)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at bnbz.b(PG:113)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at bnbz.a(PG:137)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at bmxy.a(PG:88)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at bmxx.s(PG:52)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at bmxx.n(PG:329)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at rgq.call(PG:435)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at bpjl.a(PG:3)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at bpiq.run(PG:19)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at bpjm.run(PG:5)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at whd.run(PG:662)
+07-04 16:05:29.060  4262  4807 E RequestContextBuilder: 	at java.lang.Thread.run(Thread.java:1572)
+07-04 16:05:29.102  1636  1824 E DatabaseUtils: Writing exception to parcel
+07-04 16:05:29.102  1636  1824 E DatabaseUtils: java.lang.SecurityException: No permission to access APN settings
+07-04 16:05:29.102  1636  1824 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.checkPermissionForApnTable(TelephonyProvider.java:5655)
+07-04 16:05:29.102  1636  1824 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.checkPermission(TelephonyProvider.java:5627)
+07-04 16:05:29.102  1636  1824 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.checkPermissionCompat(TelephonyProvider.java:5672)
+07-04 16:05:29.102  1636  1824 E DatabaseUtils: 	at com.android.providers.telephony.TelephonyProvider.query(TelephonyProvider.java:4473)
+07-04 16:05:29.102  1636  1824 E DatabaseUtils: 	at android.content.ContentProvider.query(ContentProvider.java:1674)
+07-04 16:05:29.102  1636  1824 E DatabaseUtils: 	at android.content.ContentProvider.query(ContentProvider.java:1770)
+07-04 16:05:29.102  1636  1824 E DatabaseUtils: 	at android.content.ContentProvider$Transport.query(ContentProvider.java:301)
+07-04 16:05:29.102  1636  1824 E DatabaseUtils: 	at android.content.ContentProviderNative.onTransact(ContentProviderNative.java:107)
+07-04 16:05:29.102  1636  1824 E DatabaseUtils: 	at android.os.Binder.execTransactInternal(Binder.java:1525)
+07-04 16:05:29.102  1636  1824 E DatabaseUtils: 	at android.os.Binder.execTransact(Binder.java:1460)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: Could not get APN after (but including) LollipopMr1: 
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: java.lang.SecurityException: No permission to access APN settings
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at android.os.Parcel.createExceptionOrNull(Parcel.java:3241)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at android.os.Parcel.createException(Parcel.java:3225)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at android.os.Parcel.readException(Parcel.java:3208)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at android.database.DatabaseUtils.readExceptionFromParcel(DatabaseUtils.java:203)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at android.database.DatabaseUtils.readExceptionFromParcel(DatabaseUtils.java:155)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at android.content.ContentProviderProxy.query(ContentProviderNative.java:495)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at android.content.ContentResolver.query(ContentResolver.java:1229)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at android.content.ContentResolver.query(ContentResolver.java:1161)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at android.content.ContentResolver.query(ContentResolver.java:1117)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at bnbz.b(PG:113)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at bnbz.a(PG:137)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at bmxy.a(PG:88)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at bmxx.s(PG:52)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at bmxx.n(PG:329)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at rgq.call(PG:435)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at bpjl.a(PG:3)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at bpiq.run(PG:19)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at bpjm.run(PG:5)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at whd.run(PG:662)
+07-04 16:05:29.106  4262  4807 E RequestContextBuilder: 	at java.lang.Thread.run(Thread.java:1572)
+07-04 16:05:29.308  1163  4426 E BiometricService: Non-biometric, non-credential bits found. Authenticators: 65536
+07-04 16:05:29.637 11032 11032 E Ads     : JS: Refused to get unsafe header "X-Afma-Gcache-IsGcacheHit" (https://www.gstatic.com/mysidia/18f82a7e858a826fb1ec350454dac03b.js?tag=addon/rewarded_video:422)
+07-04 16:05:29.682   437   437 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(269). errno: Success
+07-04 16:05:29.683   437   437 E TrustyKeymaster: Getting response size (56)
+07-04 16:05:29.722 11032 11032 E Ads     : JS: Refused to get unsafe header "X-Afma-Gcache-IsGcacheHit" (https://www.gstatic.com/mysidia/18f82a7e858a826fb1ec350454dac03b.js?tag=addon/rewarded_video:422)
+07-04 16:05:30.008   687  1466 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 16:05:30.010   687  1466 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 16:05:30.011   687  1466 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 16:05:30.025   437   437 E TrustyKeymaster: succeeded to send cmd (16) to com.android.trusty.keymaster with rc(12). errno: Success
+07-04 16:05:30.028   437   437 E TrustyKeymaster: Getting response size (8)
+07-04 16:05:30.034   687  1466 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 16:05:30.036   687  1466 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 16:05:30.037   687  1466 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 0 2 
+07-04 16:05:30.147   687  1466 I APM_AudioPolicyManager: isFadeWhiteListApp() packageName:
+07-04 16:05:30.178   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ANOMALY' not found
+07-04 16:05:30.178   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ERRCODE' not found
+07-04 16:05:30.204   687  1466 D APM_AudioPolicyManager: getOutputForAttrInt() attributes={ Content type: AUDIO_CONTENT_TYPE_MUSIC Usage: AUDIO_USAGE_MEDIA Source: AUDIO_SOURCE_DEFAULT Flags: 0x200 Tags:  } stream=AUDIO_STREAM_MUSIC session 5977 selectedDeviceId 0
+07-04 16:05:30.204   687  1466 I APM_AudioPolicyManager: getOutputForAttrInt() device {AUDIO_DEVICE_OUT_SPEAKER, @:}, sampling rate 44100, format 0x5, channel mask 0x3, flags 0x8 stream AUDIO_STREAM_MUSIC
+07-04 16:05:30.228   687  1466 D APM_AudioPolicyManager: selectOutput new bestOutput 13 criteria 0 100 0 0 0 0 2 2 
+07-04 16:05:30.229   687  1466 D APM_AudioPolicyManager: selectOutput new bestOutput 21 criteria 0 100 0 0 0 1 3 0 
+07-04 16:05:30.229   687  1466 D APM_AudioPolicyManager: getOutputForAttrInt returns output 21 selectedDeviceId 3
+07-04 16:05:30.229   687  1466 I APM_AudioPolicyManager: getOutputForAttr() returns output 21 requestedPortId 0 selectedDeviceId 3 for port ID 871
+07-04 16:05:30.419   687  1466 I APM_AudioPolicyManager: startOutput portId 871
+07-04 16:05:30.419   687  1466 I APM_AudioPolicyManager: startOutput() output 21, stream 3, session 5977
+07-04 16:05:30.502   687  1466 D APM_AudioPolicyManager: getNewOutputDevices selected devices {AUDIO_DEVICE_OUT_SPEAKER, @:}
+07-04 16:05:30.514   687  1466 I APM_AudioPolicyManager: setOutputDevices caller startSource[[portId:5][io:21, deep_buffer]] device {AUDIO_DEVICE_OUT_SPEAKER, @:} delayMs 0
+07-04 16:05:30.515   687  1466 I APM_AudioPolicyManager: setOutputDevices caller startSource[[portId:5][io:21, deep_buffer]] changing device to {AUDIO_DEVICE_OUT_SPEAKER, @:}
+07-04 16:05:30.758   687  1466 E audioserver: addTrack UX is 0
+07-04 16:05:30.758 11032 11315 E AudioSystem: funcName or pkg should not be null
+07-04 16:05:31.352   356   371 E lowmemorykiller: process_mrelease 10705 failed: No such process
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: QuickPerformanceLogger instance wasn't installed in provider, returning noop. Please call QuickPerformanceLoggerProvider.setQuickPerformanceLogger() before getting the instance.
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: java.lang.IllegalStateException: No QPL instance provided
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at com.facebook.quicklog.QuickPerformanceLoggerProvider.getQPLInstance(:35)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at X.1I2.Egn(:1)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at X.1Hp.<init>(:11)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at X.1Hw.apply(:18)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at java.util.concurrent.ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1729)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at X.1Hk.A00(:71)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at X.1Gs.<init>(:23)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at X.WzZ.A04(:734)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at X.WzZ.A0D(:11)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at X.WzZ.A09(:11)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at X.18P.A01(:91)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at X.3Rn.A03(:69)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at X.3Rn.A02(:4)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at com.facebook.common.appinit.invoker.OnApplicationInitInvoker.CNC(:6629)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at X.0ks.run(:292)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at X.0Fr.run(:11)
+07-04 16:05:31.597 11181 11708 E fb4a.QPLProvider: 	at java.lang.Thread.run(Thread.java:1572)
+07-04 16:05:31.768   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: QuickPerformanceLogger instance wasn't installed in provider, returning noop. Please call QuickPerformanceLoggerProvider.setQuickPerformanceLogger() before getting the instance.
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: java.lang.IllegalStateException: No QPL instance provided
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at com.facebook.quicklog.QuickPerformanceLoggerProvider.getQPLInstance(:35)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at X.1I2.Egn(:1)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at X.1Hp.<init>(:11)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at X.1Hw.apply(:18)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at java.util.concurrent.ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1729)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at X.1Hk.A00(:71)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at X.1Ha.<clinit>(:2)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at X.1HW.<init>(:9)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at X.TqZ.A04(:991)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at X.18P.A01(:86)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at X.3Rn.A03(:69)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at com.facebook.common.appinit.invoker.OnApplicationInitInvoker.CNC(:2334)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at X.0ks.run(:292)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at X.0Fr.run(:11)
+07-04 16:05:31.807 11181 11710 E fb4a.QPLProvider: 	at java.lang.Thread.run(Thread.java:1572)
+07-04 16:05:31.807 11181 11710 E fb4a.AppState: Returning default for firstRunInfo
+07-04 16:05:31.807 11181 11710 E fb4a.AppState: Returning default for firstRunInfo
+07-04 16:05:31.833   653 11815 E VSP     : read_uncompressed_header, 762, -10
+07-04 16:05:31.836   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.838   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.845   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.850 11181 11703 E facebook.katana: No implementation found for void com.facebook.quicklog.QuickPerformanceLoggerNativeProvider.nativeUpdateQPLInstance() (tried Java_com_facebook_quicklog_QuickPerformanceLoggerNativeProvider_nativeUpdateQPLInstance and Java_com_facebook_quicklog_QuickPerformanceLoggerNativeProvider_nativeUpdateQPLInstance__) - is the library loaded, e.g. System.loadLibrary?
+07-04 16:05:31.858   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.862   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.864   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.867   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.870   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.872   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.875   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.877   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.884   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.888   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.890   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:31.893   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:32.036   875   922 E ThermalActionCommon: charge has been turn off
+07-04 16:05:32.052 11032 11315 E AudioSystem: funcName or pkg should not be null
+07-04 16:05:32.068   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:32.069   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:32.070   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:32.071   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:32.071   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:32.078   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:32.079   653 11816 E mali_gralloc: Usage not a subset. Buffer usage = 0x4000000000000133, Descriptor usage = 0x5
+07-04 16:05:32.367   687   891 I APM_AudioPolicyManager: stopOutput portId 871
+07-04 16:05:32.367   687  1054 E audioserver: removeTrack UX is 0
+07-04 16:05:32.367   687   891 I APM_AudioPolicyManager: stopOutput() output 21, stream 3, session 5977
+07-04 16:05:32.367   687   891 D APM_AudioPolicyManager: getNewOutputDevices selected devices AUDIO_DEVICE_NONE
+07-04 16:05:32.367   687   891 I APM_AudioPolicyManager: setOutputDevices caller stopSource[[portId:5][io:21, deep_buffer]] device AUDIO_DEVICE_NONE delayMs 320
+07-04 16:05:32.369   687   891 D APM_AudioPolicyManager: getNewOutputDevices selected devices AUDIO_DEVICE_NONE
+07-04 16:05:32.370   687   891 I APM_AudioPolicyManager: setOutputDevices caller stopSource[[portId:1][io:13, primary output]] device AUDIO_DEVICE_NONE delayMs 320
+07-04 16:05:32.371   687   891 I APM_AudioPolicyManager: setOutputDevices caller stopSource[[portId:1][io:13, primary output]] changing device to AUDIO_DEVICE_NONE
+07-04 16:05:32.374   687   891 D APM_AudioPolicyManager: getNewOutputDevices selected devices AUDIO_DEVICE_NONE
+07-04 16:05:32.374   687   891 I APM_AudioPolicyManager: setOutputDevices caller stopSource[[portId:7][io:29, fast output]] device AUDIO_DEVICE_NONE delayMs 320
+07-04 16:05:32.375   687   891 I APM_AudioPolicyManager: setOutputDevices caller stopSource[[portId:7][io:29, fast output]] changing device to AUDIO_DEVICE_NONE
+07-04 16:05:32.488   875   875 E ThermalActionCommon: charge has been turn off
+07-04 16:05:32.516 11181 11702 E fb4a.AppState: Returning default for firstRunInfo
+07-04 16:05:32.516 11181 11702 E fb4a.AppState: Returning default for firstRunInfo
+07-04 16:05:32.517 11181 11702 E fb4a.AppState: Returning default for firstRunInfo
+07-04 16:05:32.840 11181 11708 E fb4a.AppState: Returning default for firstRunInfo
+07-04 16:05:32.840 11181 11708 E fb4a.AppState: Returning default for firstRunInfo
+07-04 16:05:32.941 11181 11702 E fb4a.AppState: Returning default for firstRunInfo
+07-04 16:05:33.686 11737 11748 E FdLeakLice: unexpected error for fdleak java.lang.NullPointerException: Attempt to invoke virtual method 'android.content.Context android.app.Application.getApplicationContext()' on a null object reference
+07-04 16:05:35.184   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ANOMALY' not found
+07-04 16:05:35.184   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ERRCODE' not found
+07-04 16:05:36.003 11923 11941 E cr_ChromiumAndroidLinker: RelroIsIdentical: Relocations are not identical, giving up.
+07-04 16:05:36.003 11923 11941 E cr_ChromiumAndroidLinker: CompareRelroAndReplaceItBy: RELRO is not identical
+07-04 16:05:36.215 11923 11941 E libEGL  : eglQueryStringImpl display is EGL_NO_DISPLAY
+07-04 16:05:36.599  4262  4262 E Finsky  : [2] Setup::DSE: Failed to sync Phenotype experiments, time out after PT0.001S (Waited 1 milliseconds (plus 236385 nanoseconds delay) for jsj@c5ba4f3[status=PENDING, info=[tag=[jsh@63975b0]]])
+07-04 16:05:37.488 11737 11898 E FilePhenotypeFlags: Config package com.google.android.gms.auth_account_client#com.android.chrome cannot use FILE backing without declarative registration. See go/phenotype-android-integration#phenotype for more information. This will lead to stale flags.
+07-04 16:05:38.700 12008 12008 E libc    : SetHeapTaggingLevel: re-enabling tagging after it was disabled is not supported
+07-04 16:05:39.274   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:39.277   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:39.618   356   370 E lowmemorykiller: process_mrelease 11047 failed: No such process
+07-04 16:05:39.805   356   371 E lowmemorykiller: process_mrelease 11430 failed: No such process
+07-04 16:05:39.846   356   370 E lowmemorykiller: process_mrelease 10512 failed: No such process
+07-04 16:05:39.908   855   949 E SLOGCP  : data_rate_stat: agdsp rate: total size(MB)=0.000000; per second(bytes)=0.000000, drop_cnt_=0, drop_data_size_=0, pollin event times=0.
+07-04 16:05:39.963  1163  1279 E KernelCpuSpeedReader: Failed to read cpu-freq: /sys/devices/system/cpu/cpu٠/cpufreq/stats/time_in_state: open failed: ENOENT (No such file or directory)
+07-04 16:05:39.964  1163  1279 E KernelCpuSpeedReader: Failed to read cpu-freq: /sys/devices/system/cpu/cpu٦/cpufreq/stats/time_in_state: open failed: ENOENT (No such file or directory)
+07-04 16:05:39.966  1163  1279 E system_server: updateValue is called with a value 79, which is lower than the previous value 170
+07-04 16:05:40.194   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ANOMALY' not found
+07-04 16:05:40.194   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ERRCODE' not found
+07-04 16:05:41.042   356   371 E lowmemorykiller: process_mrelease 16201 failed: No such process
+07-04 16:05:42.527 12068 12093 E ion.XOSLauncher: Invalid resource ID 0x00000000.
+07-04 16:05:43.104 12068 12085 E AconfigFlags: Failed to read Aconfig values from /vendor/etc/aconfig_flags.pb
+07-04 16:05:43.104 12068 12085 E AconfigFlags: java.io.FileNotFoundException: /vendor/etc/aconfig_flags.pb: open failed: ENOENT (No such file or directory)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at libcore.io.IoBridge.open(IoBridge.java:574)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at java.io.FileInputStream.<init>(FileInputStream.java:179)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at java.io.FileInputStream.<init>(FileInputStream.java:133)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at com.android.internal.pm.pkg.component.AconfigFlags.<init>(AconfigFlags.java:84)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at com.android.internal.pm.pkg.parsing.ParsingPackageUtils.<clinit>(ParsingPackageUtils.java:305)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at com.android.internal.pm.parsing.PackageParser2.<init>(PackageParser2.java:99)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at android.content.pm.PackageManager.getPackageArchiveInfo(PackageManager.java:8843)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at android.content.pm.PackageManager.getPackageArchiveInfo(PackageManager.java:8816)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at r6.f.X(SourceFile:26)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at pb.c.g(SourceFile:30)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at gf.g.c(SourceFile:6)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at gf.g.<init>(SourceFile:96)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at gf.t.S0(SourceFile:160)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at gf.t.I0(SourceFile:47)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at gf.m.run(SourceFile:410)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at android.os.Handler.handleCallback(Handler.java:959)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at android.os.Looper.loopOnce(Looper.java:311)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at android.os.Looper.loop(Looper.java:408)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at android.os.HandlerThread.run(HandlerThread.java:85)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: Caused by: android.system.ErrnoException: open failed: ENOENT (No such file or directory)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at libcore.io.Linux.open(Native Method)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at libcore.io.ForwardingOs.open(ForwardingOs.java:579)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at libcore.io.BlockGuardOs.open(BlockGuardOs.java:274)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at libcore.io.ForwardingOs.open(ForwardingOs.java:579)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at android.app.ActivityThread$AndroidOs.open(ActivityThread.java:9048)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	at libcore.io.IoBridge.open(IoBridge.java:560)
+07-04 16:05:43.104 12068 12085 E AconfigFlags: 	... 19 more
+07-04 16:05:43.213   437   437 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(1425). errno: Success
+07-04 16:05:43.215   437   437 E TrustyKeymaster: Getting response size (28)
+07-04 16:05:43.222   437   437 E TrustyKeymaster: succeeded to send cmd (8) to com.android.trusty.keymaster with rc(284). errno: Success
+07-04 16:05:43.222   437   437 E TrustyKeymaster: Getting response size (28)
+07-04 16:05:43.224   437   437 E TrustyKeymaster: succeeded to send cmd (12) to com.android.trusty.keymaster with rc(32). errno: Success
+07-04 16:05:43.254   437   437 E TrustyKeymaster: Getting response size (60)
+07-04 16:05:43.255   437   437 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(1425). errno: Success
+07-04 16:05:43.256   437   437 E TrustyKeymaster: Getting response size (28)
+07-04 16:05:43.259   437   437 E TrustyKeymaster: succeeded to send cmd (8) to com.android.trusty.keymaster with rc(284). errno: Success
+07-04 16:05:43.260   437   437 E TrustyKeymaster: Getting response size (28)
+07-04 16:05:43.262   437   437 E TrustyKeymaster: succeeded to send cmd (12) to com.android.trusty.keymaster with rc(32). errno: Success
+07-04 16:05:43.294   437   437 E TrustyKeymaster: Getting response size (56)
+07-04 16:05:43.331   437   437 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(1425). errno: Success
+07-04 16:05:43.332   437   437 E TrustyKeymaster: Getting response size (28)
+07-04 16:05:43.335   437   437 E TrustyKeymaster: succeeded to send cmd (8) to com.android.trusty.keymaster with rc(284). errno: Success
+07-04 16:05:43.337   437   437 E TrustyKeymaster: Getting response size (28)
+07-04 16:05:43.338   437   437 E TrustyKeymaster: succeeded to send cmd (12) to com.android.trusty.keymaster with rc(32). errno: Success
+07-04 16:05:43.369   437   437 E TrustyKeymaster: Getting response size (88)
+07-04 16:05:44.060 12068 12068 E InputChannelManager: dispose: count = 0
+07-04 16:05:44.138  1163  1683 E TransitionController: Set visible without transition ActivityRecord{7903a7f u0 com.transsion.XOSLauncher/com.android.quickstep.RecentsActivity t15251 d0} playing=false hasRecentPlayingTransition=false defaultHome=ActivityRecord{4d24266 u0 com.babydola.launcherios/com.android.launcher3.Launcher t15249 d0} isHomeActivityNeedRestore=false caller=com.android.server.wm.ActivityTaskSupervisor.realStartActivityLocked:924 
+07-04 16:05:44.436 12068 12068 E ActivityThread: performResumeActivity r = ActivityRecord{893d5ae token=android.os.BinderProxy@7b94939 {com.transsion.XOSLauncher/com.android.quickstep.RecentsActivity}} hideForNow = false
+07-04 16:05:44.698   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:44.701   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:44.714 12068 12068 E DisplayEventDispatcher: dispatcher 0xb400007d30d5c780 ~ last event processed while scheduling was for 36552031
+07-04 16:05:44.731   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:44.744   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:44.791   668   668 E vendor.sprd.hardware.combined@1.0-service: MemTrack_DEBUG--Open ion_system_heap failed
+07-04 16:05:45.195   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ANOMALY' not found
+07-04 16:05:45.195   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ERRCODE' not found
+07-04 16:05:47.750 12068 12085 E incfs   : could not open IncFs kernel module "/vendor/lib/modules/incrementalfs.ko": No such file or directory
+07-04 16:05:50.001   356   370 E lowmemorykiller: process_mrelease 11923 failed: No such process
+07-04 16:05:50.070   356   371 E lowmemorykiller: process_mrelease 12008 failed: No such process
+07-04 16:05:50.130   356   370 E lowmemorykiller: process_mrelease 11737 failed: No such process
+07-04 16:05:50.204   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ANOMALY' not found
+07-04 16:05:50.204   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ERRCODE' not found
+07-04 16:05:50.206  1163  1279 E KernelCpuSpeedReader: Failed to read cpu-freq: /sys/devices/system/cpu/cpu٠/cpufreq/stats/time_in_state: open failed: ENOENT (No such file or directory)
+07-04 16:05:50.206  1163  1279 E KernelCpuSpeedReader: Failed to read cpu-freq: /sys/devices/system/cpu/cpu٦/cpufreq/stats/time_in_state: open failed: ENOENT (No such file or directory)
+07-04 16:05:50.209  1163  1279 E system_server: updateValue is called with a value 43543, which is lower than the previous value 43545
+07-04 16:05:50.209  1163  1279 E system_server: updateValue is called with a value 98377, which is lower than the previous value 98379
+07-04 16:05:50.284  1163  2285 E libprocessgroup: No such cgroup attribute: /sys/fs/cgroup/uid_90000/cgroup.freeze
+07-04 16:05:53.066  1163  1244 E UnisocWatchdog: UnisocWatchdogImpl sendMessage:0
+07-04 16:05:53.067  1163  1244 E UnisocWatchdog: sendMessage wait ok 
+07-04 16:05:53.067  1163  1336 E UnisocWatchdog: UNISOCWATCHDOG_MESSAGE_TIMER30 trigger
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: updateTitleForPackage error
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: android.content.pm.PackageManager$NameNotFoundException: 
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: 	at android.app.ApplicationPackageManager.getPackageInfoAsUser(ApplicationPackageManager.java:338)
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: 	at android.app.ApplicationPackageManager.getPackageInfo(ApplicationPackageManager.java:298)
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: 	at com.android.launcher3.icons.IconCache.getTitleAndIconForApp(SourceFile:6)
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: 	at com.android.launcher3.model.WidgetsModel.setWidgetsAndShortcuts(SourceFile:121)
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: 	at com.android.launcher3.model.WidgetsModel.update(SourceFile:164)
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: 	at com.android.launcher3.c1.execute(SourceFile:16)
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: 	at com.android.launcher3.LauncherModel.b(SourceFile:39)
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: 	at com.android.launcher3.a1.run(SourceFile:10)
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: 	at android.os.Handler.handleCallback(Handler.java:959)
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: 	at android.os.Handler.dispatchMessage(Handler.java:100)
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: 	at android.os.Looper.loopOnce(Looper.java:311)
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: 	at android.os.Looper.loop(Looper.java:408)
+07-04 16:05:53.332 12068 12085 E Launcher.IconCache: 	at android.os.HandlerThread.run(HandlerThread.java:85)
+07-04 16:05:55.212   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ANOMALY' not found
+07-04 16:05:55.212   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ERRCODE' not found
+07-04 16:05:57.953  4262  4262 E Finsky  : [2] Setup::DSE: Failed to sync Phenotype experiments, time out after PT0.001S (Waited 1 milliseconds (plus 435269 nanoseconds delay) for jsj@8d1a2a5[status=PENDING, info=[tag=[jsh@16eb67a]]])
+07-04 16:05:58.083 12274 12290 E cr_ChromiumAndroidLinker: RelroIsIdentical: Relocations are not identical, giving up.
+07-04 16:05:58.083 12274 12290 E cr_ChromiumAndroidLinker: CompareRelroAndReplaceItBy: RELRO is not identical
+07-04 16:05:58.182 12274 12290 E libEGL  : eglQueryStringImpl display is EGL_NO_DISPLAY
+07-04 16:05:58.546 12205 12267 E FilePhenotypeFlags: Config package com.google.android.gms.auth_account_client#com.android.chrome cannot use FILE backing without declarative registration. See go/phenotype-android-integration#phenotype for more information. This will lead to stale flags.
+07-04 16:05:58.762 12348 12348 E libc    : SetHeapTaggingLevel: re-enabling tagging after it was disabled is not supported
+07-04 16:06:00.017   356   371 E lowmemorykiller: process_mrelease 11181 failed: No such process
+07-04 16:06:00.092  1163  1366 E TranDynamicBarAnimControllerImpl: TranDynamicBarAnimControllerImpl setFromDynamicIslandToWindow pkgName:com.ayman.widget
+07-04 16:06:00.092  1163  1366 E TranDynamicBarAnimControllerImpl: start setFromDynamicIslandToWindow startFromDynamicIsland:false
+07-04 16:06:00.092  1163  1366 E TranDynamicBarAnimControllerImpl: end setFromDynamicIslandToWindow mDynamicIslandPkgName:com.ayman.widget mStartFromDynamicIsland:false
+07-04 16:06:00.130  1163  1366 E TranDynamicBarAnimControllerImpl: TranDynamicBarAnimControllerImpl setFromDynamicIslandToWindow pkgName:com.ayman.widget
+07-04 16:06:00.130  1163  1366 E TranDynamicBarAnimControllerImpl: start setFromDynamicIslandToWindow startFromDynamicIsland:false
+07-04 16:06:00.130  1163  1366 E TranDynamicBarAnimControllerImpl: end setFromDynamicIslandToWindow mDynamicIslandPkgName:com.ayman.widget mStartFromDynamicIsland:false
+07-04 16:06:00.230   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ANOMALY' not found
+07-04 16:06:00.230   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ERRCODE' not found
+07-04 16:06:00.411 12219 12399 E .apps.nbu.files: No package ID 74 found for resource ID 0x740b0013.
+07-04 16:06:02.684 12387 12479 E om.ayman.widget: No package ID 74 found for resource ID 0x740b0013.
+07-04 16:06:02.732  2670  2670 E memfusion: [MF]got no-anti notify 12 with value: 12068
+07-04 16:06:02.732  2670  2670 E memfusion: /dev/memcg/antireclaim/tasks exist
+07-04 16:06:03.194   356   370 E lowmemorykiller: process_mrelease 12387 failed: No such process
+07-04 16:06:03.269   356   371 E lowmemorykiller: process_mrelease 26870 failed: No such process
+07-04 16:06:03.622   437   437 E TrustyKeymaster: succeeded to send cmd (4) to com.android.trusty.keymaster with rc(286). errno: Success
+07-04 16:06:03.623   437   437 E TrustyKeymaster: Getting response size (52)
+07-04 16:06:03.642   437   437 E TrustyKeymaster: succeeded to send cmd (8) to com.android.trusty.keymaster with rc(162). errno: Success
+07-04 16:06:03.642   437   437 E TrustyKeymaster: Getting response size (162)
+07-04 16:06:03.644   437   437 E TrustyKeymaster: succeeded to send cmd (12) to com.android.trusty.keymaster with rc(32). errno: Success
+07-04 16:06:03.644   437   437 E TrustyKeymaster: Getting response size (40)
+07-04 16:06:05.072 12221 12221 E YT.mlplayer: setDefaultLoudnessTargetPreferenceState
+07-04 16:06:05.085 12221 12221 E YT.mlplayer: setAudioDrc(enabled=1)
+07-04 16:06:05.228   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ANOMALY' not found
+07-04 16:06:05.228   399   424 E NetlinkEvent: NetlinkEvent::FindParam(): Parameter 'ERRCODE' not found
