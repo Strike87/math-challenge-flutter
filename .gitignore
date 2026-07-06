@@ -47,5 +47,15 @@ GoogleService-Info.plist
 *.freezed.dart
 *.mocks.dart
 
+# Dev / debug / release-test artifacts — never commit
+*.salive
+p0_*.txt
+p0_*.png
+release_test_*.txt
+release_test_*.xml
+release_white_screen_*.txt
+debug_*_log.txt
+debug_*_screenshot*.png
+
 # Misc
 *.log
