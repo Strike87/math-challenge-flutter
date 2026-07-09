@@ -138,9 +138,9 @@ void main() {
       });
 
       expect(state.p[1].name, 'Ada');
-      expect(state.p[1].avatar, '🦊');
+      expect(state.p[1].avatar.storageEmoji, '🦊');
       expect(state.p[2].name, 'Turing');
-      expect(state.p[2].avatar, '🐸');
+      expect(state.p[2].avatar.storageEmoji, '🐸');
     });
 
     test('E legacy shop ownership maps from object to Flutter lists', () async {

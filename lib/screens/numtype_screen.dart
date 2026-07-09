@@ -12,6 +12,8 @@ class NumTypeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
     final s = context.watch<SettingsService>();
+    final integersUnlocked = (gs.numTypeUnlocked['integers'] ?? 0) > 0;
+    final rationalsUnlocked = (gs.numTypeUnlocked['rationals'] ?? 0) > 0;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
@@ -40,11 +42,11 @@ class NumTypeScreen extends StatelessWidget {
               label: 'Integers',
               desc: gs.numTypeUnlockFeedback == 'integers'
                   ? 'Need 🪙 500'
-                  : gs.numTypeUnlocked['integers']! > 0
+                  : integersUnlocked
                       ? 'Includes negatives: −3, 0, 5, …'
                       : '🔒 Unlock for 🪙 500',
               color: const Color(GameConfig.sky),
-              locked: gs.numTypeUnlocked['integers']! == 0,
+              locked: !integersUnlocked,
               onTap: () {
                 gs.selectNumType('integers');
               },
@@ -56,11 +58,11 @@ class NumTypeScreen extends StatelessWidget {
               label: 'Rationals / Decimals',
               desc: gs.numTypeUnlockFeedback == 'rationals'
                   ? 'Need 🪙 1200'
-                  : gs.numTypeUnlocked['rationals']! > 0
+                  : rationalsUnlocked
                       ? '1.5, 2.7, 0.3, …'
                       : '🔒 Unlock for 🪙 1200',
               color: const Color(GameConfig.punch),
-              locked: gs.numTypeUnlocked['rationals']! == 0,
+              locked: !rationalsUnlocked,
               onTap: () {
                 gs.selectNumType('rationals');
               },

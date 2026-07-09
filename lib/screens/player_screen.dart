@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
 import '../game_config.dart';
+import '../models/player.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
 
@@ -143,11 +144,10 @@ class _PlayerSection extends StatelessWidget {
           GestureDetector(
             key: Key('player-setup-avatar-tile-p$pid'),
             onTap: () async {
-              final current = pl.avatar is String ? pl.avatar as String : '🐶';
               final selected = await showDialog<String>(
                 context: context,
                 builder: (_) => AvatarPickerDialog(
-                  currentAvatar: current,
+                  currentAvatar: pl.avatar.storageEmoji,
                   availableAvatars: gs.availableAvatarBases,
                 ),
               );
@@ -223,7 +223,7 @@ class _PlayerSection extends StatelessWidget {
                 final a = gs.availableAvatarBases[i];
                 return _AvatarOption(
                   avatar: a,
-                  selected: pl.avatar == a,
+                  selected: pl.avatar.storageEmoji == a,
                   onTap: () => gs.pickAvatar(pid, a),
                 );
               },
@@ -285,7 +285,7 @@ class _AvatarOption extends StatelessWidget {
     required this.selected,
     required this.onTap,
   });
-  final Object avatar;
+  final String avatar;
   final bool selected;
   final VoidCallback onTap;
 
@@ -319,7 +319,9 @@ class _AvatarOption extends StatelessWidget {
                 ]
               : null,
         ),
-        child: Center(child: AvatarWidget(avatar: avatar, size: 40)),
+        child: Center(
+          child: AvatarWidget(avatar: AvatarData.emoji(avatar), size: 40),
+        ),
       ),
     );
   }

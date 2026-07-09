@@ -276,8 +276,8 @@ class GameState extends ChangeNotifier {
   late RuntimeState rt = RuntimeState();
   late List<PlayerState> p = [
     PlayerState(),
-    PlayerState(name: 'Player 1', avatar: '🐶'),
-    PlayerState(name: 'Player 2', avatar: '🐱')
+    PlayerState(name: 'Player 1', avatar: const AvatarData.emoji('🐶')),
+    PlayerState(name: 'Player 2', avatar: const AvatarData.emoji('🐱'))
   ];
 
   // ─── Persistent ─────────────────────────────────────────────
@@ -460,9 +460,9 @@ class GameState extends ChangeNotifier {
     await Storage.setObjectList('mc_scores', highScores);
     await Storage.setString('mc_skillMap', _encodeSkillMap());
     await Storage.setInt(
-        'mc_numTypeUnlocked_integers', numTypeUnlocked['integers']!);
+        'mc_numTypeUnlocked_integers', numTypeUnlocked['integers'] ?? 0);
     await Storage.setInt(
-        'mc_numTypeUnlocked_rationals', numTypeUnlocked['rationals']!);
+        'mc_numTypeUnlocked_rationals', numTypeUnlocked['rationals'] ?? 0);
     await Storage.setInt('mc_loginStreak', loginStreak);
     await Storage.setObject('mc_avatarCustom1', avatarCustom['1']!.toJson());
     await Storage.setObject('mc_avatarCustom2', avatarCustom['2']!.toJson());
@@ -475,11 +475,9 @@ class GameState extends ChangeNotifier {
     await Storage.setInt('mc_adGameCount', adGameCount);
     await Storage.setInt('mc_lastRewardedAt', lastRewardedAt);
     await Storage.setString('mc_p1_name', p[1].name);
-    await Storage.setString(
-        'mc_p1_avatar', p[1].avatar is String ? p[1].avatar as String : '🐶');
+    await Storage.setString('mc_p1_avatar', p[1].avatar.storageEmoji);
     await Storage.setString('mc_p2_name', p[2].name);
-    await Storage.setString(
-        'mc_p2_avatar', p[2].avatar is String ? p[2].avatar as String : '🐱');
+    await Storage.setString('mc_p2_avatar', p[2].avatar.storageEmoji);
   }
 
   Future<void> _persistLoadedMigrationState() async {
@@ -1236,7 +1234,7 @@ class GameState extends ChangeNotifier {
 
   Future<void> selectNumType(String numTypeName) async {
     final nt = NumberType.fromString(numTypeName);
-    if (nt == NumberType.integers && numTypeUnlocked['integers']! < 1) {
+    if (nt == NumberType.integers && (numTypeUnlocked['integers'] ?? 0) < 1) {
       // Match the original HTML economy.
       if (coins < 500) {
         numTypeUnlockFeedback = 'integers';
@@ -1246,7 +1244,7 @@ class GameState extends ChangeNotifier {
       addCoins(-500);
       numTypeUnlocked['integers'] = 1;
     } else if (nt == NumberType.rationals &&
-        numTypeUnlocked['rationals']! < 1) {
+        (numTypeUnlocked['rationals'] ?? 0) < 1) {
       if (coins < 1200) {
         numTypeUnlockFeedback = 'rationals';
         notifyListeners();
@@ -1333,7 +1331,7 @@ class GameState extends ChangeNotifier {
     showScreen(GameScreen.player);
   }
 
-  void pickAvatar(int pid, dynamic av) {
+  void pickAvatar(int pid, String av) {
     p[pid].avatar = av;
     notifyListeners();
   }
@@ -1378,16 +1376,16 @@ class GameState extends ChangeNotifier {
       ..isWarmUp = (mode == GameMode.standard && !isMaster && !isBoss);
 
     rt.maxTurns = isMaster
-        ? (currentMasterLevel?.goal ?? 99999)
+        ? (currentMasterLevel?.goal ?? GameConfig.endlessTurns)
         : isBoss
-            ? (rt.dailyBoss?.goal ?? dailyBoss?.goal ?? 99999)
+            ? (rt.dailyBoss?.goal ?? dailyBoss?.goal ?? GameConfig.endlessTurns)
             : ([
                 GameMode.blitz,
                 GameMode.death,
                 GameMode.survival,
                 GameMode.combo
               ].contains(mode)
-                ? 99999
+                ? GameConfig.endlessTurns
                 : players * questionCount);
 
     if (isMaster) {
@@ -1884,7 +1882,7 @@ class GameState extends ChangeNotifier {
   void _checkStandardTurnLimit() {
     if (rt.challenge == Operation.master ||
         rt.challenge == Operation.dailyBoss ||
-        rt.maxTurns == 99999) {
+        rt.maxTurns == GameConfig.endlessTurns) {
       return;
     }
     if (rt.totalTurns >= rt.maxTurns) {
@@ -2209,10 +2207,10 @@ class GameState extends ChangeNotifier {
 
     if (players == 2 && mode == GameMode.standard) {
       if (p1.score > p2.score) {
-        resultIcon = p1.avatar is String ? p1.avatar as String : '🏆';
+        resultIcon = p1.avatar.storageEmoji;
         resultTitle = '${p1.name} Wins! 🏆';
       } else if (p2.score > p1.score) {
-        resultIcon = p2.avatar is String ? p2.avatar as String : '🏆';
+        resultIcon = p2.avatar.storageEmoji;
         resultTitle = '${p2.name} Wins! 🏆';
       } else {
         resultIcon = '🤝';
@@ -2542,17 +2540,15 @@ class GameState extends ChangeNotifier {
     builderPid = pid;
     final selected = p[pid].avatar;
     final saved = avatarCustom['$pid'];
-    if (selected is AvatarCustom) {
-      builderAvatar = selected;
-    } else if (selected is String && selected.trim().isNotEmpty) {
+    if (selected.isCustom) {
+      builderAvatar = selected.custom!;
+    } else {
       builderAvatar = AvatarCustom(
-        base: selected,
+        base: selected.base,
         hat: saved?.hat ?? '',
         accessory: saved?.accessory ?? '',
         color: saved?.color,
       );
-    } else {
-      builderAvatar = saved ?? AvatarCustom();
     }
     showModal(GameModal.avatarBuilder);
   }
@@ -2599,7 +2595,7 @@ class GameState extends ChangeNotifier {
 
   void saveCustomAvatar() {
     avatarCustom['$builderPid'] = builderAvatar;
-    p[builderPid].avatar = builderAvatar;
+    p[builderPid].avatar = AvatarData.custom(builderAvatar);
     unlockAch('avatar_artist');
     closeModal();
     save();
@@ -2870,8 +2866,8 @@ class GameState extends ChangeNotifier {
     lastRewardedAt = 0;
     p = [
       PlayerState(),
-      PlayerState(name: 'Player 1', avatar: '🐶'),
-      PlayerState(name: 'Player 2', avatar: '🐱'),
+      PlayerState(name: 'Player 1', avatar: const AvatarData.emoji('🐶')),
+      PlayerState(name: 'Player 2', avatar: const AvatarData.emoji('🐱')),
     ];
     rt = RuntimeState();
     _masterLevel = 0;

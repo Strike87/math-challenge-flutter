@@ -30,8 +30,10 @@ class Question {
 
 /// Player runtime data for one game session.
 class PlayerState {
+  static const int noFastestTime = 999999999;
+
   String name;
-  Object avatar; // String emoji or AvatarCustom
+  AvatarData _avatar;
   int score;
   int correct;
   int total;
@@ -48,13 +50,13 @@ class PlayerState {
 
   PlayerState({
     this.name = 'Player',
-    this.avatar = '🐶',
+    AvatarData avatar = const AvatarData.emoji('🐶'),
     this.score = 0,
     this.correct = 0,
     this.total = 0,
     this.timeMs = 0,
     this.skipped = 0,
-    this.fastest = 999999999,
+    this.fastest = noFastestTime,
     this.bonus = 0,
     this.streak = 0,
     this.maxStreak = 0,
@@ -62,8 +64,15 @@ class PlayerState {
     List<PowerUp>? pups,
     this.doubleActive = false,
     this.shieldActive = false,
-  })  : history = history ?? [],
+  })  : _avatar = avatar,
+        history = history ?? [],
         pups = pups ?? [];
+
+  AvatarData get avatar => _avatar;
+
+  set avatar(Object value) {
+    _avatar = AvatarData.from(value);
+  }
 
   /// Reset to fresh game session values while keeping name + avatar.
   void resetForGame(
@@ -73,7 +82,7 @@ class PlayerState {
     total = 0;
     timeMs = 0;
     skipped = 0;
-    fastest = 999999999;
+    fastest = noFastestTime;
     bonus = 0;
     streak = 0;
     maxStreak = 0;
@@ -88,6 +97,44 @@ class PlayerState {
 
   /// Accuracy as a percentage (0–100).
   double get accuracy => total == 0 ? 0 : (correct / total) * 100;
+}
+
+/// Typed avatar value: either an emoji base or a custom avatar stack.
+class AvatarData {
+  const AvatarData.emoji(this.emoji) : custom = null;
+
+  const AvatarData.custom(this.custom) : emoji = null;
+
+  factory AvatarData.from(Object value) {
+    if (value is AvatarData) return value;
+    if (value is AvatarCustom) return AvatarData.custom(value);
+    if (value is String && value.trim().isNotEmpty) {
+      return AvatarData.emoji(value);
+    }
+    return const AvatarData.emoji('🐶');
+  }
+
+  final String? emoji;
+  final AvatarCustom? custom;
+
+  bool get isCustom => custom != null;
+  String get base => custom?.base ?? emoji ?? '🐶';
+  String get storageEmoji => emoji ?? base;
+
+  @override
+  bool operator ==(Object other) {
+    if (other is String) return emoji == other;
+    if (other is AvatarCustom) return custom == other;
+    return other is AvatarData &&
+        other.emoji == emoji &&
+        other.custom == custom;
+  }
+
+  @override
+  int get hashCode => Object.hash(emoji, custom);
+
+  @override
+  String toString() => custom?.toString() ?? emoji ?? '🐶';
 }
 
 class HistoryEntry {
@@ -129,4 +176,16 @@ class AvatarCustom {
         accessory: (j['accessory'] as String?) ?? '',
         color: j['color'] as String?,
       );
+
+  @override
+  bool operator ==(Object other) {
+    return other is AvatarCustom &&
+        other.base == base &&
+        other.hat == hat &&
+        other.accessory == accessory &&
+        other.color == color;
+  }
+
+  @override
+  int get hashCode => Object.hash(base, hat, accessory, color);
 }

@@ -180,7 +180,7 @@ void main() {
 
       expect(state.availableAvatarBases, contains(robot.emoji));
       state.pickAvatar(1, robot.emoji);
-      expect(state.p[1].avatar, robot.emoji);
+      expect(state.p[1].avatar.storageEmoji, robot.emoji);
     });
 
     test('insufficient coins grant no ownership and do not go negative',

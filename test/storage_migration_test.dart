@@ -156,9 +156,9 @@ void main() {
       final state = await makeState({'mc_p1Data': p1, 'mc_p2Data': p2});
 
       expect(state.p[1].name, 'Ada');
-      expect(state.p[1].avatar, '🦊');
+      expect(state.p[1].avatar.storageEmoji, '🦊');
       expect(state.p[2].name, 'Turing');
-      expect(state.p[2].avatar, '🐸');
+      expect(state.p[2].avatar.storageEmoji, '🐸');
       expect(Storage.getString('mc_p1_name', ''), 'Ada');
       expect(Storage.getString('mc_p1_avatar', ''), '🦊');
       expect(Storage.getString('mc_p2_name', ''), 'Turing');

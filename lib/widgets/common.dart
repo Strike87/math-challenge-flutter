@@ -155,7 +155,8 @@ class _PressableScaleState extends State<_PressableScale> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsService>();
+    final duration =
+        context.select<SettingsService, Duration>((s) => s.duration(180));
     return Semantics(
       button: true,
       child: GestureDetector(
@@ -168,11 +169,11 @@ class _PressableScaleState extends State<_PressableScale> {
         },
         child: AnimatedScale(
           scale: _pressed ? 0.95 : 1,
-          duration: settings.duration(180),
+          duration: duration,
           curve: const Cubic(0.4, 0, 0.2, 1),
           child: AnimatedSlide(
             offset: _pressed ? const Offset(0, 0.04) : Offset.zero,
-            duration: settings.duration(180),
+            duration: duration,
             curve: const Cubic(0.4, 0, 0.2, 1),
             child: widget.child,
           ),
@@ -194,59 +195,58 @@ class AppFonts {
       settings.dyslexia ? dyslexia : body;
 }
 
-/// Renders an avatar — either an emoji string or a [AvatarCustom] stack.
+/// Renders an avatar — either an emoji base or a custom stack.
 class AvatarWidget extends StatelessWidget {
   const AvatarWidget({super.key, required this.avatar, this.size = 48});
-  final Object avatar;
+  final AvatarData avatar;
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    if (avatar is String) {
+    final custom = avatar.custom;
+    if (custom == null) {
       return Text(
-        avatar as String,
+        avatar.base,
         style: TextStyle(fontSize: size * 0.8),
       );
     }
-    if (avatar is AvatarCustom) {
-      final a = avatar as AvatarCustom;
-      final bgColor = a.color == null ? null : _parseColor(a.color!);
-      return SizedBox(
-        width: size,
-        height: size,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            if (bgColor != null)
-              Container(
-                width: size * 0.86,
-                height: size * 0.86,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: bgColor.withValues(alpha: 0.26),
-                  border: Border.all(
-                    color: bgColor.withValues(alpha: 0.58),
-                    width: size * 0.035,
-                  ),
+    final bgColor = custom.color == null ? null : _parseColor(custom.color!);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (bgColor != null)
+            Container(
+              width: size * 0.86,
+              height: size * 0.86,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: bgColor.withValues(alpha: 0.26),
+                border: Border.all(
+                  color: bgColor.withValues(alpha: 0.58),
+                  width: size * 0.035,
                 ),
               ),
-            Text(a.base, style: TextStyle(fontSize: size * 0.7)),
-            if (a.hat.isNotEmpty)
-              Positioned(
-                top: -size * 0.05,
-                child: Text(a.hat, style: TextStyle(fontSize: size * 0.35)),
+            ),
+          Text(custom.base, style: TextStyle(fontSize: size * 0.7)),
+          if (custom.hat.isNotEmpty)
+            Positioned(
+              top: -size * 0.05,
+              child: Text(custom.hat, style: TextStyle(fontSize: size * 0.35)),
+            ),
+          if (custom.accessory.isNotEmpty)
+            Positioned(
+              bottom: size * 0.05,
+              child: Text(
+                custom.accessory,
+                style: TextStyle(fontSize: size * 0.3),
               ),
-            if (a.accessory.isNotEmpty)
-              Positioned(
-                bottom: size * 0.05,
-                child:
-                    Text(a.accessory, style: TextStyle(fontSize: size * 0.3)),
-              ),
-          ],
-        ),
-      );
-    }
-    return Text('🐶', style: TextStyle(fontSize: size * 0.8));
+            ),
+        ],
+      ),
+    );
   }
 
   Color _parseColor(String hex) {
@@ -348,8 +348,11 @@ class BigEmojiOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsService>();
-    if (settings.reduceMotion) return const SizedBox.shrink();
+    final motion =
+        context.select<SettingsService, ({Duration duration, bool reduce})>(
+      (s) => (duration: s.duration(350), reduce: s.reduceMotion),
+    );
+    if (motion.reduce) return const SizedBox.shrink();
 
     return TweenAnimationBuilder<double>(
       key: ValueKey('$emoji-$visible'),
@@ -357,12 +360,12 @@ class BigEmojiOverlay extends StatelessWidget {
         begin: visible ? 0.5 : 1.15,
         end: visible ? 1.15 : 0.5,
       ),
-      duration: settings.duration(350),
+      duration: motion.duration,
       curve: const Cubic(0.2, 0.9, 0.3, 1),
       builder: (context, scale, child) {
         return AnimatedOpacity(
           opacity: visible ? 1.0 : 0.0,
-          duration: settings.duration(350),
+          duration: motion.duration,
           child: Transform.scale(scale: scale, child: child),
         );
       },
@@ -401,7 +404,10 @@ class NeoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsService>();
+    final settings =
+        context.select<SettingsService, ({bool dark, bool lowPerf})>(
+      (s) => (dark: s.dark, lowPerf: s.lowPerf),
+    );
     final radius = BorderRadius.circular(borderRadius);
     Widget surface = Container(
       decoration: BoxDecoration(

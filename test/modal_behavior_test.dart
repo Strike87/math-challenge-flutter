@@ -402,13 +402,13 @@ void main() {
         state.setBuilderColor('#FF6B6B');
         state.saveCustomAvatar();
 
-        final p1 = state.p[1].avatar as AvatarCustom;
+        final p1 = state.p[1].avatar.custom!;
         expect(p1.base, '🐱');
         expect(p1.hat, '🎓');
         expect(p1.accessory, '👓');
         expect(p1.color, '#FF6B6B');
         expect(state.avatarCustom['1'], isA<AvatarCustom>());
-        expect(state.p[2].avatar, isNot(isA<AvatarCustom>()));
+        expect(state.p[2].avatar.isCustom, isFalse);
         expect(state.currentModal, GameModal.none);
 
         state.showAvatarBuilder(2);
@@ -421,9 +421,9 @@ void main() {
         state.setBuilderBase('🐸');
         state.saveCustomAvatar();
 
-        final p2 = state.p[2].avatar as AvatarCustom;
+        final p2 = state.p[2].avatar.custom!;
         expect(p2.base, '🐸');
-        expect((state.p[1].avatar as AvatarCustom).base, '🐱');
+        expect(state.p[1].avatar.custom!.base, '🐱');
 
         state.showAvatarBuilder(1);
         expect(state.builderAvatar.base, '🐱');
@@ -444,7 +444,7 @@ void main() {
         state.setBuilderBase('🐱');
         state.closeModal();
 
-        expect(state.p[1].avatar, '🐶');
+        expect(state.p[1].avatar.storageEmoji, '🐶');
         expect(state.avatarCustom['1']?.base, isNot('🐱'));
         expect(state.currentModal, GameModal.none);
       } finally {

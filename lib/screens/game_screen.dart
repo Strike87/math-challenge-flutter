@@ -561,7 +561,9 @@ class _ScoreProgress extends StatelessWidget {
 
     final target = isBoss
         ? (gs.rt.dailyBoss?.goal ?? 1)
-        : (gs.rt.maxTurns == 99999 ? gs.questionCount : gs.rt.maxTurns);
+        : (gs.rt.maxTurns == GameConfig.endlessTurns
+            ? gs.questionCount
+            : gs.rt.maxTurns);
     final clampedTarget = target <= 0 ? 1 : target;
     final current =
         isBoss ? gs.rt.dailyBossProgress : _questionNumber(gs, clampedTarget);
@@ -696,6 +698,7 @@ class _BossCircle extends StatefulWidget {
 class _BossCircleState extends State<_BossCircle>
     with SingleTickerProviderStateMixin {
   late final AnimationController _float;
+  bool _effectsEnabled = false;
 
   @override
   void initState() {
@@ -707,22 +710,32 @@ class _BossCircleState extends State<_BossCircle>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final s = Provider.of<SettingsService>(context);
+    _syncFloat(!s.reduceMotion && !s.lowPerf);
+  }
+
+  @override
   void dispose() {
     _float.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final s = context.watch<SettingsService>();
-    final effectsEnabled = !s.reduceMotion && !s.lowPerf;
-    if (effectsEnabled) {
+  void _syncFloat(bool enabled) {
+    _effectsEnabled = enabled;
+    if (enabled) {
       if (!_float.isAnimating) _float.repeat();
     } else {
       _float.stop();
       _float.value = 0;
     }
+  }
 
+  @override
+  Widget build(BuildContext context) {
+    final hitDuration =
+        context.select<SettingsService, Duration>((s) => s.duration(450));
     final gs = widget.gs;
     final isMaster = gs.rt.challenge == Operation.master;
     final normalIcon = isMaster
@@ -760,11 +773,11 @@ class _BossCircleState extends State<_BossCircle>
             begin: 0,
             end:
                 (gs.rt.bossMood == 'hit' || gs.rt.bossMood == 'wrong') ? 1 : 0),
-        duration: s.duration(450),
+        duration: hitDuration,
         curve: Curves.easeOut,
         child: circle,
         builder: (_, t, child) {
-          if (!effectsEnabled ||
+          if (!_effectsEnabled ||
               (gs.rt.bossMood != 'hit' && gs.rt.bossMood != 'wrong')) {
             return child!;
           }
@@ -778,7 +791,7 @@ class _BossCircleState extends State<_BossCircle>
       ),
       builder: (_, child) {
         final dy =
-            effectsEnabled ? math.sin(_float.value * math.pi * 2) * -4.5 : 0.0;
+            _effectsEnabled ? math.sin(_float.value * math.pi * 2) * -4.5 : 0.0;
         return Transform.translate(offset: Offset(0, dy), child: child);
       },
     );
@@ -962,6 +975,7 @@ class _FloatingShieldBadge extends StatefulWidget {
 class _FloatingShieldBadgeState extends State<_FloatingShieldBadge>
     with SingleTickerProviderStateMixin {
   late final AnimationController _float;
+  bool _effectsEnabled = false;
 
   @override
   void initState() {
@@ -973,28 +987,43 @@ class _FloatingShieldBadgeState extends State<_FloatingShieldBadge>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final s = Provider.of<SettingsService>(context);
+    _syncFloat(widget.active && !s.reduceMotion && !s.lowPerf);
+  }
+
+  @override
+  void didUpdateWidget(covariant _FloatingShieldBadge oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final s = Provider.of<SettingsService>(context, listen: false);
+    _syncFloat(widget.active && !s.reduceMotion && !s.lowPerf);
+  }
+
+  @override
   void dispose() {
     _float.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final s = context.watch<SettingsService>();
-    final effectsEnabled = widget.active && !s.reduceMotion && !s.lowPerf;
-    if (effectsEnabled) {
+  void _syncFloat(bool enabled) {
+    _effectsEnabled = enabled;
+    if (enabled) {
       if (!_float.isAnimating) _float.repeat();
     } else {
       _float.stop();
       _float.value = 0;
     }
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _float,
       child: widget.child,
       builder: (_, child) {
         final dy =
-            effectsEnabled ? math.sin(_float.value * math.pi * 2) * -4.5 : 0.0;
+            _effectsEnabled ? math.sin(_float.value * math.pi * 2) * -4.5 : 0.0;
         return Transform.translate(offset: Offset(0, dy), child: child);
       },
     );
@@ -1521,7 +1550,7 @@ class _QuestionCard extends StatelessWidget {
                             fit: BoxFit.scaleDown,
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              'Q ${_questionNumber(gs, gs.rt.maxTurns)} / ${gs.rt.maxTurns == 99999 ? '∞' : gs.rt.maxTurns}',
+                              'Q ${_questionNumber(gs, gs.rt.maxTurns)} / ${gs.rt.maxTurns == GameConfig.endlessTurns ? '∞' : gs.rt.maxTurns}',
                               maxLines: 1,
                               softWrap: false,
                               style: TextStyle(
@@ -1733,7 +1762,7 @@ class _QuestionCard extends StatelessWidget {
 }
 
 int _questionNumber(GameState gs, int target) {
-  if (target == 99999) return gs.rt.totalTurns + 1;
+  if (target == GameConfig.endlessTurns) return gs.rt.totalTurns + 1;
   final current = gs.rt.accepting ? gs.rt.totalTurns + 1 : gs.rt.totalTurns;
   return current.clamp(1, target).toInt();
 }

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 // Expanded avatar list for Math Challenge.
 //
 // Originally the HTML game had 11 animal emojis. We've expanded to ~50
@@ -149,7 +151,7 @@ class AvatarPool {
 
   /// Pick a random avatar — useful for default assignment.
   static String random() {
-    final i = DateTime.now().millisecondsSinceEpoch % all.length;
+    final i = Random().nextInt(all.length);
     return all[i];
   }
 }

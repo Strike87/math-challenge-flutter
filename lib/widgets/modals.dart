@@ -480,7 +480,7 @@ class _AvatarSettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
     final p1 = gs.p[1];
-    final currentAvatar = p1.avatar is String ? p1.avatar as String : '🐶';
+    final currentAvatar = p1.avatar.storageEmoji;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1886,7 +1886,10 @@ class _AvatarBuilderPreview extends StatelessWidget {
                 children: [
                   _AvatarStudioSlot(
                     size: slotSize,
-                    child: AvatarWidget(avatar: avatar, size: slotSize - 8),
+                    child: AvatarWidget(
+                      avatar: AvatarData.custom(avatar),
+                      size: slotSize - 8,
+                    ),
                   ),
                   _AvatarStudioSlot(
                     size: slotSize,
@@ -2363,10 +2366,11 @@ class _SkillLabelItem extends StatelessWidget {
 }
 
 class _SkillRadarPainter extends CustomPainter {
-  const _SkillRadarPainter({required this.skills, required this.settings});
+  _SkillRadarPainter({required this.skills, required this.settings});
 
   final List<_SkillSnapshot> skills;
   final SettingsService settings;
+  final Map<String, TextPainter> _textPainters = {};
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -2490,18 +2494,22 @@ class _SkillRadarPainter extends CustomPainter {
     FontWeight weight, {
     bool centered = false,
   }) {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          color: color,
-          fontSize: fontSize,
-          fontWeight: weight,
-          fontFamily: AppFonts.body,
+    final key = '$text|${color.toARGB32()}|$fontSize|${weight.value}';
+    final painter = _textPainters.putIfAbsent(
+      key,
+      () => TextPainter(
+        text: TextSpan(
+          text: text,
+          style: TextStyle(
+            color: color,
+            fontSize: fontSize,
+            fontWeight: weight,
+            fontFamily: AppFonts.body,
+          ),
         ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+        textDirection: TextDirection.ltr,
+      )..layout(),
+    );
     painter.paint(
       canvas,
       centered

@@ -47,7 +47,8 @@ void main() {
           reduceMotion: true,
           animSpeed: 0.3,
         );
-      final state = GameState(settings: settings, audio: AudioService(settings));
+      final state =
+          GameState(settings: settings, audio: AudioService(settings));
       addTearDown(state.dispose);
 
       state
@@ -105,7 +106,7 @@ void main() {
       expect(state.unlockedHats, isEmpty);
       expect(state.adsRemoved, isFalse);
       expect(state.p[1].name, 'Player 1');
-      expect(state.p[1].avatar, '🐶');
+      expect(state.p[1].avatar.storageEmoji, '🐶');
       expect(state.currentScreen, GameScreen.menu);
       expect(state.currentModal, GameModal.none);
       expect(state.isDailyBossClaimedToday, isFalse);

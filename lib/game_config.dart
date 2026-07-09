@@ -107,6 +107,7 @@ class GameConfig {
   static const int msPerDay = 86400000;
   static const int blitzTimerDefault = 60000; // 60 s
   static const int comboTimerDefault = 90000; // 90 s
+  static const int endlessTurns = 99999;
   static const int timerMinMs = 3000;
   static const int timerPenaltyStep = 3;
   static const Map<String, int> timerBaseMs = {
