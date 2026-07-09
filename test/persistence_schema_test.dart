@@ -185,7 +185,8 @@ void main() {
       expect(reloaded.animSpeed, 0.3);
     });
 
-    test('G legacy same-key JSON values and avatar custom load', () async {
+    test('G legacy values recompute adaptive level and load avatar custom',
+        () async {
       final state = await makeState({
         'mc_coins': jsonEncode(42),
         'mc_gamesPlayed': jsonEncode(7),
@@ -201,7 +202,7 @@ void main() {
 
       expect(state.coins, 42);
       expect(state.gamesPlayed, 7);
-      expect(state.adaptLvlRaw, 6.5);
+      expect(state.adaptLvlRaw, 2);
       expect(state.adsRemoved, isTrue);
       expect(state.avatarCustom['1']!.base, '🦁');
       expect(state.avatarCustom['1']!.hat, '🎓');
