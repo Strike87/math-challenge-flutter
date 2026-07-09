@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
@@ -27,8 +29,13 @@ void main() {
         .setMockMethodCallHandler(audioPlayerChannel, null);
   });
 
-  Future<GameState> makeState() async {
-    SharedPreferences.setMockInitialValues({});
+  Future<GameState> makeState({
+    bool clearStorage = true,
+    Map<String, Object>? initialValues,
+  }) async {
+    if (clearStorage) {
+      SharedPreferences.setMockInitialValues(initialValues ?? {});
+    }
     await Storage.init();
 
     final settings = SettingsService()
@@ -173,6 +180,70 @@ void main() {
 
       expect(restored.expert, 2);
       expect(restored.insane, 3);
+    });
+
+    test('stale adaptive level is corrected from loaded skill mastery',
+        () async {
+      final state = await makeState(initialValues: {
+        'mc_adaptLvl': 0.0,
+        'mc_skillMap': jsonEncode({
+          'addition': {'mastery': 95},
+        }),
+      });
+
+      expect(state.adaptLvlRaw, closeTo(3.875, 0.0001));
+      expect(state.adaptLvl, 4);
+    });
+
+    test('missing adaptive level is recomputed from loaded skill mastery',
+        () async {
+      final state = await makeState(initialValues: {
+        'mc_skillMap': jsonEncode({
+          'addition': {'mastery': 95},
+        }),
+      });
+
+      expect(state.adaptLvlRaw, closeTo(3.875, 0.0001));
+      expect(state.adaptLvl, 4);
+    });
+
+    test('new skill map uses the default adaptive level', () async {
+      final state = await makeState();
+
+      expect(state.adaptLvlRaw, 2);
+      expect(state.adaptLvl, 2);
+    });
+
+    test('reset all data clears adaptive level and skill mastery', () async {
+      final state = await makeState(initialValues: {
+        'mc_adaptLvl': 9.0,
+        'mc_skillMap': jsonEncode({
+          'addition': {'mastery': 95},
+        }),
+      });
+
+      await state.resetAllData();
+
+      expect(state.adaptLvlRaw, 0);
+      expect(state.adaptLvl, 0);
+      expect(state.skillMap[Operation.addition.name]!.mastery, 20);
+    });
+
+    test('skill mastery persists across a fresh session', () async {
+      final state = await makeState();
+      state.skillMap[Operation.addition.name]!.mastery = 90;
+      state.debugRecordAdaptiveAnswer(
+        Operation.addition,
+        Difficulty.expert,
+        true,
+        1400,
+      );
+      await state.save();
+
+      final restored = await makeState(clearStorage: false);
+      expect(restored.skillMap[Operation.addition.name]!.mastery, 97.6);
+      expect(restored.debugGetAdaptDiff(Operation.addition), Difficulty.insane);
+      expect(restored.debugGetAdaptDiff(Operation.division), Difficulty.easy);
     });
   });
 }

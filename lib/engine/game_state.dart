@@ -427,6 +427,7 @@ class GameState extends ChangeNotifier {
         'mc_scores', (j) => HighScore.fromJson(j)));
     coins = Storage.getInt('mc_coins', 0);
     skillMap = _loadSkillMap();
+    _recomputeAdaptiveLevel();
     numTypeUnlocked = _loadNumTypeUnlocked();
     loginStreak = Storage.getInt('mc_loginStreak', 0);
     avatarCustom['1'] = _loadAvatarCustom(1);
