@@ -58,4 +58,4 @@ debug_*_log.txt
 debug_*_screenshot*.png
 
 # Misc
-*.log
+*.logtest/failures/
