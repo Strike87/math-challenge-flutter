@@ -9,6 +9,7 @@ import '../models/enums.dart';
 import '../models/game_data.dart';
 import '../models/player.dart';
 import '../services/iap.dart';
+import '../services/link_launcher.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
 
@@ -297,10 +298,36 @@ class SettingsModal extends StatelessWidget {
                 gs.restorePurchases();
               },
             ),
+            const SizedBox(height: 16),
+            _section('Support / About', s),
+            _SupportLinkTile(
+              icon: '✉️',
+              label: 'Email',
+              value: 'support@mathchallenge.me',
+              onTap: () => _openSupportLink(
+                gs,
+                'mailto:support@mathchallenge.me',
+              ),
+            ),
+            const SizedBox(height: 8),
+            _SupportLinkTile(
+              icon: '🌐',
+              label: 'Website',
+              value: 'mathchallenge.me',
+              onTap: () => _openSupportLink(
+                gs,
+                'https://mathchallenge.me',
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _openSupportLink(GameState gs, String url) async {
+    if (await LinkLauncher.open(url)) return;
+    gs.showToast('Could not open link.');
   }
 
   Widget _section(String text, SettingsService s) {
@@ -313,6 +340,69 @@ class SettingsModal extends StatelessWidget {
           fontSize: 12,
           fontWeight: FontWeight.w800,
           letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+}
+
+class _SupportLinkTile extends StatelessWidget {
+  const _SupportLinkTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
+
+  final String icon;
+  final String label;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Material(
+      color: s.surface2.withValues(alpha: s.dark ? 0.84 : 0.56),
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: s.text,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: AppFonts.body,
+                      ),
+                    ),
+                    Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: s.muted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: AppFonts.body,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.open_in_new, size: 18, color: s.muted),
+            ],
+          ),
         ),
       ),
     );
@@ -748,6 +838,16 @@ class _MasterIntroCopy extends StatelessWidget {
         const _AdventureRule(
             icon: '⚔️', title: 'Quest', text: 'Beat each boss'),
         const _AdventureRule(icon: '♥', title: 'Lives', text: '3 hearts'),
+        const SizedBox(height: 6),
+        Text(
+          'Answer enough questions before your hearts run out.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: s.text2,
+            fontWeight: FontWeight.w700,
+            height: 1.3,
+          ),
+        ),
         const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
@@ -894,6 +994,16 @@ class DailyBossModal extends StatelessWidget {
               fontSize: 14,
               fontWeight: FontWeight.w500,
               height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Defeat the boss by answering enough questions correctly. Wrong answers or timeouts cost hearts. Reach the goal before your hearts run out to win.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              height: 1.35,
             ),
           ),
           const SizedBox(height: 12),
@@ -1551,6 +1661,34 @@ class TutorialModal extends StatelessWidget {
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text('How to play', style: TextStyle(fontWeight: FontWeight.w900)),
+          SizedBox(height: 8),
+          Text(
+              'Answer math questions, earn coins, unlock rewards, and beat bosses.'),
+          SizedBox(height: 12),
+          Text('Boss fights', style: TextStyle(fontWeight: FontWeight.w900)),
+          SizedBox(height: 8),
+          Text(
+              'Defeat the boss by answering enough questions correctly. Wrong answers or timeouts cost hearts. Reach the goal before your hearts run out to win.'),
+          SizedBox(height: 12),
+          Text('Hearts', style: TextStyle(fontWeight: FontWeight.w900)),
+          SizedBox(height: 8),
+          Text(
+              'Hearts protect you in boss and survival challenges. Lose all hearts and the challenge ends.'),
+          SizedBox(height: 12),
+          Text('Coins', style: TextStyle(fontWeight: FontWeight.w900)),
+          SizedBox(height: 8),
+          Text(
+              'Earn coins by playing, beating bosses, claiming daily rewards, and completing challenges. Use coins to unlock avatars, hats, number types, and power-ups.'),
+          SizedBox(height: 12),
+          Text('Power-ups', style: TextStyle(fontWeight: FontWeight.w900)),
+          SizedBox(height: 8),
+          Text(
+              'Power-ups can help during tough questions. Use them carefully when the boss gets stronger.'),
+          SizedBox(height: 12),
+          Text(
+              'Practice addition, subtraction, multiplication, and division through quick challenges and boss battles.'),
+          SizedBox(height: 12),
           Text('Game Modes', style: TextStyle(fontWeight: FontWeight.w900)),
           SizedBox(height: 8),
           Text('• Standard: Answer questions before time runs out'),
@@ -1566,11 +1704,6 @@ class TutorialModal extends StatelessWidget {
           Text('• Natural: 1, 2, 3, …'),
           Text('• Integers: includes negatives'),
           Text('• Rationals: decimal numbers'),
-          SizedBox(height: 12),
-          Text('Power-Ups', style: TextStyle(fontWeight: FontWeight.w900)),
-          SizedBox(height: 8),
-          Text(
-              'Earn power-ups every 3 correct answers in single-player Standard mode.'),
         ],
       ),
     );

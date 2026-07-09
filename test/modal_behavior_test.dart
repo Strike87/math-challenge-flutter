@@ -17,6 +17,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const audioGlobalChannel = MethodChannel('xyz.luan/audioplayers.global');
   const audioPlayerChannel = MethodChannel('xyz.luan/audioplayers');
+  const linkChannel = MethodChannel('math_challenge/link_launcher');
 
   setUpAll(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -30,6 +31,8 @@ void main() {
         .setMockMethodCallHandler(audioGlobalChannel, null);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(audioPlayerChannel, null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(linkChannel, null);
   });
 
   group('RT-030 modal behavioral content parity', () {
@@ -126,6 +129,43 @@ void main() {
         expect(find.text('Performance mode'), findsOneWidget);
         expect(find.text('faster on all devices'), findsOneWidget);
       } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('Settings support links open and report failure',
+        (tester) async {
+      final state = await _makeState();
+      final opened = <String>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(linkChannel, (call) async {
+        opened.add((call.arguments as Map)['url'] as String);
+        return opened.length == 1;
+      });
+      try {
+        state.showModal(GameModal.settings);
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+
+        expect(find.text('Support / About'), findsOneWidget);
+        expect(find.text('support@mathchallenge.me'), findsOneWidget);
+        expect(find.text('mathchallenge.me'), findsOneWidget);
+
+        await tester.ensureVisible(find.text('mathchallenge.me'));
+        await tester.pump();
+        await tester.tap(find.text('mathchallenge.me'));
+        await tester.pump();
+        expect(opened.single, 'https://mathchallenge.me');
+
+        await tester.ensureVisible(find.text('support@mathchallenge.me'));
+        await tester.pump();
+        await tester.tap(find.text('support@mathchallenge.me'));
+        await tester.pump();
+        expect(opened.last, 'mailto:support@mathchallenge.me');
+        expect(state.toastMessage, 'Could not open link.');
+      } finally {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(linkChannel, null);
         state.dispose();
       }
     });
