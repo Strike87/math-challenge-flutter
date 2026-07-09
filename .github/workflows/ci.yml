@@ -13,5 +13,6 @@ jobs:
         with:
           channel: stable
       - run: flutter pub get
-      - run: flutter test --reporter compact
+      # Golden tests run manually or in a dedicated golden environment because pixel output can differ by OS/font renderer.
+      - run: flutter test --reporter compact --exclude-tags golden
       - run: flutter analyze
