@@ -108,7 +108,7 @@ class MenuScreen extends StatelessWidget {
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    '🟰 Designed by Mr. Mohamed Khairy, Mathematics Supervisor',
+                    '🎓 Designed by Mr. Mohamed Khairy, Mathematics Supervisor',
                     maxLines: 1,
                     softWrap: false,
                     style: TextStyle(
