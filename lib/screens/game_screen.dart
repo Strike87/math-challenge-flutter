@@ -559,14 +559,18 @@ class _ScoreProgress extends StatelessWidget {
         gs.rt.challenge != Operation.dailyBoss;
     if (!isBoss && !isStandard) return const SizedBox(height: 8);
 
-    final target = isBoss
+    final isEndless = !isBoss && gs.rt.maxTurns == GameConfig.endlessTurns;
+    final totalTarget = isBoss
         ? (gs.rt.dailyBoss?.goal ?? 1)
-        : (gs.rt.maxTurns == GameConfig.endlessTurns
-            ? gs.questionCount
-            : gs.rt.maxTurns);
+        : (isEndless ? gs.questionCount : gs.rt.maxTurns);
+    final target = isEndless ? totalTarget : _questionTarget(gs, totalTarget);
     final clampedTarget = target <= 0 ? 1 : target;
-    final current =
-        isBoss ? gs.rt.dailyBossProgress : _questionNumber(gs, clampedTarget);
+    final current = isBoss
+        ? gs.rt.dailyBossProgress
+        : _questionNumber(
+            gs,
+            isEndless ? GameConfig.endlessTurns : totalTarget,
+          );
     final value = (current / clampedTarget).clamp(0.0, 1.0);
 
     return Padding(
@@ -1550,7 +1554,7 @@ class _QuestionCard extends StatelessWidget {
                             fit: BoxFit.scaleDown,
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              'Q ${_questionNumber(gs, gs.rt.maxTurns)} / ${gs.rt.maxTurns == GameConfig.endlessTurns ? '∞' : gs.rt.maxTurns}',
+                              'Q ${_questionNumber(gs, gs.rt.maxTurns)} / ${_questionTarget(gs, gs.rt.maxTurns) == GameConfig.endlessTurns ? '∞' : _questionTarget(gs, gs.rt.maxTurns)}',
                               maxLines: 1,
                               softWrap: false,
                               style: TextStyle(
@@ -1761,10 +1765,32 @@ class _QuestionCard extends StatelessWidget {
   }
 }
 
-int _questionNumber(GameState gs, int target) {
-  if (target == GameConfig.endlessTurns) return gs.rt.totalTurns + 1;
+int _questionTarget(GameState gs, int totalTarget) {
+  if (gs.players == 2 &&
+      gs.mode == GameMode.standard &&
+      gs.rt.challenge != Operation.dailyBoss &&
+      gs.rt.challenge != Operation.master &&
+      totalTarget != GameConfig.endlessTurns) {
+    return totalTarget ~/ 2;
+  }
+  return totalTarget;
+}
+
+int _questionNumber(GameState gs, int totalTarget) {
+  if (totalTarget == GameConfig.endlessTurns) return gs.rt.totalTurns + 1;
+  final target = _questionTarget(gs, totalTarget);
+  final clampedTarget = target <= 0 ? 1 : target;
+  if (gs.players == 2 &&
+      gs.mode == GameMode.standard &&
+      gs.rt.challenge != Operation.dailyBoss &&
+      gs.rt.challenge != Operation.master) {
+    final current = gs.rt.accepting
+        ? gs.rt.totalTurns ~/ 2 + 1
+        : (gs.rt.totalTurns + 1) ~/ 2;
+    return current.clamp(1, clampedTarget).toInt();
+  }
   final current = gs.rt.accepting ? gs.rt.totalTurns + 1 : gs.rt.totalTurns;
-  return current.clamp(1, target).toInt();
+  return current.clamp(1, clampedTarget).toInt();
 }
 
 class _AnswersGrid extends StatelessWidget {

@@ -105,6 +105,43 @@ void main() {
       state.rt.timer?.cancel();
     });
 
+    testWidgets('two player question counter uses per-player progress',
+        (tester) async {
+      final state = await _makeState();
+      _startTwoPlayerStandard(state);
+      await _pumpGame(tester, state);
+
+      expect(state.rt.maxTurns, 20);
+      expect(state.rt.activePlayer, 1);
+      expect(find.text('Q 1 / 10'), findsOneWidget);
+
+      state.onAnswer(state.rt.q!.ans);
+      await tester.pump(const Duration(milliseconds: 1300));
+      expect(state.rt.activePlayer, 2);
+      expect(find.text('Q 1 / 10'), findsOneWidget);
+
+      state.onAnswer(state.rt.q!.ans);
+      await tester.pump(const Duration(milliseconds: 1300));
+      expect(state.rt.activePlayer, 1);
+      expect(find.text('Q 2 / 10'), findsOneWidget);
+
+      state.onAnswer(state.rt.q!.ans);
+      await tester.pump(const Duration(milliseconds: 1300));
+      expect(state.rt.activePlayer, 2);
+      expect(find.text('Q 2 / 10'), findsOneWidget);
+      expect(state.rt.gameActive, isTrue);
+
+      for (var turn = 3; turn < 20; turn++) {
+        state.onAnswer(state.rt.q!.ans);
+        if (turn < 19) {
+          await tester.pump(const Duration(milliseconds: 1300));
+        }
+      }
+      expect(state.rt.totalTurns, 20);
+      expect(state.rt.state, 'ending');
+      state.dispose();
+    });
+
     testWidgets('skip and timeout do not consume an armed shield',
         (tester) async {
       final state = await _makeState();
@@ -198,6 +235,15 @@ Future<GameState> _makeState({
 
 void _startStandard(GameState state) {
   state.players = 1;
+  state.mode = GameMode.standard;
+  state.rt.challenge = Operation.addition;
+  state.questionCount = 10;
+  state.adaptive = false;
+  state.startGame();
+}
+
+void _startTwoPlayerStandard(GameState state) {
+  state.players = 2;
   state.mode = GameMode.standard;
   state.rt.challenge = Operation.addition;
   state.questionCount = 10;
