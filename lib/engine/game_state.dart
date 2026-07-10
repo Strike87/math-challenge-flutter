@@ -318,6 +318,7 @@ class GameState extends ChangeNotifier {
   Timer? _bigEmojiHideTimer;
   Timer? _postFeedbackTimer;
   Timer? _delayedResultModalTimer;
+  Timer? _delayedLossTimer;
   final List<String> _toastQueue = [];
   int builderPid = 1;
   AvatarCustom builderAvatar = AvatarCustom();
@@ -411,6 +412,7 @@ class GameState extends ChangeNotifier {
     _bigEmojiHideTimer?.cancel();
     _postFeedbackTimer?.cancel();
     _delayedResultModalTimer?.cancel();
+    _cancelDelayedLossEnd();
     _toastQueue.clear();
     rt.timer?.cancel();
     super.dispose();
@@ -1349,6 +1351,8 @@ class GameState extends ChangeNotifier {
       return;
     }
 
+    _cancelDelayedLossEnd();
+    _turnSeq++;
     closeModal();
 
     // Reset player data
@@ -1663,7 +1667,7 @@ class GameState extends ChangeNotifier {
 
     rt.totalTurns++;
     _checkStandardTurnLimit();
-    _scheduleNextTurn();
+    if (_delayedLossTimer == null) _scheduleNextTurn();
   }
 
   void _freezeQuestionTimer() {
@@ -1917,7 +1921,7 @@ class GameState extends ChangeNotifier {
       audio.playWrong();
       audio.vibrateWrong();
       _shakeScreen(vibrate: false);
-      Timer(const Duration(milliseconds: 600), () => _endGame(false, true));
+      _scheduleDelayedLossEnd(const Duration(milliseconds: 600));
       notifyListeners();
       return;
     }
@@ -1936,7 +1940,7 @@ class GameState extends ChangeNotifier {
       audio.vibrateWrong();
       _shakeScreen(vibrate: false);
       if (rt.survivalLives <= 0) {
-        Timer(const Duration(milliseconds: 900), () => _endGame(false, true));
+        _scheduleDelayedLossEnd(const Duration(milliseconds: 900));
         notifyListeners();
         return;
       }
@@ -1950,7 +1954,7 @@ class GameState extends ChangeNotifier {
       audio.vibrateWrong();
       _shakeScreen(vibrate: false);
       if (rt.dailyBossLives <= 0) {
-        Timer(const Duration(milliseconds: 900), () => _endGame(false, true));
+        _scheduleDelayedLossEnd(const Duration(milliseconds: 900));
         notifyListeners();
         return;
       }
@@ -1965,7 +1969,7 @@ class GameState extends ChangeNotifier {
       audio.vibrateWrong();
       _shakeScreen(vibrate: false);
       if (_masterLives <= 0) {
-        Timer(const Duration(milliseconds: 900), () => _endGame(false, true));
+        _scheduleDelayedLossEnd(const Duration(milliseconds: 900));
         notifyListeners();
         return;
       }
@@ -2002,6 +2006,27 @@ class GameState extends ChangeNotifier {
   void _shakeScreen({bool vibrate = true}) {
     if (vibrate) audio.vibratePattern([100, 50, 100]);
     if (!settings.reduceMotion) screenShakeTick++;
+  }
+
+  void _cancelDelayedLossEnd() {
+    _delayedLossTimer?.cancel();
+    _delayedLossTimer = null;
+  }
+
+  void _scheduleDelayedLossEnd(Duration delay) {
+    _cancelDelayedLossEnd();
+    final seq = _turnSeq;
+    _delayedLossTimer = Timer(delay, () {
+      _delayedLossTimer = null;
+      if (_disposed ||
+          seq != _turnSeq ||
+          !rt.gameActive ||
+          rt.state == 'ended' ||
+          currentScreen != GameScreen.game) {
+        return;
+      }
+      _endGame(false, true);
+    });
   }
 
   void _scheduleNextTurn() {
@@ -2089,6 +2114,8 @@ class GameState extends ChangeNotifier {
   }
 
   void _endGame(bool win, bool loss) {
+    _cancelDelayedLossEnd();
+    if (!rt.gameActive || rt.state == 'ended') return;
     rt.gameActive = false;
     rt.state = 'ended';
     rt.timer?.cancel();
@@ -2257,6 +2284,8 @@ class GameState extends ChangeNotifier {
   }
 
   Future<void> quitToMenu() async {
+    _cancelDelayedLossEnd();
+    _turnSeq++;
     final dismissedResult = currentModal == GameModal.win;
     closeModal();
     if (dismissedResult) await _showPendingInterstitialAd();
@@ -2819,6 +2848,8 @@ class GameState extends ChangeNotifier {
 
   Future<void> resetAllData() async {
     rt.timer?.cancel();
+    _cancelDelayedLossEnd();
+    _turnSeq++;
     for (final key in _resetStorageKeys) {
       await Storage.remove(key);
     }
