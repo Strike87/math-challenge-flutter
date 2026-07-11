@@ -256,5 +256,43 @@ void main() {
 
       expect(settings.lowPerf, isTrue);
     });
+
+    test('K malformed persisted values fall back to safe defaults', () async {
+      final state = await makeState({
+        'mc_coins': 'broken',
+        'mc_gamesPlayed': 'broken',
+        'mc_adaptLvl': 'broken',
+        'mc_achievements': 'broken',
+        'mc_scores': 'broken',
+        'mc_skillMap': 'broken',
+        'mc_numTypeUnlocked': 'broken',
+        'mc_avatarCustom': 'broken',
+        'mc_p1Data': 'broken',
+        'mc_shopOwned': 'broken',
+        'mc_unlockedAvatars': 'broken',
+        'mc_unlockedHats': 'broken',
+        'mc_dailyProgress': 'broken',
+        'mc_dailyChallenges': 'broken',
+      });
+
+      expect(state.coins, 0);
+      expect(state.gamesPlayed, 0);
+      expect(state.adaptLvlRaw, 2);
+      expect(state.achievements.values, everyElement(isFalse));
+      expect(state.highScores, isEmpty);
+      expect(state.skillMap.values, hasLength(4));
+      expect(
+        state.skillMap.values.map((skill) => skill.mastery),
+        everyElement(20),
+      );
+      expect(state.numTypeUnlocked, {'integers': 0, 'rationals': 0});
+      expect(state.p[1].name, 'Player 1');
+      expect(state.p[1].avatar.storageEmoji, '🐶');
+      expect(state.shopOwned, isEmpty);
+      expect(state.unlockedAvatars, isEmpty);
+      expect(state.unlockedHats, isEmpty);
+      expect(state.dailyProgress, isEmpty);
+      expect(state.dailyChallengeIds, hasLength(3));
+    });
   });
 }
