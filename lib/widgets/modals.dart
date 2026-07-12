@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
+import '../features/modals/presentation/widgets/skill_dashboard_header.dart';
 import '../game_config.dart';
 import '../models/enums.dart';
 import '../models/game_data.dart';
@@ -2192,7 +2193,7 @@ class SkillDashboardModal extends StatelessWidget {
       icon: '📈',
       title: 'Skill Dashboard',
       maxHeight: 680,
-      header: _SkillDashboardHeader(settings: s),
+      header: SkillDashboardHeader(settings: s),
       actions: [
         NeoButton(
             label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
@@ -2265,40 +2266,6 @@ class SkillDashboardModal extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SkillDashboardHeader extends StatelessWidget {
-  const _SkillDashboardHeader({required this.settings});
-
-  final SettingsService settings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text('📈', style: TextStyle(fontSize: 44)),
-        const SizedBox(width: 12),
-        Flexible(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              'Skill Dashboard',
-              maxLines: 1,
-              softWrap: false,
-              style: TextStyle(
-                color: settings.text,
-                fontSize: 30,
-                fontWeight: FontWeight.w900,
-                fontFamily: AppFonts.headFor(settings),
-                height: 1.0,
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
