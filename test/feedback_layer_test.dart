@@ -526,6 +526,32 @@ void main() {
         state.dispose();
       }
     });
+
+    testWidgets('toast reset clears its pending queue and timer',
+        (tester) async {
+      final state = await _makeState();
+      void listener() {}
+      state.addListener(listener);
+      try {
+        state.showToast('First message');
+        state.showToast('Queued message');
+
+        await state.resetAllData();
+        expect(state.toastVisible, isTrue);
+        final resetMessage = state.toastMessage;
+        expect(resetMessage, isNot(anyOf('First message', 'Queued message')));
+
+        await tester.pump(const Duration(milliseconds: 2400));
+        expect(state.toastVisible, isFalse);
+        expect(state.toastMessage, resetMessage);
+        await tester.pump(const Duration(milliseconds: 2400));
+        expect(state.toastVisible, isFalse);
+        expect(state.toastMessage, resetMessage);
+      } finally {
+        state.removeListener(listener);
+        state.dispose();
+      }
+    });
   });
 }
 

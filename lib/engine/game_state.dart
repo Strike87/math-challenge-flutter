@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+import '../features/modals/presentation/toast_controller.dart';
 import '../game_config.dart';
 import '../models/celebration.dart';
 import '../models/enums.dart';
@@ -153,6 +154,7 @@ class GameState extends ChangeNotifier {
             nowMillisProvider ?? (() => DateTime.now().millisecondsSinceEpoch),
         _adultGateFactory =
             adultGateFactory ?? (() => AdultGateChallenge.random()) {
+    _toastController = ToastController(onChanged: notifyListeners);
     _iapPurchaseSub = iapPurchaseStream?.listen((purchases) {
       for (final purchase in purchases) {
         unawaited(handleIapPurchase(purchase));
@@ -311,15 +313,16 @@ class GameState extends ChangeNotifier {
   // ─── UI routing ─────────────────────────────────────────────
   GameScreen currentScreen = GameScreen.menu;
   GameModal currentModal = GameModal.none;
-  String toastMessage = '';
-  bool toastVisible = false;
+  late final ToastController _toastController;
+  String get toastMessage => _toastController.message;
+  set toastMessage(String value) => _toastController.message = value;
+  bool get toastVisible => _toastController.visible;
+  set toastVisible(bool value) => _toastController.visible = value;
   String numTypeUnlockFeedback = '';
-  Timer? _toastTimer;
   Timer? _bigEmojiHideTimer;
   Timer? _postFeedbackTimer;
   Timer? _delayedResultModalTimer;
   Timer? _delayedLossTimer;
-  final List<String> _toastQueue = [];
   int builderPid = 1;
   AvatarCustom builderAvatar = AvatarCustom();
   bool isDailyBossClaimedToday = false;
@@ -408,12 +411,11 @@ class GameState extends ChangeNotifier {
     _turnSeq++;
     rt.gameActive = false;
     _iapPurchaseSub?.cancel();
-    _toastTimer?.cancel();
+    _toastController.dispose();
     _bigEmojiHideTimer?.cancel();
     _postFeedbackTimer?.cancel();
     _delayedResultModalTimer?.cancel();
     _cancelDelayedLossEnd();
-    _toastQueue.clear();
     rt.timer?.cancel();
     super.dispose();
   }
@@ -1145,28 +1147,8 @@ class GameState extends ChangeNotifier {
   }
 
   // ─── Toast ──────────────────────────────────────────────────
-  void showToast(String msg) {
-    if (toastVisible && hasListeners) {
-      _toastQueue.add(msg);
-      return;
-    }
-    _showToastNow(msg);
-  }
-
-  void _showToastNow(String msg) {
-    toastMessage = msg;
-    toastVisible = true;
-    notifyListeners();
-    _toastTimer?.cancel();
-    _toastTimer = Timer(const Duration(milliseconds: 2400), () {
-      if (_toastQueue.isNotEmpty) {
-        _showToastNow(_toastQueue.removeAt(0));
-        return;
-      }
-      toastVisible = false;
-      notifyListeners();
-    });
-  }
+  void showToast(String msg) =>
+      _toastController.show(msg, canQueue: hasListeners);
 
   void _celebrate(
     CelebrationKind kind, {
@@ -2907,10 +2889,7 @@ class GameState extends ChangeNotifier {
     _masterProgress = 0;
     currentScreen = GameScreen.menu;
     currentModal = GameModal.none;
-    _toastTimer?.cancel();
-    _toastQueue.clear();
-    toastMessage = '';
-    toastVisible = false;
+    _toastController.reset();
     builderPid = 1;
     builderAvatar = AvatarCustom();
     isDailyBossClaimedToday = false;
