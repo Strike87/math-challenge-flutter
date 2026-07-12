@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
+import '../features/gameplay/presentation/widgets/gameplay_animation_wrappers.dart';
 import '../features/gameplay/presentation/widgets/gameplay_controls.dart';
 import '../features/gameplay/presentation/widgets/gameplay_feedback_effects.dart';
 import '../game_config.dart';
@@ -223,89 +224,6 @@ bool _timerWarning(GameState gs) {
   return remaining <= threshold && remaining > 0;
 }
 
-class _WarningPulse extends StatefulWidget {
-  const _WarningPulse({
-    required this.active,
-    required this.effectsEnabled,
-    required this.duration,
-    required this.builder,
-  });
-
-  final bool active;
-  final bool effectsEnabled;
-  final Duration duration;
-  final Widget Function(BuildContext context, double opacity) builder;
-
-  @override
-  State<_WarningPulse> createState() => _WarningPulseState();
-}
-
-class _WarningPulseState extends State<_WarningPulse>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: _safeDuration(widget.duration),
-    );
-    _opacity = _buildOpacity();
-    _sync();
-  }
-
-  @override
-  void didUpdateWidget(covariant _WarningPulse oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final nextDuration = _safeDuration(widget.duration);
-    if (_controller.duration != nextDuration) {
-      _controller.duration = nextDuration;
-      _opacity = _buildOpacity();
-    }
-    _sync();
-  }
-
-  Duration _safeDuration(Duration duration) {
-    if (duration <= Duration.zero) {
-      return const Duration(milliseconds: 1000);
-    }
-    return duration;
-  }
-
-  Animation<double> _buildOpacity() {
-    return Tween<double>(begin: 1, end: 0).animate(_controller);
-  }
-
-  void _sync() {
-    if (widget.active && widget.effectsEnabled) {
-      if (!_controller.isAnimating) _controller.repeat(reverse: true);
-      return;
-    }
-    _controller.stop();
-    _controller.value = 0;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        final opacity =
-            widget.active && widget.effectsEnabled ? _opacity.value : 1.0;
-        return widget.builder(context, opacity);
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-}
-
 class _TimerCircle extends StatelessWidget {
   const _TimerCircle({required this.gs, required this.s});
   final GameState gs;
@@ -317,7 +235,7 @@ class _TimerCircle extends StatelessWidget {
     final seconds = (remainingMs / 1000).ceil();
     final danger = _timerWarning(gs);
     final effectsEnabled = danger && !s.lowPerf && !s.reduceMotion;
-    return _WarningPulse(
+    return WarningPulse(
       active: danger,
       effectsEnabled: effectsEnabled,
       duration: s.duration(1000),
@@ -1271,7 +1189,7 @@ class _ActivePowerUpGlow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectsEnabled = !s.reduceMotion && !s.lowPerf;
-    return _WarningPulse(
+    return WarningPulse(
       active: active,
       effectsEnabled: active && effectsEnabled,
       duration: s.duration(700),
@@ -1318,7 +1236,7 @@ class _ShieldArmedPulse extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!active) return child;
     final effectsEnabled = !s.reduceMotion && !s.lowPerf;
-    return _WarningPulse(
+    return WarningPulse(
       active: active,
       effectsEnabled: effectsEnabled,
       duration: s.duration(700),
@@ -1556,7 +1474,7 @@ class _QuestionCard extends StatelessWidget {
         ],
       ),
     );
-    return _WarningPulse(
+    return WarningPulse(
       active: danger,
       effectsEnabled: effectsEnabled,
       duration: s.duration(1000),
