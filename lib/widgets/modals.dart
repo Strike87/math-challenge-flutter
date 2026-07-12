@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
+import '../features/modals/presentation/widgets/avatar_builder_tab_label.dart';
 import '../features/modals/presentation/widgets/skill_dashboard_header.dart';
 import '../game_config.dart';
 import '../models/enums.dart';
@@ -1757,14 +1758,12 @@ class AvatarBuilderModal extends StatelessWidget {
               child: const TabBar(
                 labelPadding: EdgeInsets.zero,
                 tabs: [
-                  Tab(child: _AvatarBuilderTabLabel(icon: '🐾', label: 'Base')),
-                  Tab(child: _AvatarBuilderTabLabel(icon: '🎩', label: 'Hat')),
+                  Tab(child: AvatarBuilderTabLabel(icon: '🐾', label: 'Base')),
+                  Tab(child: AvatarBuilderTabLabel(icon: '🎩', label: 'Hat')),
                   Tab(
-                      child: _AvatarBuilderTabLabel(
+                      child: AvatarBuilderTabLabel(
                           icon: '🎒', label: 'Accessory')),
-                  Tab(
-                      child:
-                          _AvatarBuilderTabLabel(icon: '🎨', label: 'Color')),
+                  Tab(child: AvatarBuilderTabLabel(icon: '🎨', label: 'Color')),
                 ],
                 labelColor: Colors.white,
                 unselectedLabelColor: Color(GameConfig.mutedLight),
@@ -1951,36 +1950,6 @@ class _AvatarStudioSlot extends StatelessWidget {
           style: TextStyle(color: s.text, fontSize: 26, height: 1),
           child: FittedBox(fit: BoxFit.scaleDown, child: child),
         ),
-      ),
-    );
-  }
-}
-
-class _AvatarBuilderTabLabel extends StatelessWidget {
-  const _AvatarBuilderTabLabel({required this.icon, required this.label});
-
-  final String icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 17)),
-          Text(
-            label,
-            maxLines: 1,
-            softWrap: false,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              fontFamily: AppFonts.body,
-            ),
-          ),
-        ],
       ),
     );
   }
