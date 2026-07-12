@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+import '../features/economy/domain/coin_ledger.dart';
 import '../features/modals/presentation/toast_controller.dart';
 import '../game_config.dart';
 import '../models/celebration.dart';
@@ -283,7 +284,9 @@ class GameState extends ChangeNotifier {
   ];
 
   // ─── Persistent ─────────────────────────────────────────────
-  int coins = 0;
+  final CoinLedger _coinLedger = CoinLedger();
+  int get coins => _coinLedger.balance;
+  set coins(int value) => _coinLedger.balance = value;
   int gamesPlayed = 0;
   double adaptLvlRaw = 0;
   int adaptLvl = 0;
@@ -1009,7 +1012,7 @@ class GameState extends ChangeNotifier {
 
   // ─── Coin operations ────────────────────────────────────────
   void addCoins(int amount, [bool silent = false]) {
-    coins += amount;
+    _coinLedger.adjust(amount);
     if (!silent) {
       showToast(amount >= 0 ? '+$amount 🪙' : '$amount 🪙');
     }
@@ -2840,7 +2843,7 @@ class GameState extends ChangeNotifier {
   }
 
   void _resetInMemoryData() {
-    coins = 0;
+    _coinLedger.reset();
     gamesPlayed = 0;
     adaptLvlRaw = 0;
     adaptLvl = 0;
