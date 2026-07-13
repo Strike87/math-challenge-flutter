@@ -2281,11 +2281,14 @@ class GameState extends ChangeNotifier {
     if (sd == null) return;
 
     final prevMastery = sd.mastery == 0 ? _masteryDefault : sd.mastery;
+    final nudge = _adaptiveDifficultyEngine.adaptiveNudgeFor(
+      correct: correct,
+      responseMilliseconds: timeMs,
+    );
     if (correct) {
-      final boost = timeMs < 2000 ? 0.6 : 0.2;
-      sd.mastery = min(_masteryMax, prevMastery + boost);
+      sd.mastery = min(_masteryMax, prevMastery + nudge);
     } else {
-      sd.mastery = max(0, prevMastery - 0.5);
+      sd.mastery = max(0, prevMastery + nudge);
     }
     _recomputeAdaptiveLevel();
   }
