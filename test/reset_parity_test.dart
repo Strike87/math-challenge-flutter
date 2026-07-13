@@ -109,6 +109,7 @@ void main() {
       expect(state.p[1].avatar.storageEmoji, '🐶');
       expect(state.currentScreen, GameScreen.menu);
       expect(state.currentModal, GameModal.none);
+      expect(state.isDailyCoinsClaimedToday, isFalse);
       expect(state.isDailyBossClaimedToday, isFalse);
 
       expect(settings.dark, isFalse);

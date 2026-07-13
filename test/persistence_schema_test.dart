@@ -294,5 +294,15 @@ void main() {
       expect(state.dailyProgress, isEmpty);
       expect(state.dailyChallengeIds, hasLength(3));
     });
+
+    test('L malformed daily bonus date remains eligible and claimable',
+        () async {
+      final state = await makeState({'mc_dailyCoinsDate': 'broken'});
+
+      expect(state.isDailyCoinsClaimedToday, isFalse);
+      expect(await state.claimDailyCoinBonus(), isTrue);
+      expect(state.coins, GameState.dailyBonusCoins);
+      expect(state.isDailyCoinsClaimedToday, isTrue);
+    });
   });
 }
