@@ -139,6 +139,32 @@ void main() {
       expect(state.toastVisible, isFalse);
     });
 
+    test('missing ownership stays locked until exact balance is available',
+        () async {
+      final state = await makeState({'mc_coins': 499});
+      state
+        ..numTypeUnlocked = {}
+        ..currentScreen = GameScreen.numType;
+
+      await state.selectNumType('integers');
+
+      expect(state.numTypeUnlocked, isEmpty);
+      expect(state.coins, 499);
+      expect(Storage.getInt('mc_coins', -1), 499);
+      expect(state.currentScreen, GameScreen.numType);
+      expect(state.numTypeUnlockFeedback, 'integers');
+      expect(state.toastVisible, isFalse);
+
+      state.coins = 500;
+      await state.selectNumType('integers');
+
+      expect(state.numTypeUnlocked['integers'], 1);
+      expect(state.coins, 0);
+      expect(Storage.getInt('mc_numTypeUnlocked_integers', 0), 1);
+      expect(state.currentScreen, GameScreen.config);
+      expect(state.toastMessage, '-500 🪙');
+    });
+
     test('reset and migration contracts remain compatible with unlock flags',
         () async {
       final state = await makeState({

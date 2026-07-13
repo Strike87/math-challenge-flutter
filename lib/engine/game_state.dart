@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../features/economy/domain/coin_ledger.dart';
 import '../features/economy/domain/daily_bonus_policy.dart';
+import '../features/economy/domain/number_type_unlock_policy.dart';
 import '../features/modals/presentation/toast_controller.dart';
 import '../game_config.dart';
 import '../models/celebration.dart';
@@ -287,6 +288,8 @@ class GameState extends ChangeNotifier {
   // ─── Persistent ─────────────────────────────────────────────
   final CoinLedger _coinLedger = CoinLedger();
   final DailyBonusPolicy _dailyBonusPolicy = DailyBonusPolicy();
+  final NumberTypeUnlockPolicy _numberTypeUnlockPolicy =
+      const NumberTypeUnlockPolicy();
   int get coins => _coinLedger.balance;
   set coins(int value) => _coinLedger.balance = value;
   int gamesPlayed = 0;
@@ -1233,24 +1236,15 @@ class GameState extends ChangeNotifier {
 
   Future<void> selectNumType(String numTypeName) async {
     final nt = NumberType.fromString(numTypeName);
-    if (nt == NumberType.integers && (numTypeUnlocked['integers'] ?? 0) < 1) {
-      // Match the original HTML economy.
-      if (coins < 500) {
-        numTypeUnlockFeedback = 'integers';
+    if (_numberTypeUnlockPolicy.requiresPurchase(nt, numTypeUnlocked)) {
+      final price = _numberTypeUnlockPolicy.priceFor(nt);
+      if (!_numberTypeUnlockPolicy.canAfford(nt, coins)) {
+        numTypeUnlockFeedback = nt.name;
         notifyListeners();
         return;
       }
-      addCoins(-500);
-      numTypeUnlocked['integers'] = 1;
-    } else if (nt == NumberType.rationals &&
-        (numTypeUnlocked['rationals'] ?? 0) < 1) {
-      if (coins < 1200) {
-        numTypeUnlockFeedback = 'rationals';
-        notifyListeners();
-        return;
-      }
-      addCoins(-1200);
-      numTypeUnlocked['rationals'] = 1;
+      addCoins(-price);
+      numTypeUnlocked[nt.name] = 1;
     }
     numTypeUnlockFeedback = '';
     numType = nt;
