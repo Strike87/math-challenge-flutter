@@ -166,19 +166,8 @@ class GameState extends ChangeNotifier {
     });
   }
 
-  static const int _masteryFastMs = 1500;
-  static const int _masteryNormalMs = 3000;
-  static const double _masteryGainFast = 7;
-  static const double _masteryGainNormal = 5;
-  static const double _masteryGainSlow = 3;
-  static const double _masteryPenalty = -4;
-  static const double _masteryPenaltyTimeout = -2;
-  static const double _masteryMax = 100;
+  static const double _masteryMax = AdaptiveDifficultyEngine.maxMastery;
   static const double _masteryDefault = AdaptiveDifficultyEngine.defaultMastery;
-  static const double _confidenceSpeedDivisor = 120;
-  static const double _confidenceEmaAlpha = 0.25;
-  static const double _confidenceDefault = 50;
-  static const int _confidenceDefaultMs = 5000;
   static const double _adaptThresholdEasy = 45;
   static const double _adaptThresholdMedium = 65;
   static const double _adaptThresholdHard = 82;
@@ -2337,32 +2326,20 @@ class GameState extends ChangeNotifier {
   }
 
   void _updateMastery(SkillData sd, bool correct, int timeMs) {
-    double change;
-    if (correct) {
-      if (timeMs < _masteryFastMs) {
-        change = _masteryGainFast;
-      } else if (timeMs < _masteryNormalMs) {
-        change = _masteryGainNormal;
-      } else {
-        change = _masteryGainSlow;
-      }
-    } else {
-      final timeoutLimitMs = rt.qTimerLimit > 0 ? rt.qTimerLimit * 1000 : 10000;
-      change = (timeMs == 0 || timeMs >= timeoutLimitMs)
-          ? _masteryPenaltyTimeout
-          : _masteryPenalty;
-    }
-
-    final baseMastery = sd.mastery == 0 ? _masteryDefault : sd.mastery;
-    sd.mastery = max(0, min(_masteryMax, baseMastery + change));
-
-    final ms = timeMs == 0 ? _confidenceDefaultMs : timeMs;
-    final speedScore = max(0, 100 - (ms / _confidenceSpeedDivisor));
-    final baseConfidence =
-        sd.confidence == 0 ? _confidenceDefault : sd.confidence;
-    sd.confidence = (baseConfidence * (1 - _confidenceEmaAlpha) +
-            speedScore * _confidenceEmaAlpha)
-        .roundToDouble();
+    final timeoutLimitMs = rt.qTimerLimit > 0 ? rt.qTimerLimit * 1000 : 10000;
+    final outcome = correct
+        ? MasteryOutcome.correct
+        : timeMs == 0 || timeMs >= timeoutLimitMs
+            ? MasteryOutcome.timeout
+            : MasteryOutcome.wrong;
+    final update = _adaptiveDifficultyEngine.calculateMasteryUpdate(
+      currentMastery: sd.mastery,
+      currentConfidence: sd.confidence,
+      outcome: outcome,
+      responseMilliseconds: timeMs,
+    );
+    sd.mastery = update.mastery;
+    sd.confidence = update.confidence;
     _recomputeAdaptiveLevel();
   }
 

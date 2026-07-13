@@ -173,6 +173,35 @@ void main() {
       expect(skill.confidence, 44);
     });
 
+    test('wrong response uses the exact runtime timeout boundary', () async {
+      final state = await makeState();
+      state.rt.qTimerLimit = 8;
+
+      state.skillMap[Operation.division.name] = SkillData(
+        mastery: 50,
+        confidence: 50,
+      );
+      state.debugUpdateSkillMap(
+        Operation.division,
+        Difficulty.hard,
+        false,
+        7999,
+      );
+      expect(state.skillMap[Operation.division.name]!.mastery, 46);
+
+      state.skillMap[Operation.division.name] = SkillData(
+        mastery: 50,
+        confidence: 50,
+      );
+      state.debugUpdateSkillMap(
+        Operation.division,
+        Difficulty.hard,
+        false,
+        8000,
+      );
+      expect(state.skillMap[Operation.division.name]!.mastery, 48);
+    });
+
     test('skill data preserves expert and insane counters in JSON', () {
       final skill = SkillData(expert: 2, insane: 3);
 
