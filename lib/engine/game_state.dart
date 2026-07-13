@@ -168,10 +168,6 @@ class GameState extends ChangeNotifier {
 
   static const double _masteryMax = AdaptiveDifficultyEngine.maxMastery;
   static const double _masteryDefault = AdaptiveDifficultyEngine.defaultMastery;
-  static const double _adaptThresholdEasy = 45;
-  static const double _adaptThresholdMedium = 65;
-  static const double _adaptThresholdHard = 82;
-  static const double _adaptThresholdExpert = 93;
   static const int dailyBonusCoins = 20;
   static const int rewardedAdCoins = 10;
   static const int rewardedCooldownMs = 300000;
@@ -1527,11 +1523,7 @@ class GameState extends ChangeNotifier {
 
   Difficulty _getAdaptDiff(Operation type) {
     final m = skillMap[type.name]?.mastery ?? _masteryDefault;
-    if (m < _adaptThresholdEasy) return Difficulty.easy;
-    if (m < _adaptThresholdMedium) return Difficulty.medium;
-    if (m < _adaptThresholdHard) return Difficulty.hard;
-    if (m < _adaptThresholdExpert) return Difficulty.expert;
-    return Difficulty.insane;
+    return _adaptiveDifficultyEngine.difficultyForMastery(m);
   }
 
   int _getTimerLimitMs() {
