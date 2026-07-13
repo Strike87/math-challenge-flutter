@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../features/economy/domain/coin_ledger.dart';
+import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/modals/presentation/toast_controller.dart';
 import '../game_config.dart';
 import '../models/celebration.dart';
@@ -285,6 +286,7 @@ class GameState extends ChangeNotifier {
 
   // ─── Persistent ─────────────────────────────────────────────
   final CoinLedger _coinLedger = CoinLedger();
+  final DailyBonusPolicy _dailyBonusPolicy = DailyBonusPolicy();
   int get coins => _coinLedger.balance;
   set coins(int value) => _coinLedger.balance = value;
   int gamesPlayed = 0;
@@ -384,9 +386,10 @@ class GameState extends ChangeNotifier {
   List<String> get availableAvatarHats =>
       _mergeUnlocked(GameConfig.avatarHats, unlockedHats);
 
-  bool get isDailyCoinsClaimedToday =>
-      _normalizeDateKey(Storage.getString('mc_dailyCoinsDate', '')) ==
-      _dailyDateKey();
+  bool get isDailyCoinsClaimedToday {
+    _hydrateDailyBonusPolicy();
+    return _dailyBonusPolicy.isClaimedOn(_dailyDateKey());
+  }
 
   List<DailyChallenge> get activeDailyChallenges {
     final byId = {for (final c in GameConfig.dailyChallenges) c.id: c};
@@ -457,6 +460,7 @@ class GameState extends ChangeNotifier {
     await _updateLoginStreak();
     _updateDailyBossClaimStatus();
     await _persistLoadedMigrationState();
+    _hydrateDailyBonusPolicy();
     notifyListeners();
   }
 
@@ -505,6 +509,11 @@ class GameState extends ChangeNotifier {
     if (_isDateKey(normalized)) {
       await Storage.setString(key, normalized);
     }
+  }
+
+  void _hydrateDailyBonusPolicy() {
+    _dailyBonusPolicy.lastClaimDate =
+        _normalizeDateKey(Storage.getString('mc_dailyCoinsDate', ''));
   }
 
   Future<void> _migrateDailyBossClaimDate() async {
@@ -1134,7 +1143,9 @@ class GameState extends ChangeNotifier {
       return false;
     }
 
-    await Storage.setString('mc_dailyCoinsDate', _dailyDateKey());
+    final today = _dailyDateKey();
+    await Storage.setString('mc_dailyCoinsDate', today);
+    _dailyBonusPolicy.recordClaim(today);
     addCoins(dailyBonusCoins, true);
     await save();
     showToast('💎 +$dailyBonusCoins🪙 daily bonus');
@@ -2844,6 +2855,7 @@ class GameState extends ChangeNotifier {
 
   void _resetInMemoryData() {
     _coinLedger.reset();
+    _dailyBonusPolicy.reset();
     gamesPlayed = 0;
     adaptLvlRaw = 0;
     adaptLvl = 0;
