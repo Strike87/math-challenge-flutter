@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import '../../../models/enums.dart';
+
 enum MasteryOutcome { correct, wrong, timeout }
 
 class AdaptiveDifficultyEngine {
@@ -18,6 +20,18 @@ class AdaptiveDifficultyEngine {
   static const int _defaultConfidenceMilliseconds = 5000;
   static const double _confidenceSpeedDivisor = 120;
   static const double _confidenceEmaAlpha = 0.25;
+  static const double _easyThreshold = 45;
+  static const double _mediumThreshold = 65;
+  static const double _hardThreshold = 82;
+  static const double _expertThreshold = 93;
+
+  Difficulty difficultyForMastery(double mastery) {
+    if (mastery < _easyThreshold) return Difficulty.easy;
+    if (mastery < _mediumThreshold) return Difficulty.medium;
+    if (mastery < _hardThreshold) return Difficulty.hard;
+    if (mastery < _expertThreshold) return Difficulty.expert;
+    return Difficulty.insane;
+  }
 
   ({double raw, int level}) levelFromMasteries(
     Iterable<double> masteries,

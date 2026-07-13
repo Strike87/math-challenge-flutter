@@ -88,6 +88,13 @@ void main() {
       expect(state.debugGetAdaptDiff(Operation.addition), Difficulty.insane);
     });
 
+    test('missing operation mastery uses the default easy tier', () async {
+      final state = await makeState();
+      state.skillMap.remove(Operation.addition.name);
+
+      expect(state.debugGetAdaptDiff(Operation.addition), Difficulty.easy);
+    });
+
     test('fast correct answer applies source mastery and confidence formulas',
         () async {
       final state = await makeState();
@@ -271,6 +278,7 @@ void main() {
 
       final restored = await makeState(clearStorage: false);
       expect(restored.skillMap[Operation.addition.name]!.mastery, 97.6);
+      expect(restored.adaptLvl, 4);
       expect(restored.debugGetAdaptDiff(Operation.addition), Difficulty.insane);
       expect(restored.debugGetAdaptDiff(Operation.division), Difficulty.easy);
     });

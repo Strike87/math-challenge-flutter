@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/features/adaptive/domain/adaptive_difficulty_engine.dart';
+import 'package:math_challenge/models/enums.dart';
 
 void main() {
   const engine = AdaptiveDifficultyEngine();
@@ -30,6 +31,32 @@ void main() {
 
     expect(level.raw, 11);
     expect(level.level, 10);
+  });
+
+  test('mastery thresholds map directly without conversion or clamping', () {
+    for (final testCase in const [
+      (mastery: -1.0, difficulty: Difficulty.easy),
+      (mastery: 0.0, difficulty: Difficulty.easy),
+      (mastery: 44.999, difficulty: Difficulty.easy),
+      (mastery: 45.0, difficulty: Difficulty.medium),
+      (mastery: 45.001, difficulty: Difficulty.medium),
+      (mastery: 64.999, difficulty: Difficulty.medium),
+      (mastery: 65.0, difficulty: Difficulty.hard),
+      (mastery: 65.001, difficulty: Difficulty.hard),
+      (mastery: 81.999, difficulty: Difficulty.hard),
+      (mastery: 82.0, difficulty: Difficulty.expert),
+      (mastery: 82.001, difficulty: Difficulty.expert),
+      (mastery: 92.999, difficulty: Difficulty.expert),
+      (mastery: 93.0, difficulty: Difficulty.insane),
+      (mastery: 93.001, difficulty: Difficulty.insane),
+      (mastery: 101.0, difficulty: Difficulty.insane),
+    ]) {
+      expect(
+        engine.difficultyForMastery(testCase.mastery),
+        testCase.difficulty,
+        reason: 'mastery ${testCase.mastery}',
+      );
+    }
   });
 
   for (final testCase in const [
