@@ -168,6 +168,19 @@ void main() {
       expect(state.toastMessage, 'Daily bonus already claimed');
     });
 
+    test('daily bonus remains blocked after a fresh state reload', () async {
+      final state = await makeState();
+
+      expect(await state.claimDailyCoinBonus(), isTrue);
+
+      final reloaded = makeSecondState(state.settings);
+      await reloaded.load();
+
+      expect(reloaded.isDailyCoinsClaimedToday, isTrue);
+      expect(await reloaded.claimDailyCoinBonus(), isFalse);
+      expect(reloaded.coins, GameState.dailyBonusCoins);
+    });
+
     test('locked shop avatars stay out of tap-to-change until bought',
         () async {
       final state = await makeState({'mc_coins': 300});
