@@ -57,6 +57,57 @@ void main() {
   }
 
   group('RT-003 survival boss event', () {
+    testWidgets('valid survival scoring follows executable reference parity',
+        (tester) async {
+      final state = await makeState();
+      try {
+        state.players = 1;
+        state.mode = GameMode.survival;
+        state.rt.challenge = Operation.addition;
+        state.startGame();
+
+        for (var i = 0; i < 4; i++) {
+          await answerCorrect(state, tester);
+        }
+
+        final scoreBefore = state.p[1].score;
+        final coinsBefore = state.coins;
+        expect(state.p[1].doubleActive, isFalse);
+        state.rt.qStartTs = DateTime.now().millisecondsSinceEpoch -
+            const Duration(seconds: 1).inMilliseconds;
+
+        state.onAnswer(state.rt.q!.ans);
+
+        // Executable-reference parity: valid Survival uses timed scoring; the
+        // prose phase-bonus documentation conflicts with executable behavior.
+        const baseScore = 10;
+        const remainingTimeBonus = 14;
+        const speedBonus = 2;
+        const streakMultiplier = 1.5;
+        final scoreDelta = state.p[1].score - scoreBefore;
+        expect(state.rt.comboMultiplier, streakMultiplier);
+        expect(GameConfig.scoreBase, baseScore);
+        expect(
+          scoreDelta,
+          ((baseScore + remainingTimeBonus + speedBonus) * streakMultiplier)
+              .round(),
+        );
+        expect(
+          scoreDelta,
+          isNot(((baseScore + GameConfig.phaseBonus[1] + 3) * streakMultiplier)
+              .round()),
+        );
+
+        // Coin expectation is independent of the score calculation above.
+        final coinDelta = state.coins - coinsBefore;
+        expect(coinDelta, 1 + 1 + GameConfig.streakCoins[0]);
+
+        await tester.pump(const Duration(milliseconds: 1300));
+      } finally {
+        state.dispose();
+      }
+    });
+
     testWidgets('fires every 10 correct without breaking phase progression',
         (tester) async {
       final state = await makeState();
