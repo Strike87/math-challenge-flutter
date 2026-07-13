@@ -95,6 +95,44 @@ void main() {
       expect(state.debugGetAdaptDiff(Operation.addition), Difficulty.easy);
     });
 
+    test('secondary nudge preserves zero default and asymmetric bounds',
+        () async {
+      final state = await makeState();
+      for (final testCase in const [
+        (mastery: 0.0, correct: true, milliseconds: 1999, expected: 20.6),
+        (mastery: 100.0, correct: true, milliseconds: 2001, expected: 100.0),
+        (mastery: 0.25, correct: false, milliseconds: 0, expected: 0.0),
+      ]) {
+        state.skillMap[Operation.addition.name] =
+            SkillData(mastery: testCase.mastery);
+
+        state.debugUpdateAdapt(
+          testCase.correct,
+          testCase.milliseconds,
+          Operation.addition,
+        );
+
+        expect(
+          state.skillMap[Operation.addition.name]!.mastery,
+          testCase.expected,
+          reason: 'mastery=${testCase.mastery}, correct=${testCase.correct}',
+        );
+      }
+    });
+
+    test('secondary nudge leaves a missing skill entry unchanged', () async {
+      final state = await makeState();
+      state.skillMap.remove(Operation.addition.name);
+      state.adaptLvlRaw = 7.25;
+      state.adaptLvl = 7;
+
+      state.debugUpdateAdapt(true, 1000, Operation.addition);
+
+      expect(state.skillMap.containsKey(Operation.addition.name), isFalse);
+      expect(state.adaptLvlRaw, 7.25);
+      expect(state.adaptLvl, 7);
+    });
+
     test('fast correct answer applies source mastery and confidence formulas',
         () async {
       final state = await makeState();

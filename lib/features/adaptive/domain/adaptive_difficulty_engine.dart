@@ -24,6 +24,10 @@ class AdaptiveDifficultyEngine {
   static const double _mediumThreshold = 65;
   static const double _hardThreshold = 82;
   static const double _expertThreshold = 93;
+  static const int _fastAdaptiveNudgeMilliseconds = 2000;
+  static const double _fastAdaptiveNudge = 0.6;
+  static const double _normalAdaptiveNudge = 0.2;
+  static const double _incorrectAdaptiveNudge = -0.5;
 
   Difficulty difficultyForMastery(double mastery) {
     if (mastery < _easyThreshold) return Difficulty.easy;
@@ -31,6 +35,16 @@ class AdaptiveDifficultyEngine {
     if (mastery < _hardThreshold) return Difficulty.hard;
     if (mastery < _expertThreshold) return Difficulty.expert;
     return Difficulty.insane;
+  }
+
+  double adaptiveNudgeFor({
+    required bool correct,
+    required int responseMilliseconds,
+  }) {
+    if (!correct) return _incorrectAdaptiveNudge;
+    return responseMilliseconds < _fastAdaptiveNudgeMilliseconds
+        ? _fastAdaptiveNudge
+        : _normalAdaptiveNudge;
   }
 
   ({double raw, int level}) levelFromMasteries(

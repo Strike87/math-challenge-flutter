@@ -59,6 +59,30 @@ void main() {
     }
   });
 
+  test('secondary adaptive nudge keeps its time and correctness boundaries',
+      () {
+    for (final testCase in const [
+      (correct: true, milliseconds: 1999, nudge: 0.6),
+      (correct: true, milliseconds: 2000, nudge: 0.2),
+      (correct: true, milliseconds: 2001, nudge: 0.2),
+      (correct: true, milliseconds: -1, nudge: 0.6),
+      (correct: false, milliseconds: 0, nudge: -0.5),
+      (correct: false, milliseconds: 1999, nudge: -0.5),
+      (correct: false, milliseconds: 2000, nudge: -0.5),
+      (correct: false, milliseconds: 1000000, nudge: -0.5),
+    ]) {
+      expect(
+        engine.adaptiveNudgeFor(
+          correct: testCase.correct,
+          responseMilliseconds: testCase.milliseconds,
+        ),
+        testCase.nudge,
+        reason:
+            'correct=${testCase.correct}, milliseconds=${testCase.milliseconds}',
+      );
+    }
+  });
+
   for (final testCase in const [
     (milliseconds: 1499, mastery: 57.0),
     (milliseconds: 1500, mastery: 55.0),
