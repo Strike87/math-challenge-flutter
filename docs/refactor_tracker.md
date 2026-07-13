@@ -4,25 +4,16 @@ Only the first unchecked item under **Active** may be started.
 
 ## Active
 
-- [ ] R5 Survival scoring branch audit
+- [ ] R5 Step 2C — Survival hybrid-only scoring branch disposition audit
   - Type: audit only
-  - Goal: determine whether the suspicious Survival scoring branch is
-    unreachable, redundant, narrowly reachable, or behaviorally significant
+  - Goal: determine whether the Survival+Master-only scoring branch should
+    remain, be documented, be guarded against, or be proposed for later removal
   - Production edits: prohibited
   - Preserve:
-    - Survival score
-    - `+1` coin per correct
-    - `+5` boss reward
-    - achievements
-    - persistence
-    - all other mode scoring
-  - Required result:
-    - control-flow map
-    - per-mode scoring table
-    - reachability verdict
-    - side-effect map
-    - test-coverage report
-    - smallest recommended next step
+    - executable-reference parity
+    - scoring order
+    - valid Survival behavior
+  - Implementation: do not begin
 
 ## Completed
 
@@ -34,6 +25,18 @@ Only the first unchecked item under **Active** may be started.
 - [x] R4 adaptive difficulty thresholds
 - [x] R4 secondary adaptive nudge
 - [x] R5 SurvivalProgressionPolicy
+- [x] R5 Step 2A — Survival scoring branch audit
+- [x] R5 Step 2B — Survival scoring characterization
+  - Verified evidence:
+    - `test/survival_boss_event_test.dart` contains the valid Survival scoring
+      characterization
+    - Focused Survival tests: 2 passed
+    - Question timer tests: 19 passed
+    - Achievement tests: 10 passed
+    - Full non-golden suite: 252 passed
+    - Visual parity suite: 13 passed
+    - `flutter analyze`: clean
+    - `regression_reviewer` reported no confirmed findings
 
 ## Deferred
 
