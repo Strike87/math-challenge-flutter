@@ -7,6 +7,7 @@ import '../features/adaptive/domain/adaptive_difficulty_engine.dart';
 import '../features/economy/domain/coin_ledger.dart';
 import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/economy/domain/number_type_unlock_policy.dart';
+import '../features/gameplay/domain/survival_progression_policy.dart';
 import '../features/modals/presentation/toast_controller.dart';
 import '../game_config.dart';
 import '../models/celebration.dart';
@@ -173,6 +174,7 @@ class GameState extends ChangeNotifier {
   static const int rewardedCooldownMs = 300000;
   static const int interstitialCadenceGames = 3;
   static const _adaptiveDifficultyEngine = AdaptiveDifficultyEngine();
+  static const _survivalProgressionPolicy = SurvivalProgressionPolicy();
 
   static const Map<PowerUp, String> _powerUpBonusStorageKeys = {
     PowerUp.time: 'time',
@@ -1658,11 +1660,16 @@ class GameState extends ChangeNotifier {
     if (timeTaken < pl.fastest) pl.fastest = timeTaken;
     if (timeTaken < 2000) rt.fastAnswers++;
 
+    var survivalBossDue = false;
+
     // Survival: phase + coin per correct
     if (mode == GameMode.survival) {
       rt.survivalCorrect++;
+      final progression =
+          _survivalProgressionPolicy.afterCorrect(rt.survivalCorrect);
+      survivalBossDue = progression.bossDue;
       addCoins(1, true);
-      if (rt.survivalCorrect % 10 == 0) {
+      if (survivalBossDue) {
         final boss = GameConfig
             .survivalBosses[_rng.nextInt(GameConfig.survivalBosses.length)];
         addCoins(GameConfig.survivalBossReward, true);
@@ -1678,7 +1685,7 @@ class GameState extends ChangeNotifier {
           message: 'BOSS DOWN! +${GameConfig.survivalBossReward}🪙',
         );
       }
-      final newPhase = min(rt.survivalCorrect ~/ 5, 4);
+      final newPhase = progression.phase;
       if (newPhase > rt.survivalPhase) {
         rt.survivalPhase = newPhase;
         audio.vibratePattern([60, 30, 60]);
@@ -1785,7 +1792,7 @@ class GameState extends ChangeNotifier {
       showToast('🎁 Comeback! +3🪙');
     }
 
-    final bossDown = mode == GameMode.survival && rt.survivalCorrect % 10 == 0;
+    final bossDown = mode == GameMode.survival && survivalBossDue;
     final rx = GameConfig.correctRx[_rng.nextInt(GameConfig.correctRx.length)];
     if (!bossDown) {
       reactionPill = '$rx +$pts';
