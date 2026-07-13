@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+import '../features/adaptive/domain/adaptive_difficulty_engine.dart';
 import '../features/economy/domain/coin_ledger.dart';
 import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/economy/domain/number_type_unlock_policy.dart';
@@ -173,7 +174,7 @@ class GameState extends ChangeNotifier {
   static const double _masteryPenalty = -4;
   static const double _masteryPenaltyTimeout = -2;
   static const double _masteryMax = 100;
-  static const double _masteryDefault = 20;
+  static const double _masteryDefault = AdaptiveDifficultyEngine.defaultMastery;
   static const double _confidenceSpeedDivisor = 120;
   static const double _confidenceEmaAlpha = 0.25;
   static const double _confidenceDefault = 50;
@@ -186,6 +187,7 @@ class GameState extends ChangeNotifier {
   static const int rewardedAdCoins = 10;
   static const int rewardedCooldownMs = 300000;
   static const int interstitialCadenceGames = 3;
+  static const _adaptiveDifficultyEngine = AdaptiveDifficultyEngine();
 
   static const Map<PowerUp, String> _powerUpBonusStorageKeys = {
     PowerUp.time: 'time',
@@ -2365,20 +2367,11 @@ class GameState extends ChangeNotifier {
   }
 
   void _recomputeAdaptiveLevel() {
-    final values = skillMap.values;
-    if (values.isEmpty) {
-      adaptLvlRaw = 0;
-      adaptLvl = 0;
-      return;
-    }
-    final sum = values.fold<double>(
-      0,
-      (total, skill) =>
-          total + (skill.mastery == 0 ? _masteryDefault : skill.mastery),
+    final level = _adaptiveDifficultyEngine.levelFromMasteries(
+      skillMap.values.map((skill) => skill.mastery),
     );
-    final mean = sum / values.length;
-    adaptLvlRaw = (mean / 100) * 10;
-    adaptLvl = min(10, adaptLvlRaw.round());
+    adaptLvlRaw = level.raw;
+    adaptLvl = level.level;
   }
 
   @visibleForTesting
