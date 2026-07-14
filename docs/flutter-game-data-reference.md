@@ -158,16 +158,18 @@ bonus logic below supersedes this in most modes).
 else:     +0
 ```
 
-**Survival mode:**
-```
-phase bonus by current phase: [0, 2, 4, 7, 10]  (indexed by phase, capped at phase 4)
-plus +3 additional if answered in < 2000ms
-```
+### Survival scoring note
 
-**Other modes:** no extra speed bonus beyond base (Standard, Death,
-Master, Daily Boss use base points + combo multiplier only — verify
-against source if a specific mode seems to be missing a bonus you
-expected; don't assume parity with Blitz/Survival).
+Valid Survival answers are scored by the earlier timed-scoring branch.
+
+The later Survival phase-bonus branch is reached only by the publicly
+constructible but unsupported `Survival + Master` hybrid state. That ordering
+is retained for executable-reference parity and must not be described as
+normal supported Survival scoring.
+
+**Timed-scoring modes:** supported Standard, Death, Daily Boss, and valid
+Survival use the earlier timed-scoring branch. Master bypasses it. The later
+phase bonus applies only to the unsupported `Survival + Master` hybrid.
 
 ### Double points power-up interaction
 If the "double" power-up is active: `points = (base + bonus) * 2`, and
@@ -204,13 +206,13 @@ player's score permanently, since `NaN + anything === NaN`).
 
 | Mode | Timer type | Speed bonus | Combo system | Notes |
 |---|---|---|---|---|
-| Standard | Per-question, difficulty-based | None | System B | Baseline mode |
+| Standard | Per-question, difficulty-based | Yes (earlier timed branch) | System B | Baseline mode |
 | Blitz | Global 60s | Yes (tiered) | System B | Time-pressure mode |
-| Death | Per-question | None | System B | Likely ends run on first wrong answer — verify exact lose condition against source `_endGame` logic for this mode specifically |
-| Survival | Per-question, phase-based | Yes (phase + speed) | System B | 5 escalating phases |
-| Combo | Global 60s (same as Blitz) | None | System A (dedicated) | The only mode using System A combo multipliers |
+| Death | Per-question | Yes (earlier timed branch) | System B | Likely ends run on first wrong answer — verify exact lose condition against source `_endGame` logic for this mode specifically |
+| Survival | Per-question, phase-based | Yes (earlier timed branch) | System B | Later phase bonus is unsupported `Survival + Master` only |
+| Combo | Global 90s | Yes (tiered) | System A (dedicated) | The only mode using System A combo multipliers |
 | Master | Per-stage (5 stages) | None | System B | Story progression, see Section 6 |
-| Daily Boss | Per-boss (6 bosses) | None | System B | 3 lives, deterministic per date, see Section 7 |
+| Daily Boss | Per-boss (6 bosses) | Yes (earlier timed branch) | System B | 3 lives, deterministic per date, see Section 7 |
 
 **Note on Death mode**: this reference doesn't have a verified exact
 lose-condition citation from this extraction pass. Before implementing,
