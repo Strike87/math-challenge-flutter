@@ -25,6 +25,14 @@ class MenuScreen extends StatelessWidget {
             // CAMPAIGN label
             _SectionLabel('CAMPAIGN', s, trailing: _streakBadge(gs, s)),
             _CampaignCard(
+              icon: '➕',
+              title: 'Operation Quest',
+              subtitle: 'ADDITION TRAIL • 3 STAGES',
+              color: s.accent(GameConfig.mango),
+              onTap: gs.showOperationQuest,
+            ),
+            const SizedBox(height: 10),
+            _CampaignCard(
               icon: '🏆',
               title: 'Master Challenge',
               subtitle: 'BOSS BATTLES • 5 STAGES',

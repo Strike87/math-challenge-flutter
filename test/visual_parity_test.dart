@@ -263,12 +263,14 @@ void main() {
       expect(find.text('MATH'), findsOneWidget);
       expect(find.text('CHALLENGE'), findsOneWidget);
       expect(find.text('BOSS BATTLE EDITION'), findsOneWidget);
+      expect(find.text('Operation Quest'), findsOneWidget);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/01_menu_phone_light.png'));
 
       state.settings.toggleDark();
       await tester.pumpAndSettle();
+      expect(find.text('Operation Quest'), findsOneWidget);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/01_menu_phone_dark.png'));
@@ -281,6 +283,7 @@ void main() {
       await tester.pumpWidget(
           TestAppWrapper(state: state, child: const TestAppShell()));
       await tester.pumpAndSettle();
+      expect(find.text('Operation Quest'), findsOneWidget);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/02_menu_tablet_light.png'));
@@ -452,8 +455,28 @@ void main() {
     testWidgets('10. Stage cleared modal uses real Master stage state',
         (tester) async {
       final state = await _makeState({'mc_dark': false});
-      state.currentScreen = GameScreen.menu;
       state.debugSetMasterStage(1);
+      state.currentScreen = GameScreen.game;
+      state.p[1].resetForGame(
+        isSinglePlayer: true,
+        isMasterOrBoss: true,
+      );
+      state.rt = RuntimeState()
+        ..challenge = Operation.master
+        ..gameActive = true
+        ..state = 'playing'
+        ..isWarmUp = false
+        ..maxTurns = state.currentMasterLevel!.goal
+        ..accepting = true
+        ..q = const Question(
+          type: Operation.subtraction,
+          key: '9-4',
+          text: '9 - 4',
+          ans: 5,
+          choices: [3, 4, 5, 6],
+          diff: Difficulty.medium,
+          numType: NumberType.natural,
+        );
       state.showModal(GameModal.stageCleared);
       await setTestDevice(tester, logicalSize: phoneSize);
       await tester.pumpWidget(

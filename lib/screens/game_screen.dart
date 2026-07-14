@@ -69,10 +69,10 @@ class _GameScreenState extends State<GameScreen> {
                 ),
 
                 // Mode-specific widgets
-                if (gs.mode == GameMode.survival &&
+                if (gs.activeMode == GameMode.survival &&
                     gs.rt.challenge != Operation.dailyBoss)
                   _LivesRow(gs: gs, s: s),
-                if (gs.mode == GameMode.combo) _ComboMeter(gs: gs, s: s),
+                if (gs.activeMode == GameMode.combo) _ComboMeter(gs: gs, s: s),
 
                 // Power-up HUD
                 if (_shouldShowPowerUpHud(gs))
@@ -108,7 +108,7 @@ class _GameScreenState extends State<GameScreen> {
   String _modeLabel(GameState gs) {
     if (gs.rt.challenge == Operation.master) return '🏆 Master';
     if (gs.rt.challenge == Operation.dailyBoss) return '🐲 Daily Boss';
-    return gs.mode.label;
+    return gs.activeMode.label;
   }
 
   Color _modeColor(GameState gs) {
@@ -116,7 +116,7 @@ class _GameScreenState extends State<GameScreen> {
       return const Color(GameConfig.mango);
     if (gs.rt.challenge == Operation.dailyBoss)
       return const Color(GameConfig.punch);
-    switch (gs.mode) {
+    switch (gs.activeMode) {
       case GameMode.blitz:
         return const Color(GameConfig.mango);
       case GameMode.death:
@@ -176,7 +176,7 @@ class _GameTopBar extends StatelessWidget {
                   children: [
                     ModeBadge(label: label.toUpperCase(), color: color),
                     if (rt.comboMultiplier > 1.0 &&
-                        gs.mode != GameMode.combo) ...[
+                        gs.activeMode != GameMode.combo) ...[
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -223,7 +223,9 @@ double _timerPct(GameState gs) {
 bool _timerWarning(GameState gs) {
   final remaining = _timerRemainingMs(gs);
   final threshold =
-      gs.mode == GameMode.blitz || gs.mode == GameMode.combo ? 5000 : 3000;
+      gs.activeMode == GameMode.blitz || gs.activeMode == GameMode.combo
+          ? 5000
+          : 3000;
   return remaining <= threshold && remaining > 0;
 }
 
@@ -365,7 +367,7 @@ class _ScoreProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isBoss = gs.rt.challenge == Operation.dailyBoss;
-    final isStandard = gs.mode == GameMode.standard &&
+    final isStandard = gs.activeMode == GameMode.standard &&
         gs.rt.challenge != Operation.master &&
         gs.rt.challenge != Operation.dailyBoss;
     if (!isBoss && !isStandard) return const SizedBox(height: 8);
@@ -373,7 +375,7 @@ class _ScoreProgress extends StatelessWidget {
     final isEndless = !isBoss && gs.rt.maxTurns == GameConfig.endlessTurns;
     final totalTarget = isBoss
         ? (gs.rt.dailyBoss?.goal ?? 1)
-        : (isEndless ? gs.questionCount : gs.rt.maxTurns);
+        : (isEndless ? gs.activeQuestionTarget : gs.rt.maxTurns);
     final target = isEndless ? totalTarget : _questionTarget(gs, totalTarget);
     final clampedTarget = target <= 0 ? 1 : target;
     final current = isBoss
@@ -488,7 +490,7 @@ class _ScorecardsRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: playerOne),
-          if (gs.players == 2) ...[
+          if (gs.activePlayers == 2) ...[
             const SizedBox(width: 8),
             Expanded(
               child:
@@ -1168,7 +1170,7 @@ class _PowerUpHud extends StatelessWidget {
 }
 
 bool _shouldShowPowerUpHud(GameState gs) {
-  if (gs.players != 1) return false;
+  if (gs.activePlayers != 1) return false;
   if (gs.rt.challenge == Operation.master ||
       gs.rt.challenge == Operation.dailyBoss) {
     return false;
@@ -1318,13 +1320,14 @@ class _QuestionCard extends StatelessWidget {
       );
     }
     final promptText = _prompt(gs);
-    final showCounter = gs.mode != GameMode.blitz &&
-        gs.mode != GameMode.combo &&
+    final showCounter = gs.activeMode != GameMode.blitz &&
+        gs.activeMode != GameMode.combo &&
         gs.rt.challenge != Operation.master &&
         gs.rt.challenge != Operation.dailyBoss;
-    final showSkip = ![GameMode.death, GameMode.survival].contains(gs.mode) &&
-        gs.rt.challenge != Operation.master &&
-        gs.rt.challenge != Operation.dailyBoss;
+    final showSkip =
+        ![GameMode.death, GameMode.survival].contains(gs.activeMode) &&
+            gs.rt.challenge != Operation.master &&
+            gs.rt.challenge != Operation.dailyBoss;
     final danger = _timerWarning(gs);
     final effectsEnabled = danger && !s.lowPerf && !s.reduceMotion;
     final card = Container(
@@ -1514,7 +1517,7 @@ class _QuestionCard extends StatelessWidget {
       return '🌱 Warm-Up • Q ${gs.rt.warmUpCount}/3';
     if (gs.rt.challenge == Operation.master) return 'Solve it!';
     if (gs.rt.challenge == Operation.dailyBoss) return 'Boss Battle!';
-    switch (gs.mode) {
+    switch (gs.activeMode) {
       case GameMode.blitz:
         return '⚡ Blitz Mode — answer fast!';
       case GameMode.death:
@@ -1524,14 +1527,14 @@ class _QuestionCard extends StatelessWidget {
       case GameMode.combo:
         return '🔥 Combo — Streak: ${gs.rt.comboStreak}';
       default:
-        return gs.players == 2
+        return gs.activePlayers == 2
             ? "${gs.p[gs.rt.activePlayer].name}'s Turn"
             : 'Solve it!';
     }
   }
 
   String? _modeWarning(GameState gs) {
-    switch (gs.mode) {
+    switch (gs.activeMode) {
       case GameMode.blitz:
         return '⚡ Answer fast for more points!';
       case GameMode.death:
@@ -1577,8 +1580,8 @@ class _QuestionCard extends StatelessWidget {
 }
 
 int _questionTarget(GameState gs, int totalTarget) {
-  if (gs.players == 2 &&
-      gs.mode == GameMode.standard &&
+  if (gs.activePlayers == 2 &&
+      gs.activeMode == GameMode.standard &&
       gs.rt.challenge != Operation.dailyBoss &&
       gs.rt.challenge != Operation.master &&
       totalTarget != GameConfig.endlessTurns) {
@@ -1591,8 +1594,8 @@ int _questionNumber(GameState gs, int totalTarget) {
   if (totalTarget == GameConfig.endlessTurns) return gs.rt.totalTurns + 1;
   final target = _questionTarget(gs, totalTarget);
   final clampedTarget = target <= 0 ? 1 : target;
-  if (gs.players == 2 &&
-      gs.mode == GameMode.standard &&
+  if (gs.activePlayers == 2 &&
+      gs.activeMode == GameMode.standard &&
       gs.rt.challenge != Operation.dailyBoss &&
       gs.rt.challenge != Operation.master) {
     final current = gs.rt.accepting

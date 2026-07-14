@@ -94,6 +94,7 @@ void main() {
       expect(state.coins, 0);
       expect(state.gamesPlayed, 0);
       expect(state.selectedAnswerStyle, AnswerStyle.choice4);
+      expect(state.operationQuestProgress.stars, isEmpty);
       expect(state.rt.answerStyle, AnswerStyle.choice4);
       expect(state.adaptLvlRaw, 0);
       expect(state.adaptLvl, 0);
