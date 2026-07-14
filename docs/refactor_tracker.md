@@ -4,6 +4,17 @@ Only the first unchecked item under **Active** may be started.
 
 ## Active
 
+R5 is complete. The project is in post-refactor release validation and mainline
+checkpointing before v2 feature planning. No new refactor item is approved
+unless explicitly added under **Active**.
+
+```text
+R5 complete
+→ fresh release validation
+→ stable main checkpoint/tag
+→ v2 feature planning
+```
+
 ## Completed
 
 - [x] R3 CoinLedger
