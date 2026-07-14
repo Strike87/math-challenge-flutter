@@ -1,3 +1,5 @@
+import 'enums.dart';
+
 /// Master Mode level definition — 5 story stages with bosses.
 class MasterLevel {
   final String name;
@@ -105,27 +107,40 @@ class ShopItem {
 class HighScore {
   final String name;
   final int score;
-  final String mode;
+  final GameMode mode;
+  final Difficulty? difficulty;
+  final AnswerStyle answerStyle;
   final String date;
 
   const HighScore({
     required this.name,
     required this.score,
     required this.mode,
+    this.difficulty,
+    this.answerStyle = AnswerStyle.choice4,
     required this.date,
   });
 
   Map<String, dynamic> toJson() => {
         'name': name,
         'score': score,
-        'mode': mode,
+        'mode': mode.name,
+        'difficulty': difficulty?.name,
+        'answerStyle': answerStyle.name,
         'date': date,
       };
 
   static HighScore fromJson(Map<String, dynamic> j) => HighScore(
         name: j['name'] as String? ?? 'Player',
         score: (j['score'] as num?)?.toInt() ?? 0,
-        mode: j['mode'] as String? ?? 'standard',
+        mode: GameMode.fromString(j['mode'] as String? ?? ''),
+        difficulty: j['difficulty'] is String
+            ? Difficulty.values.cast<Difficulty?>().firstWhere(
+                  (difficulty) => difficulty?.name == j['difficulty'],
+                  orElse: () => null,
+                )
+            : null,
+        answerStyle: AnswerStyle.fromString(j['answerStyle'] as String? ?? ''),
         date: j['date'] as String? ?? '',
       );
 }

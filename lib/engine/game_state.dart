@@ -46,6 +46,9 @@ enum GameModal {
 /// Runtime game state (the `rt` object in the original JS).
 class RuntimeState {
   Operation challenge;
+  AnswerStyle answerStyle;
+  num? proposedAnswer;
+  bool? proposedTruth;
   int activePlayer;
   Question? q;
   String state; // 'idle' | 'playing' | 'paused' | 'ended'
@@ -89,6 +92,9 @@ class RuntimeState {
 
   RuntimeState()
       : challenge = Operation.mixed,
+        answerStyle = AnswerStyle.choice4,
+        proposedAnswer = null,
+        proposedTruth = null,
         activePlayer = 1,
         q = null,
         state = 'idle',
@@ -135,6 +141,31 @@ class _FollowUpData {
   final Operation type;
   final Difficulty diff;
   _FollowUpData(this.type, this.diff);
+}
+
+@visibleForTesting
+({num answer, bool truth}) trueFalseProposal(Question question) {
+  final correctIndex = question.choices.indexWhere(
+    (choice) => (choice - question.ans).abs() < 1e-9,
+  );
+  assert(
+    correctIndex >= 0,
+    'True/False proposal requires the correct answer in choices.',
+  );
+  if (correctIndex < 0) {
+    throw StateError(
+      'True/False proposal requires the correct answer in choices.',
+    );
+  }
+  if (correctIndex.isEven) {
+    return (answer: question.choices[correctIndex], truth: true);
+  }
+  return (
+    answer: question.choices.firstWhere(
+      (choice) => (choice - question.ans).abs() >= 1e-9,
+    ),
+    truth: false,
+  );
 }
 
 /// The central game state controller.
@@ -189,6 +220,7 @@ class GameState extends ChangeNotifier {
     'mc_coins',
     'mc_scores',
     'mc_gamesPlayed',
+    'mc_selectedAnswerStyle',
     'mc_adaptLvl',
     'mc_achs',
     'mc_achievements',
@@ -257,6 +289,11 @@ class GameState extends ChangeNotifier {
   int _masterLevel = 0;
   int _masterLives = 3;
   int _masterProgress = 0;
+  ({
+    GameMode mode,
+    Difficulty difficulty,
+    AnswerStyle answerStyle
+  })? _runSnapshot;
 
   // ─── Options ────────────────────────────────────────────────
   int players = 2;
@@ -265,6 +302,7 @@ class GameState extends ChangeNotifier {
   int questionCount = 10;
   bool adaptive = true;
   NumberType numType = NumberType.natural;
+  AnswerStyle selectedAnswerStyle = AnswerStyle.choice4;
 
   // ─── Runtime ────────────────────────────────────────────────
   late RuntimeState rt = RuntimeState();
@@ -422,6 +460,9 @@ class GameState extends ChangeNotifier {
   Future<void> load() async {
     coins = Storage.getInt('mc_coins', 0);
     gamesPlayed = Storage.getInt('mc_gamesPlayed', 0);
+    selectedAnswerStyle = AnswerStyle.fromString(
+      Storage.getString('mc_selectedAnswerStyle', ''),
+    );
     adaptLvlRaw = Storage.getDouble('mc_adaptLvl', 0);
     adaptLvl = adaptLvlRaw.round();
     achievements = _loadAchs();
@@ -459,6 +500,10 @@ class GameState extends ChangeNotifier {
   Future<void> save() async {
     await Storage.setInt('mc_coins', coins);
     await Storage.setInt('mc_gamesPlayed', gamesPlayed);
+    await Storage.setString(
+      'mc_selectedAnswerStyle',
+      selectedAnswerStyle.name,
+    );
     await Storage.setDouble('mc_adaptLvl', adaptLvlRaw);
     await Storage.setString('mc_achievements', _encodeAchs());
     await Storage.setObjectList('mc_scores', highScores);
@@ -1272,6 +1317,19 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setAnswerStyle(AnswerStyle style) {
+    selectedAnswerStyle = style;
+    unawaited(Storage.setString('mc_selectedAnswerStyle', style.name));
+    notifyListeners();
+  }
+
+  AnswerStyle get effectiveAnswerStyle => mode == GameMode.standard &&
+          players == 1 &&
+          rt.challenge != Operation.master &&
+          rt.challenge != Operation.dailyBoss
+      ? selectedAnswerStyle
+      : AnswerStyle.choice4;
+
   void goToPlayerSetup() {
     showScreen(GameScreen.player);
   }
@@ -1319,7 +1377,15 @@ class GameState extends ChangeNotifier {
   }
 
   // ─── Game lifecycle ─────────────────────────────────────────
-  void startGame() {
+  void startGame() => _startGame();
+
+  void _startGame({
+    ({
+      GameMode mode,
+      Difficulty difficulty,
+      AnswerStyle answerStyle
+    })? replaySnapshot,
+  }) {
     _postFeedbackTimer?.cancel();
     _delayedResultModalTimer?.cancel();
 
@@ -1337,6 +1403,11 @@ class GameState extends ChangeNotifier {
     // Reset player data
     final isMaster = rt.challenge == Operation.master;
     final isBoss = rt.challenge == Operation.dailyBoss;
+    final snapshot = replaySnapshot ??
+        (mode: mode, difficulty: diff, answerStyle: effectiveAnswerStyle);
+    mode = snapshot.mode;
+    diff = snapshot.difficulty;
+    _runSnapshot = snapshot;
     for (var i = 1; i <= 2; i++) {
       p[i].resetForGame(
         isSinglePlayer: players == 1,
@@ -1354,6 +1425,7 @@ class GameState extends ChangeNotifier {
           ? Operation.master
           : (isBoss ? Operation.dailyBoss : rt.challenge)
       ..dailyBoss = isBoss ? dailyBoss : null
+      ..answerStyle = snapshot.answerStyle
       ..dailyBossLives = 3
       ..gameActive = true
       ..state = 'playing'
@@ -1510,6 +1582,11 @@ class GameState extends ChangeNotifier {
     );
 
     rt.q = q;
+    if (rt.answerStyle == AnswerStyle.trueFalse) {
+      final proposal = trueFalseProposal(q);
+      rt.proposedAnswer = proposal.answer;
+      rt.proposedTruth = proposal.truth;
+    }
     rt.selectedAnswer = null;
     rt.lastAnswerCorrect = false;
     rt.bossMood = 'normal';
@@ -1597,6 +1674,19 @@ class GameState extends ChangeNotifier {
   // ─── Answer handler ─────────────────────────────────────────
   void onAnswer(num val) {
     _onAnswer(val, false, false);
+  }
+
+  void onTrueFalseAnswer(bool response) {
+    if (rt.answerStyle != AnswerStyle.trueFalse || rt.proposedTruth == null) {
+      return;
+    }
+    final q = rt.q!;
+    final answer = response == rt.proposedTruth
+        ? q.ans
+        : q.choices.firstWhere(
+            (choice) => (choice - q.ans).abs() >= 1e-9,
+          );
+    onAnswer(answer);
   }
 
   void skip() {
@@ -1732,7 +1822,7 @@ class GameState extends ChangeNotifier {
     }
 
     // Scoring
-    int pts = GameConfig.scoreBase;
+    int pts = rt.answerStyle.baseScore(classicBase: GameConfig.scoreBase);
     int bonus = 0;
     final isBlitz = mode == GameMode.blitz;
     final isMaster = rt.challenge == Operation.master;
@@ -2105,10 +2195,16 @@ class GameState extends ChangeNotifier {
 
     // Save high score
     if (p[1].score > 0) {
+      final snapshot = _runSnapshot!;
       highScores.add(HighScore(
         name: p[1].name,
         score: p[1].score,
-        mode: mode.name,
+        mode: snapshot.mode,
+        difficulty: rt.challenge == Operation.master ||
+                rt.challenge == Operation.dailyBoss
+            ? null
+            : snapshot.difficulty,
+        answerStyle: snapshot.answerStyle,
         date: DateTime.now().toIso8601String().substring(0, 10),
       ));
       highScores.sort((a, b) => b.score.compareTo(a.score));
@@ -2251,6 +2347,7 @@ class GameState extends ChangeNotifier {
   }
 
   Future<void> replayGame() async {
+    final snapshot = _runSnapshot;
     final dismissedResult = currentModal == GameModal.win;
     closeModal();
     if (dismissedResult) await _showPendingInterstitialAd();
@@ -2260,7 +2357,7 @@ class GameState extends ChangeNotifier {
       _masterLives = 3 + Storage.getInt('mc_livesBonus', 0);
       Storage.setInt('mc_livesBonus', 0);
     }
-    startGame();
+    _startGame(replaySnapshot: snapshot);
   }
 
   Future<void> quitToMenu() async {
@@ -2275,6 +2372,7 @@ class GameState extends ChangeNotifier {
     _masterLevel = 0;
     _masterLives = 3;
     _masterProgress = 0;
+    _runSnapshot = null;
     showScreen(GameScreen.menu);
   }
 
@@ -2516,6 +2614,9 @@ class GameState extends ChangeNotifier {
   }
 
   bool _isPowerUpBlocked(PowerUp pu) {
+    if (pu == PowerUp.fifty && rt.answerStyle == AnswerStyle.trueFalse) {
+      return true;
+    }
     if (pu == PowerUp.time || pu == PowerUp.freeze) {
       if (mode == GameMode.blitz || mode == GameMode.combo) return true;
     }
@@ -2823,6 +2924,7 @@ class GameState extends ChangeNotifier {
     _coinLedger.reset();
     _dailyBonusPolicy.reset();
     gamesPlayed = 0;
+    selectedAnswerStyle = AnswerStyle.choice4;
     adaptLvlRaw = 0;
     adaptLvl = 0;
     achievements = {
@@ -2868,6 +2970,7 @@ class GameState extends ChangeNotifier {
     _masterLevel = 0;
     _masterLives = 3;
     _masterProgress = 0;
+    _runSnapshot = null;
     currentScreen = GameScreen.menu;
     currentModal = GameModal.none;
     _toastController.reset();

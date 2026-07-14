@@ -52,6 +52,27 @@ class ConfigScreen extends StatelessWidget {
                 _ModeInfoCard(mode: gs.mode, s: s),
                 const SizedBox(height: 16),
 
+                if (gs.mode == GameMode.standard && gs.players == 1) ...[
+                  _SectionTitle('Answer Style', s),
+                  _ToggleRow(
+                    options: [
+                      _ToggleOpt(
+                        '🔢 ${AnswerStyle.choice4.label}',
+                        AnswerStyle.choice4,
+                        s.accent(GameConfig.sky),
+                      ),
+                      _ToggleOpt(
+                        '✓ ${AnswerStyle.trueFalse.label}',
+                        AnswerStyle.trueFalse,
+                        s.accent(GameConfig.mint),
+                      ),
+                    ],
+                    active: gs.selectedAnswerStyle,
+                    onPick: gs.setAnswerStyle,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // Difficulty
                 _SectionTitle('Difficulty', s),
                 _ToggleRow(

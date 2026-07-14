@@ -1542,7 +1542,15 @@ class HighScoreModal extends StatelessWidget {
               children: [
                 _ResultRow('Name', 'Score', 'Mode', 'Date', header: true),
                 ...gs.highScores.map((s) => _ResultRow(
-                    s.name, '${s.score}', s.mode, s.date.substring(5))),
+                      s.name,
+                      '${s.score}',
+                      [
+                        s.mode.label,
+                        if (s.difficulty != null) s.difficulty!.label,
+                        s.answerStyle.label,
+                      ].join(' · '),
+                      s.date.length >= 5 ? s.date.substring(5) : s.date,
+                    )),
               ],
             ),
     );

@@ -270,7 +270,7 @@ void main() {
           (i) => HighScore(
             name: 'P$i',
             score: i + 1,
-            mode: 'standard',
+            mode: GameMode.standard,
             date: '2026-06-27',
           ),
         );

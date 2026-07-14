@@ -86,7 +86,10 @@ class _GameScreenState extends State<GameScreen> {
                       children: [
                         _QuestionCard(gs: gs, s: s),
                         const SizedBox(height: 16),
-                        _AnswersGrid(gs: gs, s: s),
+                        if (rt.answerStyle == AnswerStyle.trueFalse)
+                          _TrueFalseAnswers(gs: gs, s: s)
+                        else
+                          _AnswersGrid(gs: gs, s: s),
                         const SizedBox(height: 12),
                         if (gs.reactionPill.isNotEmpty)
                           ReactionPill(text: gs.reactionPill, s: s),
@@ -1671,7 +1674,7 @@ class _AnswersGrid extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      _fmt(c),
+                      _formatAnswer(c),
                       style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w900,
@@ -1694,12 +1697,67 @@ class _AnswersGrid extends StatelessWidget {
       ],
     );
   }
+}
 
-  String _fmt(num n) {
-    if (n == n.roundToDouble()) return '${n.toInt()}';
-    return n
-        .toStringAsFixed(2)
-        .replaceAll(RegExp(r'0+$'), '')
-        .replaceAll(RegExp(r'\.$'), '');
+class _TrueFalseAnswers extends StatelessWidget {
+  const _TrueFalseAnswers({required this.gs, required this.s});
+
+  final GameState gs;
+  final SettingsService s;
+
+  @override
+  Widget build(BuildContext context) {
+    final proposed = gs.rt.proposedAnswer;
+    if (proposed == null) return const SizedBox.shrink();
+    return Column(
+      children: [
+        Text(
+          '= ${_formatAnswer(proposed)}',
+          key: const Key('true-false-proposal'),
+          style: TextStyle(
+            color: s.text,
+            fontSize: 32,
+            fontWeight: FontWeight.w900,
+            fontFamily: AppFonts.head,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            for (final option in [true, false]) ...[
+              Expanded(
+                child: AbsorbPointer(
+                  absorbing: !gs.rt.accepting,
+                  child: Opacity(
+                    opacity: gs.rt.accepting ? 1 : 0.5,
+                    child: NeoButton(
+                      key: Key(option ? 'answer-true' : 'answer-false'),
+                      label: option ? 'True' : 'False',
+                      color: option ? GameConfig.mint : GameConfig.punch,
+                      onPressed: () => gs.onTrueFalseAnswer(option),
+                    ),
+                  ),
+                ),
+              ),
+              if (option) const SizedBox(width: 10),
+            ],
+          ],
+        ),
+        IgnorePointer(
+          child: BigEmojiOverlay(
+            emoji: gs.bigEmoji,
+            visible: gs.bigEmojiVisible && gs.bigEmoji.isNotEmpty,
+          ),
+        ),
+      ],
+    );
   }
+}
+
+String _formatAnswer(num answer) {
+  if (answer == answer.roundToDouble()) return '${answer.toInt()}';
+  return answer
+      .toStringAsFixed(2)
+      .replaceAll(RegExp(r'0+$'), '')
+      .replaceAll(RegExp(r'\.$'), '');
 }

@@ -54,6 +54,7 @@ void main() {
       state
         ..coins = 500
         ..gamesPlayed = 12
+        ..selectedAnswerStyle = AnswerStyle.trueFalse
         ..adaptLvlRaw = 6.5
         ..adaptLvl = 7
         ..achievements = {'first_win': true}
@@ -61,7 +62,7 @@ void main() {
           HighScore(
             name: 'Player 1',
             score: 999,
-            mode: 'standard',
+            mode: GameMode.standard,
             date: '2026-06-27',
           ),
         ]
@@ -82,6 +83,7 @@ void main() {
         ..isDailyBossClaimedToday = true;
       state.p[1].name = 'Reset Me';
       state.p[1].avatar = '🐲';
+      state.rt.answerStyle = AnswerStyle.trueFalse;
 
       await state.resetAllData();
 
@@ -91,6 +93,8 @@ void main() {
 
       expect(state.coins, 0);
       expect(state.gamesPlayed, 0);
+      expect(state.selectedAnswerStyle, AnswerStyle.choice4);
+      expect(state.rt.answerStyle, AnswerStyle.choice4);
       expect(state.adaptLvlRaw, 0);
       expect(state.adaptLvl, 0);
       expect(state.achievements.values.any((unlocked) => unlocked), isFalse);

@@ -173,6 +173,28 @@ enum GameMode {
   }
 }
 
+/// Answer presentation used for a game session.
+enum AnswerStyle {
+  choice4,
+  trueFalse;
+
+  String get label => switch (this) {
+        AnswerStyle.choice4 => '4 Choices',
+        AnswerStyle.trueFalse => 'True / False',
+      };
+
+  int baseScore({required int classicBase}) => switch (this) {
+        AnswerStyle.choice4 => classicBase,
+        AnswerStyle.trueFalse => classicBase ~/ 2,
+      };
+
+  static AnswerStyle fromString(String storedName) =>
+      AnswerStyle.values.firstWhere(
+        (style) => style.name == storedName,
+        orElse: () => AnswerStyle.choice4,
+      );
+}
+
 /// Power-up kinds awarded to single-player Standard runs.
 enum PowerUp {
   time,
