@@ -4,17 +4,6 @@ Only the first unchecked item under **Active** may be started.
 
 ## Active
 
-- [ ] R5 Step 2C — Survival hybrid-only scoring branch disposition audit
-  - Type: audit only
-  - Goal: determine whether the Survival+Master-only scoring branch should
-    remain, be documented, be guarded against, or be proposed for later removal
-  - Production edits: prohibited
-  - Preserve:
-    - executable-reference parity
-    - scoring order
-    - valid Survival behavior
-  - Implementation: do not begin
-
 ## Completed
 
 - [x] R3 CoinLedger
@@ -37,6 +26,10 @@ Only the first unchecked item under **Active** may be started.
     - Visual parity suite: 13 passed
     - `flutter analyze`: clean
     - `regression_reviewer` reported no confirmed findings
+- [x] R5 Step 2C — VERIFIED, no code change
+  - The unsupported but publicly constructible `Survival + Master` branch is
+    retained for executable-reference parity; any coherence guard requires a
+    separate behavior-matrix audit and product decision.
 
 ## Deferred
 

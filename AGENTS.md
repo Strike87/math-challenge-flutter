@@ -79,6 +79,17 @@ Do not incidentally change:
 
 The frozen contracts are recorded in `docs/behavior_contracts.md`.
 
+### Unsupported hybrid compatibility
+
+The publicly constructible `Survival + Master` state is unsupported by normal
+UI flow but remains part of executable-reference behavior.
+
+Do not delete the Survival phase-scoring branch or add a challenge/mode
+coherence guard as incidental cleanup.
+
+Any normalization or rejection of unsupported challenge/mode combinations
+requires a separately approved behavior-matrix audit and product decision.
+
 ## Architecture boundaries
 
 Pure domain policies and engines must not depend on:

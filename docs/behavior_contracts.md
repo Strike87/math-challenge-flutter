@@ -37,6 +37,22 @@ product decision or confirmed bug authorizes a change.
 - Selecting `10` questions produces `20` combined turns.
 - Per-player counter remains `1/10`, `2/10`, and so on.
 
+## Unsupported challenge/mode hybrids
+
+Public mutable state permits challenge/mode combinations that supported UI
+flows do not actively start.
+
+In particular, `GameMode.survival` combined with `Operation.master` preserves
+the executable-reference ordering, including the Survival phase-scoring branch.
+
+This combination is unsupported but publicly constructible. It is intentionally
+retained for reference parity.
+
+Do not remove the branch or normalize this hybrid as incidental refactoring.
+Any coherence guard requires a separate product decision and a full audit of
+scoring, timers, lives, coins, progression, achievements, UI, replay, and
+persistence behavior.
+
 ## Delayed terminal feedback
 
 - Sudden Death terminal delay: `600ms`.
