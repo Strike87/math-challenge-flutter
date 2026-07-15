@@ -295,7 +295,7 @@ void main() {
           matchesGoldenFile('goldens/02_menu_tablet_dark.png'));
     });
 
-    testWidgets('2b. Operation Quest map shows both trails and lock states',
+    testWidgets('2b. Operation Quest map shows all trails and lock states',
         (tester) async {
       final state = await _makeState({
         'mc_dark': false,
@@ -310,6 +310,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('➕ Addition Trail'), findsOneWidget);
       expect(find.text('➖ Subtraction Trail'), findsOneWidget);
+      expect(find.text('✖️ Multiplication Trail'), findsOneWidget);
       expect(find.text('First Differences'), findsOneWidget);
       expectNoVisualException(tester);
       await expectLater(

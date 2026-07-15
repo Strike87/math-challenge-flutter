@@ -27,7 +27,7 @@ class MenuScreen extends StatelessWidget {
             _CampaignCard(
               icon: '➕',
               title: 'Operation Quest',
-              subtitle: '2 TRAILS • 6 STAGES',
+              subtitle: '3 TRAILS • 9 STAGES',
               color: s.accent(GameConfig.mango),
               onTap: gs.showOperationQuest,
             ),

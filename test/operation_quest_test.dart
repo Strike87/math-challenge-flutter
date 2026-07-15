@@ -34,7 +34,7 @@ void main() {
         .setMockMethodCallHandler(audioPlayerChannel, null);
   });
 
-  test('domain defines both trails, explicit unlocks, and safe progress JSON',
+  test('domain defines all trails, explicit unlocks, and safe progress JSON',
       () {
     expect(
       operationQuestStages
@@ -89,6 +89,27 @@ void main() {
           NumberType.natural,
           10
         ),
+        (
+          'Times Table Start',
+          Difficulty.easy,
+          Operation.multiplication,
+          NumberType.natural,
+          10
+        ),
+        (
+          'Product Climb',
+          Difficulty.medium,
+          Operation.multiplication,
+          NumberType.natural,
+          10
+        ),
+        (
+          'Multiplication Challenge',
+          Difficulty.hard,
+          Operation.multiplication,
+          NumberType.natural,
+          10
+        ),
       ],
     );
     expect(
@@ -100,6 +121,9 @@ void main() {
         'subtraction_easy',
         'subtraction_medium',
         'subtraction_hard',
+        'multiplication_easy',
+        'multiplication_medium',
+        'multiplication_hard',
       ],
     );
     expect(
@@ -115,6 +139,9 @@ void main() {
         'addition_hard': 1,
         'subtraction_easy': 2,
         'subtraction_medium': 1,
+        'subtraction_hard': 1,
+        'multiplication_easy': 2,
+        'multiplication_medium': 1,
         'unknown': 3,
       },
     }));
@@ -129,9 +156,27 @@ void main() {
     );
     expect(progress.isUnlocked(OperationQuestStageId.subtractionHard), isTrue);
     expect(
+        progress.isUnlocked(OperationQuestStageId.multiplicationEasy), isTrue);
+    expect(progress.isUnlocked(OperationQuestStageId.multiplicationMedium),
+        isTrue);
+    expect(
+        progress.isUnlocked(OperationQuestStageId.multiplicationHard), isTrue);
+    expect(
       OperationQuestProgress({
         OperationQuestStageId.additionHard: 1,
       }).isUnlocked(OperationQuestStageId.subtractionMedium),
+      isFalse,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.subtractionMedium: 3,
+      }).isUnlocked(OperationQuestStageId.multiplicationEasy),
+      isFalse,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.subtractionHard: 1,
+      }).isUnlocked(OperationQuestStageId.multiplicationMedium),
       isFalse,
     );
     expect(
@@ -156,6 +201,9 @@ void main() {
           'addition_hard': 1,
           'subtraction_easy': 1,
           'subtraction_medium': 1,
+          'subtraction_hard': 1,
+          'multiplication_easy': 1,
+          'multiplication_medium': 1,
         },
       }),
     });
@@ -169,7 +217,7 @@ void main() {
       ..adaptive = true
       ..selectedAnswerStyle = AnswerStyle.trueFalse;
 
-    state.startOperationQuestStage(OperationQuestStageId.subtractionHard);
+    state.startOperationQuestStage(OperationQuestStageId.multiplicationHard);
     expect(state.setupPlayers, 1);
     state.startGame();
     state.rt.timer?.cancel();
@@ -188,12 +236,12 @@ void main() {
     expect(state.activeQuestionTarget, 10);
     expect(state.rt.answerStyle, AnswerStyle.choice4);
     expect(state.activeAdaptive, isFalse);
-    expect(state.rt.q?.type, Operation.subtraction);
+    expect(state.rt.q?.type, Operation.multiplication);
 
     await state.replayGame();
     state.rt.timer?.cancel();
     expect(state.activeRunSnapshot?.operationQuestStageId,
-        OperationQuestStageId.subtractionHard);
+        OperationQuestStageId.multiplicationHard);
     expect(state.activeDifficulty, Difficulty.hard);
     expect(state.mode, GameMode.combo);
     expect(state.diff, Difficulty.insane);
@@ -397,7 +445,50 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
   });
 
-  testWidgets('Campaign card shows both trails and locked stages do not start',
+  testWidgets('Multiplication Stage 3 copy and history use the Quest snapshot',
+      (tester) async {
+    final saved = jsonEncode({
+      'version': 1,
+      'stars': {
+        'subtraction_hard': 3,
+        'multiplication_easy': 3,
+        'multiplication_medium': 3,
+        'multiplication_hard': 3,
+      },
+    });
+    final state = await _makeState({'mc_operationQuestProgress': saved});
+    addTearDown(state.dispose);
+    final initialCount = state.skillMap[Operation.multiplication.name]!.count;
+
+    state.startOperationQuestStage(OperationQuestStageId.multiplicationHard);
+    state.startGame();
+    await _finishQuest(tester, state, correctAnswers: 0);
+
+    expect(state.resultIcon, '✖️');
+    expect(state.resultTitle, 'Multiplication Challenge Complete');
+    expect(Storage.getString('mc_operationQuestProgress', ''), saved);
+
+    await state.replayGame();
+    await _finishQuest(tester, state, correctAnswers: 6);
+
+    expect(state.resultIcon, '⭐');
+    expect(state.resultTitle, 'Multiplication Trail Complete');
+    expect(
+      state.p[1].history.every(
+        (attempt) => attempt.type == Operation.multiplication,
+      ),
+      isTrue,
+    );
+    expect(
+      state.skillMap[Operation.multiplication.name]!.count,
+      initialCount + 20,
+    );
+    expect(state.highScores, isEmpty);
+    expect(Storage.getString('mc_operationQuestProgress', ''), saved);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('Campaign card shows all trails and locked stages do not start',
       (tester) async {
     final state = await _makeState();
     addTearDown(state.dispose);
@@ -408,20 +499,26 @@ void main() {
     );
 
     expect(find.text('Operation Quest'), findsOneWidget);
-    expect(find.text('2 TRAILS • 6 STAGES'), findsOneWidget);
+    expect(find.text('3 TRAILS • 9 STAGES'), findsOneWidget);
     await tester.tap(find.text('Operation Quest'));
     await tester.pump();
     expect(find.text('➕ Addition Trail'), findsOneWidget);
     expect(find.text('➖ Subtraction Trail'), findsOneWidget);
+    expect(find.text('✖️ Multiplication Trail'), findsOneWidget);
     expect(find.text('First Sums'), findsOneWidget);
     expect(find.text('Bigger Sums'), findsOneWidget);
     expect(find.text('Addition Challenge'), findsOneWidget);
     expect(find.text('First Differences'), findsOneWidget);
     expect(find.text('Bigger Differences'), findsOneWidget);
     expect(find.text('Subtraction Challenge'), findsOneWidget);
-    expect(find.text('🔒'), findsNWidgets(5));
+    expect(find.text('Times Table Start'), findsOneWidget);
+    expect(find.text('Product Climb'), findsOneWidget);
+    expect(find.text('Multiplication Challenge'), findsOneWidget);
+    expect(find.text('🔒'), findsNWidgets(8));
 
     state.startOperationQuestStage(OperationQuestStageId.subtractionEasy);
+    expect(state.currentScreen, GameScreen.menu);
+    state.startOperationQuestStage(OperationQuestStageId.multiplicationEasy);
     expect(state.currentScreen, GameScreen.menu);
 
     await tester.tap(
@@ -430,6 +527,17 @@ void main() {
     await tester.pump();
     expect(state.currentScreen, GameScreen.menu);
 
+    final multiplicationEasy = find.byKey(
+      const Key('operation-quest-stage-multiplication_easy'),
+    );
+    await tester.ensureVisible(multiplicationEasy);
+    await tester.tap(multiplicationEasy);
+    await tester.pump();
+    expect(state.currentScreen, GameScreen.menu);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('operation-quest-stage-addition_easy')),
+    );
     await tester.tap(
       find.byKey(const Key('operation-quest-stage-addition_easy')),
     );
