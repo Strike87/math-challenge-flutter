@@ -17,7 +17,7 @@ class _PlayerSetupScreenState extends State<PlayerSetupScreen> {
   int _setupStep = 0;
 
   void _goBack(GameState gs) {
-    if (gs.players == 2 && _setupStep == 1) {
+    if (gs.setupPlayers == 2 && _setupStep == 1) {
       setState(() => _setupStep = 0);
       return;
     }
@@ -26,7 +26,7 @@ class _PlayerSetupScreenState extends State<PlayerSetupScreen> {
   }
 
   void _submit(GameState gs) {
-    if (gs.players == 2 && _setupStep == 0) {
+    if (gs.setupPlayers == 2 && _setupStep == 0) {
       setState(() => _setupStep = 1);
       return;
     }
@@ -38,12 +38,12 @@ class _PlayerSetupScreenState extends State<PlayerSetupScreen> {
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
     final s = context.watch<SettingsService>();
-    if (gs.players != 2 && _setupStep != 0) {
+    if (gs.setupPlayers != 2 && _setupStep != 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _setupStep = 0);
       });
     }
-    final twoPlayer = gs.players == 2 &&
+    final twoPlayer = gs.setupPlayers == 2 &&
         gs.rt.challenge.name != 'master' &&
         gs.rt.challenge.name != 'dailyBoss';
     final currentPid = twoPlayer && _setupStep == 1 ? 2 : 1;

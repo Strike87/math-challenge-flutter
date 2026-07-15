@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
 import '../features/modals/presentation/widgets/avatar_builder_tab_label.dart';
 import '../features/modals/presentation/widgets/skill_dashboard_header.dart';
+import '../features/operation_quest/domain/operation_quest.dart';
 import '../game_config.dart';
 import '../models/enums.dart';
 import '../models/game_data.dart';
@@ -73,9 +74,129 @@ class ModalRouter extends StatelessWidget {
         return AdultGateModal(gs: gs);
       case GameModal.dailyChallenges:
         return DailyChallengesModal(gs: gs);
+      case GameModal.operationQuest:
+        return OperationQuestModal(gs: gs);
       case GameModal.none:
         return const SizedBox.shrink();
     }
+  }
+}
+
+class OperationQuestModal extends StatelessWidget {
+  const OperationQuestModal({super.key, required this.gs});
+
+  final GameState gs;
+
+  @override
+  Widget build(BuildContext context) {
+    return ModalShell(
+      icon: '➕',
+      title: 'Addition Trail',
+      maxHeight: 620,
+      actions: [
+        NeoButton(
+          label: 'Close',
+          outlined: true,
+          color: GameConfig.coral,
+          onPressed: gs.closeModal,
+        ),
+      ],
+      child: Column(
+        children: [
+          const Text(
+            'Natural addition • 10 questions per stage',
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 14),
+          for (var i = 0; i < operationQuestStages.length; i++) ...[
+            _OperationQuestStageCard(
+              number: i + 1,
+              stage: operationQuestStages[i],
+              stars: gs.operationQuestProgress
+                  .bestStars(operationQuestStages[i].id),
+              unlocked: gs.operationQuestProgress
+                  .isUnlocked(operationQuestStages[i].id),
+              onTap: () =>
+                  gs.startOperationQuestStage(operationQuestStages[i].id),
+            ),
+            if (i < operationQuestStages.length - 1) const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _OperationQuestStageCard extends StatelessWidget {
+  const _OperationQuestStageCard({
+    required this.number,
+    required this.stage,
+    required this.stars,
+    required this.unlocked,
+    required this.onTap,
+  });
+
+  final int number;
+  final OperationQuestStage stage;
+  final int stars;
+  final bool unlocked;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Material(
+      key: Key('operation-quest-stage-${stage.id.storageId}'),
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: unlocked ? onTap : null,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: s.surface2,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: unlocked ? const Color(GameConfig.mango) : s.border,
+            ),
+          ),
+          child: Row(
+            children: [
+              Text(
+                unlocked ? '$number' : '🔒',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      stage.title,
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    Text(
+                      '${stage.difficulty.label} • Addition',
+                      style: TextStyle(color: s.muted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                List.generate(3, (i) => i < stars ? '★' : '☆').join(),
+                style: TextStyle(
+                  color: unlocked ? const Color(GameConfig.mango) : s.muted,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -1234,10 +1355,12 @@ class WinModal extends StatelessWidget {
             onPressed: gs.replayGame,
           ),
         NeoButton(
-          label: 'Main Menu',
+          label: gs.isOperationQuest ? 'Quest Map' : 'Main Menu',
           outlined: true,
           color: GameConfig.coral,
-          onPressed: gs.quitToMenu,
+          onPressed: gs.isOperationQuest
+              ? gs.returnToOperationQuestMap
+              : gs.quitToMenu,
         ),
       ],
       child: Column(
@@ -1250,7 +1373,7 @@ class WinModal extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
-          if (gs.players == 2 && gs.mode == GameMode.standard)
+          if (gs.activePlayers == 2 && gs.activeMode == GameMode.standard)
             _CompareResultReport(p1: p1, p2: p2)
           else
             _SingleResultReport(player: p1),

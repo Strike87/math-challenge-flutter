@@ -116,6 +116,8 @@ void main() {
     await state.replayGame();
     state.rt.timer?.cancel();
 
+    expect(state.activeMode, GameMode.standard);
+    expect(state.activeDifficulty, Difficulty.easy);
     expect(state.mode, GameMode.standard);
     expect(state.diff, Difficulty.easy);
     expect(state.rt.answerStyle, AnswerStyle.trueFalse);

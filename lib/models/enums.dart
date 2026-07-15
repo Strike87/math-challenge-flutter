@@ -173,6 +173,9 @@ enum GameMode {
   }
 }
 
+/// Identifies whether a run came from normal setup or Operation Quest.
+enum GameRunType { normal, operationQuest }
+
 /// Answer presentation used for a game session.
 enum AnswerStyle {
   choice4,

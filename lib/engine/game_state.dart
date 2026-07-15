@@ -9,6 +9,7 @@ import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/economy/domain/number_type_unlock_policy.dart';
 import '../features/gameplay/domain/survival_progression_policy.dart';
 import '../features/modals/presentation/toast_controller.dart';
+import '../features/operation_quest/domain/operation_quest.dart';
 import '../game_config.dart';
 import '../models/celebration.dart';
 import '../models/enums.dart';
@@ -41,6 +42,7 @@ enum GameModal {
   coinShop,
   adultGate,
   dailyChallenges,
+  operationQuest,
 }
 
 /// Runtime game state (the `rt` object in the original JS).
@@ -143,6 +145,31 @@ class _FollowUpData {
   _FollowUpData(this.type, this.diff);
 }
 
+@immutable
+class GameRunSnapshot {
+  const GameRunSnapshot({
+    required this.runType,
+    required this.mode,
+    required this.operation,
+    required this.difficulty,
+    required this.numberType,
+    required this.answerStyle,
+    required this.players,
+    required this.questionTarget,
+    this.operationQuestStageId,
+  });
+
+  final GameRunType runType;
+  final GameMode mode;
+  final Operation operation;
+  final Difficulty difficulty;
+  final NumberType numberType;
+  final AnswerStyle answerStyle;
+  final int players;
+  final int questionTarget;
+  final OperationQuestStageId? operationQuestStageId;
+}
+
 @visibleForTesting
 ({num answer, bool truth}) trueFalseProposal(Question question) {
   final correctIndex = question.choices.indexWhere(
@@ -221,6 +248,7 @@ class GameState extends ChangeNotifier {
     'mc_scores',
     'mc_gamesPlayed',
     'mc_selectedAnswerStyle',
+    'mc_operationQuestProgress',
     'mc_adaptLvl',
     'mc_achs',
     'mc_achievements',
@@ -289,11 +317,8 @@ class GameState extends ChangeNotifier {
   int _masterLevel = 0;
   int _masterLives = 3;
   int _masterProgress = 0;
-  ({
-    GameMode mode,
-    Difficulty difficulty,
-    AnswerStyle answerStyle
-  })? _runSnapshot;
+  GameRunSnapshot? _runSnapshot;
+  OperationQuestStageId? _pendingOperationQuestStageId;
 
   // ─── Options ────────────────────────────────────────────────
   int players = 2;
@@ -320,6 +345,8 @@ class GameState extends ChangeNotifier {
   int get coins => _coinLedger.balance;
   set coins(int value) => _coinLedger.balance = value;
   int gamesPlayed = 0;
+  OperationQuestProgress operationQuestProgress = OperationQuestProgress();
+  int operationQuestResultStars = 0;
   double adaptLvlRaw = 0;
   int adaptLvl = 0;
   Map<String, bool> achievements = {};
@@ -344,6 +371,17 @@ class GameState extends ChangeNotifier {
   int adGameCount = 0;
   int lastRewardedAt = 0;
   bool _pendingInterstitialAd = false;
+
+  GameRunSnapshot? get activeRunSnapshot => _runSnapshot;
+  bool get isOperationQuest =>
+      _runSnapshot?.runType == GameRunType.operationQuest;
+  int get setupPlayers => _pendingOperationQuestStageId == null ? players : 1;
+  int get activePlayers => _runSnapshot?.players ?? players;
+  GameMode get activeMode => _runSnapshot?.mode ?? mode;
+  Difficulty get activeDifficulty => _runSnapshot?.difficulty ?? diff;
+  NumberType get activeNumberType => _runSnapshot?.numberType ?? numType;
+  int get activeQuestionTarget => _runSnapshot?.questionTarget ?? questionCount;
+  bool get activeAdaptive => isOperationQuest ? false : adaptive;
 
   // ─── UI routing ─────────────────────────────────────────────
   GameScreen currentScreen = GameScreen.menu;
@@ -462,6 +500,9 @@ class GameState extends ChangeNotifier {
     gamesPlayed = Storage.getInt('mc_gamesPlayed', 0);
     selectedAnswerStyle = AnswerStyle.fromString(
       Storage.getString('mc_selectedAnswerStyle', ''),
+    );
+    operationQuestProgress = OperationQuestProgress.decode(
+      Storage.getString('mc_operationQuestProgress', ''),
     );
     adaptLvlRaw = Storage.getDouble('mc_adaptLvl', 0);
     adaptLvl = adaptLvlRaw.round();
@@ -990,6 +1031,7 @@ class GameState extends ChangeNotifier {
   }
 
   void _applyPowerUpBonusIfEligible({
+    required int players,
     required bool isMaster,
     required bool isBoss,
   }) {
@@ -1334,7 +1376,25 @@ class GameState extends ChangeNotifier {
     showScreen(GameScreen.player);
   }
 
+  void showOperationQuest() {
+    _pendingOperationQuestStageId = null;
+    showModal(GameModal.operationQuest);
+  }
+
+  void startOperationQuestStage(OperationQuestStageId id) {
+    if (!operationQuestProgress.isUnlocked(id)) return;
+    _pendingOperationQuestStageId = id;
+    closeModal();
+    showScreen(GameScreen.player);
+  }
+
   void backFromPlayers() {
+    if (_pendingOperationQuestStageId != null) {
+      _pendingOperationQuestStageId = null;
+      showScreen(GameScreen.menu);
+      showModal(GameModal.operationQuest);
+      return;
+    }
     if (rt.challenge == Operation.master ||
         rt.challenge == Operation.dailyBoss) {
       showScreen(GameScreen.menu);
@@ -1379,18 +1439,14 @@ class GameState extends ChangeNotifier {
   // ─── Game lifecycle ─────────────────────────────────────────
   void startGame() => _startGame();
 
-  void _startGame({
-    ({
-      GameMode mode,
-      Difficulty difficulty,
-      AnswerStyle answerStyle
-    })? replaySnapshot,
-  }) {
+  void _startGame({GameRunSnapshot? replaySnapshot}) {
     _postFeedbackTimer?.cancel();
     _delayedResultModalTimer?.cancel();
 
-    // Safety: block 2P games in single-player-only modes.
-    if (!GameMode.isAvailableForPlayers(mode, players)) {
+    // Safety: block corrupted normal 2P + restricted-mode setup.
+    if (replaySnapshot == null &&
+        _pendingOperationQuestStageId == null &&
+        !GameMode.isAvailableForPlayers(mode, players)) {
       mode = GameMode.standard;
       notifyListeners();
       return;
@@ -1400,36 +1456,48 @@ class GameState extends ChangeNotifier {
     _turnSeq++;
     closeModal();
 
-    // Reset player data
-    final isMaster = rt.challenge == Operation.master;
-    final isBoss = rt.challenge == Operation.dailyBoss;
+    final pendingQuestId = _pendingOperationQuestStageId;
     final snapshot = replaySnapshot ??
-        (mode: mode, difficulty: diff, answerStyle: effectiveAnswerStyle);
-    mode = snapshot.mode;
-    diff = snapshot.difficulty;
+        (pendingQuestId == null
+            ? GameRunSnapshot(
+                runType: GameRunType.normal,
+                mode: mode,
+                operation: rt.challenge,
+                difficulty: diff,
+                numberType: numType,
+                answerStyle: effectiveAnswerStyle,
+                players: players,
+                questionTarget: questionCount,
+              )
+            : _operationQuestSnapshot(pendingQuestId));
+    _pendingOperationQuestStageId = null;
     _runSnapshot = snapshot;
+    final isMaster = snapshot.operation == Operation.master;
+    final isBoss = snapshot.operation == Operation.dailyBoss;
     for (var i = 1; i <= 2; i++) {
       p[i].resetForGame(
-        isSinglePlayer: players == 1,
+        isSinglePlayer: snapshot.players == 1,
         isMasterOrBoss: isMaster || isBoss,
       );
     }
-    _applyPowerUpBonusIfEligible(isMaster: isMaster, isBoss: isBoss);
+    _applyPowerUpBonusIfEligible(
+      players: snapshot.players,
+      isMaster: isMaster,
+      isBoss: isBoss,
+    );
     _clearAnswerFeedback();
     celebration = const CelebrationEvent.none();
     screenShakeTick = 0;
 
     // Reset runtime
     rt = RuntimeState()
-      ..challenge = isMaster
-          ? Operation.master
-          : (isBoss ? Operation.dailyBoss : rt.challenge)
+      ..challenge = snapshot.operation
       ..dailyBoss = isBoss ? dailyBoss : null
       ..answerStyle = snapshot.answerStyle
       ..dailyBossLives = 3
       ..gameActive = true
       ..state = 'playing'
-      ..isWarmUp = (mode == GameMode.standard && !isMaster && !isBoss);
+      ..isWarmUp = (snapshot.mode == GameMode.standard && !isMaster && !isBoss);
 
     rt.maxTurns = isMaster
         ? (currentMasterLevel?.goal ?? GameConfig.endlessTurns)
@@ -1440,9 +1508,9 @@ class GameState extends ChangeNotifier {
                 GameMode.death,
                 GameMode.survival,
                 GameMode.combo
-              ].contains(mode)
+              ].contains(snapshot.mode)
                 ? GameConfig.endlessTurns
-                : players * questionCount);
+                : snapshot.players * snapshot.questionTarget);
 
     if (isMaster) {
       // Master reset: 3 lives
@@ -1452,11 +1520,11 @@ class GameState extends ChangeNotifier {
 
     showScreen(GameScreen.game);
 
-    if (mode == GameMode.blitz) {
+    if (snapshot.mode == GameMode.blitz) {
       rt.blitzTotalMs = GameConfig.blitzTimerDefault;
       rt.blitzElapsedMs = 0;
       _startGlobalTimer(GameConfig.blitzTimerDefault);
-    } else if (mode == GameMode.combo) {
+    } else if (snapshot.mode == GameMode.combo) {
       rt.blitzTotalMs = GameConfig.comboTimerDefault;
       rt.blitzElapsedMs = 0;
       _startGlobalTimer(GameConfig.comboTimerDefault);
@@ -1465,9 +1533,26 @@ class GameState extends ChangeNotifier {
     _nextTurn();
   }
 
+  GameRunSnapshot _operationQuestSnapshot(OperationQuestStageId id) {
+    final stage = operationQuestStage(id);
+    return GameRunSnapshot(
+      runType: GameRunType.operationQuest,
+      mode: GameMode.standard,
+      operation: stage.operation,
+      difficulty: stage.difficulty,
+      numberType: stage.numberType,
+      answerStyle: AnswerStyle.choice4,
+      players: 1,
+      questionTarget: stage.questionTarget,
+      operationQuestStageId: id,
+    );
+  }
+
   void _nextTurn() {
     if (!rt.gameActive) return;
-    if (players == 2 && mode == GameMode.standard && rt.totalTurns > 0) {
+    if (activePlayers == 2 &&
+        activeMode == GameMode.standard &&
+        rt.totalTurns > 0) {
       rt.activePlayer = rt.activePlayer == 1 ? 2 : 1;
     }
 
@@ -1489,7 +1574,8 @@ class GameState extends ChangeNotifier {
 
   void _generateQ() {
     var type = rt.challenge;
-    var d = diff;
+    var d = activeDifficulty;
+    var generatedNumType = activeNumberType;
 
     // Follow-up reinforcement
     if (rt.isFollowUp && rt.followUpData != null) {
@@ -1515,6 +1601,7 @@ class GameState extends ChangeNotifier {
               NumberType.rationals
             ][_rng.nextInt(3)]
           : NumberType.fromString(masterNt);
+      generatedNumType = numType;
     } else if (rt.challenge == Operation.dailyBoss) {
       final lvl = rt.dailyBoss ?? dailyBoss!;
       d = Difficulty.fromString(lvl.diff);
@@ -1527,9 +1614,10 @@ class GameState extends ChangeNotifier {
               NumberType.rationals
             ][_rng.nextInt(3)]
           : NumberType.fromString(lvl.numType);
+      generatedNumType = numType;
     }
 
-    if (mode == GameMode.survival) {
+    if (activeMode == GameMode.survival) {
       d = Difficulty.fromString(
           GameConfig.phaseKeys[rt.survivalPhase.clamp(0, 4)]);
     }
@@ -1544,18 +1632,19 @@ class GameState extends ChangeNotifier {
     }
 
     // Adaptive difficulty
-    if (adaptive &&
+    if (activeAdaptive &&
         rt.challenge != Operation.master &&
         rt.challenge != Operation.dailyBoss &&
-        mode != GameMode.survival) {
+        activeMode != GameMode.survival) {
       d = _getAdaptDiff(type);
     }
 
     // Build question with uniqueness guarantee
-    Question q = _qgen.build(type: type, diff: d, numType: numType);
+    Question q = _qgen.build(type: type, diff: d, numType: generatedNumType);
     bool foundUnique = false;
     for (var attempt = 0; attempt < 500; attempt++) {
-      final candidate = _qgen.build(type: type, diff: d, numType: numType);
+      final candidate =
+          _qgen.build(type: type, diff: d, numType: generatedNumType);
       if (!rt.usedFacts.contains(candidate.key)) {
         rt.usedFacts.add(candidate.key);
         q = candidate;
@@ -1565,7 +1654,7 @@ class GameState extends ChangeNotifier {
     }
     if (!foundUnique) {
       rt.usedFacts.clear();
-      q = _qgen.build(type: type, diff: d, numType: numType);
+      q = _qgen.build(type: type, diff: d, numType: generatedNumType);
       rt.usedFacts.add(q.key);
     }
 
@@ -1577,7 +1666,7 @@ class GameState extends ChangeNotifier {
       choices: q.choices,
       boss: boss,
       diff: d,
-      numType: numType,
+      numType: generatedNumType,
       ratDP: q.ratDP,
     );
 
@@ -1594,7 +1683,7 @@ class GameState extends ChangeNotifier {
     rt.accepting = true;
 
     // Start per-question timer
-    if (mode != GameMode.blitz && mode != GameMode.combo) {
+    if (activeMode != GameMode.blitz && activeMode != GameMode.combo) {
       rt.qTimerLimit = 0;
       _startQuestionTimer();
     }
@@ -1606,7 +1695,7 @@ class GameState extends ChangeNotifier {
   }
 
   int _getTimerLimitMs() {
-    if (mode == GameMode.blitz || mode == GameMode.combo) {
+    if (activeMode == GameMode.blitz || activeMode == GameMode.combo) {
       return rt.blitzTotalMs;
     }
     if (rt.challenge == Operation.master) {
@@ -1615,15 +1704,16 @@ class GameState extends ChangeNotifier {
     if (rt.challenge == Operation.dailyBoss) {
       return (rt.dailyBoss?.time ?? dailyBoss?.time ?? 9) * 1000;
     }
-    if (mode == GameMode.survival) {
+    if (activeMode == GameMode.survival) {
       return GameConfig.phaseTimesMs[rt.survivalPhase.clamp(0, 4)];
     }
 
-    final timerDiff = adaptive && rt.q?.diff != null ? rt.q!.diff! : diff;
+    final timerDiff =
+        activeAdaptive && rt.q?.diff != null ? rt.q!.diff! : activeDifficulty;
     final baseMs = GameConfig.timerBaseMs[timerDiff.name] ??
         GameConfig.timerBaseMs['hard']!;
     final penalty =
-        adaptive ? (adaptLvl ~/ GameConfig.timerPenaltyStep) * 1000 : 0;
+        activeAdaptive ? (adaptLvl ~/ GameConfig.timerPenaltyStep) * 1000 : 0;
     return max(GameConfig.timerMinMs, baseMs - penalty);
   }
 
@@ -1697,7 +1787,7 @@ class GameState extends ChangeNotifier {
   void _onAnswer(num? val, bool isSkip, bool isTimeout) {
     if (!rt.accepting || rt.state == 'paused') return;
     rt.accepting = false;
-    if (mode != GameMode.blitz && mode != GameMode.combo) {
+    if (activeMode != GameMode.blitz && activeMode != GameMode.combo) {
       _freezeQuestionTimer();
       rt.timer?.cancel();
     }
@@ -1721,7 +1811,7 @@ class GameState extends ChangeNotifier {
       pl.history = pl.history.sublist(pl.history.length - 50);
     }
 
-    _updateSkillMap(q.type, q.diff ?? diff, isCorrect, timeTaken);
+    _updateSkillMap(q.type, q.diff ?? activeDifficulty, isCorrect, timeTaken);
     _updateAdapt(isCorrect, timeTaken, q.type);
 
     if (isCorrect) {
@@ -1753,7 +1843,7 @@ class GameState extends ChangeNotifier {
     var survivalBossDue = false;
 
     // Survival: phase + coin per correct
-    if (mode == GameMode.survival) {
+    if (activeMode == GameMode.survival) {
       rt.survivalCorrect++;
       final progression =
           _survivalProgressionPolicy.afterCorrect(rt.survivalCorrect);
@@ -1784,7 +1874,7 @@ class GameState extends ChangeNotifier {
     }
 
     // Combo mode
-    if (mode == GameMode.combo) {
+    if (activeMode == GameMode.combo) {
       rt.comboStreak++;
       final streak = rt.comboStreak;
       int mult = 1;
@@ -1806,10 +1896,10 @@ class GameState extends ChangeNotifier {
     }
 
     // Power-up reward (single-player non-boss non-combo non-survival)
-    final eligibleForPU = players == 1 &&
+    final eligibleForPU = activePlayers == 1 &&
         rt.challenge != Operation.master &&
         rt.challenge != Operation.dailyBoss &&
-        ![GameMode.combo, GameMode.survival].contains(mode);
+        ![GameMode.combo, GameMode.survival].contains(activeMode);
     if (eligibleForPU && pl.correct == 1) {
       pl.pups.addAll(PowerUp.values);
       showToast('🎁 Got one of each power-up!');
@@ -1824,17 +1914,17 @@ class GameState extends ChangeNotifier {
     // Scoring
     int pts = rt.answerStyle.baseScore(classicBase: GameConfig.scoreBase);
     int bonus = 0;
-    final isBlitz = mode == GameMode.blitz;
+    final isBlitz = activeMode == GameMode.blitz;
     final isMaster = rt.challenge == Operation.master;
     final isBoss = rt.challenge == Operation.dailyBoss;
 
-    if (!isBlitz && !isMaster && mode != GameMode.combo) {
+    if (!isBlitz && !isMaster && activeMode != GameMode.combo) {
       final remaining = max(0, (rt.qTimerLimit * 1000 - timeTaken) / 1000);
       bonus = remaining.ceil();
       if (timeTaken < 2000) {
         bonus += 2;
       } else if (timeTaken < 4000) bonus += 1;
-    } else if (mode == GameMode.combo) {
+    } else if (activeMode == GameMode.combo) {
       if (timeTaken < 1500) {
         bonus = 5;
       } else if (timeTaken < 2500)
@@ -1846,7 +1936,7 @@ class GameState extends ChangeNotifier {
       } else if (timeTaken < 2500)
         bonus = 5;
       else if (timeTaken < 4000) bonus = 2;
-    } else if (mode == GameMode.survival) {
+    } else if (activeMode == GameMode.survival) {
       bonus = GameConfig.phaseBonus[min(rt.survivalPhase, 4)];
       if (timeTaken < 2000) bonus += 3;
     }
@@ -1882,7 +1972,7 @@ class GameState extends ChangeNotifier {
       showToast('🎁 Comeback! +3🪙');
     }
 
-    final bossDown = mode == GameMode.survival && survivalBossDue;
+    final bossDown = activeMode == GameMode.survival && survivalBossDue;
     final rx = GameConfig.correctRx[_rng.nextInt(GameConfig.correctRx.length)];
     if (!bossDown) {
       reactionPill = '$rx +$pts';
@@ -1905,7 +1995,7 @@ class GameState extends ChangeNotifier {
     _checkProgressMilestones();
 
     // Daily challenges
-    if (mode == GameMode.blitz) _updateDailyProgress('blitz_15');
+    if (activeMode == GameMode.blitz) _updateDailyProgress('blitz_15');
     if (rt.q?.type == Operation.division) _updateDailyProgress('division_10');
     _updateDailyProgressAbsolute('streak_7', pl.streak);
     _updateDailyProgressAbsolute('perfect_5', pl.streak);
@@ -1970,7 +2060,7 @@ class GameState extends ChangeNotifier {
     rt.combo = 0;
     rt.comboMultiplier = 1.0;
 
-    if (mode == GameMode.combo) {
+    if (activeMode == GameMode.combo) {
       rt.comboStreak = 0;
       rt.comboMultiplier = 1.0;
     }
@@ -1984,7 +2074,7 @@ class GameState extends ChangeNotifier {
       return;
     }
 
-    if (mode == GameMode.death && !isSkip) {
+    if (activeMode == GameMode.death && !isSkip) {
       bigEmoji = '💀';
       reactionPill = '💀 Game Over!';
       bigEmojiVisible = true;
@@ -2001,7 +2091,7 @@ class GameState extends ChangeNotifier {
         ? "⏰ Time's Up!"
         : GameConfig.wrongRx[_rng.nextInt(GameConfig.wrongRx.length)];
 
-    if (mode == GameMode.survival && !isSkip) {
+    if (activeMode == GameMode.survival && !isSkip) {
       rt.survivalLives--;
       bigEmoji = '💔';
       reactionPill = '💔 Ans: ${rt.q?.ans}';
@@ -2063,10 +2153,11 @@ class GameState extends ChangeNotifier {
       // Follow-up
       if (!isSkip &&
           !isTimeout &&
-          mode == GameMode.standard &&
+          activeMode == GameMode.standard &&
           rt.challenge != Operation.dailyBoss) {
         rt.isFollowUp = true;
-        rt.followUpData = _FollowUpData(rt.q!.type, rt.q!.diff ?? diff);
+        rt.followUpData =
+            _FollowUpData(rt.q!.type, rt.q!.diff ?? activeDifficulty);
       }
     }
 
@@ -2192,10 +2283,13 @@ class GameState extends ChangeNotifier {
     gamesPlayed++;
     unawaited(_recordCompletedGameForAds());
     if (gamesPlayed >= 10) unlockAch('persistent');
+    final snapshot = _runSnapshot!;
+    final questProgressSave = isOperationQuest
+        ? _recordOperationQuestResult(snapshot.operationQuestStageId!)
+        : null;
 
     // Save high score
-    if (p[1].score > 0) {
-      final snapshot = _runSnapshot!;
+    if (!isOperationQuest && p[1].score > 0) {
       highScores.add(HighScore(
         name: p[1].name,
         score: p[1].score,
@@ -2222,7 +2316,9 @@ class GameState extends ChangeNotifier {
     // Speed demon
     if (rt.fastAnswers >= 5) unlockAch('speed_demon');
     // Survivor
-    if (mode == GameMode.death && p[1].score >= 250) unlockAch('survivor');
+    if (activeMode == GameMode.death && p[1].score >= 250) {
+      unlockAch('survivor');
+    }
     // Skill master
     for (final e in skillMap.entries) {
       if (e.value.count >= 5 && e.value.mastery >= 90) {
@@ -2259,7 +2355,7 @@ class GameState extends ChangeNotifier {
       }
     }
 
-    save();
+    unawaited(save());
     if (isBossWin) {
       _delayedResultModalTimer?.cancel();
       _delayedResultModalTimer = Timer(const Duration(milliseconds: 1250), () {
@@ -2267,9 +2363,33 @@ class GameState extends ChangeNotifier {
           showModal(GameModal.win);
         }
       });
+    } else if (questProgressSave != null) {
+      final seq = _turnSeq;
+      unawaited(questProgressSave.whenComplete(() {
+        if (seq == _turnSeq &&
+            rt.state == 'ended' &&
+            currentModal == GameModal.none) {
+          showModal(GameModal.win);
+        }
+      }));
     } else {
       showModal(GameModal.win);
     }
+  }
+
+  Future<void> _recordOperationQuestResult(OperationQuestStageId id) {
+    operationQuestResultStars =
+        operationQuestStarsForCorrectAnswers(p[1].correct);
+    final updated = operationQuestProgress.recordBest(
+      id,
+      operationQuestResultStars,
+    );
+    if (identical(updated, operationQuestProgress)) return Future.value();
+    operationQuestProgress = updated;
+    return Storage.setString(
+      'mc_operationQuestProgress',
+      operationQuestProgress.encode(),
+    );
   }
 
   void _prepareResultSummary({required bool win, required bool loss}) {
@@ -2309,7 +2429,23 @@ class GameState extends ChangeNotifier {
       return;
     }
 
-    if (players == 2 && mode == GameMode.standard) {
+    if (isOperationQuest) {
+      final stage = operationQuestStage(
+        _runSnapshot!.operationQuestStageId!,
+      );
+      resultIcon = operationQuestResultStars == 0 ? '➕' : '⭐';
+      resultTitle = stage.id == OperationQuestStageId.additionHard &&
+              operationQuestResultStars >= 1
+          ? 'Addition Trail Complete'
+          : '${stage.title} Complete';
+      final stars = List.filled(operationQuestResultStars, '⭐').join();
+      final emptyStars = List.filled(3 - operationQuestResultStars, '☆').join();
+      resultDescription =
+          '${p1.correct}/${stage.questionTarget} correct • $stars$emptyStars';
+      return;
+    }
+
+    if (activePlayers == 2 && activeMode == GameMode.standard) {
       if (p1.score > p2.score) {
         resultIcon = p1.avatar.storageEmoji;
         resultTitle = '${p1.name} Wins! 🏆';
@@ -2324,8 +2460,10 @@ class GameState extends ChangeNotifier {
       return;
     }
 
-    resultIcon = mode == GameMode.blitz || mode == GameMode.combo ? '⏱️' : '🌟';
-    resultTitle = mode == GameMode.blitz || mode == GameMode.combo
+    resultIcon = activeMode == GameMode.blitz || activeMode == GameMode.combo
+        ? '⏱️'
+        : '🌟';
+    resultTitle = activeMode == GameMode.blitz || activeMode == GameMode.combo
         ? "Time's Up!"
         : 'Player Report';
     resultDescription = 'Final Score: ${p1.score}';
@@ -2357,6 +2495,10 @@ class GameState extends ChangeNotifier {
       _masterLives = 3 + Storage.getInt('mc_livesBonus', 0);
       Storage.setInt('mc_livesBonus', 0);
     }
+    if (snapshot?.runType == GameRunType.normal) {
+      mode = snapshot!.mode;
+      diff = snapshot.difficulty;
+    }
     _startGame(replaySnapshot: snapshot);
   }
 
@@ -2373,7 +2515,23 @@ class GameState extends ChangeNotifier {
     _masterLives = 3;
     _masterProgress = 0;
     _runSnapshot = null;
+    _pendingOperationQuestStageId = null;
     showScreen(GameScreen.menu);
+  }
+
+  Future<void> returnToOperationQuestMap() async {
+    _cancelDelayedLossEnd();
+    _turnSeq++;
+    final dismissedResult = currentModal == GameModal.win;
+    closeModal();
+    if (dismissedResult) await _showPendingInterstitialAd();
+    rt.gameActive = false;
+    rt.state = 'idle';
+    rt.timer?.cancel();
+    _runSnapshot = null;
+    _pendingOperationQuestStageId = null;
+    showScreen(GameScreen.menu);
+    showModal(GameModal.operationQuest);
   }
 
   void showQuitConfirm() {
@@ -2618,9 +2776,12 @@ class GameState extends ChangeNotifier {
       return true;
     }
     if (pu == PowerUp.time || pu == PowerUp.freeze) {
-      if (mode == GameMode.blitz || mode == GameMode.combo) return true;
+      if (activeMode == GameMode.blitz || activeMode == GameMode.combo) {
+        return true;
+      }
     }
-    if (pu == PowerUp.freeze && (mode == GameMode.survival || rt.frozen)) {
+    if (pu == PowerUp.freeze &&
+        (activeMode == GameMode.survival || rt.frozen)) {
       return true;
     }
     return false;
@@ -2925,6 +3086,8 @@ class GameState extends ChangeNotifier {
     _dailyBonusPolicy.reset();
     gamesPlayed = 0;
     selectedAnswerStyle = AnswerStyle.choice4;
+    operationQuestProgress = OperationQuestProgress();
+    operationQuestResultStars = 0;
     adaptLvlRaw = 0;
     adaptLvl = 0;
     achievements = {
@@ -2971,6 +3134,7 @@ class GameState extends ChangeNotifier {
     _masterLives = 3;
     _masterProgress = 0;
     _runSnapshot = null;
+    _pendingOperationQuestStageId = null;
     currentScreen = GameScreen.menu;
     currentModal = GameModal.none;
     _toastController.reset();
