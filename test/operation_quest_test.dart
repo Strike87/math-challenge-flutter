@@ -34,7 +34,7 @@ void main() {
         .setMockMethodCallHandler(audioPlayerChannel, null);
   });
 
-  test('domain defines Addition Trail stages, stars, and safe progress JSON',
+  test('domain defines both trails, explicit unlocks, and safe progress JSON',
       () {
     expect(
       operationQuestStages
@@ -68,6 +68,38 @@ void main() {
           NumberType.natural,
           10
         ),
+        (
+          'First Differences',
+          Difficulty.easy,
+          Operation.subtraction,
+          NumberType.natural,
+          10
+        ),
+        (
+          'Bigger Differences',
+          Difficulty.medium,
+          Operation.subtraction,
+          NumberType.natural,
+          10
+        ),
+        (
+          'Subtraction Challenge',
+          Difficulty.hard,
+          Operation.subtraction,
+          NumberType.natural,
+          10
+        ),
+      ],
+    );
+    expect(
+      OperationQuestStageId.values.map((id) => id.storageId),
+      [
+        'addition_easy',
+        'addition_medium',
+        'addition_hard',
+        'subtraction_easy',
+        'subtraction_medium',
+        'subtraction_hard',
       ],
     );
     expect(
@@ -80,6 +112,9 @@ void main() {
       'stars': {
         'addition_easy': 9,
         'addition_medium': -2,
+        'addition_hard': 1,
+        'subtraction_easy': 2,
+        'subtraction_medium': 1,
         'unknown': 3,
       },
     }));
@@ -87,6 +122,18 @@ void main() {
     expect(progress.bestStars(OperationQuestStageId.additionMedium), 0);
     expect(progress.isUnlocked(OperationQuestStageId.additionMedium), isTrue);
     expect(progress.isUnlocked(OperationQuestStageId.additionHard), isFalse);
+    expect(progress.isUnlocked(OperationQuestStageId.subtractionEasy), isTrue);
+    expect(
+      progress.isUnlocked(OperationQuestStageId.subtractionMedium),
+      isTrue,
+    );
+    expect(progress.isUnlocked(OperationQuestStageId.subtractionHard), isTrue);
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.additionHard: 1,
+      }).isUnlocked(OperationQuestStageId.subtractionMedium),
+      isFalse,
+    );
     expect(
       progress
           .recordBest(OperationQuestStageId.additionEasy, 1)
@@ -102,7 +149,16 @@ void main() {
 
   test('quest snapshot leaves normal preferences untouched and drives replay',
       () async {
-    final state = await _makeState();
+    final state = await _makeState({
+      'mc_operationQuestProgress': jsonEncode({
+        'version': 1,
+        'stars': {
+          'addition_hard': 1,
+          'subtraction_easy': 1,
+          'subtraction_medium': 1,
+        },
+      }),
+    });
     addTearDown(state.dispose);
     state
       ..players = 2
@@ -113,7 +169,7 @@ void main() {
       ..adaptive = true
       ..selectedAnswerStyle = AnswerStyle.trueFalse;
 
-    state.startOperationQuestStage(OperationQuestStageId.additionEasy);
+    state.startOperationQuestStage(OperationQuestStageId.subtractionHard);
     expect(state.setupPlayers, 1);
     state.startGame();
     state.rt.timer?.cancel();
@@ -127,18 +183,18 @@ void main() {
     expect(state.activeRunSnapshot?.runType, GameRunType.operationQuest);
     expect(state.activeMode, GameMode.standard);
     expect(state.activePlayers, 1);
-    expect(state.activeDifficulty, Difficulty.easy);
+    expect(state.activeDifficulty, Difficulty.hard);
     expect(state.activeNumberType, NumberType.natural);
     expect(state.activeQuestionTarget, 10);
     expect(state.rt.answerStyle, AnswerStyle.choice4);
     expect(state.activeAdaptive, isFalse);
-    expect(state.rt.q?.type, Operation.addition);
+    expect(state.rt.q?.type, Operation.subtraction);
 
     await state.replayGame();
     state.rt.timer?.cancel();
     expect(state.activeRunSnapshot?.operationQuestStageId,
-        OperationQuestStageId.additionEasy);
-    expect(state.activeDifficulty, Difficulty.easy);
+        OperationQuestStageId.subtractionHard);
+    expect(state.activeDifficulty, Difficulty.hard);
     expect(state.mode, GameMode.combo);
     expect(state.diff, Difficulty.insane);
   });
@@ -294,7 +350,54 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
   });
 
-  testWidgets('Campaign card opens locked Addition Trail and starts Stage 1',
+  testWidgets(
+      'Subtraction Stage 3 copy uses current stars and best stars do not decrease',
+      (tester) async {
+    final saved = jsonEncode({
+      'version': 1,
+      'stars': {
+        'addition_hard': 3,
+        'subtraction_easy': 3,
+        'subtraction_medium': 3,
+        'subtraction_hard': 3,
+      },
+    });
+    final state = await _makeState({'mc_operationQuestProgress': saved});
+    addTearDown(state.dispose);
+    final initialCount = state.skillMap[Operation.subtraction.name]!.count;
+
+    state.startOperationQuestStage(OperationQuestStageId.subtractionHard);
+    state.startGame();
+    await _finishQuest(tester, state, correctAnswers: 0);
+
+    expect(state.resultTitle, 'Subtraction Challenge Complete');
+    expect(
+      state.operationQuestProgress
+          .bestStars(OperationQuestStageId.subtractionHard),
+      3,
+    );
+    expect(Storage.getString('mc_operationQuestProgress', ''), saved);
+
+    await state.replayGame();
+    await _finishQuest(tester, state, correctAnswers: 6);
+
+    expect(state.resultTitle, 'Subtraction Trail Complete');
+    expect(
+      state.p[1].history.every(
+        (attempt) => attempt.type == Operation.subtraction,
+      ),
+      isTrue,
+    );
+    expect(
+      state.skillMap[Operation.subtraction.name]!.count,
+      initialCount + 20,
+    );
+    expect(state.highScores, isEmpty);
+    expect(Storage.getString('mc_operationQuestProgress', ''), saved);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('Campaign card shows both trails and locked stages do not start',
       (tester) async {
     final state = await _makeState();
     addTearDown(state.dispose);
@@ -305,12 +408,21 @@ void main() {
     );
 
     expect(find.text('Operation Quest'), findsOneWidget);
+    expect(find.text('2 TRAILS • 6 STAGES'), findsOneWidget);
     await tester.tap(find.text('Operation Quest'));
     await tester.pump();
-    expect(find.text('Addition Trail'), findsOneWidget);
+    expect(find.text('➕ Addition Trail'), findsOneWidget);
+    expect(find.text('➖ Subtraction Trail'), findsOneWidget);
     expect(find.text('First Sums'), findsOneWidget);
     expect(find.text('Bigger Sums'), findsOneWidget);
     expect(find.text('Addition Challenge'), findsOneWidget);
+    expect(find.text('First Differences'), findsOneWidget);
+    expect(find.text('Bigger Differences'), findsOneWidget);
+    expect(find.text('Subtraction Challenge'), findsOneWidget);
+    expect(find.text('🔒'), findsNWidgets(5));
+
+    state.startOperationQuestStage(OperationQuestStageId.subtractionEasy);
+    expect(state.currentScreen, GameScreen.menu);
 
     await tester.tap(
       find.byKey(const Key('operation-quest-stage-addition_medium')),

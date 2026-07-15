@@ -2433,11 +2433,15 @@ class GameState extends ChangeNotifier {
       final stage = operationQuestStage(
         _runSnapshot!.operationQuestStageId!,
       );
-      resultIcon = operationQuestResultStars == 0 ? '➕' : '⭐';
-      resultTitle = stage.id == OperationQuestStageId.additionHard &&
-              operationQuestResultStars >= 1
-          ? 'Addition Trail Complete'
-          : '${stage.title} Complete';
+      resultIcon = operationQuestResultStars == 0
+          ? stage.operation == Operation.addition
+              ? '➕'
+              : '➖'
+          : '⭐';
+      resultTitle =
+          stage.difficulty == Difficulty.hard && operationQuestResultStars >= 1
+              ? '${stage.operation.label} Trail Complete'
+              : '${stage.title} Complete';
       final stars = List.filled(operationQuestResultStars, '⭐').join();
       final emptyStars = List.filled(3 - operationQuestResultStars, '☆').join();
       resultDescription =

@@ -90,8 +90,8 @@ class OperationQuestModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ModalShell(
-      icon: '➕',
-      title: 'Addition Trail',
+      icon: '🗺️',
+      title: 'Operation Quest',
       maxHeight: 620,
       actions: [
         NeoButton(
@@ -103,26 +103,55 @@ class OperationQuestModal extends StatelessWidget {
       ],
       child: Column(
         children: [
-          const Text(
-            'Natural addition • 10 questions per stage',
-            textAlign: TextAlign.center,
+          _OperationQuestTrail(
+            heading: '➕ Addition Trail',
+            stages: operationQuestStagesFor(Operation.addition),
+            gs: gs,
           ),
-          const SizedBox(height: 14),
-          for (var i = 0; i < operationQuestStages.length; i++) ...[
-            _OperationQuestStageCard(
-              number: i + 1,
-              stage: operationQuestStages[i],
-              stars: gs.operationQuestProgress
-                  .bestStars(operationQuestStages[i].id),
-              unlocked: gs.operationQuestProgress
-                  .isUnlocked(operationQuestStages[i].id),
-              onTap: () =>
-                  gs.startOperationQuestStage(operationQuestStages[i].id),
-            ),
-            if (i < operationQuestStages.length - 1) const SizedBox(height: 10),
-          ],
+          const SizedBox(height: 18),
+          _OperationQuestTrail(
+            heading: '➖ Subtraction Trail',
+            stages: operationQuestStagesFor(Operation.subtraction),
+            gs: gs,
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _OperationQuestTrail extends StatelessWidget {
+  const _OperationQuestTrail({
+    required this.heading,
+    required this.stages,
+    required this.gs,
+  });
+
+  final String heading;
+  final List<OperationQuestStage> stages;
+  final GameState gs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          heading,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 10),
+        for (var i = 0; i < stages.length; i++) ...[
+          _OperationQuestStageCard(
+            number: i + 1,
+            stage: stages[i],
+            stars: gs.operationQuestProgress.bestStars(stages[i].id),
+            unlocked: gs.operationQuestProgress.isUnlocked(stages[i].id),
+            onTap: () => gs.startOperationQuestStage(stages[i].id),
+          ),
+          if (i < stages.length - 1) const SizedBox(height: 10),
+        ],
+      ],
     );
   }
 }
@@ -179,7 +208,7 @@ class _OperationQuestStageCard extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
                     Text(
-                      '${stage.difficulty.label} • Addition',
+                      '${stage.difficulty.label} • ${stage.operation.label}',
                       style: TextStyle(color: s.muted, fontSize: 12),
                     ),
                   ],

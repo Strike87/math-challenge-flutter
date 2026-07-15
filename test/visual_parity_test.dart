@@ -295,6 +295,29 @@ void main() {
           matchesGoldenFile('goldens/02_menu_tablet_dark.png'));
     });
 
+    testWidgets('2b. Operation Quest map shows both trails and lock states',
+        (tester) async {
+      final state = await _makeState({
+        'mc_dark': false,
+        'mc_operationQuestProgress':
+            '{"version":1,"stars":{"addition_easy":2,"addition_medium":1}}',
+      });
+      state.currentScreen = GameScreen.menu;
+      state.showOperationQuest();
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+      expect(find.text('➕ Addition Trail'), findsOneWidget);
+      expect(find.text('➖ Subtraction Trail'), findsOneWidget);
+      expect(find.text('First Differences'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/02b_operation_quest_map_phone.png'),
+      );
+    });
+
     testWidgets('3. Number type screen (locked & unlocked states)',
         (tester) async {
       final state = await _makeState({
