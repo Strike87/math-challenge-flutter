@@ -131,6 +131,21 @@ void main() {
           NumberType.natural,
           10
         ),
+        ('Mix It Up', Difficulty.easy, Operation.mixed, NumberType.natural, 10),
+        (
+          'Operation Switch',
+          Difficulty.medium,
+          Operation.mixed,
+          NumberType.natural,
+          10
+        ),
+        (
+          'Mixed Challenge',
+          Difficulty.hard,
+          Operation.mixed,
+          NumberType.natural,
+          10
+        ),
       ],
     );
     expect(
@@ -148,6 +163,9 @@ void main() {
         'division_easy',
         'division_medium',
         'division_hard',
+        'mixed_easy',
+        'mixed_medium',
+        'mixed_hard',
       ],
     );
     expect(
@@ -170,6 +188,9 @@ void main() {
         'division_easy': 2,
         'division_medium': 1,
         'division_hard': 1,
+        'mixed_easy': 2,
+        'mixed_medium': 1,
+        'mixed_hard': 1,
         'unknown': 3,
       },
     }));
@@ -192,6 +213,9 @@ void main() {
     expect(progress.isUnlocked(OperationQuestStageId.divisionEasy), isTrue);
     expect(progress.isUnlocked(OperationQuestStageId.divisionMedium), isTrue);
     expect(progress.isUnlocked(OperationQuestStageId.divisionHard), isTrue);
+    expect(progress.isUnlocked(OperationQuestStageId.mixedEasy), isTrue);
+    expect(progress.isUnlocked(OperationQuestStageId.mixedMedium), isTrue);
+    expect(progress.isUnlocked(OperationQuestStageId.mixedHard), isTrue);
     expect(
       OperationQuestProgress({
         OperationQuestStageId.additionHard: 1,
@@ -235,6 +259,42 @@ void main() {
       isTrue,
     );
     expect(
+      OperationQuestProgress({
+        OperationQuestStageId.divisionMedium: 3,
+      }).isUnlocked(OperationQuestStageId.mixedEasy),
+      isFalse,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.divisionHard: 1,
+      }).isUnlocked(OperationQuestStageId.mixedEasy),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.divisionHard: 1,
+      }).isUnlocked(OperationQuestStageId.mixedMedium),
+      isFalse,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.mixedEasy: 1,
+      }).isUnlocked(OperationQuestStageId.mixedMedium),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.mixedMedium: 1,
+      }).isUnlocked(OperationQuestStageId.mixedHard),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.mixedEasy: 1,
+      }).isUnlocked(OperationQuestStageId.mixedHard),
+      isFalse,
+    );
+    expect(
       progress
           .recordBest(OperationQuestStageId.additionEasy, 1)
           .bestStars(OperationQuestStageId.additionEasy),
@@ -247,7 +307,7 @@ void main() {
     );
   });
 
-  test('legacy one-, two-, and three-trail progress keeps Division empty', () {
+  test('legacy one- through four-trail progress keeps Mixed empty', () {
     for (final rawStars in [
       {'addition_easy': 1},
       {'addition_easy': 1, 'subtraction_easy': 1},
@@ -256,14 +316,20 @@ void main() {
         'subtraction_easy': 1,
         'multiplication_easy': 1,
       },
+      {
+        'addition_easy': 1,
+        'subtraction_easy': 1,
+        'multiplication_easy': 1,
+        'division_easy': 1,
+      },
     ]) {
       final progress = OperationQuestProgress.decode(jsonEncode({
         'version': 1,
         'stars': rawStars,
       }));
-      expect(progress.bestStars(OperationQuestStageId.divisionEasy), 0);
-      expect(progress.bestStars(OperationQuestStageId.divisionMedium), 0);
-      expect(progress.bestStars(OperationQuestStageId.divisionHard), 0);
+      expect(progress.bestStars(OperationQuestStageId.mixedEasy), 0);
+      expect(progress.bestStars(OperationQuestStageId.mixedMedium), 0);
+      expect(progress.bestStars(OperationQuestStageId.mixedHard), 0);
     }
   });
 
@@ -282,6 +348,9 @@ void main() {
           'multiplication_hard': 1,
           'division_easy': 1,
           'division_medium': 1,
+          'division_hard': 1,
+          'mixed_easy': 1,
+          'mixed_medium': 1,
         },
       }),
     });
@@ -295,7 +364,7 @@ void main() {
       ..adaptive = true
       ..selectedAnswerStyle = AnswerStyle.trueFalse;
 
-    state.startOperationQuestStage(OperationQuestStageId.divisionHard);
+    state.startOperationQuestStage(OperationQuestStageId.mixedHard);
     expect(state.setupPlayers, 1);
     state.startGame();
     state.rt.timer?.cancel();
@@ -314,12 +383,21 @@ void main() {
     expect(state.activeQuestionTarget, 10);
     expect(state.rt.answerStyle, AnswerStyle.choice4);
     expect(state.activeAdaptive, isFalse);
-    expect(state.rt.q?.type, Operation.division);
+    expect(state.activeRunSnapshot?.operation, Operation.mixed);
+    expect(
+      state.rt.q?.type,
+      isIn([
+        Operation.addition,
+        Operation.subtraction,
+        Operation.multiplication,
+        Operation.division,
+      ]),
+    );
 
     await state.replayGame();
     state.rt.timer?.cancel();
     expect(state.activeRunSnapshot?.operationQuestStageId,
-        OperationQuestStageId.divisionHard);
+        OperationQuestStageId.mixedHard);
     expect(state.activeDifficulty, Difficulty.hard);
     expect(state.mode, GameMode.combo);
     expect(state.diff, Difficulty.insane);
@@ -615,6 +693,72 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
   });
 
+  testWidgets(
+      'Mixed Stage 3 resolves concrete questions and keeps shared progress behavior',
+      (tester) async {
+    final saved = jsonEncode({
+      'version': 1,
+      'stars': {
+        'division_hard': 3,
+        'mixed_easy': 3,
+        'mixed_medium': 3,
+        'mixed_hard': 3,
+      },
+    });
+    final state = await _makeState({'mc_operationQuestProgress': saved});
+    addTearDown(state.dispose);
+    state.dailyChallengeIds = ['division_10'];
+    final initialTotalSkillCount = [
+      Operation.addition,
+      Operation.subtraction,
+      Operation.multiplication,
+      Operation.division,
+    ].fold(
+        0, (total, operation) => total + state.skillMap[operation.name]!.count);
+
+    state.startOperationQuestStage(OperationQuestStageId.mixedHard);
+    state.startGame();
+    await _finishQuest(tester, state, correctAnswers: 0);
+
+    expect(state.resultIcon, '🧮');
+    expect(state.resultTitle, 'Mixed Challenge Complete');
+    expect(Storage.getString('mc_operationQuestProgress', ''), saved);
+
+    await state.replayGame();
+    await _finishQuest(tester, state, correctAnswers: 6);
+
+    expect(state.resultIcon, '⭐');
+    expect(state.resultTitle, 'Mixed Operations Trail Complete');
+    final history = state.p[1].history;
+    const concreteOperations = {
+      Operation.addition,
+      Operation.subtraction,
+      Operation.multiplication,
+      Operation.division,
+    };
+    expect(history, hasLength(10));
+    expect(
+        history.every((attempt) => concreteOperations.contains(attempt.type)),
+        isTrue);
+    expect(
+      concreteOperations.fold(
+        0,
+        (total, operation) => total + state.skillMap[operation.name]!.count,
+      ),
+      initialTotalSkillCount + 20,
+    );
+    expect(
+      state.dailyProgress['division_10'],
+      history
+          .where((attempt) =>
+              attempt.correct && attempt.type == Operation.division)
+          .length,
+    );
+    expect(state.highScores, isEmpty);
+    expect(Storage.getString('mc_operationQuestProgress', ''), saved);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
   testWidgets('Campaign card shows all trails and locked stages do not start',
       (tester) async {
     final state = await _makeState();
@@ -626,13 +770,14 @@ void main() {
     );
 
     expect(find.text('Operation Quest'), findsOneWidget);
-    expect(find.text('4 TRAILS • 12 STAGES'), findsOneWidget);
+    expect(find.text('5 TRAILS • 15 STAGES'), findsOneWidget);
     await tester.tap(find.text('Operation Quest'));
     await tester.pump();
     expect(find.text('➕ Addition Trail'), findsOneWidget);
     expect(find.text('➖ Subtraction Trail'), findsOneWidget);
     expect(find.text('✖️ Multiplication Trail'), findsOneWidget);
     expect(find.text('➗ Division Trail'), findsOneWidget);
+    expect(find.text('🧮 Mixed Operations Trail'), findsOneWidget);
     expect(find.text('First Sums'), findsOneWidget);
     expect(find.text('Bigger Sums'), findsOneWidget);
     expect(find.text('Addition Challenge'), findsOneWidget);
@@ -645,13 +790,18 @@ void main() {
     expect(find.text('Sharing Basics'), findsOneWidget);
     expect(find.text('Quotient Climb'), findsOneWidget);
     expect(find.text('Division Challenge'), findsOneWidget);
-    expect(find.text('🔒'), findsNWidgets(11));
+    expect(find.text('Mix It Up'), findsOneWidget);
+    expect(find.text('Operation Switch'), findsOneWidget);
+    expect(find.text('Mixed Challenge'), findsOneWidget);
+    expect(find.text('🔒'), findsNWidgets(14));
 
     state.startOperationQuestStage(OperationQuestStageId.subtractionEasy);
     expect(state.currentScreen, GameScreen.menu);
     state.startOperationQuestStage(OperationQuestStageId.multiplicationEasy);
     expect(state.currentScreen, GameScreen.menu);
     state.startOperationQuestStage(OperationQuestStageId.divisionEasy);
+    expect(state.currentScreen, GameScreen.menu);
+    state.startOperationQuestStage(OperationQuestStageId.mixedEasy);
     expect(state.currentScreen, GameScreen.menu);
 
     await tester.tap(
@@ -673,6 +823,14 @@ void main() {
     );
     await tester.ensureVisible(divisionEasy);
     await tester.tap(divisionEasy);
+    await tester.pump();
+    expect(state.currentScreen, GameScreen.menu);
+
+    final mixedEasy = find.byKey(
+      const Key('operation-quest-stage-mixed_easy'),
+    );
+    await tester.ensureVisible(mixedEasy);
+    await tester.tap(mixedEasy);
     await tester.pump();
     expect(state.currentScreen, GameScreen.menu);
 
@@ -707,7 +865,7 @@ void main() {
     await tester.drag(scrollable, const Offset(0, -300));
     await tester.pump();
     expect(scrollState.position.pixels, greaterThan(0));
-    await tester.ensureVisible(find.text('Division Challenge'));
+    await tester.ensureVisible(find.text('Mixed Challenge'));
     expect(find.text('Close').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

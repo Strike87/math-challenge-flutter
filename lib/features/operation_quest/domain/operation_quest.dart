@@ -14,7 +14,10 @@ enum OperationQuestStageId {
   multiplicationHard('multiplication_hard'),
   divisionEasy('division_easy'),
   divisionMedium('division_medium'),
-  divisionHard('division_hard');
+  divisionHard('division_hard'),
+  mixedEasy('mixed_easy'),
+  mixedMedium('mixed_medium'),
+  mixedHard('mixed_hard');
 
   const OperationQuestStageId(this.storageId);
 
@@ -117,6 +120,24 @@ const operationQuestStages = <OperationQuestStage>[
     operation: Operation.division,
     difficulty: Difficulty.hard,
   ),
+  OperationQuestStage(
+    id: OperationQuestStageId.mixedEasy,
+    title: 'Mix It Up',
+    operation: Operation.mixed,
+    difficulty: Difficulty.easy,
+  ),
+  OperationQuestStage(
+    id: OperationQuestStageId.mixedMedium,
+    title: 'Operation Switch',
+    operation: Operation.mixed,
+    difficulty: Difficulty.medium,
+  ),
+  OperationQuestStage(
+    id: OperationQuestStageId.mixedHard,
+    title: 'Mixed Challenge',
+    operation: Operation.mixed,
+    difficulty: Difficulty.hard,
+  ),
 ];
 
 OperationQuestStage operationQuestStage(OperationQuestStageId id) =>
@@ -188,6 +209,12 @@ class OperationQuestProgress {
           bestStars(OperationQuestStageId.divisionEasy) >= 1,
         OperationQuestStageId.divisionHard =>
           bestStars(OperationQuestStageId.divisionMedium) >= 1,
+        OperationQuestStageId.mixedEasy =>
+          bestStars(OperationQuestStageId.divisionHard) >= 1,
+        OperationQuestStageId.mixedMedium =>
+          bestStars(OperationQuestStageId.mixedEasy) >= 1,
+        OperationQuestStageId.mixedHard =>
+          bestStars(OperationQuestStageId.mixedMedium) >= 1,
       };
 
   OperationQuestProgress recordBest(OperationQuestStageId id, int value) {
