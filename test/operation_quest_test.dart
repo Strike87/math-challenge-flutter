@@ -110,6 +110,27 @@ void main() {
           NumberType.natural,
           10
         ),
+        (
+          'Sharing Basics',
+          Difficulty.easy,
+          Operation.division,
+          NumberType.natural,
+          10
+        ),
+        (
+          'Quotient Climb',
+          Difficulty.medium,
+          Operation.division,
+          NumberType.natural,
+          10
+        ),
+        (
+          'Division Challenge',
+          Difficulty.hard,
+          Operation.division,
+          NumberType.natural,
+          10
+        ),
       ],
     );
     expect(
@@ -124,6 +145,9 @@ void main() {
         'multiplication_easy',
         'multiplication_medium',
         'multiplication_hard',
+        'division_easy',
+        'division_medium',
+        'division_hard',
       ],
     );
     expect(
@@ -142,6 +166,10 @@ void main() {
         'subtraction_hard': 1,
         'multiplication_easy': 2,
         'multiplication_medium': 1,
+        'multiplication_hard': 1,
+        'division_easy': 2,
+        'division_medium': 1,
+        'division_hard': 1,
         'unknown': 3,
       },
     }));
@@ -161,6 +189,9 @@ void main() {
         isTrue);
     expect(
         progress.isUnlocked(OperationQuestStageId.multiplicationHard), isTrue);
+    expect(progress.isUnlocked(OperationQuestStageId.divisionEasy), isTrue);
+    expect(progress.isUnlocked(OperationQuestStageId.divisionMedium), isTrue);
+    expect(progress.isUnlocked(OperationQuestStageId.divisionHard), isTrue);
     expect(
       OperationQuestProgress({
         OperationQuestStageId.additionHard: 1,
@@ -180,6 +211,30 @@ void main() {
       isFalse,
     );
     expect(
+      OperationQuestProgress({
+        OperationQuestStageId.multiplicationMedium: 3,
+      }).isUnlocked(OperationQuestStageId.divisionEasy),
+      isFalse,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.multiplicationHard: 1,
+      }).isUnlocked(OperationQuestStageId.divisionEasy),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.divisionEasy: 1,
+      }).isUnlocked(OperationQuestStageId.divisionMedium),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.divisionMedium: 1,
+      }).isUnlocked(OperationQuestStageId.divisionHard),
+      isTrue,
+    );
+    expect(
       progress
           .recordBest(OperationQuestStageId.additionEasy, 1)
           .bestStars(OperationQuestStageId.additionEasy),
@@ -190,6 +245,26 @@ void main() {
       OperationQuestProgress.decode('{"version":2,"stars":{}}').stars,
       isEmpty,
     );
+  });
+
+  test('legacy one-, two-, and three-trail progress keeps Division empty', () {
+    for (final rawStars in [
+      {'addition_easy': 1},
+      {'addition_easy': 1, 'subtraction_easy': 1},
+      {
+        'addition_easy': 1,
+        'subtraction_easy': 1,
+        'multiplication_easy': 1,
+      },
+    ]) {
+      final progress = OperationQuestProgress.decode(jsonEncode({
+        'version': 1,
+        'stars': rawStars,
+      }));
+      expect(progress.bestStars(OperationQuestStageId.divisionEasy), 0);
+      expect(progress.bestStars(OperationQuestStageId.divisionMedium), 0);
+      expect(progress.bestStars(OperationQuestStageId.divisionHard), 0);
+    }
   });
 
   test('quest snapshot leaves normal preferences untouched and drives replay',
@@ -204,6 +279,9 @@ void main() {
           'subtraction_hard': 1,
           'multiplication_easy': 1,
           'multiplication_medium': 1,
+          'multiplication_hard': 1,
+          'division_easy': 1,
+          'division_medium': 1,
         },
       }),
     });
@@ -217,7 +295,7 @@ void main() {
       ..adaptive = true
       ..selectedAnswerStyle = AnswerStyle.trueFalse;
 
-    state.startOperationQuestStage(OperationQuestStageId.multiplicationHard);
+    state.startOperationQuestStage(OperationQuestStageId.divisionHard);
     expect(state.setupPlayers, 1);
     state.startGame();
     state.rt.timer?.cancel();
@@ -236,28 +314,33 @@ void main() {
     expect(state.activeQuestionTarget, 10);
     expect(state.rt.answerStyle, AnswerStyle.choice4);
     expect(state.activeAdaptive, isFalse);
-    expect(state.rt.q?.type, Operation.multiplication);
+    expect(state.rt.q?.type, Operation.division);
 
     await state.replayGame();
     state.rt.timer?.cancel();
     expect(state.activeRunSnapshot?.operationQuestStageId,
-        OperationQuestStageId.multiplicationHard);
+        OperationQuestStageId.divisionHard);
     expect(state.activeDifficulty, Difficulty.hard);
     expect(state.mode, GameMode.combo);
     expect(state.diff, Difficulty.insane);
   });
 
-  testWidgets('quest answers use the shared Standard answer pipeline',
+  testWidgets('Division Quest answers use the shared Standard answer pipeline',
       (tester) async {
-    final state = await _makeState();
+    final state = await _makeState({
+      'mc_operationQuestProgress': jsonEncode({
+        'version': 1,
+        'stars': {'multiplication_hard': 1},
+      }),
+    });
     addTearDown(state.dispose);
-    state.dailyChallengeIds = ['streak_7', 'perfect_5'];
-    final initialSkill = state.skillMap[Operation.addition.name]!;
+    state.dailyChallengeIds = ['streak_7', 'perfect_5', 'division_10'];
+    final initialSkill = state.skillMap[Operation.division.name]!;
     final initialCount = initialSkill.count;
     final initialCorrect = initialSkill.correct;
     final initialMastery = initialSkill.mastery;
 
-    state.startOperationQuestStage(OperationQuestStageId.additionEasy);
+    state.startOperationQuestStage(OperationQuestStageId.divisionEasy);
     state.startGame();
 
     expect(state.activeMode, GameMode.standard);
@@ -270,14 +353,15 @@ void main() {
 
     expect(state.p[1].score, GameConfig.scoreBase + 5);
     expect(state.p[1].history, hasLength(1));
-    expect(state.p[1].history.single.type, Operation.addition);
+    expect(state.p[1].history.single.type, Operation.division);
     expect(state.p[1].history.single.correct, isTrue);
-    final updatedSkill = state.skillMap[Operation.addition.name]!;
+    final updatedSkill = state.skillMap[Operation.division.name]!;
     expect(updatedSkill.count, initialCount + 1);
     expect(updatedSkill.correct, initialCorrect + 1);
     expect(updatedSkill.mastery, greaterThan(initialMastery));
     expect(state.dailyProgress['streak_7'], 1);
     expect(state.dailyProgress['perfect_5'], 1);
+    expect(state.dailyProgress['division_10'], 1);
     for (final powerUp in PowerUp.values) {
       expect(state.p[1].pups, contains(powerUp));
     }
@@ -488,6 +572,49 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
   });
 
+  testWidgets('Division Stage 3 copy, icon, and history use the Quest snapshot',
+      (tester) async {
+    final saved = jsonEncode({
+      'version': 1,
+      'stars': {
+        'multiplication_hard': 3,
+        'division_easy': 3,
+        'division_medium': 3,
+        'division_hard': 3,
+      },
+    });
+    final state = await _makeState({'mc_operationQuestProgress': saved});
+    addTearDown(state.dispose);
+    final initialCount = state.skillMap[Operation.division.name]!.count;
+
+    state.startOperationQuestStage(OperationQuestStageId.divisionHard);
+    state.startGame();
+    await _finishQuest(tester, state, correctAnswers: 0);
+
+    expect(state.resultIcon, '➗');
+    expect(state.resultTitle, 'Division Challenge Complete');
+    expect(Storage.getString('mc_operationQuestProgress', ''), saved);
+
+    await state.replayGame();
+    await _finishQuest(tester, state, correctAnswers: 6);
+
+    expect(state.resultIcon, '⭐');
+    expect(state.resultTitle, 'Division Trail Complete');
+    expect(
+      state.p[1].history.every(
+        (attempt) => attempt.type == Operation.division,
+      ),
+      isTrue,
+    );
+    expect(
+      state.skillMap[Operation.division.name]!.count,
+      initialCount + 20,
+    );
+    expect(state.highScores, isEmpty);
+    expect(Storage.getString('mc_operationQuestProgress', ''), saved);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
   testWidgets('Campaign card shows all trails and locked stages do not start',
       (tester) async {
     final state = await _makeState();
@@ -499,12 +626,13 @@ void main() {
     );
 
     expect(find.text('Operation Quest'), findsOneWidget);
-    expect(find.text('3 TRAILS • 9 STAGES'), findsOneWidget);
+    expect(find.text('4 TRAILS • 12 STAGES'), findsOneWidget);
     await tester.tap(find.text('Operation Quest'));
     await tester.pump();
     expect(find.text('➕ Addition Trail'), findsOneWidget);
     expect(find.text('➖ Subtraction Trail'), findsOneWidget);
     expect(find.text('✖️ Multiplication Trail'), findsOneWidget);
+    expect(find.text('➗ Division Trail'), findsOneWidget);
     expect(find.text('First Sums'), findsOneWidget);
     expect(find.text('Bigger Sums'), findsOneWidget);
     expect(find.text('Addition Challenge'), findsOneWidget);
@@ -514,11 +642,16 @@ void main() {
     expect(find.text('Times Table Start'), findsOneWidget);
     expect(find.text('Product Climb'), findsOneWidget);
     expect(find.text('Multiplication Challenge'), findsOneWidget);
-    expect(find.text('🔒'), findsNWidgets(8));
+    expect(find.text('Sharing Basics'), findsOneWidget);
+    expect(find.text('Quotient Climb'), findsOneWidget);
+    expect(find.text('Division Challenge'), findsOneWidget);
+    expect(find.text('🔒'), findsNWidgets(11));
 
     state.startOperationQuestStage(OperationQuestStageId.subtractionEasy);
     expect(state.currentScreen, GameScreen.menu);
     state.startOperationQuestStage(OperationQuestStageId.multiplicationEasy);
+    expect(state.currentScreen, GameScreen.menu);
+    state.startOperationQuestStage(OperationQuestStageId.divisionEasy);
     expect(state.currentScreen, GameScreen.menu);
 
     await tester.tap(
@@ -535,6 +668,14 @@ void main() {
     await tester.pump();
     expect(state.currentScreen, GameScreen.menu);
 
+    final divisionEasy = find.byKey(
+      const Key('operation-quest-stage-division_easy'),
+    );
+    await tester.ensureVisible(divisionEasy);
+    await tester.tap(divisionEasy);
+    await tester.pump();
+    expect(state.currentScreen, GameScreen.menu);
+
     await tester.ensureVisible(
       find.byKey(const Key('operation-quest-stage-addition_easy')),
     );
@@ -544,6 +685,31 @@ void main() {
     await tester.pump();
     expect(state.currentScreen, GameScreen.player);
     expect(state.setupPlayers, 1);
+  });
+
+  testWidgets('Quest map scrolls with compact high-text-scale layout',
+      (tester) async {
+    final state = await _makeState();
+    addTearDown(state.dispose);
+    state.showOperationQuest();
+    await _pump(
+      tester,
+      state,
+      MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(1.5)),
+        child: const ModalRouter(),
+      ),
+      size: const Size(390, 480),
+    );
+
+    final scrollable = find.byType(Scrollable).first;
+    final scrollState = tester.state<ScrollableState>(scrollable);
+    await tester.drag(scrollable, const Offset(0, -300));
+    await tester.pump();
+    expect(scrollState.position.pixels, greaterThan(0));
+    await tester.ensureVisible(find.text('Division Challenge'));
+    expect(find.text('Close').hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   test('reset removes quest progress and runtime identity', () async {
@@ -608,10 +774,11 @@ Future<void> _finishQuest(
 Future<void> _pump(
   WidgetTester tester,
   GameState state,
-  Widget child,
-) async {
+  Widget child, {
+  Size size = const Size(390, 844),
+}) async {
   tester.view.devicePixelRatio = 1;
-  tester.view.physicalSize = const Size(390, 844);
+  tester.view.physicalSize = size;
   addTearDown(() {
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();

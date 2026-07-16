@@ -311,6 +311,7 @@ void main() {
       expect(find.text('➕ Addition Trail'), findsOneWidget);
       expect(find.text('➖ Subtraction Trail'), findsOneWidget);
       expect(find.text('✖️ Multiplication Trail'), findsOneWidget);
+      expect(find.text('➗ Division Trail'), findsOneWidget);
       expect(find.text('First Differences'), findsOneWidget);
       expectNoVisualException(tester);
       await expectLater(
