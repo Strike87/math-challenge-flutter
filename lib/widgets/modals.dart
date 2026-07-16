@@ -120,6 +120,12 @@ class OperationQuestModal extends StatelessWidget {
             stages: operationQuestStagesFor(Operation.multiplication),
             gs: gs,
           ),
+          const SizedBox(height: 18),
+          _OperationQuestTrail(
+            heading: '➗ Division Trail',
+            stages: operationQuestStagesFor(Operation.division),
+            gs: gs,
+          ),
         ],
       ),
     );

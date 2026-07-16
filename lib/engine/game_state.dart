@@ -2438,6 +2438,7 @@ class GameState extends ChangeNotifier {
               Operation.addition => '➕',
               Operation.subtraction => '➖',
               Operation.multiplication => '✖️',
+              Operation.division => '➗',
               _ => '⭐',
             }
           : '⭐';
