@@ -80,10 +80,22 @@ Only the first unchecked item under **Active** may be started.
   - Preferred commit: `fix: correct True/False proposition and 50/50 disabled
     badge`.
 
-- [ ] V2-03D — Change the Operation Quest main-menu icon
+- [x] V2-03D — Change the Operation Quest main-menu icon
   - Change only the main-menu Operation Quest card icon from `➕` to `🗺️`.
   - Keep the `Operation Quest` title and current campaign subtitle.
   - Do not change individual trail icons or the Operation Quest modal icon.
+  - Implementation complete.
+  - Verification record:
+    - Focused menu visual tests: 2 passed.
+    - Normal golden tests: 2 passed, covering 4 images.
+    - Focused menu/navigation tests: 2 passed.
+    - Full non-golden suite: 288 passed.
+    - `flutter analyze --no-pub`: clean.
+    - `git diff --check`: clean.
+    - The four approved menu goldens were regenerated and remained
+      byte-identical because the golden renderer maps both emoji to the same
+      missing-glyph box.
+    - Semantic assertions verify that `🗺️` is present and `➕` is absent.
   - Preferred commit: `ui: update Operation Quest menu icon`.
 
 - [ ] V2-03E — Add Missing Operation to Quick Practice
