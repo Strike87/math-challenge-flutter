@@ -155,6 +155,21 @@ void main() {
     state.dispose();
   });
 
+  test('matching True and False responses both grade as correct', () async {
+    for (final truth in [true, false]) {
+      final state = await _makeState();
+      _startTrueFalse(state);
+      state.rt.qTimerLimit = 0;
+      state.rt.proposedTruth = truth;
+
+      state.onTrueFalseAnswer(truth);
+
+      expect(state.p[1].total, 1);
+      expect(state.p[1].correct, 1);
+      state.dispose();
+    }
+  });
+
   test('high scores serialize typed fields and migrate legacy entries', () {
     const score = HighScore(
       name: 'Ada',
@@ -205,16 +220,101 @@ void main() {
     state.dispose();
   });
 
-  testWidgets('true-false UI submits once and keeps 50/50 disabled',
+  testWidgets('true-false proposition uses stored formatted answer stably',
+      (tester) async {
+    final cases = [
+      (
+        question: const Question(
+          type: Operation.addition,
+          key: 'natural',
+          text: '2 + 3 = ?',
+          ans: 5,
+          choices: [4, 5, 6, 7],
+          numType: NumberType.natural,
+        ),
+        proposed: 5,
+        truth: true,
+        expected: '2 + 3 = 5',
+      ),
+      (
+        question: const Question(
+          type: Operation.addition,
+          key: 'integer',
+          text: '-5 + 2 = ?',
+          ans: -3,
+          choices: [-4, -3, -2, -1],
+          numType: NumberType.integers,
+        ),
+        proposed: -2,
+        truth: false,
+        expected: '-5 + 2 = -2',
+      ),
+      (
+        question: const Question(
+          type: Operation.addition,
+          key: 'rational',
+          text: '1.25 + 1.25 = ?',
+          ans: 2.5,
+          choices: [2, 2.25, 2.5, 2.75],
+          numType: NumberType.rationals,
+        ),
+        proposed: 2.5,
+        truth: true,
+        expected: '1.25 + 1.25 = 2.5',
+      ),
+    ];
+
+    for (final testCase in cases) {
+      final state = await _makeState();
+      _setTrueFalseQuestion(
+        state,
+        question: testCase.question,
+        proposedAnswer: testCase.proposed,
+        proposedTruth: testCase.truth,
+      );
+      await _pump(tester, state, const game_screen.GameScreen());
+
+      expect(
+        find.text(testCase.expected, findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.text('?', findRichText: true), findsNothing);
+      expect(find.byKey(const Key('true-false-proposal')), findsNothing);
+
+      state.notifyListeners();
+      await tester.pump();
+      expect(
+        find.text(testCase.expected, findRichText: true),
+        findsOneWidget,
+      );
+      expect(state.rt.proposedAnswer, testCase.proposed);
+      state.dispose();
+    }
+  });
+
+  testWidgets('true-false hides only disabled 50/50 count until Choice4',
       (tester) async {
     final state = await _makeState();
-    _startTrueFalse(state);
-    state.p[1].pups = [PowerUp.fifty];
+    _setTrueFalseQuestion(
+      state,
+      question: const Question(
+        type: Operation.addition,
+        key: 'badge',
+        text: '2 + 3 = ?',
+        ans: 5,
+        choices: [4, 5, 6, 7],
+        numType: NumberType.natural,
+      ),
+      proposedAnswer: 5,
+      proposedTruth: true,
+    );
+    state.p[1].pups = [PowerUp.fifty, PowerUp.fifty];
     await _pump(tester, state, const game_screen.GameScreen());
 
-    expect(find.byKey(const Key('true-false-proposal')), findsOneWidget);
     expect(find.byKey(const Key('answer-true')), findsOneWidget);
     expect(find.byKey(const Key('answer-false')), findsOneWidget);
+    expect(find.text('50/50'), findsOneWidget);
+    expect(find.byKey(const Key('powerup-fifty-count')), findsNothing);
     expect(
       find
           .ancestor(
@@ -226,21 +326,29 @@ void main() {
           .evaluate(),
       isNotEmpty,
     );
+
     await tester.tap(find.text('50/50'));
     await tester.pump();
-    expect(state.p[1].pups.where((pu) => pu == PowerUp.fifty).length, 1);
+    expect(state.p[1].pups.where((pu) => pu == PowerUp.fifty).length, 2);
     expect(state.rt.puUsed, 0);
-    expect(state.p[1].total, 0);
 
-    final answerKey = state.rt.proposedTruth!
-        ? const Key('answer-true')
-        : const Key('answer-false');
-    await tester.tap(find.byKey(answerKey));
+    state.rt.answerStyle = AnswerStyle.choice4;
+    state.notifyListeners();
     await tester.pump();
 
-    expect(state.p[1].total, 1);
-    expect(state.p[1].correct, 1);
-    await tester.pump(const Duration(milliseconds: 1400));
+    expect(find.byKey(const Key('powerup-fifty-count')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('powerup-fifty-count')),
+        matching: find.text('2'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('?', findRichText: true), findsOneWidget);
+    for (final answer in ['4', '5', '6', '7']) {
+      expect(find.text(answer), findsOneWidget);
+    }
+    expect(state.p[1].pups.where((pu) => pu == PowerUp.fifty).length, 2);
     state.dispose();
   });
 
@@ -290,6 +398,28 @@ void _startTrueFalse(GameState state) {
   state.setAnswerStyle(AnswerStyle.trueFalse);
   state.startGame();
   state.rt.timer?.cancel();
+}
+
+void _setTrueFalseQuestion(
+  GameState state, {
+  required Question question,
+  required num proposedAnswer,
+  required bool proposedTruth,
+}) {
+  state.players = 1;
+  state.mode = GameMode.standard;
+  state.currentScreen = GameScreen.game;
+  state.p[1].resetForGame(isSinglePlayer: true, isMasterOrBoss: false);
+  state.rt = RuntimeState()
+    ..challenge = question.type
+    ..answerStyle = AnswerStyle.trueFalse
+    ..proposedAnswer = proposedAnswer
+    ..proposedTruth = proposedTruth
+    ..gameActive = true
+    ..state = 'playing'
+    ..maxTurns = 10
+    ..accepting = true
+    ..q = question;
 }
 
 Future<void> _pump(

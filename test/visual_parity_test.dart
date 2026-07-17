@@ -623,5 +623,48 @@ void main() {
       );
       state.rt.timer?.cancel();
     });
+
+    testWidgets('15. True/False gameplay', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.setOption('players', 1);
+      state.currentScreen = GameScreen.game;
+      state.p[1].resetForGame(isSinglePlayer: true, isMasterOrBoss: false);
+      state.p[1].pups = [PowerUp.time, PowerUp.fifty, PowerUp.fifty];
+      state.rt = RuntimeState()
+        ..challenge = Operation.subtraction
+        ..answerStyle = AnswerStyle.trueFalse
+        ..proposedAnswer = 8
+        ..proposedTruth = false
+        ..gameActive = true
+        ..state = 'playing'
+        ..isWarmUp = false
+        ..maxTurns = 10
+        ..accepting = true
+        ..q = const Question(
+          type: Operation.subtraction,
+          key: 'visual-true-false',
+          text: '12 - 5 = ?',
+          ans: 7,
+          choices: [6, 7, 8, 9],
+          diff: Difficulty.easy,
+          numType: NumberType.natural,
+        );
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('12 - 5 = 8', findRichText: true), findsOneWidget);
+      expect(find.text('?', findRichText: true), findsNothing);
+      expect(find.byKey(const Key('answer-true')), findsOneWidget);
+      expect(find.byKey(const Key('answer-false')), findsOneWidget);
+      expect(find.byKey(const Key('powerup-fifty-count')), findsNothing);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/15_true_false_gameplay.png'),
+      );
+    });
   });
 }

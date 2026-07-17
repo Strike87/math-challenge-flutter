@@ -88,7 +88,7 @@ class _GameScreenState extends State<GameScreen> {
                         _QuestionCard(gs: gs, s: s),
                         const SizedBox(height: 16),
                         if (rt.answerStyle == AnswerStyle.trueFalse)
-                          _TrueFalseAnswers(gs: gs, s: s)
+                          _TrueFalseAnswers(gs: gs)
                         else
                           _AnswersGrid(gs: gs, s: s),
                         const SizedBox(height: 12),
@@ -1116,34 +1116,39 @@ class _PowerUpHud extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Positioned(
-                        right: -3,
-                        top: -7,
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: const Color(GameConfig.punch),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(GameConfig.punch)
-                                    .withValues(alpha: 0.28),
-                                blurRadius: 8,
+                      if (pu != PowerUp.fifty ||
+                          gs.rt.answerStyle != AnswerStyle.trueFalse)
+                        Positioned(
+                          key: pu == PowerUp.fifty
+                              ? const Key('powerup-fifty-count')
+                              : null,
+                          right: -3,
+                          top: -7,
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: const Color(GameConfig.punch),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(GameConfig.punch)
+                                      .withValues(alpha: 0.28),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              '$count',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
                               ),
-                            ],
-                          ),
-                          child: Text(
-                            '$count',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 );
@@ -1321,6 +1326,11 @@ class _QuestionCard extends StatelessWidget {
       );
     }
     final promptText = _prompt(gs);
+    final proposedAnswer = gs.rt.proposedAnswer;
+    final questionText =
+        gs.rt.answerStyle == AnswerStyle.trueFalse && proposedAnswer != null
+            ? q.text.replaceFirst('?', _formatAnswer(proposedAnswer))
+            : q.text;
     final showCounter = gs.activeMode != GameMode.blitz &&
         gs.activeMode != GameMode.combo &&
         gs.rt.challenge != Operation.master &&
@@ -1453,7 +1463,7 @@ class _QuestionCard extends StatelessWidget {
                     fontFamily: AppFonts.head,
                     height: 1.2,
                   ),
-                  children: _spans(q.text, s),
+                  children: _spans(questionText, s),
                 ),
               ),
             ),
@@ -1706,10 +1716,9 @@ class _AnswersGrid extends StatelessWidget {
 }
 
 class _TrueFalseAnswers extends StatelessWidget {
-  const _TrueFalseAnswers({required this.gs, required this.s});
+  const _TrueFalseAnswers({required this.gs});
 
   final GameState gs;
-  final SettingsService s;
 
   @override
   Widget build(BuildContext context) {
@@ -1717,17 +1726,6 @@ class _TrueFalseAnswers extends StatelessWidget {
     if (proposed == null) return const SizedBox.shrink();
     return Column(
       children: [
-        Text(
-          '= ${_formatAnswer(proposed)}',
-          key: const Key('true-false-proposal'),
-          style: TextStyle(
-            color: s.text,
-            fontSize: 32,
-            fontWeight: FontWeight.w900,
-            fontFamily: AppFonts.head,
-          ),
-        ),
-        const SizedBox(height: 12),
         Row(
           children: [
             for (final option in [true, false]) ...[
