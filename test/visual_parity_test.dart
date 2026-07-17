@@ -315,6 +315,7 @@ void main() {
       expect(find.text('➗ Division Trail'), findsOneWidget);
       expect(find.text('🧮 Mixed Operations Trail'), findsOneWidget);
       expect(find.text('❔ Missing Operation Trail'), findsOneWidget);
+      expect(find.text('🔢 Missing Number Trail'), findsOneWidget);
       expect(find.text('First Differences'), findsOneWidget);
       expectNoVisualException(tester);
       await expectLater(
