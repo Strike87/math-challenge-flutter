@@ -30,7 +30,7 @@ Only the first unchecked item under **Active** may be started.
     Integers, Decimals, Mixed Number Systems, Order of Operations, and
     Fractions.
 
-- [ ] V2-03B — Stabilize interstitial lifecycle and navigation performance
+- [x] V2-03B — Stabilize interstitial lifecycle and navigation performance
   - Initialize Mobile Ads once.
   - Retain and asynchronously preload one ready interstitial.
   - Replay, Main Menu, and Operation Quest Map navigation must never wait for
@@ -50,6 +50,13 @@ Only the first unchecked item under **Active** may be started.
     persistence, modal creation, and route/state-transition boundaries.
   - Physical-device timing smoke remains required before claiming full
     performance verification.
+  - Implementation complete; device verification still required.
+  - Verification record:
+    - Focused AdMob tests: 25 passed.
+    - Focused replay/navigation tests: 3 passed.
+    - Full non-golden suite: 286 passed.
+    - `flutter analyze --no-pub`: clean.
+    - `git diff --check`: clean.
   - Preferred commit: `fix: stabilize interstitial lifecycle and navigation
     performance`.
 
