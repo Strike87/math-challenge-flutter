@@ -168,6 +168,27 @@ void main() {
           NumberType.natural,
           10
         ),
+        (
+          'Find the Number',
+          Difficulty.easy,
+          Operation.mixed,
+          NumberType.natural,
+          10
+        ),
+        (
+          'Number Detective',
+          Difficulty.medium,
+          Operation.mixed,
+          NumberType.natural,
+          10
+        ),
+        (
+          'Missing Number Master',
+          Difficulty.hard,
+          Operation.mixed,
+          NumberType.natural,
+          10
+        ),
       ],
     );
     expect(
@@ -191,6 +212,17 @@ void main() {
         'missing_operation_easy',
         'missing_operation_medium',
         'missing_operation_hard',
+        'missing_number_easy',
+        'missing_number_medium',
+        'missing_number_hard',
+      ],
+    );
+    expect(
+      operationQuestStages.map((stage) => stage.questionMechanic),
+      [
+        ...List.filled(15, OperationQuestQuestionMechanic.standard),
+        ...List.filled(3, OperationQuestQuestionMechanic.missingOperation),
+        ...List.filled(3, OperationQuestQuestionMechanic.missingNumber),
       ],
     );
     expect(
@@ -219,6 +251,9 @@ void main() {
         'missing_operation_easy': 2,
         'missing_operation_medium': 1,
         'missing_operation_hard': 1,
+        'missing_number_easy': 2,
+        'missing_number_medium': 1,
+        'missing_number_hard': 1,
         'unknown': 3,
       },
     }));
@@ -250,6 +285,12 @@ void main() {
         isTrue);
     expect(progress.isUnlocked(OperationQuestStageId.missingOperationHard),
         isTrue);
+    expect(
+        progress.isUnlocked(OperationQuestStageId.missingNumberEasy), isTrue);
+    expect(
+        progress.isUnlocked(OperationQuestStageId.missingNumberMedium), isTrue);
+    expect(
+        progress.isUnlocked(OperationQuestStageId.missingNumberHard), isTrue);
     expect(
       OperationQuestProgress({
         OperationQuestStageId.additionHard: 1,
@@ -353,6 +394,30 @@ void main() {
       isTrue,
     );
     expect(
+      OperationQuestProgress({
+        OperationQuestStageId.missingOperationHard: 1,
+      }).isUnlocked(OperationQuestStageId.missingNumberEasy),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.missingNumberEasy: 1,
+      }).isUnlocked(OperationQuestStageId.missingNumberMedium),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.missingNumberMedium: 1,
+      }).isUnlocked(OperationQuestStageId.missingNumberHard),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.missingOperationMedium: 3,
+      }).isUnlocked(OperationQuestStageId.missingNumberEasy),
+      isFalse,
+    );
+    expect(
       progress
           .recordBest(OperationQuestStageId.additionEasy, 1)
           .bestStars(OperationQuestStageId.additionEasy),
@@ -365,8 +430,7 @@ void main() {
     );
   });
 
-  test('legacy one- through five-trail progress keeps Missing Operation empty',
-      () {
+  test('legacy one- through six-trail progress keeps later trails empty', () {
     for (final rawStars in [
       {'addition_easy': 1},
       {'addition_easy': 1, 'subtraction_easy': 1},
@@ -388,15 +452,29 @@ void main() {
         'division_easy': 1,
         'mixed_easy': 1,
       },
+      {
+        'addition_easy': 1,
+        'subtraction_easy': 1,
+        'multiplication_easy': 1,
+        'division_easy': 1,
+        'mixed_easy': 1,
+        'missing_operation_easy': 1,
+      },
     ]) {
       final progress = OperationQuestProgress.decode(jsonEncode({
         'version': 1,
         'stars': rawStars,
       }));
-      expect(progress.bestStars(OperationQuestStageId.missingOperationEasy), 0);
+      expect(
+        progress.bestStars(OperationQuestStageId.missingOperationEasy),
+        rawStars['missing_operation_easy'] ?? 0,
+      );
       expect(
           progress.bestStars(OperationQuestStageId.missingOperationMedium), 0);
       expect(progress.bestStars(OperationQuestStageId.missingOperationHard), 0);
+      expect(progress.bestStars(OperationQuestStageId.missingNumberEasy), 0);
+      expect(progress.bestStars(OperationQuestStageId.missingNumberMedium), 0);
+      expect(progress.bestStars(OperationQuestStageId.missingNumberHard), 0);
     }
   });
 
@@ -492,6 +570,69 @@ void main() {
         ans: 6,
         choices: [6, 5, 4, 7],
       )),
+      isNull,
+    );
+  });
+
+  test('Missing Number filter enforces stage forms without rebuilding', () {
+    const direct = Question(
+      type: Operation.addition,
+      key: 'a3+4',
+      text: '3 + 4 = ?',
+      ans: 7,
+      choices: [7, 6, 8, 9],
+    );
+    const missingLeft = Question(
+      type: Operation.subtraction,
+      key: 's?-4=5',
+      text: '? - 4 = 5',
+      ans: 9,
+      choices: [9, 8, 10, 11],
+    );
+    const missingRight = Question(
+      type: Operation.division,
+      key: 'd12/?=4',
+      text: '12 ÷ ? = 4',
+      ans: 3,
+      choices: [3, 2, 4, 5],
+    );
+    const multiplication = Question(
+      type: Operation.multiplication,
+      key: 'm?x4=12',
+      text: '? × 4 = 12',
+      ans: 3,
+      choices: [3, 2, 4, 5],
+    );
+
+    expect(missingNumberQuestion(direct, Difficulty.easy), same(direct));
+    expect(missingNumberQuestion(missingLeft, Difficulty.easy), isNull);
+    expect(missingNumberQuestion(direct, Difficulty.medium), isNull);
+    expect(missingNumberQuestion(missingLeft, Difficulty.medium),
+        same(missingLeft));
+    expect(missingNumberQuestion(missingRight, Difficulty.medium),
+        same(missingRight));
+    for (final question in [
+      direct,
+      missingLeft,
+      missingRight,
+      multiplication
+    ]) {
+      expect(missingNumberQuestion(question, Difficulty.hard), same(question));
+      expect(question.choices.toSet(), hasLength(4));
+      expect(question.choices.where((choice) => choice == question.ans),
+          hasLength(1));
+    }
+    expect(
+      missingNumberQuestion(
+        const Question(
+          type: Operation.addition,
+          key: 'bad',
+          text: '3 + 4 = ? extra',
+          ans: 7,
+          choices: [7, 6, 8, 9],
+        ),
+        Difficulty.hard,
+      ),
       isNull,
     );
   });
@@ -1004,6 +1145,121 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
   });
 
+  testWidgets(
+      'Missing Number Quest filters forms and keeps the numeric shared pipeline',
+      (tester) async {
+    final saved = jsonEncode({
+      'version': 1,
+      'stars': {
+        'missing_operation_hard': 3,
+        'missing_number_easy': 3,
+        'missing_number_medium': 3,
+        'missing_number_hard': 3,
+      },
+    });
+    final state = await _makeState({'mc_operationQuestProgress': saved});
+    addTearDown(state.dispose);
+    state
+      ..players = 2
+      ..mode = GameMode.combo
+      ..diff = Difficulty.insane
+      ..numType = NumberType.rationals
+      ..questionCount = 20
+      ..adaptive = true
+      ..selectedAnswerStyle = AnswerStyle.trueFalse
+      ..dailyChallengeIds = ['division_10'];
+
+    state.startOperationQuestStage(OperationQuestStageId.missingNumberHard);
+    state.startGame();
+    expect(state.activeRunSnapshot?.operation, Operation.mixed);
+    expect(
+      state.activeRunSnapshot?.operationQuestQuestionMechanic,
+      OperationQuestQuestionMechanic.missingNumber,
+    );
+    expect(state.activeMode, GameMode.standard);
+    expect(state.activePlayers, 1);
+    expect(state.activeNumberType, NumberType.natural);
+    expect(state.activeDifficulty, Difficulty.hard);
+    expect(state.rt.answerStyle, AnswerStyle.choice4);
+    expect(state.activeAdaptive, isFalse);
+    expect(
+      state.rt.q?.text,
+      matches(RegExp(
+          r'^(?:\d+ [+\-×÷] \d+ = \?|\? [+\-×÷] \d+ = \d+|\d+ [+\-×÷] \? = \d+)$')),
+    );
+    expect(state.rt.q?.choices.toSet(), hasLength(4));
+    expect(
+      state.rt.q?.choices.where((choice) => choice == state.rt.q?.ans),
+      hasLength(1),
+    );
+
+    state.p[1].pups.add(PowerUp.fifty);
+    state.usePowerUp(PowerUp.fifty);
+    expect(state.rt.q?.choices, hasLength(2));
+    final first = state.rt.q!;
+    state.onAnswer(first.choices.firstWhere((choice) => choice != first.ans));
+    expect(state.reactionPill, contains('${first.ans}'));
+
+    await tester.pump(const Duration(milliseconds: 1300));
+    state.skip();
+    expect(state.reactionPill, startsWith('Skipped! Ans:'));
+    await tester.pump(const Duration(milliseconds: 1300));
+    state.debugTimeoutForTest();
+    expect(state.reactionPill, contains('Ans:'));
+
+    for (var i = 3; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 1300));
+      state.rt.timer?.cancel();
+      final question = state.rt.q!;
+      state.onAnswer(question.ans);
+    }
+    await tester.pump(const Duration(milliseconds: 1300));
+    expect(state.resultIcon, '⭐');
+    expect(state.resultTitle, 'Missing Number Trail Complete');
+    expect(state.p[1].history, hasLength(10));
+    expect(
+      state.p[1].history.every((attempt) => attempt.type != Operation.mixed),
+      isTrue,
+    );
+    expect(
+      state.dailyProgress['division_10'] ?? 0,
+      state.p[1].history
+          .where((attempt) =>
+              attempt.correct && attempt.type == Operation.division)
+          .length,
+    );
+    expect(state.highScores, isEmpty);
+    expect(Storage.getString('mc_operationQuestProgress', ''), saved);
+
+    await state.replayGame();
+    state.rt.timer?.cancel();
+    expect(state.activeRunSnapshot?.operationQuestStageId,
+        OperationQuestStageId.missingNumberHard);
+    expect(state.activeDifficulty, Difficulty.hard);
+    expect(state.mode, GameMode.combo);
+    expect(state.diff, Difficulty.insane);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('Missing Number zero-star Hard result uses stage completion copy',
+      (tester) async {
+    final saved = jsonEncode({
+      'version': 1,
+      'stars': {'missing_number_medium': 1},
+    });
+    final state = await _makeState({'mc_operationQuestProgress': saved});
+    addTearDown(state.dispose);
+    state.startOperationQuestStage(OperationQuestStageId.missingNumberHard);
+    state.startGame();
+
+    await _finishQuest(tester, state, correctAnswers: 0);
+
+    expect(state.resultIcon, '🔢');
+    expect(state.resultTitle, 'Missing Number Master Complete');
+    expect(Storage.getString('mc_operationQuestProgress', ''), saved);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
   testWidgets('Campaign card shows all trails and locked stages do not start',
       (tester) async {
     final state = await _makeState();
@@ -1015,7 +1271,7 @@ void main() {
     );
 
     expect(find.text('Operation Quest'), findsOneWidget);
-    expect(find.text('6 TRAILS • 18 STAGES'), findsOneWidget);
+    expect(find.text('7 TRAILS • 21 STAGES'), findsOneWidget);
     await tester.tap(find.text('Operation Quest'));
     await tester.pump();
     expect(find.text('➕ Addition Trail'), findsOneWidget);
@@ -1024,6 +1280,7 @@ void main() {
     expect(find.text('➗ Division Trail'), findsOneWidget);
     expect(find.text('🧮 Mixed Operations Trail'), findsOneWidget);
     expect(find.text('❔ Missing Operation Trail'), findsOneWidget);
+    expect(find.text('🔢 Missing Number Trail'), findsOneWidget);
     expect(find.text('First Sums'), findsOneWidget);
     expect(find.text('Bigger Sums'), findsOneWidget);
     expect(find.text('Addition Challenge'), findsOneWidget);
@@ -1042,7 +1299,10 @@ void main() {
     expect(find.text('Find the Sign'), findsOneWidget);
     expect(find.text('Operator Detective'), findsOneWidget);
     expect(find.text('Master Operator'), findsOneWidget);
-    expect(find.text('🔒'), findsNWidgets(17));
+    expect(find.text('Find the Number'), findsOneWidget);
+    expect(find.text('Number Detective'), findsOneWidget);
+    expect(find.text('Missing Number Master'), findsOneWidget);
+    expect(find.text('🔒'), findsNWidgets(20));
 
     state.startOperationQuestStage(OperationQuestStageId.subtractionEasy);
     expect(state.currentScreen, GameScreen.menu);
@@ -1053,6 +1313,8 @@ void main() {
     state.startOperationQuestStage(OperationQuestStageId.mixedEasy);
     expect(state.currentScreen, GameScreen.menu);
     state.startOperationQuestStage(OperationQuestStageId.missingOperationEasy);
+    expect(state.currentScreen, GameScreen.menu);
+    state.startOperationQuestStage(OperationQuestStageId.missingNumberEasy);
     expect(state.currentScreen, GameScreen.menu);
 
     await tester.tap(
@@ -1116,7 +1378,7 @@ void main() {
     await tester.drag(scrollable, const Offset(0, -300));
     await tester.pump();
     expect(scrollState.position.pixels, greaterThan(0));
-    await tester.ensureVisible(find.text('Master Operator'));
+    await tester.ensureVisible(find.text('Missing Number Master'));
     expect(find.text('Close').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

@@ -6,6 +6,7 @@ import '../../../models/player.dart';
 enum OperationQuestQuestionMechanic {
   standard,
   missingOperation,
+  missingNumber,
 }
 
 enum OperationQuestStageId {
@@ -26,7 +27,10 @@ enum OperationQuestStageId {
   mixedHard('mixed_hard'),
   missingOperationEasy('missing_operation_easy'),
   missingOperationMedium('missing_operation_medium'),
-  missingOperationHard('missing_operation_hard');
+  missingOperationHard('missing_operation_hard'),
+  missingNumberEasy('missing_number_easy'),
+  missingNumberMedium('missing_number_medium'),
+  missingNumberHard('missing_number_hard');
 
   const OperationQuestStageId(this.storageId);
 
@@ -170,6 +174,27 @@ const operationQuestStages = <OperationQuestStage>[
     difficulty: Difficulty.hard,
     questionMechanic: OperationQuestQuestionMechanic.missingOperation,
   ),
+  OperationQuestStage(
+    id: OperationQuestStageId.missingNumberEasy,
+    title: 'Find the Number',
+    operation: Operation.mixed,
+    difficulty: Difficulty.easy,
+    questionMechanic: OperationQuestQuestionMechanic.missingNumber,
+  ),
+  OperationQuestStage(
+    id: OperationQuestStageId.missingNumberMedium,
+    title: 'Number Detective',
+    operation: Operation.mixed,
+    difficulty: Difficulty.medium,
+    questionMechanic: OperationQuestQuestionMechanic.missingNumber,
+  ),
+  OperationQuestStage(
+    id: OperationQuestStageId.missingNumberHard,
+    title: 'Missing Number Master',
+    operation: Operation.mixed,
+    difficulty: Difficulty.hard,
+    questionMechanic: OperationQuestQuestionMechanic.missingNumber,
+  ),
 ];
 
 OperationQuestStage operationQuestStage(OperationQuestStageId id) =>
@@ -235,6 +260,20 @@ Question? missingOperationQuestion(Question question) {
     numType: question.numType,
     ratDP: question.ratDP,
   );
+}
+
+Question? missingNumberQuestion(Question question, Difficulty difficulty) {
+  final direct = RegExp(r'^\d+ [+\-×÷] \d+ = \?$').hasMatch(question.text);
+  final missingLeft = RegExp(r'^\? [+\-×÷] \d+ = \d+$').hasMatch(question.text);
+  final missingRight =
+      RegExp(r'^\d+ [+\-×÷] \? = \d+$').hasMatch(question.text);
+  final allowed = switch (difficulty) {
+    Difficulty.easy => direct,
+    Difficulty.medium => missingLeft || missingRight,
+    Difficulty.hard => direct || missingLeft || missingRight,
+    _ => false,
+  };
+  return allowed ? question : null;
 }
 
 int operationQuestStarsForCorrectAnswers(int correct) {
@@ -310,6 +349,12 @@ class OperationQuestProgress {
           bestStars(OperationQuestStageId.missingOperationEasy) >= 1,
         OperationQuestStageId.missingOperationHard =>
           bestStars(OperationQuestStageId.missingOperationMedium) >= 1,
+        OperationQuestStageId.missingNumberEasy =>
+          bestStars(OperationQuestStageId.missingOperationHard) >= 1,
+        OperationQuestStageId.missingNumberMedium =>
+          bestStars(OperationQuestStageId.missingNumberEasy) >= 1,
+        OperationQuestStageId.missingNumberHard =>
+          bestStars(OperationQuestStageId.missingNumberMedium) >= 1,
       };
 
   OperationQuestProgress recordBest(OperationQuestStageId id, int value) {

@@ -380,6 +380,9 @@ class GameState extends ChangeNotifier {
   bool get isMissingOperationQuest =>
       _runSnapshot?.operationQuestQuestionMechanic ==
       OperationQuestQuestionMechanic.missingOperation;
+  bool get isMissingNumberQuest =>
+      _runSnapshot?.operationQuestQuestionMechanic ==
+      OperationQuestQuestionMechanic.missingNumber;
   int get setupPlayers => _pendingOperationQuestStageId == null ? players : 1;
   int get activePlayers => _runSnapshot?.players ?? players;
   GameMode get activeMode => _runSnapshot?.mode ?? mode;
@@ -1646,16 +1649,22 @@ class GameState extends ChangeNotifier {
     }
 
     // Build question with uniqueness guarantee
-    Question? q = isMissingOperationQuest
+    final filtersQuestQuestions =
+        isMissingOperationQuest || isMissingNumberQuest;
+    Question? q = filtersQuestQuestions
         ? null
         : _qgen.build(type: type, diff: d, numType: generatedNumType);
     bool foundUnique = false;
     for (var attempt = 0; attempt < 500; attempt++) {
       final candidate =
           _qgen.build(type: type, diff: d, numType: generatedNumType);
-      final question = isMissingOperationQuest
-          ? missingOperationQuestion(candidate)
-          : candidate;
+      final question = switch (_runSnapshot?.operationQuestQuestionMechanic) {
+        OperationQuestQuestionMechanic.missingOperation =>
+          missingOperationQuestion(candidate),
+        OperationQuestQuestionMechanic.missingNumber =>
+          missingNumberQuestion(candidate, d),
+        _ => candidate,
+      };
       if (question == null) continue;
       if (!rt.usedFacts.contains(candidate.key)) {
         rt.usedFacts.add(candidate.key);
@@ -1665,9 +1674,9 @@ class GameState extends ChangeNotifier {
       }
     }
     if (!foundUnique) {
-      if (isMissingOperationQuest) {
+      if (filtersQuestQuestions) {
         throw StateError(
-          'Missing Operation Quest could not generate a unique direct question.',
+          '${isMissingOperationQuest ? 'Missing Operation' : 'Missing Number'} Quest could not generate a unique supported question.',
         );
       }
       rt.usedFacts.clear();
@@ -2460,17 +2469,18 @@ class GameState extends ChangeNotifier {
         _runSnapshot!.operationQuestStageId!,
       );
       resultIcon = operationQuestResultStars == 0
-          ? stage.questionMechanic ==
-                  OperationQuestQuestionMechanic.missingOperation
-              ? '❔'
-              : switch (stage.operation) {
+          ? switch (stage.questionMechanic) {
+              OperationQuestQuestionMechanic.missingOperation => '❔',
+              OperationQuestQuestionMechanic.missingNumber => '🔢',
+              _ => switch (stage.operation) {
                   Operation.addition => '➕',
                   Operation.subtraction => '➖',
                   Operation.multiplication => '✖️',
                   Operation.division => '➗',
                   Operation.mixed => '🧮',
                   _ => '⭐',
-                }
+                },
+            }
           : '⭐';
       final trailName = switch (stage.operation) {
         Operation.multiplication => 'Multiplication',
@@ -2478,6 +2488,10 @@ class GameState extends ChangeNotifier {
             when stage.questionMechanic ==
                 OperationQuestQuestionMechanic.missingOperation =>
           'Missing Operation',
+        Operation.mixed
+            when stage.questionMechanic ==
+                OperationQuestQuestionMechanic.missingNumber =>
+          'Missing Number',
         Operation.mixed => 'Mixed Operations',
         _ => stage.operation.label,
       };

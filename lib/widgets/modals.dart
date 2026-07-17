@@ -147,6 +147,16 @@ class OperationQuestModal extends StatelessWidget {
                 .toList(),
             gs: gs,
           ),
+          const SizedBox(height: 18),
+          _OperationQuestTrail(
+            heading: '🔢 Missing Number Trail',
+            stages: operationQuestStages
+                .where((stage) =>
+                    stage.questionMechanic ==
+                    OperationQuestQuestionMechanic.missingNumber)
+                .toList(),
+            gs: gs,
+          ),
         ],
       ),
     );
