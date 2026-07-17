@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:math_challenge/engine/game_state.dart';
+import 'package:math_challenge/features/operation_quest/domain/operation_quest.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/storage.dart';
@@ -313,6 +314,7 @@ void main() {
       expect(find.text('✖️ Multiplication Trail'), findsOneWidget);
       expect(find.text('➗ Division Trail'), findsOneWidget);
       expect(find.text('🧮 Mixed Operations Trail'), findsOneWidget);
+      expect(find.text('❔ Missing Operation Trail'), findsOneWidget);
       expect(find.text('First Differences'), findsOneWidget);
       expectNoVisualException(tester);
       await expectLater(
@@ -580,6 +582,45 @@ void main() {
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/13_settings_modal_dark.png'));
+    });
+
+    testWidgets('14. Missing Operation Quest gameplay uses operator symbols',
+        (tester) async {
+      final state = await _makeState({
+        'mc_dark': false,
+        'mc_operationQuestProgress':
+            '{"version":1,"stars":{"missing_operation_medium":1}}',
+      });
+      state
+          .startOperationQuestStage(OperationQuestStageId.missingOperationHard);
+      state.startGame();
+      state.rt.timer?.cancel();
+      state.rt.timer = null;
+      state.rt.timerDurationMs = 0;
+      state.rt.timerStart = 0;
+      state.rt.q = Question(
+        type: Operation.addition,
+        key: 'visual-missing-operation',
+        text: '90 ? 9 = 99',
+        ans: 0,
+        choices: [0, 1, 2, 3],
+        diff: Difficulty.hard,
+        numType: NumberType.natural,
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+      expect(find.text('?', findRichText: true), findsWidgets);
+      for (final symbol in ['+', '−', '×', '÷']) {
+        expect(find.text(symbol), findsOneWidget);
+      }
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/14_missing_operation_gameplay.png'),
+      );
+      state.rt.timer?.cancel();
     });
   });
 }
