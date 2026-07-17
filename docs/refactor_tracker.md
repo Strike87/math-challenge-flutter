@@ -4,16 +4,31 @@ Only the first unchecked item under **Active** may be started.
 
 ## Active
 
-R5 is complete. The project is in post-refactor release validation and mainline
-checkpointing before v2 feature planning. No new refactor item is approved
-unless explicitly added under **Active**.
-
-```text
-R5 complete
-→ fresh release validation
-→ stable main checkpoint/tag
-→ v2 feature planning
-```
+- [ ] V2-03A — Operation Quest Missing Number Trail
+  - Corrected baseline: V2-02F Missing Operation is complete at
+    `6 TRAILS • 18 STAGES`.
+  - Target: `7 TRAILS • 21 STAGES`.
+  - Approved question forms:
+    - Easy: direct result only.
+    - Medium: missing left or right operand only.
+    - Hard: direct result, missing left operand, or missing right operand.
+  - Reuse existing generated questions and choices; do not change
+    `QuestionGenerator` production code.
+  - Missing-dividend answers may use the generator's existing derived dividend
+    ranges.
+  - Existing overlap with ordinary Medium and Hard missing-operand arithmetic
+    is intentional.
+  - Concrete `Question.type` continues to drive history, mastery, achievements,
+    adaptive-state records, and `division_10`.
+  - Trail heading/icon: `🔢 Missing Number Trail`.
+  - Stage labels, in order: `Find the Number`, `Number Detective`, and
+    `Missing Number Master`.
+  - Zero-star Hard copy: `Missing Number Master Complete`.
+  - Cleared Hard copy: `Missing Number Trail Complete`.
+  - Persistence remains `mc_operationQuestProgress` schema version 1.
+  - Excluded: Regions, bosses, modifiers, True/False Quest, Written Answer,
+    Integers, Decimals, Mixed Number Systems, Order of Operations, and
+    Fractions.
 
 ## Completed
 
