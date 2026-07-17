@@ -4,7 +4,7 @@ Only the first unchecked item under **Active** may be started.
 
 ## Active
 
-- [ ] V2-03A — Operation Quest Missing Number Trail
+- [x] V2-03A — Operation Quest Missing Number Trail
   - Corrected baseline: V2-02F Missing Operation is complete at
     `6 TRAILS • 18 STAGES`.
   - Target: `7 TRAILS • 21 STAGES`.
