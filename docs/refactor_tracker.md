@@ -60,7 +60,7 @@ Only the first unchecked item under **Active** may be started.
   - Preferred commit: `fix: stabilize interstitial lifecycle and navigation
     performance`.
 
-- [ ] V2-03C — Correct True/False proposition and disabled 50/50 badge
+- [x] V2-03C — Correct True/False proposition and disabled 50/50 badge
   - Display one complete proposition inside the question card.
   - Replace the existing question placeholder with the stored proposed answer.
   - Remove the detached proposed-answer line.
@@ -70,6 +70,13 @@ Only the first unchecked item under **Active** may be started.
   - Do not consume or reset 50/50 inventory.
   - Returning to Choice4 must reveal the real inventory count.
   - Add `test/goldens/15_true_false_gameplay.png`.
+  - Verification record:
+    - Focused answer-style tests: 11 passed.
+    - Focused gameplay/widget tests: 28 passed.
+    - True/False golden test: 1 passed.
+    - Full non-golden suite: 288 passed.
+    - `flutter analyze --no-pub`: clean.
+    - `git diff --check`: clean.
   - Preferred commit: `fix: correct True/False proposition and 50/50 disabled
     badge`.
 
