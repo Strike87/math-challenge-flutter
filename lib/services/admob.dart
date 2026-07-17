@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -90,7 +91,7 @@ abstract class AdMobService {
 
   Future<void> hideBanner();
 
-  Future<bool> showInterstitial();
+  Future<bool> showInterstitialIfReady();
 
   Future<bool> showRewarded();
 
@@ -113,7 +114,7 @@ class UnavailableAdMobService implements AdMobService {
   Future<void> hideBanner() async {}
 
   @override
-  Future<bool> showInterstitial() async => false;
+  Future<bool> showInterstitialIfReady() async => false;
 
   @override
   Future<bool> showRewarded() async => false;
@@ -157,7 +158,7 @@ class DevAdMobService implements AdMobService {
   }
 
   @override
-  Future<bool> showInterstitial() async {
+  Future<bool> showInterstitialIfReady() async {
     _guardNativeReleaseSimulation();
     interstitialShows++;
     return interstitialAvailable;
@@ -184,21 +185,57 @@ class DevAdMobService implements AdMobService {
   }
 }
 
+typedef InterstitialAdLoader = Future<void> Function({
+  required void Function(InterstitialAdHandle ad) onLoaded,
+  required void Function() onFailed,
+});
+
+class InterstitialAdHandle {
+  const InterstitialAdHandle({required this.show, required this.dispose});
+
+  final Future<void> Function({
+    required VoidCallback onShowed,
+    required VoidCallback onDismissed,
+    required VoidCallback onFailedToShow,
+  }) show;
+  final VoidCallback dispose;
+}
+
 class GoogleMobileAdsService implements AdMobService {
   GoogleMobileAdsService({
     this.bannerAdUnitId = '',
     this.interstitialAdUnitId = '',
     this.rewardedAdUnitId = '',
-  });
+    Future<void> Function()? initializeMobileAds,
+    InterstitialAdLoader? interstitialLoader,
+    this.interstitialLoadTimeout = const Duration(seconds: 8),
+    this.interstitialRetryBaseDelay = const Duration(seconds: 2),
+    this.maxInterstitialLoadRetries = 3,
+  })  : _initializeMobileAds = initializeMobileAds,
+        _interstitialLoader = interstitialLoader;
 
   final String bannerAdUnitId;
   final String interstitialAdUnitId;
   final String rewardedAdUnitId;
+  final Future<void> Function()? _initializeMobileAds;
+  final InterstitialAdLoader? _interstitialLoader;
+  final Duration interstitialLoadTimeout;
+  final Duration interstitialRetryBaseDelay;
+  final int maxInterstitialLoadRetries;
   bool _initialized = false;
+  Future<void>? _initializationFuture;
   bool _bannerRequested = false;
   Future<void>? _bannerShowFuture;
   RewardedAd? _rewardedAd;
   Future<RewardedAd?>? _rewardedLoadFuture;
+  InterstitialAdHandle? _readyInterstitial;
+  bool _interstitialLoading = false;
+  bool _interstitialShowing = false;
+  int _interstitialLoadToken = 0;
+  int _interstitialRetryCount = 0;
+  Timer? _interstitialLoadTimeoutTimer;
+  Timer? _interstitialRetryTimer;
+  final Stopwatch _diagnosticClock = Stopwatch()..start();
 
   @override
   AdMobRequestPolicy get requestPolicy => AdMobRequestPolicy.familiesSafe;
@@ -207,16 +244,28 @@ class GoogleMobileAdsService implements AdMobService {
       AdRequest(nonPersonalizedAds: requestPolicy.nonPersonalizedAds);
 
   @override
-  Future<void> initialize() async {
+  Future<void> initialize() {
+    if (_initialized) return Future<void>.value();
+    return _initializationFuture ??=
+        _initialize().whenComplete(() => _initializationFuture = null);
+  }
+
+  Future<void> _initialize() async {
     try {
-      await MobileAds.instance.updateRequestConfiguration(
-        RequestConfiguration(
-          tagForChildDirectedTreatment: TagForChildDirectedTreatment.yes,
-          maxAdContentRating: MaxAdContentRating.g,
-        ),
-      );
-      await MobileAds.instance.initialize();
+      final initializeMobileAds = _initializeMobileAds;
+      if (initializeMobileAds != null) {
+        await initializeMobileAds();
+      } else {
+        await MobileAds.instance.updateRequestConfiguration(
+          RequestConfiguration(
+            tagForChildDirectedTreatment: TagForChildDirectedTreatment.yes,
+            maxAdContentRating: MaxAdContentRating.g,
+          ),
+        );
+        await MobileAds.instance.initialize();
+      }
       _initialized = true;
+      _preloadInterstitial();
       unawaited(_ensureRewardedLoaded());
     } catch (_) {
       _initialized = false;
@@ -242,35 +291,139 @@ class GoogleMobileAdsService implements AdMobService {
   bool get bannerRequested => _bannerRequested;
 
   @override
-  Future<bool> showInterstitial() async {
-    if (!_initialized || interstitialAdUnitId.isEmpty) return false;
+  Future<bool> showInterstitialIfReady() async {
+    final ad = _readyInterstitial;
+    _logInterstitial(ad == null ? 'not ready' : 'show requested');
+    if (!_initialized) return false;
+    if (ad == null) {
+      if (!_interstitialShowing) {
+        _interstitialRetryCount = 0;
+        _preloadInterstitial();
+      }
+      return false;
+    }
+    _readyInterstitial = null;
+    _interstitialShowing = true;
     final completer = Completer<bool>();
-    InterstitialAd.load(
-      adUnitId: interstitialAdUnitId,
-      request: adRequest,
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) {
+
+    void finish(bool shown, String event) {
+      if (completer.isCompleted) return;
+      _logInterstitial(event);
+      _interstitialShowing = false;
+      ad.dispose();
+      completer.complete(shown);
+      _preloadInterstitial();
+    }
+
+    try {
+      await ad.show(
+        onShowed: () => _logInterstitial('showed'),
+        onDismissed: () => finish(true, 'dismissed'),
+        onFailedToShow: () => finish(false, 'failed to show'),
+      );
+    } catch (_) {
+      finish(false, 'show threw');
+    }
+    return completer.future;
+  }
+
+  void _preloadInterstitial() {
+    if (!_initialized ||
+        interstitialAdUnitId.isEmpty ||
+        _readyInterstitial != null ||
+        _interstitialLoading) {
+      return;
+    }
+    _interstitialRetryTimer?.cancel();
+    _interstitialRetryTimer = null;
+    _interstitialLoading = true;
+    final token = ++_interstitialLoadToken;
+    _logInterstitial('preload requested');
+    _interstitialLoadTimeoutTimer?.cancel();
+    _interstitialLoadTimeoutTimer = Timer(interstitialLoadTimeout, () {
+      if (token != _interstitialLoadToken || !_interstitialLoading) return;
+      _interstitialLoading = false;
+      _interstitialLoadToken++;
+      _logInterstitial('preload timed out');
+      _scheduleInterstitialRetry();
+    });
+
+    final loader = _interstitialLoader ?? _loadGoogleInterstitial;
+    try {
+      unawaited(
+        loader(
+          onLoaded: (ad) {
+            if (token != _interstitialLoadToken || !_interstitialLoading) {
               ad.dispose();
-              if (!completer.isCompleted) completer.complete(true);
-            },
-            onAdFailedToShowFullScreenContent: (ad, error) {
-              ad.dispose();
-              if (!completer.isCompleted) completer.complete(false);
-            },
-          );
-          ad.show();
-        },
-        onAdFailedToLoad: (_) {
-          if (!completer.isCompleted) completer.complete(false);
-        },
-      ),
-    );
-    return completer.future.timeout(
-      const Duration(seconds: 8),
-      onTimeout: () => false,
-    );
+              return;
+            }
+            _interstitialLoadTimeoutTimer?.cancel();
+            _interstitialLoading = false;
+            _interstitialRetryCount = 0;
+            _readyInterstitial = ad;
+            _logInterstitial('preload succeeded');
+          },
+          onFailed: () => _handleInterstitialLoadFailure(token),
+        ).catchError((_) => _handleInterstitialLoadFailure(token)),
+      );
+    } catch (_) {
+      _handleInterstitialLoadFailure(token);
+    }
+  }
+
+  Future<void> _loadGoogleInterstitial({
+    required void Function(InterstitialAdHandle ad) onLoaded,
+    required VoidCallback onFailed,
+  }) =>
+      InterstitialAd.load(
+        adUnitId: interstitialAdUnitId,
+        request: adRequest,
+        adLoadCallback: InterstitialAdLoadCallback(
+          onAdLoaded: (ad) => onLoaded(
+            InterstitialAdHandle(
+              dispose: ad.dispose,
+              show: ({
+                required onShowed,
+                required onDismissed,
+                required onFailedToShow,
+              }) {
+                ad.fullScreenContentCallback = FullScreenContentCallback(
+                  onAdShowedFullScreenContent: (_) => onShowed(),
+                  onAdDismissedFullScreenContent: (_) => onDismissed(),
+                  onAdFailedToShowFullScreenContent: (ad, error) =>
+                      onFailedToShow(),
+                );
+                return ad.show();
+              },
+            ),
+          ),
+          onAdFailedToLoad: (_) => onFailed(),
+        ),
+      );
+
+  void _handleInterstitialLoadFailure(int token) {
+    if (token != _interstitialLoadToken || !_interstitialLoading) return;
+    _interstitialLoadTimeoutTimer?.cancel();
+    _interstitialLoading = false;
+    _logInterstitial('preload failed');
+    _scheduleInterstitialRetry();
+  }
+
+  void _scheduleInterstitialRetry() {
+    if (_interstitialRetryCount >= maxInterstitialLoadRetries) return;
+    final multiplier = 1 << _interstitialRetryCount;
+    _interstitialRetryCount++;
+    final delay = interstitialRetryBaseDelay * multiplier;
+    _logInterstitial('retry scheduled in ${delay.inMilliseconds}ms');
+    _interstitialRetryTimer = Timer(delay, _preloadInterstitial);
+  }
+
+  void _logInterstitial(String event) {
+    if (kDebugMode) {
+      debugPrint(
+        '[perf +${_diagnosticClock.elapsedMilliseconds}ms] interstitial $event',
+      );
+    }
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../features/adaptive/domain/adaptive_difficulty_engine.dart';
@@ -373,6 +374,7 @@ class GameState extends ChangeNotifier {
   int adGameCount = 0;
   int lastRewardedAt = 0;
   bool _pendingInterstitialAd = false;
+  final Stopwatch _diagnosticClock = Stopwatch()..start();
 
   GameRunSnapshot? get activeRunSnapshot => _runSnapshot;
   bool get isOperationQuest =>
@@ -1154,9 +1156,11 @@ class GameState extends ChangeNotifier {
   }
 
   Future<void> _recordCompletedGameForAds() async {
+    _logPerformance('interstitial eligibility started');
     if (adsRemoved) {
       _pendingInterstitialAd = false;
       await _hideAdsSafely();
+      _logPerformance('interstitial ineligible: ads removed');
       return;
     }
     adGameCount++;
@@ -1164,6 +1168,9 @@ class GameState extends ChangeNotifier {
       _pendingInterstitialAd = true;
     }
     await Storage.setInt('mc_adGameCount', adGameCount);
+    _logPerformance(
+      'interstitial eligibility completed: pending=$_pendingInterstitialAd',
+    );
   }
 
   @visibleForTesting
@@ -1173,13 +1180,26 @@ class GameState extends ChangeNotifier {
   bool get debugPendingInterstitialAd => _pendingInterstitialAd;
 
   Future<void> _showPendingInterstitialAd() async {
-    if (!_pendingInterstitialAd) return;
+    if (!_pendingInterstitialAd) {
+      _logPerformance('interstitial skipped: cadence ineligible');
+      return;
+    }
     _pendingInterstitialAd = false;
-    if (adsRemoved || rt.gameActive || rt.state == 'playing') return;
+    if (adsRemoved || rt.gameActive || rt.state == 'playing') {
+      _logPerformance('interstitial skipped: navigation unsafe');
+      return;
+    }
     try {
-      await adService.showInterstitial();
+      final shown = await adService.showInterstitialIfReady();
+      _logPerformance('interstitial ready decision: shown=$shown');
     } on AdMobException {
       // Ad no-fill/service errors should not interrupt result dismissal.
+    }
+  }
+
+  void _logPerformance(String event) {
+    if (kDebugMode) {
+      debugPrint('[perf +${_diagnosticClock.elapsedMilliseconds}ms] $event');
     }
   }
 
@@ -1267,12 +1287,14 @@ class GameState extends ChangeNotifier {
 
   // ─── Screen / modal routing ─────────────────────────────────
   void showScreen(GameScreen s) {
+    _logPerformance('screen transition: ${currentScreen.name} -> ${s.name}');
     currentScreen = s;
     unawaited(syncBannerForCurrentScreen());
     notifyListeners();
   }
 
   void showModal(GameModal m) {
+    _logPerformance('modal transition: ${currentModal.name} -> ${m.name}');
     currentModal = m;
     unawaited(syncBannerForCurrentScreen());
     if (rt.state == 'playing' && _isPausingModal(m)) {
@@ -1286,6 +1308,7 @@ class GameState extends ChangeNotifier {
       cancelAdultGate();
       return;
     }
+    _logPerformance('modal transition: ${currentModal.name} -> none');
     currentModal = GameModal.none;
     if (rt.state == 'paused' && rt.gameActive) {
       rt.state = 'playing';
@@ -2310,6 +2333,7 @@ class GameState extends ChangeNotifier {
   }
 
   void _endGame(bool win, bool loss) {
+    _logPerformance('end game entered');
     _cancelDelayedLossEnd();
     if (!rt.gameActive || rt.state == 'ended') return;
     rt.gameActive = false;
@@ -2317,6 +2341,7 @@ class GameState extends ChangeNotifier {
     rt.timer?.cancel();
     gamesPlayed++;
     unawaited(_recordCompletedGameForAds());
+    _logPerformance('completed-game persistence scheduled');
     if (gamesPlayed >= 10) unlockAch('persistent');
     final snapshot = _runSnapshot!;
     final questProgressSave = isOperationQuest
@@ -2390,7 +2415,10 @@ class GameState extends ChangeNotifier {
       }
     }
 
-    unawaited(save());
+    _logPerformance('game save scheduled');
+    unawaited(
+      save().whenComplete(() => _logPerformance('game save completed')),
+    );
     if (isBossWin) {
       _delayedResultModalTimer?.cancel();
       _delayedResultModalTimer = Timer(const Duration(milliseconds: 1250), () {
@@ -2401,6 +2429,7 @@ class GameState extends ChangeNotifier {
     } else if (questProgressSave != null) {
       final seq = _turnSeq;
       unawaited(questProgressSave.whenComplete(() {
+        _logPerformance('operation quest progress persistence completed');
         if (seq == _turnSeq &&
             rt.state == 'ended' &&
             currentModal == GameModal.none) {
@@ -2546,6 +2575,7 @@ class GameState extends ChangeNotifier {
   }
 
   Future<void> replayGame() async {
+    _logPerformance('replay navigation entered');
     final snapshot = _runSnapshot;
     final dismissedResult = currentModal == GameModal.win;
     closeModal();
@@ -2561,9 +2591,11 @@ class GameState extends ChangeNotifier {
       diff = snapshot.difficulty;
     }
     _startGame(replaySnapshot: snapshot);
+    _logPerformance('replay started');
   }
 
   Future<void> quitToMenu() async {
+    _logPerformance('main menu navigation entered');
     _cancelDelayedLossEnd();
     _turnSeq++;
     final dismissedResult = currentModal == GameModal.win;
@@ -2578,9 +2610,11 @@ class GameState extends ChangeNotifier {
     _runSnapshot = null;
     _pendingOperationQuestStageId = null;
     showScreen(GameScreen.menu);
+    _logPerformance('main menu navigation completed');
   }
 
   Future<void> returnToOperationQuestMap() async {
+    _logPerformance('operation quest map navigation entered');
     _cancelDelayedLossEnd();
     _turnSeq++;
     final dismissedResult = currentModal == GameModal.win;
@@ -2593,6 +2627,7 @@ class GameState extends ChangeNotifier {
     _pendingOperationQuestStageId = null;
     showScreen(GameScreen.menu);
     showModal(GameModal.operationQuest);
+    _logPerformance('operation quest map navigation completed');
   }
 
   void showQuitConfirm() {

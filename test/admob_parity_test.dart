@@ -164,12 +164,29 @@ void main() {
       expect(state.debugPendingInterstitialAd, isFalse);
     });
 
-    test('replay waits for pending interstitial before gameplay resumes',
+    test('replay continues immediately when no interstitial is ready',
+        () async {
+      final ads = _FakeAdMobService(interstitialResult: false);
+      final state = await _makeState(adService: ads);
+
+      await state.debugRecordCompletedGameForAds();
+      await state.debugRecordCompletedGameForAds();
+      await state.debugRecordCompletedGameForAds();
+      state.showModal(GameModal.win);
+
+      await state.replayGame();
+
+      expect(state.rt.gameActive, isTrue);
+      expect(ads.interstitialShows, 1);
+      expect(state.debugPendingInterstitialAd, isFalse);
+    });
+
+    test('replay waits only for dismissal of an already-ready interstitial',
         () async {
       final interstitialStarted = Completer<void>();
       final interstitialDismissed = Completer<void>();
       final ads = _FakeAdMobService()
-        ..onShowInterstitial = () async {
+        ..onShowInterstitialIfReady = () async {
           interstitialStarted.complete();
           await interstitialDismissed.future;
           return true;
@@ -190,7 +207,6 @@ void main() {
 
       expect(state.rt.gameActive, isTrue);
       expect(ads.interstitialShows, 1);
-      expect(state.debugPendingInterstitialAd, isFalse);
     });
 
     test('pending interstitial is cleared instead of shown during gameplay',
@@ -417,6 +433,119 @@ void main() {
       );
     });
   });
+
+  group('Google interstitial lifecycle', () {
+    test('no ready ad returns immediately and concurrent preload is single',
+        () async {
+      final loader = _FakeInterstitialLoader();
+      var initializeCalls = 0;
+      final service = GoogleMobileAdsService(
+        interstitialAdUnitId: 'interstitial',
+        initializeMobileAds: () async => initializeCalls++,
+        interstitialLoader: loader.load,
+      );
+
+      await service.initialize();
+      await service.initialize();
+
+      expect(await service.showInterstitialIfReady(), isFalse);
+      expect(initializeCalls, 1);
+      expect(loader.loadCalls, 1);
+    });
+
+    test('ready ad is consumed once and dismissal requests next preload',
+        () async {
+      final loader = _FakeInterstitialLoader();
+      final service = GoogleMobileAdsService(
+        interstitialAdUnitId: 'interstitial',
+        initializeMobileAds: () async {},
+        interstitialLoader: loader.load,
+      );
+      await service.initialize();
+      final ad = _FakeInterstitialAd();
+      loader.succeed(ad.handle);
+
+      final shown = service.showInterstitialIfReady();
+      expect(ad.showCalls, 1);
+      expect(await service.showInterstitialIfReady(), isFalse);
+      expect(loader.loadCalls, 1);
+
+      ad.dismiss();
+      expect(await shown, isTrue);
+      expect(ad.disposeCalls, 1);
+      expect(loader.loadCalls, 2);
+    });
+
+    test('show failure disposes, completes, and requests next preload',
+        () async {
+      final loader = _FakeInterstitialLoader();
+      final service = GoogleMobileAdsService(
+        interstitialAdUnitId: 'interstitial',
+        initializeMobileAds: () async {},
+        interstitialLoader: loader.load,
+      );
+      await service.initialize();
+      final ad = _FakeInterstitialAd();
+      loader.succeed(ad.handle);
+
+      final shown = service.showInterstitialIfReady();
+      ad.failToShow();
+
+      expect(await shown, isFalse);
+      expect(ad.disposeCalls, 1);
+      expect(loader.loadCalls, 2);
+    });
+
+    test('load failure resets state and retries only to the bound', () async {
+      var loadCalls = 0;
+      final recoveredAd = _FakeInterstitialAd();
+      final service = GoogleMobileAdsService(
+        interstitialAdUnitId: 'interstitial',
+        initializeMobileAds: () async {},
+        interstitialRetryBaseDelay: Duration.zero,
+        maxInterstitialLoadRetries: 2,
+        interstitialLoader: ({required onLoaded, required onFailed}) async {
+          loadCalls++;
+          if (loadCalls <= 3) {
+            onFailed();
+          } else {
+            onLoaded(recoveredAd.handle);
+          }
+        },
+      );
+
+      await service.initialize();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(loadCalls, 3);
+      expect(await service.showInterstitialIfReady(), isFalse);
+      expect(loadCalls, 4);
+
+      final shown = service.showInterstitialIfReady();
+      recoveredAd.dismiss();
+      expect(await shown, isTrue);
+    });
+
+    test('late timed-out load is disposed and never shown', () async {
+      final loader = _FakeInterstitialLoader();
+      final service = GoogleMobileAdsService(
+        interstitialAdUnitId: 'interstitial',
+        initializeMobileAds: () async {},
+        interstitialLoadTimeout: const Duration(milliseconds: 1),
+        interstitialRetryBaseDelay: const Duration(hours: 1),
+        interstitialLoader: loader.load,
+      );
+      await service.initialize();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      final staleAd = _FakeInterstitialAd();
+
+      loader.succeed(staleAd.handle);
+
+      expect(await service.showInterstitialIfReady(), isFalse);
+      expect(staleAd.showCalls, 0);
+      expect(staleAd.disposeCalls, 1);
+    });
+  });
 }
 
 Future<GameState> _makeState({
@@ -451,12 +580,16 @@ Future<GameState> _makeState({
 }
 
 class _FakeAdMobService implements AdMobService {
-  _FakeAdMobService({this.rewardedResult = false});
+  _FakeAdMobService({
+    this.rewardedResult = false,
+    this.interstitialResult = true,
+  });
 
   bool rewardedResult;
+  bool interstitialResult;
   bool throwRewarded = false;
   AdMobException? rewardedException;
-  Future<bool> Function()? onShowInterstitial;
+  Future<bool> Function()? onShowInterstitialIfReady;
   int bannerShows = 0;
   int bannerHides = 0;
   int interstitialShows = 0;
@@ -488,10 +621,10 @@ class _FakeAdMobService implements AdMobService {
   }
 
   @override
-  Future<bool> showInterstitial() async {
+  Future<bool> showInterstitialIfReady() async {
     interstitialShows++;
-    final show = onShowInterstitial;
-    if (show == null) return true;
+    final show = onShowInterstitialIfReady;
+    if (show == null) return interstitialResult;
     return show();
   }
 
@@ -505,4 +638,44 @@ class _FakeAdMobService implements AdMobService {
     rewardedShows++;
     return rewardedResult;
   }
+}
+
+class _FakeInterstitialLoader {
+  int loadCalls = 0;
+  void Function(InterstitialAdHandle ad)? _onLoaded;
+
+  Future<void> load({
+    required void Function(InterstitialAdHandle ad) onLoaded,
+    required VoidCallback onFailed,
+  }) async {
+    loadCalls++;
+    _onLoaded = onLoaded;
+  }
+
+  void succeed(InterstitialAdHandle ad) => _onLoaded!(ad);
+}
+
+class _FakeInterstitialAd {
+  int showCalls = 0;
+  int disposeCalls = 0;
+  VoidCallback? _onDismissed;
+  VoidCallback? _onFailedToShow;
+
+  late final handle = InterstitialAdHandle(
+    dispose: () => disposeCalls++,
+    show: ({
+      required onShowed,
+      required onDismissed,
+      required onFailedToShow,
+    }) async {
+      showCalls++;
+      _onDismissed = onDismissed;
+      _onFailedToShow = onFailedToShow;
+      onShowed();
+    },
+  );
+
+  void dismiss() => _onDismissed!();
+
+  void failToShow() => _onFailedToShow!();
 }
