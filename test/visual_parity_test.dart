@@ -265,6 +265,8 @@ void main() {
       expect(find.text('CHALLENGE'), findsOneWidget);
       expect(find.text('BOSS BATTLE EDITION'), findsOneWidget);
       expect(find.text('Operation Quest'), findsOneWidget);
+      expect(find.text('🗺️'), findsOneWidget);
+      expect(find.text('➕'), findsNothing);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/01_menu_phone_light.png'));

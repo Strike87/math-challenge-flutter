@@ -25,7 +25,7 @@ class MenuScreen extends StatelessWidget {
             // CAMPAIGN label
             _SectionLabel('CAMPAIGN', s, trailing: _streakBadge(gs, s)),
             _CampaignCard(
-              icon: '➕',
+              icon: '🗺️',
               title: 'Operation Quest',
               subtitle: '7 TRAILS • 21 STAGES',
               color: s.accent(GameConfig.mango),
