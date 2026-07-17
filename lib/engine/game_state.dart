@@ -2439,12 +2439,15 @@ class GameState extends ChangeNotifier {
               Operation.subtraction => '➖',
               Operation.multiplication => '✖️',
               Operation.division => '➗',
+              Operation.mixed => '🧮',
               _ => '⭐',
             }
           : '⭐';
-      final trailName = stage.operation == Operation.multiplication
-          ? 'Multiplication'
-          : stage.operation.label;
+      final trailName = switch (stage.operation) {
+        Operation.multiplication => 'Multiplication',
+        Operation.mixed => 'Mixed Operations',
+        _ => stage.operation.label,
+      };
       resultTitle =
           stage.difficulty == Difficulty.hard && operationQuestResultStars >= 1
               ? '$trailName Trail Complete'
