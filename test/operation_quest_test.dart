@@ -7,6 +7,7 @@ import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/features/operation_quest/domain/operation_quest.dart';
 import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/models/enums.dart';
+import 'package:math_challenge/models/player.dart';
 import 'package:math_challenge/screens/menu_screen.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
@@ -146,6 +147,27 @@ void main() {
           NumberType.natural,
           10
         ),
+        (
+          'Find the Sign',
+          Difficulty.easy,
+          Operation.mixed,
+          NumberType.natural,
+          10
+        ),
+        (
+          'Operator Detective',
+          Difficulty.medium,
+          Operation.mixed,
+          NumberType.natural,
+          10
+        ),
+        (
+          'Master Operator',
+          Difficulty.hard,
+          Operation.mixed,
+          NumberType.natural,
+          10
+        ),
       ],
     );
     expect(
@@ -166,6 +188,9 @@ void main() {
         'mixed_easy',
         'mixed_medium',
         'mixed_hard',
+        'missing_operation_easy',
+        'missing_operation_medium',
+        'missing_operation_hard',
       ],
     );
     expect(
@@ -191,6 +216,9 @@ void main() {
         'mixed_easy': 2,
         'mixed_medium': 1,
         'mixed_hard': 1,
+        'missing_operation_easy': 2,
+        'missing_operation_medium': 1,
+        'missing_operation_hard': 1,
         'unknown': 3,
       },
     }));
@@ -216,6 +244,12 @@ void main() {
     expect(progress.isUnlocked(OperationQuestStageId.mixedEasy), isTrue);
     expect(progress.isUnlocked(OperationQuestStageId.mixedMedium), isTrue);
     expect(progress.isUnlocked(OperationQuestStageId.mixedHard), isTrue);
+    expect(progress.isUnlocked(OperationQuestStageId.missingOperationEasy),
+        isTrue);
+    expect(progress.isUnlocked(OperationQuestStageId.missingOperationMedium),
+        isTrue);
+    expect(progress.isUnlocked(OperationQuestStageId.missingOperationHard),
+        isTrue);
     expect(
       OperationQuestProgress({
         OperationQuestStageId.additionHard: 1,
@@ -295,6 +329,30 @@ void main() {
       isFalse,
     );
     expect(
+      OperationQuestProgress({
+        OperationQuestStageId.mixedMedium: 3,
+      }).isUnlocked(OperationQuestStageId.missingOperationEasy),
+      isFalse,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.mixedHard: 1,
+      }).isUnlocked(OperationQuestStageId.missingOperationEasy),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.missingOperationEasy: 1,
+      }).isUnlocked(OperationQuestStageId.missingOperationMedium),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.missingOperationMedium: 1,
+      }).isUnlocked(OperationQuestStageId.missingOperationHard),
+      isTrue,
+    );
+    expect(
       progress
           .recordBest(OperationQuestStageId.additionEasy, 1)
           .bestStars(OperationQuestStageId.additionEasy),
@@ -307,7 +365,8 @@ void main() {
     );
   });
 
-  test('legacy one- through four-trail progress keeps Mixed empty', () {
+  test('legacy one- through five-trail progress keeps Missing Operation empty',
+      () {
     for (final rawStars in [
       {'addition_easy': 1},
       {'addition_easy': 1, 'subtraction_easy': 1},
@@ -322,15 +381,119 @@ void main() {
         'multiplication_easy': 1,
         'division_easy': 1,
       },
+      {
+        'addition_easy': 1,
+        'subtraction_easy': 1,
+        'multiplication_easy': 1,
+        'division_easy': 1,
+        'mixed_easy': 1,
+      },
     ]) {
       final progress = OperationQuestProgress.decode(jsonEncode({
         'version': 1,
         'stars': rawStars,
       }));
-      expect(progress.bestStars(OperationQuestStageId.mixedEasy), 0);
-      expect(progress.bestStars(OperationQuestStageId.mixedMedium), 0);
-      expect(progress.bestStars(OperationQuestStageId.mixedHard), 0);
+      expect(progress.bestStars(OperationQuestStageId.missingOperationEasy), 0);
+      expect(
+          progress.bestStars(OperationQuestStageId.missingOperationMedium), 0);
+      expect(progress.bestStars(OperationQuestStageId.missingOperationHard), 0);
     }
+  });
+
+  test('Missing Operation transformer accepts only exact direct questions', () {
+    expect(
+      [0, 1, 2, 3].map(operationQuestOperatorSymbol),
+      ['+', '−', '×', '÷'],
+    );
+    final addition = missingOperationQuestion(const Question(
+      type: Operation.addition,
+      key: 'a3+4',
+      text: '3 + 4 = ?',
+      ans: 7,
+      choices: [7, 6, 8, 9],
+    ));
+    expect(addition?.text, '3 ? 4 = 7');
+    expect(addition?.ans, 0);
+    expect(addition?.choices, [0, 1, 2, 3]);
+    expect(addition?.type, Operation.addition);
+
+    final subtraction = missingOperationQuestion(const Question(
+      type: Operation.subtraction,
+      key: 's9-4',
+      text: '9 - 4 = ?',
+      ans: 5,
+      choices: [5, 4, 6, 7],
+    ));
+    expect(subtraction?.text, '9 ? 4 = 5');
+    expect(subtraction?.ans, 1);
+
+    final multiplication = missingOperationQuestion(const Question(
+      type: Operation.multiplication,
+      key: 'm3x4',
+      text: '3 × 4 = ?',
+      ans: 12,
+      choices: [12, 9, 10, 14],
+    ));
+    expect(multiplication?.text, '3 ? 4 = 12');
+    expect(multiplication?.ans, 2);
+
+    final division = missingOperationQuestion(const Question(
+      type: Operation.division,
+      key: 'd12/3',
+      text: '12 ÷ 3 = ?',
+      ans: 4,
+      choices: [4, 3, 5, 6],
+    ));
+    expect(division?.text, '12 ? 3 = 4');
+    expect(division?.ans, 3);
+    for (final question in [
+      const Question(
+        type: Operation.addition,
+        key: 'a2+2',
+        text: '2 + 2 = ?',
+        ans: 4,
+        choices: [4, 3, 5, 6],
+      ),
+      const Question(
+        type: Operation.division,
+        key: 'd4/2',
+        text: '4 ÷ 2 = ?',
+        ans: 2,
+        choices: [2, 1, 3, 4],
+      ),
+    ]) {
+      expect(missingOperationQuestion(question), isNull);
+    }
+    expect(
+      missingOperationQuestion(const Question(
+        type: Operation.addition,
+        key: 'a?+4=7',
+        text: '? + 4 = 7',
+        ans: 3,
+        choices: [3, 2, 4, 5],
+      )),
+      isNull,
+    );
+    expect(
+      missingOperationQuestion(const Question(
+        type: Operation.division,
+        key: 'd10/3',
+        text: '10 ÷ 3 = ?',
+        ans: 3,
+        choices: [3, 2, 4, 5],
+      )),
+      isNull,
+    );
+    expect(
+      missingOperationQuestion(const Question(
+        type: Operation.subtraction,
+        key: 's9-4',
+        text: '9 - 4 = ?',
+        ans: 6,
+        choices: [6, 5, 4, 7],
+      )),
+      isNull,
+    );
   });
 
   test('quest snapshot leaves normal preferences untouched and drives replay',
@@ -748,13 +911,95 @@ void main() {
       initialTotalSkillCount + 20,
     );
     expect(
-      state.dailyProgress['division_10'],
+      state.dailyProgress['division_10'] ?? 0,
       history
           .where((attempt) =>
               attempt.correct && attempt.type == Operation.division)
           .length,
     );
     expect(state.highScores, isEmpty);
+    expect(Storage.getString('mc_operationQuestProgress', ''), saved);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets(
+      'Missing Operation Quest uses symbols while retaining concrete shared behavior',
+      (tester) async {
+    final saved = jsonEncode({
+      'version': 1,
+      'stars': {
+        'mixed_hard': 3,
+        'missing_operation_easy': 3,
+        'missing_operation_medium': 3,
+        'missing_operation_hard': 3,
+      },
+    });
+    final state = await _makeState({'mc_operationQuestProgress': saved});
+    addTearDown(state.dispose);
+    state.dailyChallengeIds = ['division_10'];
+    state.startOperationQuestStage(OperationQuestStageId.missingOperationHard);
+    state.startGame();
+    expect(state.activeRunSnapshot?.operation, Operation.mixed);
+    expect(
+      state.activeRunSnapshot?.operationQuestQuestionMechanic,
+      OperationQuestQuestionMechanic.missingOperation,
+    );
+    expect(state.rt.q?.text, matches(RegExp(r'^\d+ \? \d+ = \d+$')));
+    expect(state.rt.q?.choices, [0, 1, 2, 3]);
+    expect(
+      state.rt.q?.type,
+      isIn([
+        Operation.addition,
+        Operation.subtraction,
+        Operation.multiplication,
+        Operation.division,
+      ]),
+    );
+
+    state.p[1].pups.add(PowerUp.fifty);
+    state.usePowerUp(PowerUp.fifty);
+    final firstQuestion = state.rt.q!;
+    expect(firstQuestion.choices, hasLength(2));
+    expect(state.p[1].pups, isNot(contains(PowerUp.fifty)));
+    final wrong = firstQuestion.choices.firstWhere(
+      (choice) => (choice - firstQuestion.ans).abs() >= 1e-9,
+    );
+    state.onAnswer(wrong);
+    expect(
+      state.reactionPill,
+      contains(operationQuestOperatorSymbol(firstQuestion.ans)),
+    );
+    expect(state.reactionPill, isNot(contains('${firstQuestion.ans}')));
+
+    for (var i = 0; i < 9; i++) {
+      await tester.pump(const Duration(milliseconds: 1300));
+      state.rt.timer?.cancel();
+      final question = state.rt.q!;
+      state.onAnswer(question.choices.firstWhere(
+        (choice) => (choice - question.ans).abs() >= 1e-9,
+      ));
+    }
+    await tester.pump(const Duration(milliseconds: 1300));
+    expect(state.resultIcon, '❔');
+    expect(state.resultTitle, 'Master Operator Complete');
+    expect(state.highScores, isEmpty);
+    expect(Storage.getString('mc_operationQuestProgress', ''), saved);
+
+    await state.replayGame();
+    await _finishQuest(tester, state, correctAnswers: 6);
+    expect(state.resultTitle, 'Missing Operation Trail Complete');
+    expect(state.p[1].history, hasLength(10));
+    expect(
+      state.p[1].history.every((attempt) => attempt.type != Operation.mixed),
+      isTrue,
+    );
+    expect(
+      state.dailyProgress['division_10'] ?? 0,
+      state.p[1].history
+          .where((attempt) =>
+              attempt.correct && attempt.type == Operation.division)
+          .length,
+    );
     expect(Storage.getString('mc_operationQuestProgress', ''), saved);
     await tester.pump(const Duration(seconds: 3));
   });
@@ -770,7 +1015,7 @@ void main() {
     );
 
     expect(find.text('Operation Quest'), findsOneWidget);
-    expect(find.text('5 TRAILS • 15 STAGES'), findsOneWidget);
+    expect(find.text('6 TRAILS • 18 STAGES'), findsOneWidget);
     await tester.tap(find.text('Operation Quest'));
     await tester.pump();
     expect(find.text('➕ Addition Trail'), findsOneWidget);
@@ -778,6 +1023,7 @@ void main() {
     expect(find.text('✖️ Multiplication Trail'), findsOneWidget);
     expect(find.text('➗ Division Trail'), findsOneWidget);
     expect(find.text('🧮 Mixed Operations Trail'), findsOneWidget);
+    expect(find.text('❔ Missing Operation Trail'), findsOneWidget);
     expect(find.text('First Sums'), findsOneWidget);
     expect(find.text('Bigger Sums'), findsOneWidget);
     expect(find.text('Addition Challenge'), findsOneWidget);
@@ -793,7 +1039,10 @@ void main() {
     expect(find.text('Mix It Up'), findsOneWidget);
     expect(find.text('Operation Switch'), findsOneWidget);
     expect(find.text('Mixed Challenge'), findsOneWidget);
-    expect(find.text('🔒'), findsNWidgets(14));
+    expect(find.text('Find the Sign'), findsOneWidget);
+    expect(find.text('Operator Detective'), findsOneWidget);
+    expect(find.text('Master Operator'), findsOneWidget);
+    expect(find.text('🔒'), findsNWidgets(17));
 
     state.startOperationQuestStage(OperationQuestStageId.subtractionEasy);
     expect(state.currentScreen, GameScreen.menu);
@@ -802,6 +1051,8 @@ void main() {
     state.startOperationQuestStage(OperationQuestStageId.divisionEasy);
     expect(state.currentScreen, GameScreen.menu);
     state.startOperationQuestStage(OperationQuestStageId.mixedEasy);
+    expect(state.currentScreen, GameScreen.menu);
+    state.startOperationQuestStage(OperationQuestStageId.missingOperationEasy);
     expect(state.currentScreen, GameScreen.menu);
 
     await tester.tap(
@@ -865,7 +1116,7 @@ void main() {
     await tester.drag(scrollable, const Offset(0, -300));
     await tester.pump();
     expect(scrollState.position.pixels, greaterThan(0));
-    await tester.ensureVisible(find.text('Mixed Challenge'));
+    await tester.ensureVisible(find.text('Master Operator'));
     expect(find.text('Close').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

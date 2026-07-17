@@ -129,7 +129,22 @@ class OperationQuestModal extends StatelessWidget {
           const SizedBox(height: 18),
           _OperationQuestTrail(
             heading: '🧮 Mixed Operations Trail',
-            stages: operationQuestStagesFor(Operation.mixed),
+            stages: operationQuestStages
+                .where((stage) =>
+                    stage.operation == Operation.mixed &&
+                    stage.questionMechanic ==
+                        OperationQuestQuestionMechanic.standard)
+                .toList(),
+            gs: gs,
+          ),
+          const SizedBox(height: 18),
+          _OperationQuestTrail(
+            heading: '❔ Missing Operation Trail',
+            stages: operationQuestStages
+                .where((stage) =>
+                    stage.questionMechanic ==
+                    OperationQuestQuestionMechanic.missingOperation)
+                .toList(),
             gs: gs,
           ),
         ],

@@ -157,6 +157,7 @@ class GameRunSnapshot {
     required this.players,
     required this.questionTarget,
     this.operationQuestStageId,
+    this.operationQuestQuestionMechanic,
   });
 
   final GameRunType runType;
@@ -168,6 +169,7 @@ class GameRunSnapshot {
   final int players;
   final int questionTarget;
   final OperationQuestStageId? operationQuestStageId;
+  final OperationQuestQuestionMechanic? operationQuestQuestionMechanic;
 }
 
 @visibleForTesting
@@ -375,6 +377,9 @@ class GameState extends ChangeNotifier {
   GameRunSnapshot? get activeRunSnapshot => _runSnapshot;
   bool get isOperationQuest =>
       _runSnapshot?.runType == GameRunType.operationQuest;
+  bool get isMissingOperationQuest =>
+      _runSnapshot?.operationQuestQuestionMechanic ==
+      OperationQuestQuestionMechanic.missingOperation;
   int get setupPlayers => _pendingOperationQuestStageId == null ? players : 1;
   int get activePlayers => _runSnapshot?.players ?? players;
   GameMode get activeMode => _runSnapshot?.mode ?? mode;
@@ -1545,6 +1550,7 @@ class GameState extends ChangeNotifier {
       players: 1,
       questionTarget: stage.questionTarget,
       operationQuestStageId: id,
+      operationQuestQuestionMechanic: stage.questionMechanic,
     );
   }
 
@@ -1640,39 +1646,51 @@ class GameState extends ChangeNotifier {
     }
 
     // Build question with uniqueness guarantee
-    Question q = _qgen.build(type: type, diff: d, numType: generatedNumType);
+    Question? q = isMissingOperationQuest
+        ? null
+        : _qgen.build(type: type, diff: d, numType: generatedNumType);
     bool foundUnique = false;
     for (var attempt = 0; attempt < 500; attempt++) {
       final candidate =
           _qgen.build(type: type, diff: d, numType: generatedNumType);
+      final question = isMissingOperationQuest
+          ? missingOperationQuestion(candidate)
+          : candidate;
+      if (question == null) continue;
       if (!rt.usedFacts.contains(candidate.key)) {
         rt.usedFacts.add(candidate.key);
-        q = candidate;
+        q = question;
         foundUnique = true;
         break;
       }
     }
     if (!foundUnique) {
+      if (isMissingOperationQuest) {
+        throw StateError(
+          'Missing Operation Quest could not generate a unique direct question.',
+        );
+      }
       rt.usedFacts.clear();
       q = _qgen.build(type: type, diff: d, numType: generatedNumType);
       rt.usedFacts.add(q.key);
     }
 
-    q = Question(
-      type: q.type,
-      key: q.key,
-      text: q.text,
-      ans: q.ans,
-      choices: q.choices,
+    final generatedQuestion = q!;
+    final runtimeQuestion = Question(
+      type: generatedQuestion.type,
+      key: generatedQuestion.key,
+      text: generatedQuestion.text,
+      ans: generatedQuestion.ans,
+      choices: generatedQuestion.choices,
       boss: boss,
       diff: d,
       numType: generatedNumType,
-      ratDP: q.ratDP,
+      ratDP: generatedQuestion.ratDP,
     );
 
-    rt.q = q;
+    rt.q = runtimeQuestion;
     if (rt.answerStyle == AnswerStyle.trueFalse) {
-      final proposal = trueFalseProposal(q);
+      final proposal = trueFalseProposal(runtimeQuestion);
       rt.proposedAnswer = proposal.answer;
       rt.proposedTruth = proposal.truth;
     }
@@ -2055,6 +2073,14 @@ class GameState extends ChangeNotifier {
     }
   }
 
+  String _correctAnswerText() {
+    final question = rt.q;
+    if (question == null) return '';
+    return isMissingOperationQuest
+        ? operationQuestOperatorSymbol(question.ans)
+        : '${question.ans}';
+  }
+
   void _onWrong(
       PlayerState pl, int pid, bool isSkip, bool isTimeout, num? val) {
     rt.combo = 0;
@@ -2094,7 +2120,7 @@ class GameState extends ChangeNotifier {
     if (activeMode == GameMode.survival && !isSkip) {
       rt.survivalLives--;
       bigEmoji = '💔';
-      reactionPill = '💔 Ans: ${rt.q?.ans}';
+      reactionPill = '💔 Ans: ${_correctAnswerText()}';
       bigEmojiVisible = true;
       audio.playWrong();
       audio.vibrateWrong();
@@ -2108,7 +2134,7 @@ class GameState extends ChangeNotifier {
       rt.dailyBossLives--;
       bigEmoji = '💔';
       rt.bossMood = 'wrong';
-      reactionPill = '💔 Boss hit! Ans: ${rt.q?.ans}';
+      reactionPill = '💔 Boss hit! Ans: ${_correctAnswerText()}';
       bigEmojiVisible = true;
       audio.playWrong();
       audio.vibrateWrong();
@@ -2123,7 +2149,7 @@ class GameState extends ChangeNotifier {
       _masterLives--;
       bigEmoji = '💔';
       rt.bossMood = 'wrong';
-      reactionPill = '$wrongLabel 💔 Ans: ${rt.q?.ans}';
+      reactionPill = '$wrongLabel 💔 Ans: ${_correctAnswerText()}';
       bigEmojiVisible = true;
       audio.playWrong();
       audio.vibrateWrong();
@@ -2137,10 +2163,10 @@ class GameState extends ChangeNotifier {
       if (isSkip) {
         pl.skipped++;
         bigEmoji = '⏩';
-        reactionPill = 'Skipped! Ans: ${rt.q?.ans}';
+        reactionPill = 'Skipped! Ans: ${_correctAnswerText()}';
       } else {
         bigEmoji = isTimeout ? '⏰' : wrongLabel.split(' ').first;
-        reactionPill = '$wrongLabel Ans: ${rt.q?.ans}';
+        reactionPill = '$wrongLabel Ans: ${_correctAnswerText()}';
       }
       bigEmojiVisible = true;
       if (!isTimeout) {
@@ -2434,17 +2460,24 @@ class GameState extends ChangeNotifier {
         _runSnapshot!.operationQuestStageId!,
       );
       resultIcon = operationQuestResultStars == 0
-          ? switch (stage.operation) {
-              Operation.addition => '➕',
-              Operation.subtraction => '➖',
-              Operation.multiplication => '✖️',
-              Operation.division => '➗',
-              Operation.mixed => '🧮',
-              _ => '⭐',
-            }
+          ? stage.questionMechanic ==
+                  OperationQuestQuestionMechanic.missingOperation
+              ? '❔'
+              : switch (stage.operation) {
+                  Operation.addition => '➕',
+                  Operation.subtraction => '➖',
+                  Operation.multiplication => '✖️',
+                  Operation.division => '➗',
+                  Operation.mixed => '🧮',
+                  _ => '⭐',
+                }
           : '⭐';
       final trailName = switch (stage.operation) {
         Operation.multiplication => 'Multiplication',
+        Operation.mixed
+            when stage.questionMechanic ==
+                OperationQuestQuestionMechanic.missingOperation =>
+          'Missing Operation',
         Operation.mixed => 'Mixed Operations',
         _ => stage.operation.label,
       };
