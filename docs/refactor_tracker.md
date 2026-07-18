@@ -210,6 +210,48 @@ Only the first unchecked item under **Active** may be started.
     - Independent fallback regression reviewer passed under the `AGENTS.md`
       availability policy.
 
+- [ ] V2-03G — Reorder main-menu challenge rows
+  - Reorder the existing three main-menu challenge rows/cards to:
+    1. Master Challenge
+    2. Daily Boss
+    3. Operation Quest
+  - Preserve each existing widget/card implementation.
+  - Preserve all existing callbacks and navigation targets.
+  - Preserve Master Challenge behavior.
+  - Preserve Daily Boss behavior, daily state, rewards, and challenge logic.
+  - Preserve Operation Quest navigation, stars, trails, unlocks, and progress.
+  - Do not change Quick Practice.
+  - Do not add Weak Skills Practice.
+  - Do not modify `GameState`, generators, persistence, mastery, achievements,
+    adaptive logic, or gameplay.
+  - Do not redesign the cards or rename titles or subtitles.
+  - This is a presentation-order change only.
+  - Expected production scope:
+    - `lib/screens/menu_screen.dart`
+  - Expected focused tests:
+    - `test/visual_parity_test.dart`
+    - Any existing menu/navigation test that explicitly checks challenge order.
+  - Expected direct menu goldens:
+    - `01_menu_phone_light.png`
+    - `01_menu_phone_dark.png`
+    - `02_menu_tablet_light.png`
+    - `02_menu_tablet_dark.png`
+  - Menu-backed modal goldens may also change because the reordered menu is
+    visible through translucent or blurred overlays.
+  - Do not pre-authorize modal golden updates; visually adjudicate each
+    failure before updating it.
+  - Acceptance criteria:
+    - Master Challenge appears before Daily Boss.
+    - Daily Boss appears before Operation Quest.
+    - Final order is exactly Master Challenge, Daily Boss, Operation Quest.
+    - All three existing navigation callbacks remain unchanged.
+    - No challenge is duplicated or removed.
+    - Quick Practice remains unchanged and no Weak Skills Practice is added.
+    - Responsive phone/tablet and light/dark rendering remain valid.
+    - No unrelated gameplay or progression behavior changes.
+    - Mandatory parity gate passes before implementation.
+    - Mandatory regression reviewer passes before commit.
+
 ## Completed
 
 - [x] R3 CoinLedger
