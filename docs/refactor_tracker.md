@@ -149,6 +149,52 @@ Only the first unchecked item under **Active** may be started.
       reviewer availability policy.
   - Preferred commit: `feat: add Missing Operation to Quick Practice`.
 
+- [ ] V2-03F — Quick Practice layout restructuring
+  - Convert Mixed Operations from the separate full-width `_MixBar` into the
+    sixth square `_PracticeCard`.
+  - Place Mixed Operations beside Missing Operation so Quick Practice uses
+    three rows of two cards:
+    - Addition | Subtraction
+    - Multiplication | Division
+    - Missing Operation | Mixed Operations
+  - Preserve the existing `goToConfig('mixed')` behavior and all existing
+    gameplay and configuration behavior.
+  - Remove obsolete `_MixBar` code if unused.
+  - Update only directly affected tests and approved goldens.
+  - Do not add Weak Skills Practice.
+  - Do not reorder Master Challenge, Daily Boss, or Operation Quest.
+  - Do not change `GameState`, generators, persistence, mastery, replay, or
+    gameplay logic.
+  - Expected production scope:
+    - `lib/screens/menu_screen.dart`
+  - Expected focused tests:
+    - `test/missing_operation_practice_test.dart`
+    - `test/visual_parity_test.dart`
+  - Expected direct menu goldens:
+    - `01_menu_phone_light.png`
+    - `01_menu_phone_dark.png`
+    - `02_menu_tablet_light.png`
+    - `02_menu_tablet_dark.png`
+  - Potential menu-backed modal goldens requiring separate adjudication:
+    - `02b_operation_quest_map_phone.png`
+    - `09_daily_boss_modal.png`
+    - `12_coin_shop_modal.png`
+    - `13_settings_modal_light.png`
+    - `13_settings_modal_dark.png`
+  - Do not update those modal goldens unless visual review proves the modal
+    foreground and layout are unchanged and only the underlying menu or
+    background changed.
+  - Acceptance criteria:
+    - Six square Quick Practice cards total, with two cards per row.
+    - Missing Operation and Mixed Operations share the final row.
+    - No duplicate Mixed Operations entry and no Missing Number card.
+    - Existing tap and navigation behavior is preserved.
+    - Responsive phone and tablet layout, light and dark rendering, and
+      text-scale usability are preserved.
+    - No unrelated behavior changes.
+    - Mandatory parity and regression-reviewer gates pass.
+    - Full required validation passes before commit.
+
 ## Completed
 
 - [x] R3 CoinLedger
