@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/features/operation_quest/domain/operation_quest.dart';
+import 'package:math_challenge/features/gameplay/domain/question_mechanic.dart';
 import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/models/player.dart';
@@ -220,9 +222,9 @@ void main() {
     expect(
       operationQuestStages.map((stage) => stage.questionMechanic),
       [
-        ...List.filled(15, OperationQuestQuestionMechanic.standard),
-        ...List.filled(3, OperationQuestQuestionMechanic.missingOperation),
-        ...List.filled(3, OperationQuestQuestionMechanic.missingNumber),
+        ...List.filled(15, QuestionMechanic.standard),
+        ...List.filled(3, QuestionMechanic.missingOperation),
+        ...List.filled(3, QuestionMechanic.missingNumber),
       ],
     );
     expect(
@@ -480,48 +482,56 @@ void main() {
 
   test('Missing Operation transformer accepts only exact direct questions', () {
     expect(
-      [0, 1, 2, 3].map(operationQuestOperatorSymbol),
+      [0, 1, 2, 3].map(operatorSymbol),
       ['+', '−', '×', '÷'],
     );
-    final addition = missingOperationQuestion(const Question(
-      type: Operation.addition,
-      key: 'a3+4',
-      text: '3 + 4 = ?',
-      ans: 7,
-      choices: [7, 6, 8, 9],
-    ));
+    final addition = missingOperationQuestion(
+        const Question(
+          type: Operation.addition,
+          key: 'a3+4',
+          text: '3 + 4 = ?',
+          ans: 7,
+          choices: [7, 6, 8, 9],
+        ),
+        Random(1));
     expect(addition?.text, '3 ? 4 = 7');
     expect(addition?.ans, 0);
-    expect(addition?.choices, [0, 1, 2, 3]);
+    expect(addition?.choices, unorderedEquals(operatorAnswerChoices));
     expect(addition?.type, Operation.addition);
 
-    final subtraction = missingOperationQuestion(const Question(
-      type: Operation.subtraction,
-      key: 's9-4',
-      text: '9 - 4 = ?',
-      ans: 5,
-      choices: [5, 4, 6, 7],
-    ));
+    final subtraction = missingOperationQuestion(
+        const Question(
+          type: Operation.subtraction,
+          key: 's9-4',
+          text: '9 - 4 = ?',
+          ans: 5,
+          choices: [5, 4, 6, 7],
+        ),
+        Random(1));
     expect(subtraction?.text, '9 ? 4 = 5');
     expect(subtraction?.ans, 1);
 
-    final multiplication = missingOperationQuestion(const Question(
-      type: Operation.multiplication,
-      key: 'm3x4',
-      text: '3 × 4 = ?',
-      ans: 12,
-      choices: [12, 9, 10, 14],
-    ));
+    final multiplication = missingOperationQuestion(
+        const Question(
+          type: Operation.multiplication,
+          key: 'm3x4',
+          text: '3 × 4 = ?',
+          ans: 12,
+          choices: [12, 9, 10, 14],
+        ),
+        Random(1));
     expect(multiplication?.text, '3 ? 4 = 12');
     expect(multiplication?.ans, 2);
 
-    final division = missingOperationQuestion(const Question(
-      type: Operation.division,
-      key: 'd12/3',
-      text: '12 ÷ 3 = ?',
-      ans: 4,
-      choices: [4, 3, 5, 6],
-    ));
+    final division = missingOperationQuestion(
+        const Question(
+          type: Operation.division,
+          key: 'd12/3',
+          text: '12 ÷ 3 = ?',
+          ans: 4,
+          choices: [4, 3, 5, 6],
+        ),
+        Random(1));
     expect(division?.text, '12 ? 3 = 4');
     expect(division?.ans, 3);
     for (final question in [
@@ -540,36 +550,42 @@ void main() {
         choices: [2, 1, 3, 4],
       ),
     ]) {
-      expect(missingOperationQuestion(question), isNull);
+      expect(missingOperationQuestion(question, Random(1)), isNull);
     }
     expect(
-      missingOperationQuestion(const Question(
-        type: Operation.addition,
-        key: 'a?+4=7',
-        text: '? + 4 = 7',
-        ans: 3,
-        choices: [3, 2, 4, 5],
-      )),
+      missingOperationQuestion(
+          const Question(
+            type: Operation.addition,
+            key: 'a?+4=7',
+            text: '? + 4 = 7',
+            ans: 3,
+            choices: [3, 2, 4, 5],
+          ),
+          Random(1)),
       isNull,
     );
     expect(
-      missingOperationQuestion(const Question(
-        type: Operation.division,
-        key: 'd10/3',
-        text: '10 ÷ 3 = ?',
-        ans: 3,
-        choices: [3, 2, 4, 5],
-      )),
+      missingOperationQuestion(
+          const Question(
+            type: Operation.division,
+            key: 'd10/3',
+            text: '10 ÷ 3 = ?',
+            ans: 3,
+            choices: [3, 2, 4, 5],
+          ),
+          Random(1)),
       isNull,
     );
     expect(
-      missingOperationQuestion(const Question(
-        type: Operation.subtraction,
-        key: 's9-4',
-        text: '9 - 4 = ?',
-        ans: 6,
-        choices: [6, 5, 4, 7],
-      )),
+      missingOperationQuestion(
+          const Question(
+            type: Operation.subtraction,
+            key: 's9-4',
+            text: '9 - 4 = ?',
+            ans: 6,
+            choices: [6, 5, 4, 7],
+          ),
+          Random(1)),
       isNull,
     );
   });
@@ -1082,11 +1098,11 @@ void main() {
     state.startGame();
     expect(state.activeRunSnapshot?.operation, Operation.mixed);
     expect(
-      state.activeRunSnapshot?.operationQuestQuestionMechanic,
-      OperationQuestQuestionMechanic.missingOperation,
+      state.activeRunSnapshot?.questionMechanic,
+      QuestionMechanic.missingOperation,
     );
     expect(state.rt.q?.text, matches(RegExp(r'^\d+ \? \d+ = \d+$')));
-    expect(state.rt.q?.choices, [0, 1, 2, 3]);
+    expect(state.rt.q?.choices, unorderedEquals(operatorAnswerChoices));
     expect(
       state.rt.q?.type,
       isIn([
@@ -1101,6 +1117,8 @@ void main() {
     state.usePowerUp(PowerUp.fifty);
     final firstQuestion = state.rt.q!;
     expect(firstQuestion.choices, hasLength(2));
+    expect(firstQuestion.choices.where((choice) => choice == firstQuestion.ans),
+        hasLength(1));
     expect(state.p[1].pups, isNot(contains(PowerUp.fifty)));
     final wrong = firstQuestion.choices.firstWhere(
       (choice) => (choice - firstQuestion.ans).abs() >= 1e-9,
@@ -1108,7 +1126,7 @@ void main() {
     state.onAnswer(wrong);
     expect(
       state.reactionPill,
-      contains(operationQuestOperatorSymbol(firstQuestion.ans)),
+      contains(operatorSymbol(firstQuestion.ans)),
     );
     expect(state.reactionPill, isNot(contains('${firstQuestion.ans}')));
 
@@ -1173,8 +1191,8 @@ void main() {
     state.startGame();
     expect(state.activeRunSnapshot?.operation, Operation.mixed);
     expect(
-      state.activeRunSnapshot?.operationQuestQuestionMechanic,
-      OperationQuestQuestionMechanic.missingNumber,
+      state.activeRunSnapshot?.questionMechanic,
+      QuestionMechanic.missingNumber,
     );
     expect(state.activeMode, GameMode.standard);
     expect(state.activePlayers, 1);

@@ -52,7 +52,9 @@ class ConfigScreen extends StatelessWidget {
                 _ModeInfoCard(mode: gs.mode, s: s),
                 const SizedBox(height: 16),
 
-                if (gs.mode == GameMode.standard && gs.players == 1) ...[
+                if (gs.mode == GameMode.standard &&
+                    gs.players == 1 &&
+                    !gs.isMissingOperationPractice) ...[
                   _SectionTitle('Answer Style', s),
                   _ToggleRow(
                     options: [

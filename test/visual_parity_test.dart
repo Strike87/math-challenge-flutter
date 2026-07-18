@@ -265,6 +265,8 @@ void main() {
       expect(find.text('CHALLENGE'), findsOneWidget);
       expect(find.text('BOSS BATTLE EDITION'), findsOneWidget);
       expect(find.text('Operation Quest'), findsOneWidget);
+      expect(find.text('MISSING OPERATION'), findsOneWidget);
+      expect(find.text('MISSING NUMBER'), findsNothing);
       expect(find.text('🗺️'), findsOneWidget);
       expect(find.text('➕'), findsNothing);
       expectNoVisualException(tester);
@@ -274,6 +276,7 @@ void main() {
       state.settings.toggleDark();
       await tester.pumpAndSettle();
       expect(find.text('Operation Quest'), findsOneWidget);
+      expect(find.text('MISSING OPERATION'), findsOneWidget);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/01_menu_phone_dark.png'));
@@ -606,7 +609,7 @@ void main() {
         key: 'visual-missing-operation',
         text: '90 ? 9 = 99',
         ans: 0,
-        choices: [0, 1, 2, 3],
+        choices: [2, 0, 3, 1],
         diff: Difficulty.hard,
         numType: NumberType.natural,
       );

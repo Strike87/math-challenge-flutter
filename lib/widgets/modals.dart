@@ -7,6 +7,7 @@ import '../engine/game_state.dart';
 import '../features/modals/presentation/widgets/avatar_builder_tab_label.dart';
 import '../features/modals/presentation/widgets/skill_dashboard_header.dart';
 import '../features/operation_quest/domain/operation_quest.dart';
+import '../features/gameplay/domain/question_mechanic.dart';
 import '../game_config.dart';
 import '../models/enums.dart';
 import '../models/game_data.dart';
@@ -132,8 +133,7 @@ class OperationQuestModal extends StatelessWidget {
             stages: operationQuestStages
                 .where((stage) =>
                     stage.operation == Operation.mixed &&
-                    stage.questionMechanic ==
-                        OperationQuestQuestionMechanic.standard)
+                    stage.questionMechanic == QuestionMechanic.standard)
                 .toList(),
             gs: gs,
           ),
@@ -142,8 +142,7 @@ class OperationQuestModal extends StatelessWidget {
             heading: '❔ Missing Operation Trail',
             stages: operationQuestStages
                 .where((stage) =>
-                    stage.questionMechanic ==
-                    OperationQuestQuestionMechanic.missingOperation)
+                    stage.questionMechanic == QuestionMechanic.missingOperation)
                 .toList(),
             gs: gs,
           ),
@@ -152,8 +151,7 @@ class OperationQuestModal extends StatelessWidget {
             heading: '🔢 Missing Number Trail',
             stages: operationQuestStages
                 .where((stage) =>
-                    stage.questionMechanic ==
-                    OperationQuestQuestionMechanic.missingNumber)
+                    stage.questionMechanic == QuestionMechanic.missingNumber)
                 .toList(),
             gs: gs,
           ),

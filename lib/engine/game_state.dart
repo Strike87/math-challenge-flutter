@@ -9,6 +9,7 @@ import '../features/economy/domain/coin_ledger.dart';
 import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/economy/domain/number_type_unlock_policy.dart';
 import '../features/gameplay/domain/survival_progression_policy.dart';
+import '../features/gameplay/domain/question_mechanic.dart';
 import '../features/modals/presentation/toast_controller.dart';
 import '../features/operation_quest/domain/operation_quest.dart';
 import '../game_config.dart';
@@ -158,7 +159,7 @@ class GameRunSnapshot {
     required this.players,
     required this.questionTarget,
     this.operationQuestStageId,
-    this.operationQuestQuestionMechanic,
+    this.questionMechanic = QuestionMechanic.standard,
   });
 
   final GameRunType runType;
@@ -170,7 +171,7 @@ class GameRunSnapshot {
   final int players;
   final int questionTarget;
   final OperationQuestStageId? operationQuestStageId;
-  final OperationQuestQuestionMechanic? operationQuestQuestionMechanic;
+  final QuestionMechanic questionMechanic;
 }
 
 @visibleForTesting
@@ -322,6 +323,7 @@ class GameState extends ChangeNotifier {
   int _masterProgress = 0;
   GameRunSnapshot? _runSnapshot;
   OperationQuestStageId? _pendingOperationQuestStageId;
+  QuestionMechanic _pendingQuestionMechanic = QuestionMechanic.standard;
 
   // ─── Options ────────────────────────────────────────────────
   int players = 2;
@@ -379,12 +381,15 @@ class GameState extends ChangeNotifier {
   GameRunSnapshot? get activeRunSnapshot => _runSnapshot;
   bool get isOperationQuest =>
       _runSnapshot?.runType == GameRunType.operationQuest;
-  bool get isMissingOperationQuest =>
-      _runSnapshot?.operationQuestQuestionMechanic ==
-      OperationQuestQuestionMechanic.missingOperation;
+  bool get isMissingOperation =>
+      _runSnapshot?.questionMechanic == QuestionMechanic.missingOperation;
+  bool get isMissingOperationQuest => isOperationQuest && isMissingOperation;
+  bool get isMissingOperationPractice =>
+      !isOperationQuest &&
+      (_runSnapshot?.questionMechanic == QuestionMechanic.missingOperation ||
+          _pendingQuestionMechanic == QuestionMechanic.missingOperation);
   bool get isMissingNumberQuest =>
-      _runSnapshot?.operationQuestQuestionMechanic ==
-      OperationQuestQuestionMechanic.missingNumber;
+      _runSnapshot?.questionMechanic == QuestionMechanic.missingNumber;
   int get setupPlayers => _pendingOperationQuestStageId == null ? players : 1;
   int get activePlayers => _runSnapshot?.players ?? players;
   GameMode get activeMode => _runSnapshot?.mode ?? mode;
@@ -1331,13 +1336,17 @@ class GameState extends ChangeNotifier {
 
   // ─── Configuration actions ──────────────────────────────────
   void goToConfig(String operationName) {
+    final missingOperation = operationName == 'missingOperation';
     final op = Operation.fromString(operationName);
+    _pendingQuestionMechanic = missingOperation
+        ? QuestionMechanic.missingOperation
+        : QuestionMechanic.standard;
     if (op == Operation.master) {
       rt.challenge = Operation.master;
       showModal(GameModal.masterIntro);
       return;
     }
-    rt.challenge = op;
+    rt.challenge = missingOperation ? Operation.mixed : op;
     showScreen(GameScreen.numType);
   }
 
@@ -1400,7 +1409,9 @@ class GameState extends ChangeNotifier {
           players == 1 &&
           rt.challenge != Operation.master &&
           rt.challenge != Operation.dailyBoss
-      ? selectedAnswerStyle
+      ? (_pendingQuestionMechanic == QuestionMechanic.missingOperation
+          ? AnswerStyle.choice4
+          : selectedAnswerStyle)
       : AnswerStyle.choice4;
 
   void goToPlayerSetup() {
@@ -1408,12 +1419,14 @@ class GameState extends ChangeNotifier {
   }
 
   void showOperationQuest() {
+    _pendingQuestionMechanic = QuestionMechanic.standard;
     _pendingOperationQuestStageId = null;
     showModal(GameModal.operationQuest);
   }
 
   void startOperationQuestStage(OperationQuestStageId id) {
     if (!operationQuestProgress.isUnlocked(id)) return;
+    _pendingQuestionMechanic = QuestionMechanic.standard;
     _pendingOperationQuestStageId = id;
     closeModal();
     showScreen(GameScreen.player);
@@ -1435,6 +1448,7 @@ class GameState extends ChangeNotifier {
   }
 
   void startMasterMode() {
+    _pendingQuestionMechanic = QuestionMechanic.standard;
     closeModal();
     _turnSeq++;
     players = 1;
@@ -1449,10 +1463,12 @@ class GameState extends ChangeNotifier {
   }
 
   void showDailyBoss() {
+    _pendingQuestionMechanic = QuestionMechanic.standard;
     showModal(GameModal.dailyBoss);
   }
 
   void startDailyBoss() {
+    _pendingQuestionMechanic = QuestionMechanic.standard;
     closeModal();
     rt.challenge = Operation.dailyBoss;
     rt.dailyBoss = dailyBoss;
@@ -1499,9 +1515,11 @@ class GameState extends ChangeNotifier {
                 answerStyle: effectiveAnswerStyle,
                 players: players,
                 questionTarget: questionCount,
+                questionMechanic: _pendingQuestionMechanic,
               )
             : _operationQuestSnapshot(pendingQuestId));
     _pendingOperationQuestStageId = null;
+    _pendingQuestionMechanic = QuestionMechanic.standard;
     _runSnapshot = snapshot;
     final isMaster = snapshot.operation == Operation.master;
     final isBoss = snapshot.operation == Operation.dailyBoss;
@@ -1576,7 +1594,7 @@ class GameState extends ChangeNotifier {
       players: 1,
       questionTarget: stage.questionTarget,
       operationQuestStageId: id,
-      operationQuestQuestionMechanic: stage.questionMechanic,
+      questionMechanic: stage.questionMechanic,
     );
   }
 
@@ -1672,20 +1690,20 @@ class GameState extends ChangeNotifier {
     }
 
     // Build question with uniqueness guarantee
-    final filtersQuestQuestions =
-        isMissingOperationQuest || isMissingNumberQuest;
+    final filtersQuestQuestions = isMissingOperation || isMissingNumberQuest;
     Question? q = filtersQuestQuestions
         ? null
         : _qgen.build(type: type, diff: d, numType: generatedNumType);
+    Question? retainedMissingOperationQuestion;
+    String? retainedMissingOperationKey;
     bool foundUnique = false;
     for (var attempt = 0; attempt < 500; attempt++) {
       final candidate =
           _qgen.build(type: type, diff: d, numType: generatedNumType);
-      final question = switch (_runSnapshot?.operationQuestQuestionMechanic) {
-        OperationQuestQuestionMechanic.missingOperation =>
-          missingOperationQuestion(candidate),
-        OperationQuestQuestionMechanic.missingNumber =>
-          missingNumberQuestion(candidate, d),
+      final question = switch (_runSnapshot?.questionMechanic) {
+        QuestionMechanic.missingOperation =>
+          missingOperationQuestion(candidate, _rng),
+        QuestionMechanic.missingNumber => missingNumberQuestion(candidate, d),
         _ => candidate,
       };
       if (question == null) continue;
@@ -1695,16 +1713,26 @@ class GameState extends ChangeNotifier {
         foundUnique = true;
         break;
       }
+      if (isMissingOperation && retainedMissingOperationQuestion == null) {
+        retainedMissingOperationQuestion = question;
+        retainedMissingOperationKey = candidate.key;
+      }
     }
     if (!foundUnique) {
-      if (filtersQuestQuestions) {
+      if (retainedMissingOperationQuestion != null) {
+        rt.usedFacts
+          ..clear()
+          ..add(retainedMissingOperationKey!);
+        q = retainedMissingOperationQuestion;
+      } else if (filtersQuestQuestions) {
         throw StateError(
-          '${isMissingOperationQuest ? 'Missing Operation' : 'Missing Number'} Quest could not generate a unique supported question.',
+          '${isMissingOperation ? 'Missing Operation' : 'Missing Number'} could not generate a unique supported question.',
         );
+      } else {
+        rt.usedFacts.clear();
+        q = _qgen.build(type: type, diff: d, numType: generatedNumType);
+        rt.usedFacts.add(q.key);
       }
-      rt.usedFacts.clear();
-      q = _qgen.build(type: type, diff: d, numType: generatedNumType);
-      rt.usedFacts.add(q.key);
     }
 
     final generatedQuestion = q!;
@@ -2108,8 +2136,8 @@ class GameState extends ChangeNotifier {
   String _correctAnswerText() {
     final question = rt.q;
     if (question == null) return '';
-    return isMissingOperationQuest
-        ? operationQuestOperatorSymbol(question.ans)
+    return isMissingOperation
+        ? operatorSymbol(question.ans)
         : '${question.ans}';
   }
 
@@ -2499,8 +2527,8 @@ class GameState extends ChangeNotifier {
       );
       resultIcon = operationQuestResultStars == 0
           ? switch (stage.questionMechanic) {
-              OperationQuestQuestionMechanic.missingOperation => '❔',
-              OperationQuestQuestionMechanic.missingNumber => '🔢',
+              QuestionMechanic.missingOperation => '❔',
+              QuestionMechanic.missingNumber => '🔢',
               _ => switch (stage.operation) {
                   Operation.addition => '➕',
                   Operation.subtraction => '➖',
@@ -2514,12 +2542,10 @@ class GameState extends ChangeNotifier {
       final trailName = switch (stage.operation) {
         Operation.multiplication => 'Multiplication',
         Operation.mixed
-            when stage.questionMechanic ==
-                OperationQuestQuestionMechanic.missingOperation =>
+            when stage.questionMechanic == QuestionMechanic.missingOperation =>
           'Missing Operation',
         Operation.mixed
-            when stage.questionMechanic ==
-                OperationQuestQuestionMechanic.missingNumber =>
+            when stage.questionMechanic == QuestionMechanic.missingNumber =>
           'Missing Number',
         Operation.mixed => 'Mixed Operations',
         _ => stage.operation.label,
@@ -2609,6 +2635,7 @@ class GameState extends ChangeNotifier {
     _masterProgress = 0;
     _runSnapshot = null;
     _pendingOperationQuestStageId = null;
+    _pendingQuestionMechanic = QuestionMechanic.standard;
     showScreen(GameScreen.menu);
     _logPerformance('main menu navigation completed');
   }
@@ -2625,6 +2652,7 @@ class GameState extends ChangeNotifier {
     rt.timer?.cancel();
     _runSnapshot = null;
     _pendingOperationQuestStageId = null;
+    _pendingQuestionMechanic = QuestionMechanic.standard;
     showScreen(GameScreen.menu);
     showModal(GameModal.operationQuest);
     _logPerformance('operation quest map navigation completed');

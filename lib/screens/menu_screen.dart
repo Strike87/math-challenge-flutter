@@ -54,29 +54,62 @@ class MenuScreen extends StatelessWidget {
             // QUICK PRACTICE
             _SectionLabel('QUICK PRACTICE', s),
             const SizedBox(height: 10),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.4,
-              children: [
-                _PracticeCard('+', 'ADDITION', s.opColor(Operation.addition),
-                    () => gs.goToConfig('addition')),
-                _PracticeCard(
-                    '−',
-                    'SUBTRACTION',
-                    s.opColor(Operation.subtraction),
-                    () => gs.goToConfig('subtraction')),
-                _PracticeCard(
-                    '×',
-                    'MULTIPLY',
-                    s.opColor(Operation.multiplication),
-                    () => gs.goToConfig('multiplication')),
-                _PracticeCard('÷', 'DIVISION', s.opColor(Operation.division),
-                    () => gs.goToConfig('division')),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final cardWidth = (constraints.maxWidth - 12) / 2;
+                return Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    SizedBox(
+                      width: cardWidth,
+                      height: cardWidth / 1.4,
+                      child: _PracticeCard(
+                          '+',
+                          'ADDITION',
+                          s.opColor(Operation.addition),
+                          () => gs.goToConfig('addition')),
+                    ),
+                    SizedBox(
+                      width: cardWidth,
+                      height: cardWidth / 1.4,
+                      child: _PracticeCard(
+                          '−',
+                          'SUBTRACTION',
+                          s.opColor(Operation.subtraction),
+                          () => gs.goToConfig('subtraction')),
+                    ),
+                    SizedBox(
+                      width: cardWidth,
+                      height: cardWidth / 1.4,
+                      child: _PracticeCard(
+                          '×',
+                          'MULTIPLY',
+                          s.opColor(Operation.multiplication),
+                          () => gs.goToConfig('multiplication')),
+                    ),
+                    SizedBox(
+                      width: cardWidth,
+                      height: cardWidth / 1.4,
+                      child: _PracticeCard(
+                          '÷',
+                          'DIVISION',
+                          s.opColor(Operation.division),
+                          () => gs.goToConfig('division')),
+                    ),
+                    SizedBox(
+                      width: cardWidth,
+                      height: cardWidth / 1.4,
+                      child: _PracticeCard(
+                          '?',
+                          'MISSING OPERATION',
+                          s.opColor(Operation.mixed),
+                          () => gs.goToConfig('missingOperation')),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 14),
 
@@ -553,13 +586,18 @@ class _PracticeCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.6,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.6,
+                  ),
                 ),
               ),
             ],

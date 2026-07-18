@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../features/operation_quest/domain/operation_quest.dart';
+import '../features/gameplay/domain/question_mechanic.dart';
 import '../engine/game_state.dart';
 import '../features/gameplay/presentation/widgets/gameplay_animation_wrappers.dart';
 import '../features/gameplay/presentation/widgets/gameplay_controls.dart';
@@ -1688,8 +1688,8 @@ class _AnswersGrid extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      gs.isMissingOperationQuest
-                          ? operationQuestOperatorSymbol(c)
+                      gs.isMissingOperation
+                          ? operatorSymbol(c)
                           : _formatAnswer(c),
                       style: TextStyle(
                         fontSize: 26,
