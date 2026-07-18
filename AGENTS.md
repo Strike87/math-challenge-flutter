@@ -33,6 +33,26 @@ For behavior-sensitive work:
 - wait for each role before continuing;
 - never run multiple code-writing agents against the same working tree.
 
+Flutter-worker availability policy:
+
+- use `flutter_worker` with its configured preferred model when available;
+- if that model is unavailable on the account, delegate the required bounded
+  implementation to the strongest supported implementation-capable model that
+  can reliably work in the repository;
+- the fallback agent must operate under equivalent repository and
+  workspace-write sandbox constraints appropriate to `flutter_worker`, follow
+  the same worker instructions, and remain within the explicitly approved
+  implementation scope;
+- disclose any flutter-worker model substitution in the implementation report;
+- fallback authorization does not permit the root orchestrator to silently
+  self-implement work that governance requires to be delegated;
+- if no reliable supported implementation-capable model is available, block
+  the task;
+- the fallback worker must not stage, commit, push, merge, or tag unless
+  existing governance and explicit user authorization permit those actions;
+- this availability fallback does not weaken parity, testing,
+  regression-review, scope, or commit requirements.
+
 Parity-reasoner availability policy:
 
 - use `parity_reasoner` with its configured preferred model when available;
