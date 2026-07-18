@@ -149,7 +149,7 @@ Only the first unchecked item under **Active** may be started.
       reviewer availability policy.
   - Preferred commit: `feat: add Missing Operation to Quick Practice`.
 
-- [ ] V2-03F — Quick Practice layout restructuring
+- [x] V2-03F — Quick Practice layout restructuring
   - Convert Mixed Operations from the separate full-width `_MixBar` into the
     sixth square `_PracticeCard`.
   - Place Mixed Operations beside Missing Operation so Quick Practice uses
@@ -194,6 +194,21 @@ Only the first unchecked item under **Active** may be started.
     - No unrelated behavior changes.
     - Mandatory parity and regression-reviewer gates pass.
     - Full required validation passes before commit.
+  - Implementation complete.
+  - Verification record:
+    - Six square Quick Practice cards render as three rows of two cards.
+    - Missing Operation and Mixed Operations share the final row.
+    - Mixed Operations preserves `goToConfig('mixed')` navigation.
+    - Missing Operation preserves `goToConfig('missingOperation')` navigation.
+    - Responsive and text-scale coverage passed.
+    - Full non-golden suite: 303 passed.
+    - Visual suite: 16 passed.
+    - `flutter analyze --no-pub`: clean.
+    - `git diff --check`: clean.
+    - Mandatory fallback parity gate passed under the `AGENTS.md` availability
+      policy.
+    - Independent fallback regression reviewer passed under the `AGENTS.md`
+      availability policy.
 
 ## Completed
 
