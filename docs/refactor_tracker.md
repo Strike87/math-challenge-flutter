@@ -98,7 +98,7 @@ Only the first unchecked item under **Active** may be started.
     - Semantic assertions verify that `🗺️` is present and `➕` is absent.
   - Preferred commit: `ui: update Operation Quest menu icon`.
 
-- [ ] V2-03E — Add Missing Operation to Quick Practice
+- [x] V2-03E — Add Missing Operation to Quick Practice
   - Add Missing Operation as the fifth Quick Practice card.
   - Do not add Missing Number.
   - Use the same ordinary configuration flow as the existing practice cards.
@@ -130,6 +130,23 @@ Only the first unchecked item under **Active** may be started.
   - Fit long practice-card labels safely at high text scale.
   - If Integer or Rational/Decimal support requires an unapproved architecture
     expansion, mark this task BLOCKED rather than silently disabling them.
+  - Implementation complete.
+  - Verification record:
+    - Missing Operation Quick Practice uses the shared `QuestionMechanic` path.
+    - Ambiguity rejection is preserved.
+    - Operator choices are randomized once per question, remain stable during
+      rebuilds, and are graded by selected value.
+    - Replay preserves the mechanic and generates a fresh question layout.
+    - Finite-pool exhaustion safely reuses valid facts.
+    - Natural, Integer, and Rational/Decimal forms are covered.
+    - Existing 50/50 behavior is preserved.
+    - Long-run and two-player coverage passed.
+    - Full non-golden suite: 302 passed.
+    - Visual suite: 16 passed.
+    - `flutter analyze --no-pub`: clean.
+    - `git diff --check`: clean.
+    - Independent fallback regression reviewer passed under the `AGENTS.md`
+      reviewer availability policy.
   - Preferred commit: `feat: add Missing Operation to Quick Practice`.
 
 ## Completed
