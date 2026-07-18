@@ -419,23 +419,9 @@ void main() {
     state.dispose();
   });
 
-  testWidgets('fifth card stays centered at high text scale and opens config',
+  testWidgets('six practice cards share three rows and Missing opens config',
       (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    await Storage.init();
-    final settings = SettingsService()
-      ..load(
-        dark: false,
-        sound: false,
-        vibration: false,
-        dyslexia: false,
-        colorblind: false,
-        lowPerf: true,
-        reduceMotion: true,
-        animSpeed: 1,
-      );
-    final state = GameState(settings: settings, audio: _NoOpAudioService());
-    await state.load();
+    final state = await _makeState();
     tester.view.physicalSize = const Size(834, 1194);
     tester.view.devicePixelRatio = 1;
     tester.platformDispatcher.textScaleFactorTestValue = 1.1;
@@ -449,7 +435,7 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<SettingsService>.value(value: state.settings),
           ChangeNotifierProvider<GameState>.value(value: state),
         ],
         child: const MaterialApp(home: Scaffold(body: MenuScreen())),
@@ -458,24 +444,52 @@ void main() {
     await tester.pump();
 
     expect(find.text('MISSING OPERATION'), findsOneWidget);
+    expect(find.text('MIXED OPERATIONS'), findsOneWidget);
     expect(find.text('MISSING NUMBER'), findsNothing);
-    final fittedFinder = find.ancestor(
+    expect(find.text('Mixed Operations'), findsNothing);
+    expect(find.text('THE ULTIMATE TEST'), findsNothing);
+    expect(find.text('PLAY'), findsNothing);
+    final fittedLabel = tester.widget<FittedBox>(find.ancestor(
       of: find.text('MISSING OPERATION'),
       matching: find.byType(FittedBox),
-    );
-    expect(fittedFinder, findsOneWidget);
-    final fittedLabel = tester.widget<FittedBox>(fittedFinder);
-    expect(tester.takeException(), isNull);
-    final card = find.ancestor(
+    ));
+
+    const labels = [
+      'ADDITION',
+      'SUBTRACTION',
+      'MULTIPLY',
+      'DIVISION',
+      'MISSING OPERATION',
+      'MIXED OPERATIONS',
+    ];
+    final cards = labels
+        .map((label) => find
+            .ancestor(of: find.text(label), matching: find.byType(InkWell))
+            .evaluate()
+            .single)
+        .toSet();
+    expect(cards, hasLength(6));
+
+    final missingCard = find.ancestor(
       of: find.text('MISSING OPERATION'),
       matching: find.byType(InkWell),
     );
-    final additionCard = find.ancestor(
-      of: find.text('ADDITION'),
+    final mixedCard = find.ancestor(
+      of: find.text('MIXED OPERATIONS'),
       matching: find.byType(InkWell),
     );
-    expect(tester.getCenter(card).dx, closeTo(417, 1));
-    expect(tester.getSize(card).width, tester.getSize(additionCard).width);
+    final divisionCard = find.ancestor(
+      of: find.text('DIVISION'),
+      matching: find.byType(InkWell),
+    );
+    expect(tester.getSize(missingCard), tester.getSize(mixedCard));
+    expect(tester.getCenter(missingCard).dy,
+        closeTo(tester.getCenter(mixedCard).dy, 0.1));
+    expect(tester.getCenter(missingCard).dx,
+        lessThan(tester.getCenter(mixedCard).dx));
+    expect(tester.getCenter(missingCard).dy,
+        greaterThan(tester.getCenter(divisionCard).dy));
+    expect(tester.takeException(), isNull);
 
     await tester.ensureVisible(find.text('MISSING OPERATION'));
     await tester.pumpAndSettle();
@@ -483,7 +497,7 @@ void main() {
     await tester.pump();
     expect(state.currentScreen, GameScreen.numType);
     expect(state.isMissingOperationPractice, isTrue);
-    expect(state.selectedAnswerStyle, AnswerStyle.choice4);
+    expect(state.effectiveAnswerStyle, AnswerStyle.choice4);
 
     await tester.pumpWidget(
       MediaQuery(
@@ -496,6 +510,40 @@ void main() {
     );
     await tester.pump();
     expect(find.text('MISSING OPERATION'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Mixed Operations card opens the ordinary mixed config once',
+      (tester) async {
+    final state = await _makeState();
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      state.dispose();
+    });
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: state.settings),
+          ChangeNotifierProvider<GameState>.value(value: state),
+        ],
+        child: const MaterialApp(home: Scaffold(body: MenuScreen())),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('MIXED OPERATIONS'), findsOneWidget);
+    await tester.ensureVisible(find.text('MIXED OPERATIONS'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('MIXED OPERATIONS'));
+    await tester.pump();
+
+    expect(state.currentScreen, GameScreen.numType);
+    expect(state.rt.challenge, Operation.mixed);
+    expect(state.isMissingOperationPractice, isFalse);
     expect(tester.takeException(), isNull);
   });
 }

@@ -107,14 +107,19 @@ class MenuScreen extends StatelessWidget {
                           s.opColor(Operation.mixed),
                           () => gs.goToConfig('missingOperation')),
                     ),
+                    SizedBox(
+                      width: cardWidth,
+                      height: cardWidth / 1.4,
+                      child: _PracticeCard(
+                          '🧮',
+                          'MIXED OPERATIONS',
+                          s.opColor(Operation.mixed),
+                          () => gs.goToConfig('mixed')),
+                    ),
                   ],
                 );
               },
             ),
-            const SizedBox(height: 14),
-
-            // MIXED OPS bar
-            _MixBar(s: s, onTap: () => gs.goToConfig('mixed')),
             const SizedBox(height: 24),
 
             // BOTTOM NAV
@@ -597,80 +602,6 @@ class _PracticeCard extends StatelessWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.6,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MixBar extends StatelessWidget {
-  const _MixBar({required this.s, required this.onTap});
-  final SettingsService s;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(GameConfig.grape), Color(GameConfig.coral)],
-            ),
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Row(
-            children: [
-              const Text('🧮', style: TextStyle(fontSize: 28)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Mixed Operations',
-                      style: TextStyle(
-                        color: s.dark ? Colors.black : Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        fontFamily: AppFonts.head,
-                      ),
-                    ),
-                    Text(
-                      'THE ULTIMATE TEST',
-                      style: TextStyle(
-                        color: (s.dark ? Colors.black : Colors.white)
-                            .withValues(alpha: 0.85),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'PLAY',
-                  style: TextStyle(
-                    color: const Color(GameConfig.coral),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
