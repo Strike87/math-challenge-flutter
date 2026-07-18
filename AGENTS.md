@@ -33,6 +33,19 @@ For behavior-sensitive work:
 - wait for each role before continuing;
 - never run multiple code-writing agents against the same working tree.
 
+Parity-reasoner availability policy:
+
+- use `parity_reasoner` with its configured preferred model when available;
+- if that model is unavailable on the account, delegate the mandatory read-only
+  parity investigation to the strongest supported parity-capable model that
+  can reliably audit the repository;
+- the fallback agent must remain independent from the implementation pass where
+  the workflow requires independence and must remain read-only;
+- disclose any parity-reasoner model substitution in the parity report;
+- if no reliable supported parity-capable model is available, block the task;
+- do not bypass or proceed past a required parity gate merely because the
+  preferred model is unavailable.
+
 Reviewer availability policy:
 
 - use `regression_reviewer` with its configured preferred model when available;
