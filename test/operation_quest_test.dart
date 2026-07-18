@@ -778,6 +778,7 @@ void main() {
       (tester) async {
     final state = await _makeState();
     addTearDown(state.dispose);
+    state.dailyChallengeIds = ['blitz_15', 'streak_7', 'division_10'];
     state.startOperationQuestStage(OperationQuestStageId.additionEasy);
     state.startGame();
 
