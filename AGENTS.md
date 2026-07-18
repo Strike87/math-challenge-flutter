@@ -33,6 +33,17 @@ For behavior-sensitive work:
 - wait for each role before continuing;
 - never run multiple code-writing agents against the same working tree.
 
+Reviewer availability policy:
+
+- use `regression_reviewer` with its configured preferred model when available;
+- if that model is unavailable on the account, delegate the mandatory final
+  read-only review to the strongest supported review-capable model that is
+  independent from the implementation pass and can reliably review the
+  repository;
+- disclose any reviewer-model substitution in the review report;
+- if no reliable supported reviewer model is available, block the task;
+- do not commit until the preferred or fallback reviewer passes.
+
 Use one bounded task per cycle:
 
 ```text
