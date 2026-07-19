@@ -279,7 +279,16 @@ void main() {
       expect(find.text('MATH'), findsOneWidget);
       expect(find.text('CHALLENGE'), findsOneWidget);
       expect(find.text('BOSS BATTLE EDITION'), findsOneWidget);
-      expect(find.text('Operation Quest'), findsOneWidget);
+      final master = find.text('Master Challenge');
+      final dailyBoss = find.text(state.dailyBoss!.name);
+      final operationQuest = find.text('Operation Quest');
+      expect(master, findsOneWidget);
+      expect(dailyBoss, findsOneWidget);
+      expect(operationQuest, findsOneWidget);
+      expect(tester.getTopLeft(master).dy,
+          lessThan(tester.getTopLeft(dailyBoss).dy));
+      expect(tester.getTopLeft(dailyBoss).dy,
+          lessThan(tester.getTopLeft(operationQuest).dy));
       expectQuickPracticeSemantics();
       expect(find.text('🗺️'), findsOneWidget);
       expect(find.text('➕'), findsNothing);

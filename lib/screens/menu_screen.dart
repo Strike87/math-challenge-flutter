@@ -25,14 +25,6 @@ class MenuScreen extends StatelessWidget {
             // CAMPAIGN label
             _SectionLabel('CAMPAIGN', s, trailing: _streakBadge(gs, s)),
             _CampaignCard(
-              icon: '🗺️',
-              title: 'Operation Quest',
-              subtitle: '7 TRAILS • 21 STAGES',
-              color: s.accent(GameConfig.mango),
-              onTap: gs.showOperationQuest,
-            ),
-            const SizedBox(height: 10),
-            _CampaignCard(
               icon: '🏆',
               title: 'Master Challenge',
               subtitle: 'BOSS BATTLES • 5 STAGES',
@@ -48,6 +40,14 @@ class MenuScreen extends StatelessWidget {
                   : 'NEW CHALLENGE TODAY',
               color: s.accent(GameConfig.punch),
               onTap: gs.isDailyBossClaimedToday ? () {} : gs.showDailyBoss,
+            ),
+            const SizedBox(height: 10),
+            _CampaignCard(
+              icon: '🗺️',
+              title: 'Operation Quest',
+              subtitle: '7 TRAILS • 21 STAGES',
+              color: s.accent(GameConfig.mango),
+              onTap: gs.showOperationQuest,
             ),
             const SizedBox(height: 20),
 
