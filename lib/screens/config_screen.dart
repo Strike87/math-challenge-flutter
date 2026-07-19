@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
-import '../features/weak_skills/domain/weak_skills_policy.dart';
 import '../game_config.dart';
 import '../models/enums.dart';
 import '../services/settings.dart';
@@ -31,27 +30,20 @@ class ConfigScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
 
-                if (weakSkillsPlan != null) ...[
-                  _WeakSkillsExplanation(plan: weakSkillsPlan, s: s),
-                  const SizedBox(height: 16),
-                ],
-
                 // Players
                 _SectionTitle('Players', s),
                 _ToggleRow(
                   options: [
                     _ToggleOpt('👤 1 Player', 1, s.accent(GameConfig.sky)),
-                    if (weakSkillsPlan == null)
-                      _ToggleOpt(
-                        '👥 2 Players',
-                        2,
-                        s.accent(GameConfig.punch),
-                      ),
+                    _ToggleOpt(
+                      '👥 2 Players',
+                      2,
+                      s.accent(GameConfig.punch),
+                      enabled: weakSkillsPlan == null,
+                    ),
                   ],
                   active: gs.setupPlayers,
-                  onPick: weakSkillsPlan == null
-                      ? (v) => gs.setOption('players', v)
-                      : (_) {},
+                  onPick: (v) => gs.setOption('players', v),
                 ),
                 const SizedBox(height: 16),
 
@@ -200,57 +192,6 @@ class ConfigScreen extends StatelessWidget {
   }
 }
 
-class _WeakSkillsExplanation extends StatelessWidget {
-  const _WeakSkillsExplanation({required this.plan, required this.s});
-
-  final WeakSkillsPlan plan;
-  final SettingsService s;
-
-  @override
-  Widget build(BuildContext context) {
-    final operations = plan.focusedOperations;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: s.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(GameConfig.borderMdLight)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            plan.isFallback
-                ? 'Building your practice profile'
-                : 'Recommended focus',
-            style: TextStyle(color: s.text, fontWeight: FontWeight.w800),
-          ),
-          if (plan.isFallback)
-            Text(
-              'This round will include all four operations.',
-              style: TextStyle(color: s.muted, fontSize: 12),
-            )
-          else ...[
-            const SizedBox(height: 4),
-            for (final operation in operations)
-              Text(
-                operation == Operation.multiplication
-                    ? 'Multiplication'
-                    : operation.label,
-                style: TextStyle(color: s.text, fontWeight: FontWeight.w700),
-              ),
-            const SizedBox(height: 4),
-            Text(
-              'Based on your practice history',
-              style: TextStyle(color: s.muted, fontSize: 12),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 class _SetupHeader extends StatelessWidget {
   const _SetupHeader(
       {required this.s, required this.title, required this.onBack});
@@ -311,7 +252,8 @@ class _ToggleOpt<T> {
   final String label;
   final T value;
   final Color color;
-  _ToggleOpt(this.label, this.value, this.color);
+  final bool enabled;
+  _ToggleOpt(this.label, this.value, this.color, {this.enabled = true});
 }
 
 class _ToggleRow<T> extends StatelessWidget {
@@ -360,71 +302,74 @@ class _ToggleButton<T> extends StatelessWidget {
     final isActive = o.value == active;
     final s = context.watch<SettingsService>();
     final parts = _splitIconLabel(o.label);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => onPick(o.value),
-        child: Container(
-          height: 48,
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: isActive
-                ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      o.color,
-                      Color.lerp(o.color, Colors.black, 0.18)!,
-                    ],
-                  )
-                : null,
-            color: isActive ? null : s.surface,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: isActive
-                  ? Colors.white.withValues(alpha: 0.35)
-                  : o.color.withValues(alpha: 0.35),
-              width: 1.5,
+    return Opacity(
+      opacity: o.enabled ? 1 : 0.4,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: o.enabled ? () => onPick(o.value) : null,
+          child: Container(
+            height: 48,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: isActive
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        o.color,
+                        Color.lerp(o.color, Colors.black, 0.18)!,
+                      ],
+                    )
+                  : null,
+              color: isActive ? null : s.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isActive
+                    ? Colors.white.withValues(alpha: 0.35)
+                    : o.color.withValues(alpha: 0.35),
+                width: 1.5,
+              ),
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: o.color.withValues(alpha: 0.28),
+                        blurRadius: 18,
+                        offset: const Offset(0, 6),
+                      ),
+                    ]
+                  : null,
             ),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: o.color.withValues(alpha: 0.28),
-                      blurRadius: 18,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (parts.icon.isNotEmpty) ...[
-                Text(parts.icon, style: const TextStyle(fontSize: 16)),
-                const SizedBox(width: 4),
-              ],
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    parts.label,
-                    maxLines: 1,
-                    softWrap: false,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: isActive ? Colors.white : o.color,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                      fontFamily: AppFonts.head,
-                      letterSpacing: 0.2,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (parts.icon.isNotEmpty) ...[
+                  Text(parts.icon, style: const TextStyle(fontSize: 16)),
+                  const SizedBox(width: 4),
+                ],
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      parts.label,
+                      maxLines: 1,
+                      softWrap: false,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isActive ? Colors.white : o.color,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        fontFamily: AppFonts.head,
+                        letterSpacing: 0.2,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

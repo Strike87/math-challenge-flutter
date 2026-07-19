@@ -9,6 +9,7 @@ import 'package:math_challenge/screens/menu_screen.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
+import 'package:math_challenge/widgets/modals.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -22,7 +23,12 @@ void main() {
     state.goToConfig('weakSkills');
     final plan = state.setupWeakSkillsPlan;
     expect(plan, isNotNull);
+    expect(state.currentModal, GameModal.weakSkillsPractice);
+    expect(state.currentScreen, GameScreen.menu);
+
+    state.continueWeakSkillsSetup();
     expect(state.currentScreen, GameScreen.numType);
+    expect(state.currentModal, GameModal.none);
     expect(state.rt.challenge, Operation.mixed);
 
     await state.selectNumType(NumberType.integers.name);
@@ -37,16 +43,37 @@ void main() {
     state.showScreen(GameScreen.menu);
     expect(state.setupWeakSkillsPlan, isNull);
 
-    for (final unrelated in <void Function()>[
-      () => state.goToConfig('addition'),
-      () => state.goToConfig('master'),
-      state.showDailyBoss,
-      state.showOperationQuest,
+    state.goToConfig('weakSkills');
+    state.cancelWeakSkillsSetup();
+    expect(state.setupWeakSkillsPlan, isNull);
+    expect(state.currentModal, GameModal.none);
+    expect(state.currentScreen, GameScreen.menu);
+  });
+
+  test('ordinary Quick Practice paths never open the Weak Skills popup',
+      () async {
+    final state = await _makeState();
+    addTearDown(state.dispose);
+
+    for (final operationName in [
+      'addition',
+      'subtraction',
+      'multiplication',
+      'division',
+      'missingOperation',
+      'mixed',
     ]) {
-      state.goToConfig('weakSkills');
-      expect(state.setupWeakSkillsPlan, isNotNull);
-      unrelated();
-      expect(state.setupWeakSkillsPlan, isNull);
+      state.goToConfig(operationName);
+      expect(
+        state.currentModal,
+        GameModal.none,
+        reason: operationName,
+      );
+      expect(
+        state.setupWeakSkillsPlan,
+        isNull,
+        reason: operationName,
+      );
     }
   });
 
@@ -59,6 +86,7 @@ void main() {
     _setFocusedSkills(state);
     state.goToConfig('weakSkills');
     final plan = state.setupWeakSkillsPlan!;
+    state.continueWeakSkillsSetup();
     state
       ..numType = NumberType.rationals
       ..diff = Difficulty.hard
@@ -107,6 +135,7 @@ void main() {
       ..mode = GameMode.standard
       ..adaptive = false;
     state.goToConfig('weakSkills');
+    state.continueWeakSkillsSetup();
     state.startGame();
     state.rt.timer?.cancel();
 
@@ -147,6 +176,7 @@ void main() {
       ..mode = GameMode.standard
       ..adaptive = true;
     state.goToConfig('weakSkills');
+    state.continueWeakSkillsSetup();
     state.startGame();
     state.rt.timer?.cancel();
     final question = state.rt.q!;
@@ -173,11 +203,13 @@ void main() {
     _setFocusedSkills(state);
 
     await _pumpScreen(
-      tester,
-      state,
-      const MenuScreen(),
-      size: const Size(390, 844),
-    );
+        tester,
+        state,
+        const Stack(children: [
+          MenuScreen(),
+          ModalRouter(),
+        ]),
+        size: const Size(390, 844));
     expect(find.text('Weak Skills Practice'), findsOneWidget);
     expect(find.text('🧠+'), findsOneWidget);
     for (final label in [
@@ -197,33 +229,116 @@ void main() {
     expect(rowSize.height, 84);
     await tester.ensureVisible(find.text('Weak Skills Practice'));
     await tester.tap(find.text('Weak Skills Practice'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    final plan = state.setupWeakSkillsPlan;
+    expect(plan, isNotNull);
+    expect(state.currentModal, GameModal.weakSkillsPractice);
+    expect(state.currentScreen, GameScreen.menu);
+    expect(find.text('Recommended Practice'), findsOneWidget);
+    expect(find.text('Practice areas'), findsOneWidget);
+    expect(find.text('Addition'), findsOneWidget);
+    expect(find.text('Subtraction'), findsOneWidget);
+    expect(find.text('Based on your practice history.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await _pumpScreen(
+      tester,
+      state,
+      const ModalRouter(),
+      textScale: 2,
+    );
+    expect(find.text('Recommended Practice'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    _setTiedWeakestSkills(state);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
     expect(state.currentScreen, GameScreen.numType);
+    expect(state.currentModal, GameModal.none);
+    expect(state.setupWeakSkillsPlan, same(plan));
 
     await state.selectNumType(NumberType.natural.name);
     await _pumpScreen(tester, state, const ConfigScreen(), textScale: 2);
-    expect(find.text('Recommended focus'), findsOneWidget);
-    expect(find.text('Addition'), findsOneWidget);
-    expect(find.text('Subtraction'), findsOneWidget);
-    expect(find.text('Based on your practice history'), findsOneWidget);
+    expect(find.text('Recommended Practice'), findsNothing);
+    expect(find.text('Practice areas'), findsNothing);
+    expect(find.text('Based on your practice history.'), findsNothing);
     expect(find.text('1 Player'), findsOneWidget);
-    expect(find.text('2 Players'), findsNothing);
+    expect(find.text('2 Players'), findsOneWidget);
+    await tester.tap(find.text('2 Players'));
+    await tester.pump();
+    expect(state.setupPlayers, 1);
+    expect(state.players, 2);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('fallback configuration uses supportive copy', (tester) async {
+  testWidgets('fallback popup cancels cleanly and fresh entry recalculates',
+      (tester) async {
     final state = await _makeState();
     addTearDown(state.dispose);
     state.players = 2;
     state.goToConfig('weakSkills');
-    await state.selectNumType(NumberType.natural.name);
+    final fallbackPlan = state.setupWeakSkillsPlan;
 
-    await _pumpScreen(tester, state, const ConfigScreen());
-    expect(find.text('Building your practice profile'), findsOneWidget);
+    await _pumpScreen(
+        tester,
+        state,
+        const Stack(children: [
+          MenuScreen(),
+          ModalRouter(),
+        ]));
+    expect(find.text('Building Your Practice Profile'), findsOneWidget);
     expect(
       find.text('This round will include all four operations.'),
       findsOneWidget,
     );
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(state.setupWeakSkillsPlan, isNull);
+    expect(state.currentModal, GameModal.none);
+    expect(state.currentScreen, GameScreen.menu);
+
+    _setFocusedSkills(state);
+    await tester.ensureVisible(find.text('Weak Skills Practice'));
+    await tester.tap(find.text('Weak Skills Practice'));
+    await tester.pumpAndSettle();
+    expect(state.setupWeakSkillsPlan, isNot(same(fallbackPlan)));
+    expect(state.setupWeakSkillsPlan!.isFallback, isFalse);
+  });
+
+  testWidgets('Weak Skills uses the ordinary Players row geometry',
+      (tester) async {
+    final state = await _makeState();
+    addTearDown(state.dispose);
+    state.players = 2;
+
+    await _pumpScreen(tester, state, const ConfigScreen());
+    final normalOnePlayer = tester.getRect(find.text('1 Player'));
+    final normalTwoPlayers = tester.getRect(find.text('2 Players'));
+
+    state.showScreen(GameScreen.menu);
+    state.goToConfig('weakSkills');
+    state.continueWeakSkillsSetup();
+    await state.selectNumType(NumberType.natural.name);
+    await _pumpScreen(tester, state, const ConfigScreen());
+    final weakOnePlayer = tester.getRect(find.text('1 Player'));
+    final weakTwoPlayers = tester.getRect(find.text('2 Players'));
+
+    expect(weakOnePlayer.size, normalOnePlayer.size);
+    expect(weakTwoPlayers.size, normalTwoPlayers.size);
+    expect(weakOnePlayer.topLeft, normalOnePlayer.topLeft);
+    expect(weakTwoPlayers.topLeft, normalTwoPlayers.topLeft);
+    expect(find.text('Building Your Practice Profile'), findsNothing);
+    expect(state.setupPlayers, 1);
+    expect(state.players, 2);
+
+    final disabledOpacity = tester.widget<Opacity>(
+      find
+          .ancestor(of: find.text('2 Players'), matching: find.byType(Opacity))
+          .first,
+    );
+    expect(disabledOpacity.opacity, 0.4);
+    await tester.tap(find.text('2 Players'));
     expect(state.setupPlayers, 1);
     expect(state.players, 2);
   });

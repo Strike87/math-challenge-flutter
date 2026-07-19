@@ -420,13 +420,15 @@ void main() {
         Operation.division.name: SkillData(mastery: 40, count: 3),
       };
       state.goToConfig('weakSkills');
+      state.continueWeakSkillsSetup();
       await state.selectNumType(NumberType.natural.name);
       await setTestDevice(tester, logicalSize: phoneSize);
       await tester.pumpWidget(
           TestAppWrapper(state: state, child: const TestAppShell()));
       await tester.pumpAndSettle();
-      expect(find.text('Recommended focus'), findsOneWidget);
-      expect(find.text('👥 2 Players'), findsNothing);
+      expect(find.text('Recommended Practice'), findsNothing);
+      expect(find.text('1 Player'), findsOneWidget);
+      expect(find.text('2 Players'), findsOneWidget);
       expectNoVisualException(tester);
       await expectLater(
         find.byType(TestAppShell),
@@ -437,16 +439,62 @@ void main() {
     testWidgets('17. Weak Skills fallback config', (tester) async {
       final state = await _makeState({'mc_dark': false});
       state.goToConfig('weakSkills');
+      state.continueWeakSkillsSetup();
       await state.selectNumType(NumberType.natural.name);
       await setTestDevice(tester, logicalSize: phoneSize);
       await tester.pumpWidget(
           TestAppWrapper(state: state, child: const TestAppShell()));
       await tester.pumpAndSettle();
-      expect(find.text('Building your practice profile'), findsOneWidget);
+      expect(find.text('Building Your Practice Profile'), findsNothing);
+      expect(find.text('1 Player'), findsOneWidget);
+      expect(find.text('2 Players'), findsOneWidget);
       expectNoVisualException(tester);
       await expectLater(
         find.byType(TestAppShell),
         matchesGoldenFile('goldens/17_weak_skills_config_fallback.png'),
+      );
+    });
+
+    testWidgets('18. Weak Skills focused popup', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.skillMap = {
+        Operation.addition.name: SkillData(mastery: 5, count: 3),
+        Operation.subtraction.name: SkillData(mastery: 20, count: 3),
+        Operation.multiplication.name: SkillData(mastery: 30, count: 3),
+        Operation.division.name: SkillData(mastery: 40, count: 3),
+      };
+      state.goToConfig('weakSkills');
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+      expect(find.text('Recommended Practice'), findsOneWidget);
+      expect(find.text('Practice areas'), findsOneWidget);
+      expect(find.text('Addition'), findsOneWidget);
+      expect(find.text('Subtraction'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/18_weak_skills_popup_focused.png'),
+      );
+    });
+
+    testWidgets('19. Weak Skills fallback popup', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.goToConfig('weakSkills');
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+      expect(find.text('Building Your Practice Profile'), findsOneWidget);
+      expect(
+        find.text('This round will include all four operations.'),
+        findsOneWidget,
+      );
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/19_weak_skills_popup_fallback.png'),
       );
     });
 

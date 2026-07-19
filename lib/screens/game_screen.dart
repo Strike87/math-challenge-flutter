@@ -1618,6 +1618,13 @@ int _questionNumber(GameState gs, int totalTarget) {
   return current.clamp(1, clampedTarget).toInt();
 }
 
+const _answerGridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+  crossAxisCount: 2,
+  mainAxisSpacing: 10,
+  crossAxisSpacing: 10,
+  childAspectRatio: 2.4,
+);
+
 class _AnswersGrid extends StatelessWidget {
   const _AnswersGrid({required this.gs, required this.s});
   final GameState gs;
@@ -1634,12 +1641,7 @@ class _AnswersGrid extends StatelessWidget {
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 2.4,
-          ),
+          gridDelegate: _answerGridDelegate,
           itemCount: q.choices.length,
           itemBuilder: (_, i) {
             final c = q.choices[i];
@@ -1724,28 +1726,30 @@ class _TrueFalseAnswers extends StatelessWidget {
   Widget build(BuildContext context) {
     final proposed = gs.rt.proposedAnswer;
     if (proposed == null) return const SizedBox.shrink();
-    return Column(
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
       children: [
-        Row(
-          children: [
-            for (final option in [true, false]) ...[
-              Expanded(
-                child: AbsorbPointer(
-                  absorbing: !gs.rt.accepting,
-                  child: Opacity(
-                    opacity: gs.rt.accepting ? 1 : 0.5,
-                    child: NeoButton(
-                      key: Key(option ? 'answer-true' : 'answer-false'),
-                      label: option ? 'True' : 'False',
-                      color: option ? GameConfig.mint : GameConfig.punch,
-                      onPressed: () => gs.onTrueFalseAnswer(option),
-                    ),
-                  ),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: _answerGridDelegate,
+          itemCount: 2,
+          itemBuilder: (_, index) {
+            final option = index == 0;
+            return AbsorbPointer(
+              absorbing: !gs.rt.accepting,
+              child: Opacity(
+                opacity: gs.rt.accepting ? 1 : 0.5,
+                child: NeoButton(
+                  key: Key(option ? 'answer-true' : 'answer-false'),
+                  label: option ? 'True' : 'False',
+                  color: option ? GameConfig.mint : GameConfig.punch,
+                  onPressed: () => gs.onTrueFalseAnswer(option),
                 ),
               ),
-              if (option) const SizedBox(width: 10),
-            ],
-          ],
+            );
+          },
         ),
         IgnorePointer(
           child: BigEmojiOverlay(

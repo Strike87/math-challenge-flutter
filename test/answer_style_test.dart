@@ -292,6 +292,61 @@ void main() {
     }
   });
 
+  testWidgets('true-false reuses the normal first-row answer tile geometry',
+      (tester) async {
+    final state = await _makeState();
+    _setTrueFalseQuestion(
+      state,
+      question: const Question(
+        type: Operation.addition,
+        key: 'geometry',
+        text: '2 + 3 = ?',
+        ans: 5,
+        choices: [4, 5, 6, 7],
+        numType: NumberType.natural,
+      ),
+      proposedAnswer: 5,
+      proposedTruth: true,
+    );
+    state.rt.answerStyle = AnswerStyle.choice4;
+    await _pump(tester, state, const game_screen.GameScreen());
+
+    final firstChoice = tester.getRect(find.widgetWithText(InkWell, '4'));
+    final secondChoice = tester.getRect(find.widgetWithText(InkWell, '5'));
+    final normalGridTop = tester.getTopLeft(find.byType(GridView).last).dy;
+    expect(firstChoice.top, normalGridTop);
+    expect(secondChoice.top, normalGridTop);
+
+    state.rt.answerStyle = AnswerStyle.trueFalse;
+    state.notifyListeners();
+    await tester.pump();
+
+    final trueTile = tester.getRect(find.byKey(const Key('answer-true')));
+    final falseTile = tester.getRect(find.byKey(const Key('answer-false')));
+    expect(trueTile.size, firstChoice.size);
+    expect(falseTile.size, secondChoice.size);
+    expect(trueTile.left, firstChoice.left);
+    expect(falseTile.left, secondChoice.left);
+    final trueFalseGridTop = tester.getTopLeft(find.byType(GridView).last).dy;
+    expect(trueTile.top, trueFalseGridTop);
+    expect(falseTile.top, trueFalseGridTop);
+    expect(trueTile.width, lessThan(190));
+    for (final choice in ['4', '5', '6', '7']) {
+      expect(find.text(choice), findsNothing);
+    }
+    expect(find.byKey(const Key('answer-true')), findsOneWidget);
+    expect(find.byKey(const Key('answer-false')), findsOneWidget);
+
+    await _pump(
+      tester,
+      state,
+      const game_screen.GameScreen(),
+      textScale: 2,
+    );
+    expect(tester.takeException(), isNull);
+    state.dispose();
+  });
+
   testWidgets('true-false hides only disabled 50/50 count until Choice4',
       (tester) async {
     final state = await _makeState();
@@ -425,8 +480,9 @@ void _setTrueFalseQuestion(
 Future<void> _pump(
   WidgetTester tester,
   GameState state,
-  Widget child,
-) async {
+  Widget child, {
+  double textScale = 1,
+}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(390, 844);
   addTearDown(() {
@@ -439,7 +495,12 @@ Future<void> _pump(
         ChangeNotifierProvider<SettingsService>.value(value: state.settings),
         ChangeNotifierProvider<GameState>.value(value: state),
       ],
-      child: MaterialApp(home: Scaffold(body: child)),
+      child: MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+          child: Scaffold(body: child),
+        ),
+      ),
     ),
   );
   await tester.pump();

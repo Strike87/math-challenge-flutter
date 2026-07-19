@@ -46,6 +46,7 @@ enum GameModal {
   adultGate,
   dailyChallenges,
   operationQuest,
+  weakSkillsPractice,
 }
 
 /// Runtime game state (the `rt` object in the original JS).
@@ -1324,6 +1325,10 @@ class GameState extends ChangeNotifier {
       cancelAdultGate();
       return;
     }
+    if (currentModal == GameModal.weakSkillsPractice) {
+      _pendingWeakSkillsPlan = null;
+      _pendingQuestionMechanic = QuestionMechanic.standard;
+    }
     _logPerformance('modal transition: ${currentModal.name} -> none');
     currentModal = GameModal.none;
     if (rt.state == 'paused' && rt.gameActive) {
@@ -1348,8 +1353,8 @@ class GameState extends ChangeNotifier {
   // ─── Configuration actions ──────────────────────────────────
   void goToConfig(String operationName) {
     final missingOperation = operationName == 'missingOperation';
-    _pendingWeakSkillsPlan =
-        operationName == 'weakSkills' ? selectWeakSkillsPlan(skillMap) : null;
+    final weakSkills = operationName == 'weakSkills';
+    _pendingWeakSkillsPlan = weakSkills ? selectWeakSkillsPlan(skillMap) : null;
     final op = Operation.fromString(operationName);
     _pendingQuestionMechanic = missingOperation
         ? QuestionMechanic.missingOperation
@@ -1360,8 +1365,26 @@ class GameState extends ChangeNotifier {
       return;
     }
     rt.challenge = missingOperation ? Operation.mixed : op;
+    if (weakSkills) {
+      showModal(GameModal.weakSkillsPractice);
+      return;
+    }
     showScreen(GameScreen.numType);
   }
+
+  void continueWeakSkillsSetup() {
+    if (currentModal != GameModal.weakSkillsPractice ||
+        _pendingWeakSkillsPlan == null) {
+      return;
+    }
+    _logPerformance(
+      'modal transition: ${currentModal.name} -> ${GameModal.none.name}',
+    );
+    currentModal = GameModal.none;
+    showScreen(GameScreen.numType);
+  }
+
+  void cancelWeakSkillsSetup() => closeModal();
 
   Future<void> selectNumType(String numTypeName) async {
     final nt = NumberType.fromString(numTypeName);

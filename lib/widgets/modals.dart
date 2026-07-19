@@ -77,9 +77,90 @@ class ModalRouter extends StatelessWidget {
         return DailyChallengesModal(gs: gs);
       case GameModal.operationQuest:
         return OperationQuestModal(gs: gs);
+      case GameModal.weakSkillsPractice:
+        return WeakSkillsPracticeModal(gs: gs);
       case GameModal.none:
         return const SizedBox.shrink();
     }
+  }
+}
+
+class WeakSkillsPracticeModal extends StatelessWidget {
+  const WeakSkillsPracticeModal({super.key, required this.gs});
+
+  final GameState gs;
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = gs.setupWeakSkillsPlan;
+    if (plan == null) return const SizedBox.shrink();
+    final s = context.watch<SettingsService>();
+    return ModalShell(
+      icon: '🧠+',
+      title: plan.isFallback
+          ? 'Building Your Practice Profile'
+          : 'Recommended Practice',
+      actions: [
+        NeoButton(
+          label: 'Cancel',
+          outlined: true,
+          color: GameConfig.coral,
+          onPressed: gs.cancelWeakSkillsSetup,
+        ),
+        NeoButton(
+          label: 'Continue',
+          color: GameConfig.coral,
+          onPressed: gs.continueWeakSkillsSetup,
+        ),
+      ],
+      child: plan.isFallback
+          ? Text(
+              'This round will include all four operations.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: s.text,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Practice areas',
+                  style: TextStyle(
+                    color: s.muted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                for (final operation in plan.focusedOperations)
+                  Text(
+                    operation == Operation.multiplication
+                        ? 'Multiplication'
+                        : operation.label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: s.text,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: AppFonts.headFor(s),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Text(
+                  'Based on your practice history.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: s.muted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+    );
   }
 }
 
