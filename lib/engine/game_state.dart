@@ -12,6 +12,7 @@ import '../features/gameplay/domain/survival_progression_policy.dart';
 import '../features/gameplay/domain/question_mechanic.dart';
 import '../features/modals/presentation/toast_controller.dart';
 import '../features/operation_quest/domain/operation_quest.dart';
+import '../features/weak_skills/domain/weak_skills_policy.dart';
 import '../game_config.dart';
 import '../models/celebration.dart';
 import '../models/enums.dart';
@@ -93,6 +94,7 @@ class RuntimeState {
   bool isFollowUp;
   _FollowUpData? followUpData;
   int lastDailyBossClaimDay;
+  int weakSkillsScheduleIndex;
 
   RuntimeState()
       : challenge = Operation.mixed,
@@ -138,7 +140,8 @@ class RuntimeState {
         bossMood = 'normal',
         isFollowUp = false,
         followUpData = null,
-        lastDailyBossClaimDay = -1;
+        lastDailyBossClaimDay = -1,
+        weakSkillsScheduleIndex = 0;
 }
 
 class _FollowUpData {
@@ -160,6 +163,7 @@ class GameRunSnapshot {
     required this.questionTarget,
     this.operationQuestStageId,
     this.questionMechanic = QuestionMechanic.standard,
+    this.weakSkillsPlan,
   });
 
   final GameRunType runType;
@@ -172,6 +176,7 @@ class GameRunSnapshot {
   final int questionTarget;
   final OperationQuestStageId? operationQuestStageId;
   final QuestionMechanic questionMechanic;
+  final WeakSkillsPlan? weakSkillsPlan;
 }
 
 @visibleForTesting
@@ -324,6 +329,7 @@ class GameState extends ChangeNotifier {
   GameRunSnapshot? _runSnapshot;
   OperationQuestStageId? _pendingOperationQuestStageId;
   QuestionMechanic _pendingQuestionMechanic = QuestionMechanic.standard;
+  WeakSkillsPlan? _pendingWeakSkillsPlan;
 
   // ─── Options ────────────────────────────────────────────────
   int players = 2;
@@ -390,7 +396,11 @@ class GameState extends ChangeNotifier {
           _pendingQuestionMechanic == QuestionMechanic.missingOperation);
   bool get isMissingNumberQuest =>
       _runSnapshot?.questionMechanic == QuestionMechanic.missingNumber;
-  int get setupPlayers => _pendingOperationQuestStageId == null ? players : 1;
+  WeakSkillsPlan? get setupWeakSkillsPlan => _pendingWeakSkillsPlan;
+  int get setupPlayers =>
+      _pendingOperationQuestStageId == null && _pendingWeakSkillsPlan == null
+          ? players
+          : 1;
   int get activePlayers => _runSnapshot?.players ?? players;
   GameMode get activeMode => _runSnapshot?.mode ?? mode;
   Difficulty get activeDifficulty => _runSnapshot?.difficulty ?? diff;
@@ -1292,6 +1302,7 @@ class GameState extends ChangeNotifier {
 
   // ─── Screen / modal routing ─────────────────────────────────
   void showScreen(GameScreen s) {
+    if (s == GameScreen.menu) _pendingWeakSkillsPlan = null;
     _logPerformance('screen transition: ${currentScreen.name} -> ${s.name}');
     currentScreen = s;
     unawaited(syncBannerForCurrentScreen());
@@ -1337,6 +1348,8 @@ class GameState extends ChangeNotifier {
   // ─── Configuration actions ──────────────────────────────────
   void goToConfig(String operationName) {
     final missingOperation = operationName == 'missingOperation';
+    _pendingWeakSkillsPlan =
+        operationName == 'weakSkills' ? selectWeakSkillsPlan(skillMap) : null;
     final op = Operation.fromString(operationName);
     _pendingQuestionMechanic = missingOperation
         ? QuestionMechanic.missingOperation
@@ -1378,7 +1391,7 @@ class GameState extends ChangeNotifier {
         break;
       case 'mode':
         final nextMode = GameMode.fromString(value as String);
-        if (GameMode.isAvailableForPlayers(nextMode, players)) {
+        if (GameMode.isAvailableForPlayers(nextMode, setupPlayers)) {
           mode = nextMode;
         } else {
           mode = GameMode.standard;
@@ -1406,7 +1419,7 @@ class GameState extends ChangeNotifier {
   }
 
   AnswerStyle get effectiveAnswerStyle => mode == GameMode.standard &&
-          players == 1 &&
+          setupPlayers == 1 &&
           rt.challenge != Operation.master &&
           rt.challenge != Operation.dailyBoss
       ? (_pendingQuestionMechanic == QuestionMechanic.missingOperation
@@ -1419,6 +1432,7 @@ class GameState extends ChangeNotifier {
   }
 
   void showOperationQuest() {
+    _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     _pendingOperationQuestStageId = null;
     showModal(GameModal.operationQuest);
@@ -1426,6 +1440,7 @@ class GameState extends ChangeNotifier {
 
   void startOperationQuestStage(OperationQuestStageId id) {
     if (!operationQuestProgress.isUnlocked(id)) return;
+    _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     _pendingOperationQuestStageId = id;
     closeModal();
@@ -1448,6 +1463,7 @@ class GameState extends ChangeNotifier {
   }
 
   void startMasterMode() {
+    _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     closeModal();
     _turnSeq++;
@@ -1463,11 +1479,13 @@ class GameState extends ChangeNotifier {
   }
 
   void showDailyBoss() {
+    _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     showModal(GameModal.dailyBoss);
   }
 
   void startDailyBoss() {
+    _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     closeModal();
     rt.challenge = Operation.dailyBoss;
@@ -1493,7 +1511,7 @@ class GameState extends ChangeNotifier {
     // Safety: block corrupted normal 2P + restricted-mode setup.
     if (replaySnapshot == null &&
         _pendingOperationQuestStageId == null &&
-        !GameMode.isAvailableForPlayers(mode, players)) {
+        !GameMode.isAvailableForPlayers(mode, setupPlayers)) {
       mode = GameMode.standard;
       notifyListeners();
       return;
@@ -1513,13 +1531,15 @@ class GameState extends ChangeNotifier {
                 difficulty: diff,
                 numberType: numType,
                 answerStyle: effectiveAnswerStyle,
-                players: players,
+                players: setupPlayers,
                 questionTarget: questionCount,
                 questionMechanic: _pendingQuestionMechanic,
+                weakSkillsPlan: _pendingWeakSkillsPlan,
               )
             : _operationQuestSnapshot(pendingQuestId));
     _pendingOperationQuestStageId = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
+    _pendingWeakSkillsPlan = null;
     _runSnapshot = snapshot;
     final isMaster = snapshot.operation == Operation.master;
     final isBoss = snapshot.operation == Operation.dailyBoss;
@@ -1673,12 +1693,17 @@ class GameState extends ChangeNotifier {
     }
 
     if (type == Operation.mixed || type == Operation.survival) {
-      type = [
-        Operation.multiplication,
-        Operation.division,
-        Operation.addition,
-        Operation.subtraction
-      ][_rng.nextInt(4)];
+      final weakSkillsPlan = _runSnapshot?.weakSkillsPlan;
+      if (weakSkillsPlan != null) {
+        type = weakSkillsPlan.operationAt(rt.weakSkillsScheduleIndex++);
+      } else {
+        type = [
+          Operation.multiplication,
+          Operation.division,
+          Operation.addition,
+          Operation.subtraction
+        ][_rng.nextInt(4)];
+      }
     }
 
     // Adaptive difficulty
@@ -2636,6 +2661,7 @@ class GameState extends ChangeNotifier {
     _runSnapshot = null;
     _pendingOperationQuestStageId = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
+    _pendingWeakSkillsPlan = null;
     showScreen(GameScreen.menu);
     _logPerformance('main menu navigation completed');
   }
@@ -2653,6 +2679,7 @@ class GameState extends ChangeNotifier {
     _runSnapshot = null;
     _pendingOperationQuestStageId = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
+    _pendingWeakSkillsPlan = null;
     showScreen(GameScreen.menu);
     showModal(GameModal.operationQuest);
     _logPerformance('operation quest map navigation completed');
@@ -3259,6 +3286,7 @@ class GameState extends ChangeNotifier {
     _masterProgress = 0;
     _runSnapshot = null;
     _pendingOperationQuestStageId = null;
+    _pendingWeakSkillsPlan = null;
     currentScreen = GameScreen.menu;
     currentModal = GameModal.none;
     _toastController.reset();

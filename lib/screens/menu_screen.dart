@@ -120,6 +120,17 @@ class MenuScreen extends StatelessWidget {
                 );
               },
             ),
+            const SizedBox(height: 12),
+            SizedBox(
+              key: const Key('weak-skills-practice-row'),
+              height: 84,
+              child: _PracticeCard(
+                '🧠+',
+                'Weak Skills Practice',
+                s.opColor(Operation.mixed),
+                () => gs.goToConfig('weakSkills'),
+              ),
+            ),
             const SizedBox(height: 24),
 
             // BOTTOM NAV

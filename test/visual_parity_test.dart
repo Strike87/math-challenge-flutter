@@ -15,6 +15,7 @@ import 'package:math_challenge/services/storage.dart';
 import 'package:math_challenge/theme.dart';
 import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/models/enums.dart';
+import 'package:math_challenge/models/game_data.dart';
 import 'package:math_challenge/models/player.dart';
 
 import 'package:math_challenge/screens/menu_screen.dart';
@@ -257,6 +258,8 @@ void expectQuickPracticeSemantics() {
   }
   expect(find.text('🧮'), findsOneWidget);
   expect(find.text('MISSING NUMBER'), findsNothing);
+  expect(find.text('Weak Skills Practice'), findsOneWidget);
+  expect(find.text('🧠+'), findsOneWidget);
 }
 
 void main() {
@@ -406,6 +409,45 @@ void main() {
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/05_config_2p_standard_only.png'));
+    });
+
+    testWidgets('16. Weak Skills focused config', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.skillMap = {
+        Operation.addition.name: SkillData(mastery: 5, count: 3),
+        Operation.subtraction.name: SkillData(mastery: 20, count: 3),
+        Operation.multiplication.name: SkillData(mastery: 30, count: 3),
+        Operation.division.name: SkillData(mastery: 40, count: 3),
+      };
+      state.goToConfig('weakSkills');
+      await state.selectNumType(NumberType.natural.name);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+      expect(find.text('Recommended focus'), findsOneWidget);
+      expect(find.text('👥 2 Players'), findsNothing);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/16_weak_skills_config_focused.png'),
+      );
+    });
+
+    testWidgets('17. Weak Skills fallback config', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.goToConfig('weakSkills');
+      await state.selectNumType(NumberType.natural.name);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+      expect(find.text('Building your practice profile'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/17_weak_skills_config_fallback.png'),
+      );
     });
 
     testWidgets('6. Player setup 1P layout', (tester) async {

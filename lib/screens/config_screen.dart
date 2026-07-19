@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
+import '../features/weak_skills/domain/weak_skills_policy.dart';
 import '../game_config.dart';
 import '../models/enums.dart';
 import '../services/settings.dart';
@@ -13,6 +14,7 @@ class ConfigScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
     final s = context.watch<SettingsService>();
+    final weakSkillsPlan = gs.setupWeakSkillsPlan;
     return SafeArea(
       child: LayoutBuilder(
         builder: (context, constraints) => SingleChildScrollView(
@@ -29,15 +31,27 @@ class ConfigScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
 
+                if (weakSkillsPlan != null) ...[
+                  _WeakSkillsExplanation(plan: weakSkillsPlan, s: s),
+                  const SizedBox(height: 16),
+                ],
+
                 // Players
                 _SectionTitle('Players', s),
                 _ToggleRow(
                   options: [
                     _ToggleOpt('👤 1 Player', 1, s.accent(GameConfig.sky)),
-                    _ToggleOpt('👥 2 Players', 2, s.accent(GameConfig.punch)),
+                    if (weakSkillsPlan == null)
+                      _ToggleOpt(
+                        '👥 2 Players',
+                        2,
+                        s.accent(GameConfig.punch),
+                      ),
                   ],
-                  active: gs.players,
-                  onPick: (v) => gs.setOption('players', v),
+                  active: gs.setupPlayers,
+                  onPick: weakSkillsPlan == null
+                      ? (v) => gs.setOption('players', v)
+                      : (_) {},
                 ),
                 const SizedBox(height: 16),
 
@@ -45,7 +59,7 @@ class ConfigScreen extends StatelessWidget {
                 _SectionTitle('Game Mode', s),
                 _ModeTabs(
                   active: gs.mode,
-                  players: gs.players,
+                  players: gs.setupPlayers,
                   onPick: (m) => gs.setOption('mode', m.name),
                 ),
                 const SizedBox(height: 8),
@@ -53,7 +67,7 @@ class ConfigScreen extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 if (gs.mode == GameMode.standard &&
-                    gs.players == 1 &&
+                    gs.setupPlayers == 1 &&
                     !gs.isMissingOperationPractice) ...[
                   _SectionTitle('Answer Style', s),
                   _ToggleRow(
@@ -183,6 +197,57 @@ class ConfigScreen extends StatelessWidget {
       case Difficulty.insane:
         return '💀 Numbers 100–499, lightning round';
     }
+  }
+}
+
+class _WeakSkillsExplanation extends StatelessWidget {
+  const _WeakSkillsExplanation({required this.plan, required this.s});
+
+  final WeakSkillsPlan plan;
+  final SettingsService s;
+
+  @override
+  Widget build(BuildContext context) {
+    final operations = plan.focusedOperations;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: s.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(GameConfig.borderMdLight)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            plan.isFallback
+                ? 'Building your practice profile'
+                : 'Recommended focus',
+            style: TextStyle(color: s.text, fontWeight: FontWeight.w800),
+          ),
+          if (plan.isFallback)
+            Text(
+              'This round will include all four operations.',
+              style: TextStyle(color: s.muted, fontSize: 12),
+            )
+          else ...[
+            const SizedBox(height: 4),
+            for (final operation in operations)
+              Text(
+                operation == Operation.multiplication
+                    ? 'Multiplication'
+                    : operation.label,
+                style: TextStyle(color: s.text, fontWeight: FontWeight.w700),
+              ),
+            const SizedBox(height: 4),
+            Text(
+              'Based on your practice history',
+              style: TextStyle(color: s.muted, fontSize: 12),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
