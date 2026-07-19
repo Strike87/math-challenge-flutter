@@ -269,6 +269,121 @@ Only the first unchecked item under **Active** may be started.
     - Independent fallback regression reviewer passed under the `AGENTS.md`
       reviewer availability policy.
 
+- [ ] V2-03H — Weak Skills Practice
+  - Add a full-width Quick Practice row beneath the six existing square cards.
+  - Preserve the existing three-row, two-column square-card layout unchanged:
+    - Addition | Subtraction
+    - Multiplication | Division
+    - Missing Operation | Mixed Operations
+  - Display icon `🧠+` and title `Weak Skills Practice`.
+  - Use only the existing canonical mastery data; do not create a second
+    mastery or progression system.
+  - Personalize practice around canonical operations that need more practice,
+    and explain the selected focus to the player rather than silently
+    reassigning operations.
+  - Require sufficient evidence before classifying an operation as weak.
+  - Lock the selected focus for the entire round.
+  - Replay preserves the same focus and weighting.
+  - Starting a genuinely new Weak Skills Practice run recalculates focus from
+    the latest mastery data.
+  - Inherit the player's normal Quick Practice number-type selection.
+  - Preserve normal difficulty and other supported configuration choices.
+  - Never write Operation Quest stars or progress.
+  - Do not add a new currency or unlock system.
+  - Existing mastery, achievements, history, adaptive updates, and scoring
+    must continue through canonical paths.
+  - V1 policy, subject to the mandatory pre-implementation audit:
+    - Rank only Addition, Subtraction, Multiplication, and Division.
+    - Use existing canonical operation mastery values.
+    - Do not create Operation × Number Type mastery unless the audit proves
+      that segmentation already exists canonically.
+    - The player continues to choose or inherit the normal Quick Practice
+      number type.
+    - Candidate evidence threshold:
+      - At least `10` total tracked answers.
+      - At least `3` tracked attempts for an operation before it is eligible
+        for weakness ranking.
+    - Use balanced fallback practice across all four operations when evidence
+      is insufficient.
+    - Do not manufacture weakness from effectively tied mastery values.
+    - Also use balanced fallback when fewer than two operations are eligible,
+      all eligible operations have equal mastery, or the mastery spread is too
+      small to represent a meaningful weakness.
+    - Do not hard-code a meaningful-spread threshold until the audit confirms
+      the mastery scale and existing conventions. The previously discussed
+      `5`-point candidate is not approved without audit evidence.
+    - Candidate focused weighting is `65%` primary weak operation and `35%`
+      secondary weak operation. This is tunable V1 product policy, not a
+      permanently frozen learning constant.
+    - If two operations tie for the weakest eligible position, select both
+      when possible.
+    - If a tie affects only the second focus position, use an existing
+      deterministic canonical operation order. Do not invent ordering before
+      the audit.
+    - New start from the menu/configuration calculates focus exactly once;
+      active play keeps it locked; Replay preserves it; exiting and starting a
+      new run recalculates it.
+    - Live mastery updates during a round must not change its operation mix.
+    - The run snapshot should own enough information to preserve focus across
+      the round and Replay, subject to architecture audit.
+    - Explain focused selection with supportive language such as
+      `Recommended focus` and `Based on your practice history`.
+    - Explain fallback with supportive language such as
+      `Building your practice profile` and
+      `This round will include all four operations.`
+    - Avoid negative language such as `bad at`, `worst skill`, and `failed`.
+    - End-of-round feedback may show improvement in targeted operations using
+      existing mastery data, but must not create a separate Weak Skills score
+      or mastery system.
+    - Weak Skills Practice may contribute toward existing achievements through
+      normal mastery paths only. Do not grant bonus mastery, special
+      achievement credit, or achievement shortcuts.
+  - Permanent product governance:
+    - Every new feature must improve learning or motivation.
+    - Progression must remain understandable and rewarding.
+    - Quality and stability are more important than adding features quickly.
+  - Implementation is blocked until a read-only architecture/data audit
+    confirms:
+    - Canonical mastery scale and default mastery values.
+    - Exact mastery ownership and state location.
+    - Per-operation attempt-count availability.
+    - Whether total answer count already exists.
+    - Whether mastery is operation-only or segmented by number type.
+    - Canonical operation ordering.
+    - Current adaptive mastery update timing and whether mastery changes live
+      after every answer.
+    - Run snapshot architecture and Replay snapshot behavior.
+    - Existing mixed-operation generation policy.
+    - Available deterministic RNG and testing patterns.
+    - Existing result-screen capability for showing before/after mastery.
+    - Whether any persistence migration would actually be required.
+    - The safest fallback, tie, and spread policy consistent with current data.
+  - No implementation agent may invent missing behavior.
+  - The architecture/data audit must determine and obtain approval for the
+    smallest safe implementation scope; this entry does not lock exact files
+    or authorize speculative architecture.
+  - Likely audit areas may include menu presentation, run
+    configuration/snapshot, a small Weak Skills selection policy, results
+    feedback, and focused tests.
+  - Acceptance criteria:
+    - `🧠+` Weak Skills Practice appears as a full-width row beneath the six
+      square Quick Practice cards.
+    - The existing six Quick Practice cards remain unchanged.
+    - Focus selection uses canonical existing mastery data with no parallel
+      mastery system.
+    - The player is told why a focus or fallback was selected.
+    - Insufficient evidence does not label a player weak prematurely.
+    - Focus remains fixed for the whole round, Replay preserves it, and a
+      genuinely new start recalculates it.
+    - Number-type behavior is explicit and testable.
+    - Tie and insufficient-spread behavior is explicit and deterministic.
+    - Existing mastery, history, achievement, adaptive, and scoring paths
+      remain canonical.
+    - No Operation Quest stars or progress are written.
+    - Mandatory parity gate passes before implementation.
+    - Mandatory regression-review gate passes before commit.
+    - Full required validation passes before commit.
+
 ## Completed
 
 - [x] R3 CoinLedger
