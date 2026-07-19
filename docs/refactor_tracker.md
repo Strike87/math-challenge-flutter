@@ -269,7 +269,7 @@ Only the first unchecked item under **Active** may be started.
     - Independent fallback regression reviewer passed under the `AGENTS.md`
       reviewer availability policy.
 
-- [ ] V2-03H — Weak Skills Practice
+- [x] V2-03H — Weak Skills Practice
   - Add a full-width Quick Practice row beneath the six existing square cards.
   - Preserve the existing three-row, two-column square-card layout unchanged:
     - Addition | Subtraction
@@ -342,8 +342,7 @@ Only the first unchecked item under **Active** may be started.
     - Every new feature must improve learning or motivation.
     - Progression must remain understandable and rewarding.
     - Quality and stability are more important than adding features quickly.
-  - Implementation is blocked until a read-only architecture/data audit
-    confirms:
+  - The completed read-only architecture/data audit confirmed:
     - Canonical mastery scale and default mastery values.
     - Exact mastery ownership and state location.
     - Per-operation attempt-count availability.
@@ -383,6 +382,33 @@ Only the first unchecked item under **Active** may be started.
     - Mandatory parity gate passes before implementation.
     - Mandatory regression-review gate passes before commit.
     - Full required validation passes before commit.
+  - Implementation complete.
+  - Verification record:
+    - Weak Skills Practice `🧠+` implemented.
+    - Existing canonical `skillMap` mastery reused with no parallel mastery
+      system and no persistence migration.
+    - Evidence thresholds: `10` total attempts and `3` attempts per operation.
+    - Meaningful mastery spread threshold: `10` points.
+    - Focused scheduling is deterministic: `65%` primary and `35%` secondary.
+    - Weakest-operation ties use deterministic `50%` / `50%` scheduling.
+    - Insufficient evidence uses a balanced four-operation fallback.
+    - Focus is locked for the entire round; Replay preserves it, while a fresh
+      start recalculates it.
+    - Follow-up reinforcement does not consume Weak Skills schedule slots.
+    - Single-player is enforced without changing the global player preference.
+    - Number-type and answer-style behavior is preserved.
+    - Canonical history, mastery, adaptive, and achievement paths are
+      preserved.
+    - Operation Quest progress remains isolated.
+    - Focused policy tests: 4/4 passed.
+    - Focused orchestration/UI tests: 6/6 passed.
+    - Full non-golden suite: 313/313 passed.
+    - Visual suite: 18/18 passed.
+    - `flutter analyze --no-pub`: clean.
+    - `git diff --check`: clean.
+    - `graphify update .`: passed; generated churn excluded.
+    - Independent fallback regression reviewer passed under the `AGENTS.md`
+      reviewer availability policy.
 
 ## Completed
 
