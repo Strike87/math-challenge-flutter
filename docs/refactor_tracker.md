@@ -210,7 +210,7 @@ Only the first unchecked item under **Active** may be started.
     - Independent fallback regression reviewer passed under the `AGENTS.md`
       availability policy.
 
-- [ ] V2-03G — Reorder main-menu challenge rows
+- [x] V2-03G — Reorder main-menu challenge rows
   - Reorder the existing three main-menu challenge rows/cards to:
     1. Master Challenge
     2. Daily Boss
@@ -251,6 +251,23 @@ Only the first unchecked item under **Active** may be started.
     - No unrelated gameplay or progression behavior changes.
     - Mandatory parity gate passes before implementation.
     - Mandatory regression reviewer passes before commit.
+  - Implementation complete.
+  - Verification record:
+    - Final order: Master Challenge → Daily Boss → Operation Quest.
+    - Presentation-order-only change.
+    - Existing Master Challenge navigation preserved.
+    - Daily Boss dynamic and claimed-state behavior preserved.
+    - Operation Quest navigation preserved.
+    - 10px spacing between challenge cards preserved.
+    - 20px spacing after Operation Quest preserved.
+    - Quick Practice unchanged.
+    - Full non-golden suite: 303/303 passed.
+    - Visual suite: 16/16 passed.
+    - `flutter analyze --no-pub`: clean.
+    - `git diff --check`: clean.
+    - Mandatory parity gate passed.
+    - Independent fallback regression reviewer passed under the `AGENTS.md`
+      reviewer availability policy.
 
 ## Completed
 
