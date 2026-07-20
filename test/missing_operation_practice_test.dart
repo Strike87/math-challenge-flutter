@@ -443,57 +443,70 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('MISSING OPERATION'), findsOneWidget);
-    expect(find.text('MIXED OPERATIONS'), findsOneWidget);
+    expect(find.text('Missing Operation'), findsOneWidget);
+    expect(find.text('Mixed Operations'), findsOneWidget);
     expect(find.text('MISSING NUMBER'), findsNothing);
-    expect(find.text('Mixed Operations'), findsNothing);
     expect(find.text('THE ULTIMATE TEST'), findsNothing);
     expect(find.text('PLAY'), findsNothing);
-    final fittedLabel = tester.widget<FittedBox>(find.ancestor(
-      of: find.text('MISSING OPERATION'),
-      matching: find.byType(FittedBox),
-    ));
+
+    final fittedLabel = tester.widget<FittedBox>(
+      find.ancestor(
+        of: find.text('Missing Operation'),
+        matching: find.byType(FittedBox),
+      ),
+    );
 
     const labels = [
-      'ADDITION',
-      'SUBTRACTION',
-      'MULTIPLY',
-      'DIVISION',
-      'MISSING OPERATION',
-      'MIXED OPERATIONS',
+      'Addition',
+      'Subtraction',
+      'Multiplication',
+      'Division',
+      'Missing Operation',
+      'Mixed Operations',
     ];
     final cards = labels
-        .map((label) => find
-            .ancestor(of: find.text(label), matching: find.byType(InkWell))
-            .evaluate()
-            .single)
+        .map(
+          (label) => find
+              .ancestor(
+                of: find.text(label),
+                matching: find.byType(InkWell),
+              )
+              .evaluate()
+              .single,
+        )
         .toSet();
     expect(cards, hasLength(6));
 
     final missingCard = find.ancestor(
-      of: find.text('MISSING OPERATION'),
+      of: find.text('Missing Operation'),
       matching: find.byType(InkWell),
     );
     final mixedCard = find.ancestor(
-      of: find.text('MIXED OPERATIONS'),
+      of: find.text('Mixed Operations'),
       matching: find.byType(InkWell),
     );
     final divisionCard = find.ancestor(
-      of: find.text('DIVISION'),
+      of: find.text('Division'),
       matching: find.byType(InkWell),
     );
     expect(tester.getSize(missingCard), tester.getSize(mixedCard));
-    expect(tester.getCenter(missingCard).dy,
-        closeTo(tester.getCenter(mixedCard).dy, 0.1));
-    expect(tester.getCenter(missingCard).dx,
-        lessThan(tester.getCenter(mixedCard).dx));
-    expect(tester.getCenter(missingCard).dy,
-        greaterThan(tester.getCenter(divisionCard).dy));
+    expect(
+      tester.getCenter(missingCard).dy,
+      closeTo(tester.getCenter(mixedCard).dy, 0.1),
+    );
+    expect(
+      tester.getCenter(missingCard).dx,
+      lessThan(tester.getCenter(mixedCard).dx),
+    );
+    expect(
+      tester.getCenter(missingCard).dy,
+      greaterThan(tester.getCenter(divisionCard).dy),
+    );
     expect(tester.takeException(), isNull);
 
-    await tester.ensureVisible(find.text('MISSING OPERATION'));
+    await tester.ensureVisible(find.text('Missing Operation'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('MISSING OPERATION'));
+    await tester.tap(find.text('Missing Operation'));
     await tester.pump();
     expect(state.currentScreen, GameScreen.numType);
     expect(state.isMissingOperationPractice, isTrue);
@@ -504,12 +517,16 @@ void main() {
         data: const MediaQueryData(textScaler: TextScaler.linear(2)),
         child: Directionality(
           textDirection: TextDirection.ltr,
-          child: SizedBox(width: 160, height: 32, child: fittedLabel),
+          child: SizedBox(
+            width: 160,
+            height: 32,
+            child: fittedLabel,
+          ),
         ),
       ),
     );
     await tester.pump();
-    expect(find.text('MISSING OPERATION'), findsOneWidget);
+    expect(find.text('Missing Operation'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -535,10 +552,10 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('MIXED OPERATIONS'), findsOneWidget);
-    await tester.ensureVisible(find.text('MIXED OPERATIONS'));
+    expect(find.text('Mixed Operations'), findsOneWidget);
+    await tester.ensureVisible(find.text('Mixed Operations'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('MIXED OPERATIONS'));
+    await tester.tap(find.text('Mixed Operations'));
     await tester.pump();
 
     expect(state.currentScreen, GameScreen.numType);

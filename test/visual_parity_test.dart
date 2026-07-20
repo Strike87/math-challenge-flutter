@@ -247,19 +247,20 @@ Future<GameState> _makeState([Map<String, Object> prefs = const {}]) async {
 
 void expectQuickPracticeSemantics() {
   for (final label in [
-    'ADDITION',
-    'SUBTRACTION',
-    'MULTIPLY',
-    'DIVISION',
-    'MISSING OPERATION',
-    'MIXED OPERATIONS',
+    'Addition',
+    'Subtraction',
+    'Multiplication',
+    'Division',
+    'Missing Operation',
+    'Mixed Operations',
   ]) {
     expect(find.text(label), findsOneWidget);
   }
+
   expect(find.text('🧮'), findsOneWidget);
   expect(find.text('MISSING NUMBER'), findsNothing);
   expect(find.text('Weak Skills Practice'), findsOneWidget);
-  expect(find.text('🧠+'), findsOneWidget);
+  expect(find.text('🚀'), findsOneWidget);
 }
 
 void main() {
@@ -495,7 +496,7 @@ void main() {
       expect(tester.getTopLeft(dailyBoss).dy,
           lessThan(tester.getTopLeft(operationQuest).dy));
       expectQuickPracticeSemantics();
-      expect(find.text('🗺️'), findsOneWidget);
+      expect(find.text('🧭'), findsOneWidget);
       expect(find.text('➕'), findsNothing);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
@@ -675,8 +676,23 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Recommended Practice'), findsOneWidget);
       expect(find.text('Practice areas'), findsOneWidget);
-      expect(find.text('Addition'), findsOneWidget);
-      expect(find.text('Subtraction'), findsOneWidget);
+      final modal = find.byType(ModalRouter);
+
+      expect(
+        find.descendant(
+          of: modal,
+          matching: find.text('Addition'),
+        ),
+        findsOneWidget,
+      );
+
+      expect(
+        find.descendant(
+          of: modal,
+          matching: find.text('Subtraction'),
+        ),
+        findsOneWidget,
+      );
       expectNoVisualException(tester);
       await expectLater(
         find.byType(TestAppShell),

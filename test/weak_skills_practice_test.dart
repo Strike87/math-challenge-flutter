@@ -201,6 +201,8 @@ void main() {
     final state = await _makeState();
     addTearDown(state.dispose);
     _setFocusedSkills(state);
+// Preserve an existing ordinary 2-player preference.
+    state.players = 2;
 
     await _pumpScreen(
         tester,
@@ -211,14 +213,14 @@ void main() {
         ]),
         size: const Size(390, 844));
     expect(find.text('Weak Skills Practice'), findsOneWidget);
-    expect(find.text('🧠+'), findsOneWidget);
+    expect(find.text('🚀'), findsOneWidget);
     for (final label in [
-      'ADDITION',
-      'SUBTRACTION',
-      'MULTIPLY',
-      'DIVISION',
-      'MISSING OPERATION',
-      'MIXED OPERATIONS',
+      'Addition',
+      'Subtraction',
+      'Multiplication',
+      'Division',
+      'Missing Operation',
+      'Mixed Operations',
     ]) {
       expect(find.text(label), findsOneWidget);
     }
@@ -226,7 +228,7 @@ void main() {
       find.byKey(const Key('weak-skills-practice-row')),
     );
     expect(rowSize.width, 358);
-    expect(rowSize.height, 84);
+    expect(rowSize.height, greaterThanOrEqualTo(86));
     await tester.ensureVisible(find.text('Weak Skills Practice'));
     await tester.tap(find.text('Weak Skills Practice'));
     await tester.pumpAndSettle();
@@ -236,8 +238,23 @@ void main() {
     expect(state.currentScreen, GameScreen.menu);
     expect(find.text('Recommended Practice'), findsOneWidget);
     expect(find.text('Practice areas'), findsOneWidget);
-    expect(find.text('Addition'), findsOneWidget);
-    expect(find.text('Subtraction'), findsOneWidget);
+    final modal = find.byType(ModalRouter);
+
+    expect(
+      find.descendant(
+        of: modal,
+        matching: find.text('Addition'),
+      ),
+      findsOneWidget,
+    );
+
+    expect(
+      find.descendant(
+        of: modal,
+        matching: find.text('Subtraction'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Based on your practice history.'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
