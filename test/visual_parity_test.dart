@@ -601,6 +601,7 @@ void main() {
         (tester) async {
       final state = await _makeState({'mc_dark': false});
       state.setOption('players', 2);
+      state.setAdaptive(true);
       state.currentScreen = GameScreen.config;
       await setTestDevice(tester, logicalSize: phoneSize);
       await tester.pumpWidget(
@@ -624,6 +625,7 @@ void main() {
       state.goToConfig('weakSkills');
       state.continueWeakSkillsSetup();
       await state.selectNumType(NumberType.natural.name);
+      state.setAdaptive(true);
       await setTestDevice(tester, logicalSize: phoneSize);
       await tester.pumpWidget(
           TestAppWrapper(state: state, child: const TestAppShell()));
@@ -643,6 +645,7 @@ void main() {
       state.goToConfig('weakSkills');
       state.continueWeakSkillsSetup();
       await state.selectNumType(NumberType.natural.name);
+      state.setAdaptive(true);
       await setTestDevice(tester, logicalSize: phoneSize);
       await tester.pumpWidget(
           TestAppWrapper(state: state, child: const TestAppShell()));
@@ -843,6 +846,7 @@ void main() {
 
     testWidgets('11. Avatar Builder modal', (tester) async {
       final state = await _makeState({'mc_dark': false});
+      state.setOption('players', 2);
       state.currentScreen = GameScreen.player;
       state.showModal(GameModal.avatarBuilder);
       await setTestDevice(tester, logicalSize: phoneSize);

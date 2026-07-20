@@ -333,11 +333,11 @@ class GameState extends ChangeNotifier {
   WeakSkillsPlan? _pendingWeakSkillsPlan;
 
   // ─── Options ────────────────────────────────────────────────
-  int players = 2;
+  int players = 1;
   GameMode mode = GameMode.standard;
   Difficulty diff = Difficulty.easy;
   int questionCount = 10;
-  bool adaptive = true;
+  bool adaptive = false;
   NumberType numType = NumberType.natural;
   AnswerStyle selectedAnswerStyle = AnswerStyle.choice4;
 

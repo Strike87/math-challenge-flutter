@@ -30,6 +30,18 @@ void main() {
   });
 
   group('RT-041 mode/player eligibility', () {
+    test('fresh loaded state uses the Game Setup defaults', () async {
+      final state = await _makeState();
+
+      expect(state.players, 1);
+      expect(state.setupPlayers, 1);
+      expect(state.adaptive, isFalse);
+      expect(state.mode, GameMode.standard);
+      expect(state.selectedAnswerStyle, AnswerStyle.choice4);
+      expect(state.diff, Difficulty.easy);
+      expect(state.questionCount, 10);
+    });
+
     // 1. 1P allows Standard, Blitz, Death, Survival, Combo.
     test('1P allows all five modes', () async {
       final state = await _makeState();
