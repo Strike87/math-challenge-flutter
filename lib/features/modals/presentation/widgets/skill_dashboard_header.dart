@@ -19,7 +19,7 @@ class SkillDashboardHeader extends StatelessWidget {
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
-              'Skill Dashboard',
+              'Skills Dashboard',
               maxLines: 1,
               softWrap: false,
               style: TextStyle(

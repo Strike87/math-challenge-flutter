@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -7,6 +6,9 @@ import '../engine/game_state.dart';
 import '../features/modals/presentation/widgets/avatar_builder_tab_label.dart';
 import '../features/modals/presentation/widgets/skill_dashboard_header.dart';
 import '../features/operation_quest/domain/operation_quest.dart';
+import '../features/gameplay/domain/question_mechanic.dart';
+import '../features/modals/presentation/widgets/skill_dashboard_cards.dart';
+import '../features/weak_skills/domain/weak_skills_policy.dart';
 import '../game_config.dart';
 import '../models/enums.dart';
 import '../models/game_data.dart';
@@ -76,9 +78,90 @@ class ModalRouter extends StatelessWidget {
         return DailyChallengesModal(gs: gs);
       case GameModal.operationQuest:
         return OperationQuestModal(gs: gs);
+      case GameModal.weakSkillsPractice:
+        return WeakSkillsPracticeModal(gs: gs);
       case GameModal.none:
         return const SizedBox.shrink();
     }
+  }
+}
+
+class WeakSkillsPracticeModal extends StatelessWidget {
+  const WeakSkillsPracticeModal({super.key, required this.gs});
+
+  final GameState gs;
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = gs.setupWeakSkillsPlan;
+    if (plan == null) return const SizedBox.shrink();
+    final s = context.watch<SettingsService>();
+    return ModalShell(
+      icon: '🧠+',
+      title: plan.isFallback
+          ? 'Building Your Practice Profile'
+          : 'Recommended Practice',
+      actions: [
+        NeoButton(
+          label: 'Cancel',
+          outlined: true,
+          color: GameConfig.coral,
+          onPressed: gs.cancelWeakSkillsSetup,
+        ),
+        NeoButton(
+          label: 'Continue',
+          color: GameConfig.coral,
+          onPressed: gs.continueWeakSkillsSetup,
+        ),
+      ],
+      child: plan.isFallback
+          ? Text(
+              'This round will include all four operations.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: s.text,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Practice areas',
+                  style: TextStyle(
+                    color: s.muted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                for (final operation in plan.focusedOperations)
+                  Text(
+                    operation == Operation.multiplication
+                        ? 'Multiplication'
+                        : operation.label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: s.text,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: AppFonts.headFor(s),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Text(
+                  'Based on your practice history.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: s.muted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+    );
   }
 }
 
@@ -132,8 +215,7 @@ class OperationQuestModal extends StatelessWidget {
             stages: operationQuestStages
                 .where((stage) =>
                     stage.operation == Operation.mixed &&
-                    stage.questionMechanic ==
-                        OperationQuestQuestionMechanic.standard)
+                    stage.questionMechanic == QuestionMechanic.standard)
                 .toList(),
             gs: gs,
           ),
@@ -142,8 +224,7 @@ class OperationQuestModal extends StatelessWidget {
             heading: '❔ Missing Operation Trail',
             stages: operationQuestStages
                 .where((stage) =>
-                    stage.questionMechanic ==
-                    OperationQuestQuestionMechanic.missingOperation)
+                    stage.questionMechanic == QuestionMechanic.missingOperation)
                 .toList(),
             gs: gs,
           ),
@@ -152,8 +233,7 @@ class OperationQuestModal extends StatelessWidget {
             heading: '🔢 Missing Number Trail',
             stages: operationQuestStages
                 .where((stage) =>
-                    stage.questionMechanic ==
-                    OperationQuestQuestionMechanic.missingNumber)
+                    stage.questionMechanic == QuestionMechanic.missingNumber)
                 .toList(),
             gs: gs,
           ),
@@ -2344,331 +2424,95 @@ Color _avatarBuilderColor(String hex) {
 // ═══════════════════════════════════════════════════════════════
 class SkillDashboardModal extends StatelessWidget {
   const SkillDashboardModal({super.key, required this.gs});
+
   final GameState gs;
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
+
+    final overallMasteryPercent = (gs.adaptLvlRaw * 10).clamp(0.0, 100.0);
+
+    final recommendation = selectWeakSkillsPlan(gs.skillMap);
+
     final skills = [
-      Operation.addition,
-      Operation.subtraction,
-      Operation.multiplication,
-      Operation.division,
-    ]
-        .map((op) => _SkillSnapshot(op, gs.skillMap[op.name] ?? SkillData()))
-        .toList();
-    final practiced = skills.where((item) => item.data.count > 0).toList()
-      ..sort((a, b) => a.accuracy.compareTo(b.accuracy));
-    final weakest = practiced.isEmpty ? null : practiced.first;
+      (
+        operation: Operation.addition,
+        symbol: '➕',
+        label: 'Addition',
+        color: const Color(GameConfig.mint),
+      ),
+      (
+        operation: Operation.subtraction,
+        symbol: '➖',
+        label: 'Subtraction',
+        color: const Color(GameConfig.coral),
+      ),
+      (
+        operation: Operation.multiplication,
+        symbol: '✖',
+        label: 'Multiplication',
+        color: const Color(GameConfig.mango),
+      ),
+      (
+        operation: Operation.division,
+        symbol: '➗',
+        label: 'Division',
+        color: const Color(GameConfig.sky),
+      ),
+    ];
 
     return ModalShell(
       icon: '📈',
-      title: 'Skill Dashboard',
+      title: 'Skills Dashboard',
       maxHeight: 680,
       header: SkillDashboardHeader(settings: s),
       actions: [
         NeoButton(
-            label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
+          label: 'Close',
+          color: GameConfig.coral,
+          onPressed: gs.closeModal,
+        ),
       ],
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            width: 300,
-            height: 300,
-            child: CustomPaint(
-              painter: _SkillRadarPainter(skills: skills, settings: s),
+          OverallMasteryCard(
+            settings: s,
+            masteryPercent: overallMasteryPercent,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'YOUR SKILLS',
+            style: TextStyle(
+              color: s.muted,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: 16),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final itemWidth = (constraints.maxWidth - 14) / 2;
-              return Wrap(
-                spacing: 14,
-                runSpacing: 12,
-                children: skills
-                    .map((item) => SizedBox(
-                          width: itemWidth,
-                          height: 52,
-                          child: _SkillLabelItem(item: item, settings: s),
-                        ))
-                    .toList(),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            decoration: BoxDecoration(
-              color: s.surface2.withValues(alpha: s.dark ? 0.9 : 0.7),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: s.border, width: 1.5),
+          const SizedBox(height: 12),
+          for (var i = 0; i < skills.length; i++) ...[
+            SkillMasteryCard(
+              settings: s,
+              symbol: skills[i].symbol,
+              label: skills[i].label,
+              masteryPercent:
+                  gs.skillMap[skills[i].operation.name]?.mastery ?? 0,
+              accentColor: skills[i].color,
             ),
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(text: '💡 '),
-                  if (weakest == null)
-                    const TextSpan(
-                      text:
-                          'Keep practicing! Focus on your weaker areas to become a Math Master! 🌟',
-                    )
-                  else ...[
-                    const TextSpan(text: 'Focus on '),
-                    TextSpan(
-                      text: weakest.op.name,
-                      style: const TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    TextSpan(
-                      text:
-                          ' (${weakest.accuracy.round()}% accuracy) to improve your overall score!',
-                    ),
-                  ],
-                ],
-              ),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: s.text2,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                height: 1.35,
-              ),
-            ),
+            if (i < skills.length - 1) const SizedBox(height: 10),
+          ],
+          const SizedBox(height: 22),
+          WeakSkillsRecommendationCard(
+            settings: s,
+            plan: recommendation,
+            onTap: () => gs.goToConfig('weakSkills'),
           ),
         ],
       ),
     );
   }
-}
-
-class _SkillSnapshot {
-  const _SkillSnapshot(this.op, this.data);
-
-  final Operation op;
-  final SkillData data;
-
-  double get accuracy =>
-      data.count == 0 ? 0 : (data.correct / data.count * 100).clamp(0, 100);
-}
-
-class _SkillLabelItem extends StatelessWidget {
-  const _SkillLabelItem({required this.item, required this.settings});
-
-  final _SkillSnapshot item;
-  final SettingsService settings;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _skillAccuracyColor(item.accuracy);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: settings.surface2.withValues(alpha: settings.dark ? 0.9 : 0.7),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: settings.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(text: '${item.op.name}: '),
-                    TextSpan(
-                      text: '${item.accuracy.round()}%',
-                      style: const TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                  ],
-                ),
-                style: TextStyle(
-                  color: settings.text,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SkillRadarPainter extends CustomPainter {
-  _SkillRadarPainter({required this.skills, required this.settings});
-
-  final List<_SkillSnapshot> skills;
-  final SettingsService settings;
-  final Map<String, TextPainter> _textPainters = {};
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (skills.isEmpty) return;
-
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width, size.height) * 0.34;
-    final n = skills.length;
-    final ringPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1
-      ..color =
-          settings.dark ? const Color(0xFF333355) : const Color(0xFFFFE4C8);
-    final axisPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..color =
-          settings.dark ? const Color(0xFF444466) : const Color(0xFFFFCDA0);
-    final dataFill = Paint()
-      ..style = PaintingStyle.fill
-      ..color = const Color(GameConfig.coral).withValues(alpha: 0.18);
-    final dataStroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2
-      ..strokeJoin = StrokeJoin.round
-      ..color = const Color(GameConfig.coral);
-
-    for (final pct in [0.25, 0.5, 0.75, 1.0]) {
-      final path = _polygonPath(center, radius * pct, n, (_) => 1);
-      canvas.drawPath(path..close(), ringPaint);
-      _drawText(
-        canvas,
-        '${(pct * 100).round()}%',
-        Offset(center.dx + 4, center.dy - radius * pct - 10),
-        settings.muted.withValues(alpha: 0.65),
-        8,
-        FontWeight.w700,
-      );
-    }
-
-    for (var i = 0; i < n; i++) {
-      final edge = _point(center, radius, i, n);
-      canvas.drawLine(center, edge, axisPaint);
-    }
-
-    final dataPath = _polygonPath(
-      center,
-      radius,
-      n,
-      (i) => skills[i].accuracy / 100,
-    )..close();
-    canvas.drawPath(dataPath, dataFill);
-    canvas.drawPath(dataPath, dataStroke);
-
-    for (var i = 0; i < n; i++) {
-      final item = skills[i];
-      final value = item.accuracy / 100;
-      final dot = _point(center, radius * value, i, n);
-      final dotColor = value >= 0.8
-          ? const Color(GameConfig.mint)
-          : value >= 0.5
-              ? const Color(GameConfig.mango)
-              : const Color(GameConfig.coral);
-
-      canvas.drawCircle(
-        dot,
-        5.5,
-        Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.fill,
-      );
-      canvas.drawCircle(dot, 4.6, Paint()..color = dotColor);
-
-      final axisLabel = _point(center, radius + 22, i, n);
-      _drawText(
-        canvas,
-        item.op.label,
-        axisLabel,
-        settings.text,
-        10.5,
-        FontWeight.w900,
-        centered: true,
-      );
-    }
-
-    canvas.drawCircle(center, 3, axisPaint);
-  }
-
-  Path _polygonPath(
-    Offset center,
-    double radius,
-    int count,
-    double Function(int index) scaleForIndex,
-  ) {
-    final path = Path();
-    for (var i = 0; i < count; i++) {
-      final p = _point(center, radius * scaleForIndex(i), i, count);
-      if (i == 0) {
-        path.moveTo(p.dx, p.dy);
-      } else {
-        path.lineTo(p.dx, p.dy);
-      }
-    }
-    return path;
-  }
-
-  Offset _point(Offset center, double radius, int index, int count) {
-    final angle = (index * 2 * math.pi / count) - math.pi / 2;
-    return Offset(
-      center.dx + radius * math.cos(angle),
-      center.dy + radius * math.sin(angle),
-    );
-  }
-
-  void _drawText(
-    Canvas canvas,
-    String text,
-    Offset offset,
-    Color color,
-    double fontSize,
-    FontWeight weight, {
-    bool centered = false,
-  }) {
-    final key = '$text|${color.toARGB32()}|$fontSize|${weight.value}';
-    final painter = _textPainters.putIfAbsent(
-      key,
-      () => TextPainter(
-        text: TextSpan(
-          text: text,
-          style: TextStyle(
-            color: color,
-            fontSize: fontSize,
-            fontWeight: weight,
-            fontFamily: AppFonts.body,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout(),
-    );
-    painter.paint(
-      canvas,
-      centered
-          ? offset - Offset(painter.width / 2, painter.height / 2)
-          : offset,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _SkillRadarPainter oldDelegate) {
-    return oldDelegate.skills != skills ||
-        oldDelegate.settings.dark != settings.dark ||
-        oldDelegate.settings.text != settings.text;
-  }
-}
-
-Color _skillAccuracyColor(double accuracy) {
-  if (accuracy >= 80) return const Color(GameConfig.mint);
-  if (accuracy >= 50) return const Color(GameConfig.mango);
-  return const Color(GameConfig.coral);
 }
 
 // ═══════════════════════════════════════════════════════════════

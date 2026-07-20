@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../features/operation_quest/domain/operation_quest.dart';
+import '../features/gameplay/domain/question_mechanic.dart';
 import '../engine/game_state.dart';
 import '../features/gameplay/presentation/widgets/gameplay_animation_wrappers.dart';
 import '../features/gameplay/presentation/widgets/gameplay_controls.dart';
@@ -88,7 +88,7 @@ class _GameScreenState extends State<GameScreen> {
                         _QuestionCard(gs: gs, s: s),
                         const SizedBox(height: 16),
                         if (rt.answerStyle == AnswerStyle.trueFalse)
-                          _TrueFalseAnswers(gs: gs, s: s)
+                          _TrueFalseAnswers(gs: gs)
                         else
                           _AnswersGrid(gs: gs, s: s),
                         const SizedBox(height: 12),
@@ -1116,34 +1116,39 @@ class _PowerUpHud extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Positioned(
-                        right: -3,
-                        top: -7,
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: const Color(GameConfig.punch),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(GameConfig.punch)
-                                    .withValues(alpha: 0.28),
-                                blurRadius: 8,
+                      if (pu != PowerUp.fifty ||
+                          gs.rt.answerStyle != AnswerStyle.trueFalse)
+                        Positioned(
+                          key: pu == PowerUp.fifty
+                              ? const Key('powerup-fifty-count')
+                              : null,
+                          right: -3,
+                          top: -7,
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: const Color(GameConfig.punch),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(GameConfig.punch)
+                                      .withValues(alpha: 0.28),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              '$count',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
                               ),
-                            ],
-                          ),
-                          child: Text(
-                            '$count',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 );
@@ -1321,6 +1326,11 @@ class _QuestionCard extends StatelessWidget {
       );
     }
     final promptText = _prompt(gs);
+    final proposedAnswer = gs.rt.proposedAnswer;
+    final questionText =
+        gs.rt.answerStyle == AnswerStyle.trueFalse && proposedAnswer != null
+            ? q.text.replaceFirst('?', _formatAnswer(proposedAnswer))
+            : q.text;
     final showCounter = gs.activeMode != GameMode.blitz &&
         gs.activeMode != GameMode.combo &&
         gs.rt.challenge != Operation.master &&
@@ -1453,7 +1463,7 @@ class _QuestionCard extends StatelessWidget {
                     fontFamily: AppFonts.head,
                     height: 1.2,
                   ),
-                  children: _spans(q.text, s),
+                  children: _spans(questionText, s),
                 ),
               ),
             ),
@@ -1608,6 +1618,13 @@ int _questionNumber(GameState gs, int totalTarget) {
   return current.clamp(1, clampedTarget).toInt();
 }
 
+const _answerGridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
+  crossAxisCount: 2,
+  mainAxisSpacing: 10,
+  crossAxisSpacing: 10,
+  childAspectRatio: 2.4,
+);
+
 class _AnswersGrid extends StatelessWidget {
   const _AnswersGrid({required this.gs, required this.s});
   final GameState gs;
@@ -1624,12 +1641,7 @@ class _AnswersGrid extends StatelessWidget {
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 2.4,
-          ),
+          gridDelegate: _answerGridDelegate,
           itemCount: q.choices.length,
           itemBuilder: (_, i) {
             final c = q.choices[i];
@@ -1678,8 +1690,8 @@ class _AnswersGrid extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      gs.isMissingOperationQuest
-                          ? operationQuestOperatorSymbol(c)
+                      gs.isMissingOperation
+                          ? operatorSymbol(c)
                           : _formatAnswer(c),
                       style: TextStyle(
                         fontSize: 26,
@@ -1706,48 +1718,38 @@ class _AnswersGrid extends StatelessWidget {
 }
 
 class _TrueFalseAnswers extends StatelessWidget {
-  const _TrueFalseAnswers({required this.gs, required this.s});
+  const _TrueFalseAnswers({required this.gs});
 
   final GameState gs;
-  final SettingsService s;
 
   @override
   Widget build(BuildContext context) {
     final proposed = gs.rt.proposedAnswer;
     if (proposed == null) return const SizedBox.shrink();
-    return Column(
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
       children: [
-        Text(
-          '= ${_formatAnswer(proposed)}',
-          key: const Key('true-false-proposal'),
-          style: TextStyle(
-            color: s.text,
-            fontSize: 32,
-            fontWeight: FontWeight.w900,
-            fontFamily: AppFonts.head,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            for (final option in [true, false]) ...[
-              Expanded(
-                child: AbsorbPointer(
-                  absorbing: !gs.rt.accepting,
-                  child: Opacity(
-                    opacity: gs.rt.accepting ? 1 : 0.5,
-                    child: NeoButton(
-                      key: Key(option ? 'answer-true' : 'answer-false'),
-                      label: option ? 'True' : 'False',
-                      color: option ? GameConfig.mint : GameConfig.punch,
-                      onPressed: () => gs.onTrueFalseAnswer(option),
-                    ),
-                  ),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: _answerGridDelegate,
+          itemCount: 2,
+          itemBuilder: (_, index) {
+            final option = index == 0;
+            return AbsorbPointer(
+              absorbing: !gs.rt.accepting,
+              child: Opacity(
+                opacity: gs.rt.accepting ? 1 : 0.5,
+                child: NeoButton(
+                  key: Key(option ? 'answer-true' : 'answer-false'),
+                  label: option ? 'True' : 'False',
+                  color: option ? GameConfig.mint : GameConfig.punch,
+                  onPressed: () => gs.onTrueFalseAnswer(option),
                 ),
               ),
-              if (option) const SizedBox(width: 10),
-            ],
-          ],
+            );
+          },
         ),
         IgnorePointer(
           child: BigEmojiOverlay(

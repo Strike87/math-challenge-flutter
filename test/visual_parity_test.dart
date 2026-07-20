@@ -15,6 +15,7 @@ import 'package:math_challenge/services/storage.dart';
 import 'package:math_challenge/theme.dart';
 import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/models/enums.dart';
+import 'package:math_challenge/models/game_data.dart';
 import 'package:math_challenge/models/player.dart';
 
 import 'package:math_challenge/screens/menu_screen.dart';
@@ -244,6 +245,24 @@ Future<GameState> _makeState([Map<String, Object> prefs = const {}]) async {
   return state;
 }
 
+void expectQuickPracticeSemantics() {
+  for (final label in [
+    'Addition',
+    'Subtraction',
+    'Multiplication',
+    'Division',
+    'Missing Operation',
+    'Mixed Operations',
+  ]) {
+    expect(find.text(label), findsOneWidget);
+  }
+
+  expect(find.text('🧮'), findsOneWidget);
+  expect(find.text('MISSING NUMBER'), findsNothing);
+  expect(find.text('Weak Skills Practice'), findsOneWidget);
+  expect(find.text('🚀'), findsOneWidget);
+}
+
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -254,6 +273,208 @@ void main() {
     const phoneSize = Size(390, 844);
     const tabletSize = Size(834, 1194);
 
+    testWidgets('20. Skills Dashboard phone light and dark', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+
+      state.skillMap = {
+        Operation.addition.name: SkillData(mastery: 95, count: 10),
+        Operation.subtraction.name: SkillData(mastery: 72, count: 10),
+        Operation.multiplication.name: SkillData(mastery: 85, count: 10),
+        Operation.division.name: SkillData(mastery: 60, count: 10),
+      };
+      state.adaptLvlRaw = 7.8;
+      state.showModal(GameModal.skillDashboard);
+
+      await setTestDevice(
+        tester,
+        logicalSize: phoneSize,
+      );
+
+      await tester.pumpWidget(
+        TestAppWrapper(
+          state: state,
+          child: const TestAppShell(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Skills Dashboard'), findsOneWidget);
+      expect(find.text('Overall Mastery'), findsOneWidget);
+      expect(find.text('78%'), findsOneWidget);
+      expect(find.text('YOUR SKILLS'), findsOneWidget);
+
+      final modal = find.byType(ModalRouter);
+
+      for (final label in [
+        'Addition',
+        'Subtraction',
+        'Multiplication',
+        'Division',
+      ]) {
+        expect(
+          find.descendant(
+            of: modal,
+            matching: find.text(label),
+          ),
+          findsOneWidget,
+        );
+      }
+
+      expect(
+        find.descendant(
+          of: modal,
+          matching: find.text('Operation Sense'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: modal,
+          matching: find.text('Missing Operation'),
+        ),
+        findsNothing,
+      );
+      expectNoVisualException(tester);
+
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile(
+          'goldens/20_skills_dashboard_phone_light.png',
+        ),
+      );
+
+      state.settings.toggleDark();
+      await tester.pumpAndSettle();
+
+      expectNoVisualException(tester);
+
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile(
+          'goldens/20_skills_dashboard_phone_dark.png',
+        ),
+      );
+    });
+
+    testWidgets('21. Skills Dashboard tablet layout', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+
+      state.skillMap = {
+        Operation.addition.name: SkillData(mastery: 95, count: 10),
+        Operation.subtraction.name: SkillData(mastery: 72, count: 10),
+        Operation.multiplication.name: SkillData(mastery: 85, count: 10),
+        Operation.division.name: SkillData(mastery: 60, count: 10),
+      };
+      state.adaptLvlRaw = 7.8;
+      state.showModal(GameModal.skillDashboard);
+
+      await setTestDevice(
+        tester,
+        logicalSize: tabletSize,
+      );
+
+      await tester.pumpWidget(
+        TestAppWrapper(
+          state: state,
+          child: const TestAppShell(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Skills Dashboard'), findsOneWidget);
+      expect(find.text('Overall Mastery'), findsOneWidget);
+
+      final modal = find.byType(ModalRouter);
+
+      for (final label in [
+        'Addition',
+        'Subtraction',
+        'Multiplication',
+        'Division',
+      ]) {
+        expect(
+          find.descendant(
+            of: modal,
+            matching: find.text(label),
+          ),
+          findsOneWidget,
+        );
+      }
+
+      expectNoVisualException(tester);
+
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile(
+          'goldens/21_skills_dashboard_tablet.png',
+        ),
+      );
+    });
+
+    testWidgets('22. Skills Dashboard Weak Skills recommendation', (
+      tester,
+    ) async {
+      final state = await _makeState({'mc_dark': false});
+
+      state.skillMap = {
+        Operation.addition.name: SkillData(mastery: 5, count: 3),
+        Operation.subtraction.name: SkillData(mastery: 20, count: 3),
+        Operation.multiplication.name: SkillData(mastery: 30, count: 3),
+        Operation.division.name: SkillData(mastery: 40, count: 3),
+      };
+      state.adaptLvlRaw = 2.375;
+      state.showModal(GameModal.skillDashboard);
+
+      await setTestDevice(
+        tester,
+        logicalSize: phoneSize,
+      );
+
+      await tester.pumpWidget(
+        TestAppWrapper(
+          state: state,
+          child: const TestAppShell(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final recommendation = find.byKey(
+        const Key('skill-dashboard-weak-skills-recommendation'),
+      );
+
+      await tester.ensureVisible(recommendation);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: recommendation,
+          matching: find.text('Recommended Practice'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: recommendation,
+          matching: find.text('Build Your Skills'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: recommendation,
+          matching: find.text('Focus on Addition and Subtraction'),
+        ),
+        findsOneWidget,
+      );
+      expectNoVisualException(tester);
+
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile(
+          'goldens/22_skills_dashboard_recommendation.png',
+        ),
+      );
+    });
     testWidgets('1. Main menu phone layout (light & dark)', (tester) async {
       final state = await _makeState({'mc_dark': false});
       state.currentScreen = GameScreen.menu;
@@ -264,7 +485,19 @@ void main() {
       expect(find.text('MATH'), findsOneWidget);
       expect(find.text('CHALLENGE'), findsOneWidget);
       expect(find.text('BOSS BATTLE EDITION'), findsOneWidget);
-      expect(find.text('Operation Quest'), findsOneWidget);
+      final master = find.text('Master Challenge');
+      final dailyBoss = find.text(state.dailyBoss!.name);
+      final operationQuest = find.text('Operation Quest');
+      expect(master, findsOneWidget);
+      expect(dailyBoss, findsOneWidget);
+      expect(operationQuest, findsOneWidget);
+      expect(tester.getTopLeft(master).dy,
+          lessThan(tester.getTopLeft(dailyBoss).dy));
+      expect(tester.getTopLeft(dailyBoss).dy,
+          lessThan(tester.getTopLeft(operationQuest).dy));
+      expectQuickPracticeSemantics();
+      expect(find.text('🧭'), findsOneWidget);
+      expect(find.text('➕'), findsNothing);
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/01_menu_phone_light.png'));
@@ -272,6 +505,7 @@ void main() {
       state.settings.toggleDark();
       await tester.pumpAndSettle();
       expect(find.text('Operation Quest'), findsOneWidget);
+      expectQuickPracticeSemantics();
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/01_menu_phone_dark.png'));
@@ -285,12 +519,14 @@ void main() {
           TestAppWrapper(state: state, child: const TestAppShell()));
       await tester.pumpAndSettle();
       expect(find.text('Operation Quest'), findsOneWidget);
+      expectQuickPracticeSemantics();
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/02_menu_tablet_light.png'));
 
       state.settings.toggleDark();
       await tester.pumpAndSettle();
+      expectQuickPracticeSemantics();
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/02_menu_tablet_dark.png'));
@@ -366,6 +602,7 @@ void main() {
         (tester) async {
       final state = await _makeState({'mc_dark': false});
       state.setOption('players', 2);
+      state.setAdaptive(true);
       state.currentScreen = GameScreen.config;
       await setTestDevice(tester, logicalSize: phoneSize);
       await tester.pumpWidget(
@@ -376,6 +613,110 @@ void main() {
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/05_config_2p_standard_only.png'));
+    });
+
+    testWidgets('16. Weak Skills focused config', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.skillMap = {
+        Operation.addition.name: SkillData(mastery: 5, count: 3),
+        Operation.subtraction.name: SkillData(mastery: 20, count: 3),
+        Operation.multiplication.name: SkillData(mastery: 30, count: 3),
+        Operation.division.name: SkillData(mastery: 40, count: 3),
+      };
+      state.goToConfig('weakSkills');
+      state.continueWeakSkillsSetup();
+      await state.selectNumType(NumberType.natural.name);
+      state.setAdaptive(true);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+      expect(find.text('Recommended Practice'), findsNothing);
+      expect(find.text('1 Player'), findsOneWidget);
+      expect(find.text('2 Players'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/16_weak_skills_config_focused.png'),
+      );
+    });
+
+    testWidgets('17. Weak Skills fallback config', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.goToConfig('weakSkills');
+      state.continueWeakSkillsSetup();
+      await state.selectNumType(NumberType.natural.name);
+      state.setAdaptive(true);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+      expect(find.text('Building Your Practice Profile'), findsNothing);
+      expect(find.text('1 Player'), findsOneWidget);
+      expect(find.text('2 Players'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/17_weak_skills_config_fallback.png'),
+      );
+    });
+
+    testWidgets('18. Weak Skills focused popup', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.skillMap = {
+        Operation.addition.name: SkillData(mastery: 5, count: 3),
+        Operation.subtraction.name: SkillData(mastery: 20, count: 3),
+        Operation.multiplication.name: SkillData(mastery: 30, count: 3),
+        Operation.division.name: SkillData(mastery: 40, count: 3),
+      };
+      state.goToConfig('weakSkills');
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+      expect(find.text('Recommended Practice'), findsOneWidget);
+      expect(find.text('Practice areas'), findsOneWidget);
+      final modal = find.byType(ModalRouter);
+
+      expect(
+        find.descendant(
+          of: modal,
+          matching: find.text('Addition'),
+        ),
+        findsOneWidget,
+      );
+
+      expect(
+        find.descendant(
+          of: modal,
+          matching: find.text('Subtraction'),
+        ),
+        findsOneWidget,
+      );
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/18_weak_skills_popup_focused.png'),
+      );
+    });
+
+    testWidgets('19. Weak Skills fallback popup', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.goToConfig('weakSkills');
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+      expect(find.text('Building Your Practice Profile'), findsOneWidget);
+      expect(
+        find.text('This round will include all four operations.'),
+        findsOneWidget,
+      );
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/19_weak_skills_popup_fallback.png'),
+      );
     });
 
     testWidgets('6. Player setup 1P layout', (tester) async {
@@ -521,6 +862,7 @@ void main() {
 
     testWidgets('11. Avatar Builder modal', (tester) async {
       final state = await _makeState({'mc_dark': false});
+      state.setOption('players', 2);
       state.currentScreen = GameScreen.player;
       state.showModal(GameModal.avatarBuilder);
       await setTestDevice(tester, logicalSize: phoneSize);
@@ -604,7 +946,7 @@ void main() {
         key: 'visual-missing-operation',
         text: '90 ? 9 = 99',
         ans: 0,
-        choices: [0, 1, 2, 3],
+        choices: [2, 0, 3, 1],
         diff: Difficulty.hard,
         numType: NumberType.natural,
       );
@@ -622,6 +964,49 @@ void main() {
         matchesGoldenFile('goldens/14_missing_operation_gameplay.png'),
       );
       state.rt.timer?.cancel();
+    });
+
+    testWidgets('15. True/False gameplay', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.setOption('players', 1);
+      state.currentScreen = GameScreen.game;
+      state.p[1].resetForGame(isSinglePlayer: true, isMasterOrBoss: false);
+      state.p[1].pups = [PowerUp.time, PowerUp.fifty, PowerUp.fifty];
+      state.rt = RuntimeState()
+        ..challenge = Operation.subtraction
+        ..answerStyle = AnswerStyle.trueFalse
+        ..proposedAnswer = 8
+        ..proposedTruth = false
+        ..gameActive = true
+        ..state = 'playing'
+        ..isWarmUp = false
+        ..maxTurns = 10
+        ..accepting = true
+        ..q = const Question(
+          type: Operation.subtraction,
+          key: 'visual-true-false',
+          text: '12 - 5 = ?',
+          ans: 7,
+          choices: [6, 7, 8, 9],
+          diff: Difficulty.easy,
+          numType: NumberType.natural,
+        );
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('12 - 5 = 8', findRichText: true), findsOneWidget);
+      expect(find.text('?', findRichText: true), findsNothing);
+      expect(find.byKey(const Key('answer-true')), findsOneWidget);
+      expect(find.byKey(const Key('answer-false')), findsOneWidget);
+      expect(find.byKey(const Key('powerup-fifty-count')), findsNothing);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/15_true_false_gameplay.png'),
+      );
     });
   });
 }

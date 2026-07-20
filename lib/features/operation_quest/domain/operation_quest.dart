@@ -2,12 +2,7 @@ import 'dart:convert';
 
 import '../../../models/enums.dart';
 import '../../../models/player.dart';
-
-enum OperationQuestQuestionMechanic {
-  standard,
-  missingOperation,
-  missingNumber,
-}
+import '../../gameplay/domain/question_mechanic.dart';
 
 enum OperationQuestStageId {
   additionEasy('addition_easy'),
@@ -50,14 +45,14 @@ class OperationQuestStage {
     required this.title,
     required this.operation,
     required this.difficulty,
-    this.questionMechanic = OperationQuestQuestionMechanic.standard,
+    this.questionMechanic = QuestionMechanic.standard,
   });
 
   final OperationQuestStageId id;
   final String title;
   final Operation operation;
   final Difficulty difficulty;
-  final OperationQuestQuestionMechanic questionMechanic;
+  final QuestionMechanic questionMechanic;
   NumberType get numberType => NumberType.natural;
   int get questionTarget => 10;
 }
@@ -158,42 +153,42 @@ const operationQuestStages = <OperationQuestStage>[
     title: 'Find the Sign',
     operation: Operation.mixed,
     difficulty: Difficulty.easy,
-    questionMechanic: OperationQuestQuestionMechanic.missingOperation,
+    questionMechanic: QuestionMechanic.missingOperation,
   ),
   OperationQuestStage(
     id: OperationQuestStageId.missingOperationMedium,
     title: 'Operator Detective',
     operation: Operation.mixed,
     difficulty: Difficulty.medium,
-    questionMechanic: OperationQuestQuestionMechanic.missingOperation,
+    questionMechanic: QuestionMechanic.missingOperation,
   ),
   OperationQuestStage(
     id: OperationQuestStageId.missingOperationHard,
     title: 'Master Operator',
     operation: Operation.mixed,
     difficulty: Difficulty.hard,
-    questionMechanic: OperationQuestQuestionMechanic.missingOperation,
+    questionMechanic: QuestionMechanic.missingOperation,
   ),
   OperationQuestStage(
     id: OperationQuestStageId.missingNumberEasy,
     title: 'Find the Number',
     operation: Operation.mixed,
     difficulty: Difficulty.easy,
-    questionMechanic: OperationQuestQuestionMechanic.missingNumber,
+    questionMechanic: QuestionMechanic.missingNumber,
   ),
   OperationQuestStage(
     id: OperationQuestStageId.missingNumberMedium,
     title: 'Number Detective',
     operation: Operation.mixed,
     difficulty: Difficulty.medium,
-    questionMechanic: OperationQuestQuestionMechanic.missingNumber,
+    questionMechanic: QuestionMechanic.missingNumber,
   ),
   OperationQuestStage(
     id: OperationQuestStageId.missingNumberHard,
     title: 'Missing Number Master',
     operation: Operation.mixed,
     difficulty: Difficulty.hard,
-    questionMechanic: OperationQuestQuestionMechanic.missingNumber,
+    questionMechanic: QuestionMechanic.missingNumber,
   ),
 ];
 
@@ -204,63 +199,6 @@ List<OperationQuestStage> operationQuestStagesFor(Operation operation) =>
     operationQuestStages
         .where((stage) => stage.operation == operation)
         .toList();
-
-const _operationQuestOperatorChoices = <int>[0, 1, 2, 3];
-
-String operationQuestOperatorSymbol(num code) => switch (code) {
-      0 => '+',
-      1 => '−',
-      2 => '×',
-      3 => '÷',
-      _ => throw StateError('Unknown Missing Operation answer code: $code'),
-    };
-
-Question? missingOperationQuestion(Question question) {
-  final match =
-      RegExp(r'^(\d+) ([+\-×÷]) (\d+) = \?$').firstMatch(question.text);
-  if (match == null) return null;
-  final a = int.parse(match.group(1)!);
-  final b = int.parse(match.group(3)!);
-  final symbol = match.group(2)!;
-  final expectedSymbol = switch (question.type) {
-    Operation.addition => '+',
-    Operation.subtraction => '-',
-    Operation.multiplication => '×',
-    Operation.division => '÷',
-    _ => null,
-  };
-  if (symbol != expectedSymbol) return null;
-
-  final result = question.ans;
-  final validOperations = <Operation>[
-    if (a + b == result) Operation.addition,
-    if (a - b == result) Operation.subtraction,
-    if (a * b == result) Operation.multiplication,
-    if (b != 0 && a % b == 0 && a ~/ b == result) Operation.division,
-  ];
-  if (validOperations.length != 1 || validOperations.single != question.type) {
-    return null;
-  }
-
-  final code = switch (question.type) {
-    Operation.addition => 0,
-    Operation.subtraction => 1,
-    Operation.multiplication => 2,
-    Operation.division => 3,
-    _ => throw StateError('Missing Operation requires a concrete operation.'),
-  };
-  return Question(
-    type: question.type,
-    key: '${question.key}:missing-operation',
-    text: '$a ? $b = $result',
-    ans: code,
-    choices: List<num>.from(_operationQuestOperatorChoices),
-    boss: question.boss,
-    diff: question.diff,
-    numType: question.numType,
-    ratDP: question.ratDP,
-  );
-}
 
 Question? missingNumberQuestion(Question question, Difficulty difficulty) {
   final direct = RegExp(r'^\d+ [+\-×÷] \d+ = \?$').hasMatch(question.text);

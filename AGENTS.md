@@ -33,6 +33,50 @@ For behavior-sensitive work:
 - wait for each role before continuing;
 - never run multiple code-writing agents against the same working tree.
 
+Flutter-worker availability policy:
+
+- use `flutter_worker` with its configured preferred model when available;
+- if that model is unavailable on the account, delegate the required bounded
+  implementation to the strongest supported implementation-capable model that
+  can reliably work in the repository;
+- the fallback agent must operate under equivalent repository and
+  workspace-write sandbox constraints appropriate to `flutter_worker`, follow
+  the same worker instructions, and remain within the explicitly approved
+  implementation scope;
+- disclose any flutter-worker model substitution in the implementation report;
+- fallback authorization does not permit the root orchestrator to silently
+  self-implement work that governance requires to be delegated;
+- if no reliable supported implementation-capable model is available, block
+  the task;
+- the fallback worker must not stage, commit, push, merge, or tag unless
+  existing governance and explicit user authorization permit those actions;
+- this availability fallback does not weaken parity, testing,
+  regression-review, scope, or commit requirements.
+
+Parity-reasoner availability policy:
+
+- use `parity_reasoner` with its configured preferred model when available;
+- if that model is unavailable on the account, delegate the mandatory read-only
+  parity investigation to the strongest supported parity-capable model that
+  can reliably audit the repository;
+- the fallback agent must remain independent from the implementation pass where
+  the workflow requires independence and must remain read-only;
+- disclose any parity-reasoner model substitution in the parity report;
+- if no reliable supported parity-capable model is available, block the task;
+- do not bypass or proceed past a required parity gate merely because the
+  preferred model is unavailable.
+
+Reviewer availability policy:
+
+- use `regression_reviewer` with its configured preferred model when available;
+- if that model is unavailable on the account, delegate the mandatory final
+  read-only review to the strongest supported review-capable model that is
+  independent from the implementation pass and can reliably review the
+  repository;
+- disclose any reviewer-model substitution in the review report;
+- if no reliable supported reviewer model is available, block the task;
+- do not commit until the preferred or fallback reviewer passes.
+
 Use one bounded task per cycle:
 
 ```text

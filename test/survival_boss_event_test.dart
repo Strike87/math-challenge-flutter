@@ -48,6 +48,7 @@ void main() {
       audio: AudioService(settings),
     );
     await state.load();
+    state.dailyChallengeIds = ['blitz_15', 'streak_7', 'division_10'];
     return state;
   }
 

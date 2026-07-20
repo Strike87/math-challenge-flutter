@@ -13,6 +13,7 @@ class ConfigScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
     final s = context.watch<SettingsService>();
+    final weakSkillsPlan = gs.setupWeakSkillsPlan;
     return SafeArea(
       child: LayoutBuilder(
         builder: (context, constraints) => SingleChildScrollView(
@@ -34,9 +35,14 @@ class ConfigScreen extends StatelessWidget {
                 _ToggleRow(
                   options: [
                     _ToggleOpt('👤 1 Player', 1, s.accent(GameConfig.sky)),
-                    _ToggleOpt('👥 2 Players', 2, s.accent(GameConfig.punch)),
+                    _ToggleOpt(
+                      '👥 2 Players',
+                      2,
+                      s.accent(GameConfig.punch),
+                      enabled: weakSkillsPlan == null,
+                    ),
                   ],
-                  active: gs.players,
+                  active: gs.setupPlayers,
                   onPick: (v) => gs.setOption('players', v),
                 ),
                 const SizedBox(height: 16),
@@ -45,14 +51,16 @@ class ConfigScreen extends StatelessWidget {
                 _SectionTitle('Game Mode', s),
                 _ModeTabs(
                   active: gs.mode,
-                  players: gs.players,
+                  players: gs.setupPlayers,
                   onPick: (m) => gs.setOption('mode', m.name),
                 ),
                 const SizedBox(height: 8),
                 _ModeInfoCard(mode: gs.mode, s: s),
                 const SizedBox(height: 16),
 
-                if (gs.mode == GameMode.standard && gs.players == 1) ...[
+                if (gs.mode == GameMode.standard &&
+                    gs.setupPlayers == 1 &&
+                    !gs.isMissingOperationPractice) ...[
                   _SectionTitle('Answer Style', s),
                   _ToggleRow(
                     options: [
@@ -244,7 +252,8 @@ class _ToggleOpt<T> {
   final String label;
   final T value;
   final Color color;
-  _ToggleOpt(this.label, this.value, this.color);
+  final bool enabled;
+  _ToggleOpt(this.label, this.value, this.color, {this.enabled = true});
 }
 
 class _ToggleRow<T> extends StatelessWidget {
@@ -293,71 +302,74 @@ class _ToggleButton<T> extends StatelessWidget {
     final isActive = o.value == active;
     final s = context.watch<SettingsService>();
     final parts = _splitIconLabel(o.label);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => onPick(o.value),
-        child: Container(
-          height: 48,
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: isActive
-                ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      o.color,
-                      Color.lerp(o.color, Colors.black, 0.18)!,
-                    ],
-                  )
-                : null,
-            color: isActive ? null : s.surface,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: isActive
-                  ? Colors.white.withValues(alpha: 0.35)
-                  : o.color.withValues(alpha: 0.35),
-              width: 1.5,
+    return Opacity(
+      opacity: o.enabled ? 1 : 0.4,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: o.enabled ? () => onPick(o.value) : null,
+          child: Container(
+            height: 48,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: isActive
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        o.color,
+                        Color.lerp(o.color, Colors.black, 0.18)!,
+                      ],
+                    )
+                  : null,
+              color: isActive ? null : s.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isActive
+                    ? Colors.white.withValues(alpha: 0.35)
+                    : o.color.withValues(alpha: 0.35),
+                width: 1.5,
+              ),
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: o.color.withValues(alpha: 0.28),
+                        blurRadius: 18,
+                        offset: const Offset(0, 6),
+                      ),
+                    ]
+                  : null,
             ),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: o.color.withValues(alpha: 0.28),
-                      blurRadius: 18,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (parts.icon.isNotEmpty) ...[
-                Text(parts.icon, style: const TextStyle(fontSize: 16)),
-                const SizedBox(width: 4),
-              ],
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    parts.label,
-                    maxLines: 1,
-                    softWrap: false,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: isActive ? Colors.white : o.color,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                      fontFamily: AppFonts.head,
-                      letterSpacing: 0.2,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (parts.icon.isNotEmpty) ...[
+                  Text(parts.icon, style: const TextStyle(fontSize: 16)),
+                  const SizedBox(width: 4),
+                ],
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      parts.label,
+                      maxLines: 1,
+                      softWrap: false,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isActive ? Colors.white : o.color,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        fontFamily: AppFonts.head,
+                        letterSpacing: 0.2,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
