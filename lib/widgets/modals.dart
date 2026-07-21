@@ -364,7 +364,9 @@ class ModalShell extends StatelessWidget {
     this.iconWidget,
     this.header,
     this.scrollChild = true,
+    this.subtitle,
   });
+
   final String icon;
   final String title;
   final Widget child;
@@ -373,26 +375,27 @@ class ModalShell extends StatelessWidget {
   final Widget? iconWidget;
   final Widget? header;
   final bool scrollChild;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-    final radius = BorderRadius.circular(28);
+    final radius = BorderRadius.circular(30);
     final modal = Container(
       decoration: BoxDecoration(
-        color: s.dark ? const Color(0xE01C1814) : const Color(0xD1FFFFFF),
+        color: s.dark ? const Color(0xF01B1815) : const Color(0xF7FFFFFF),
         borderRadius: radius,
         border: Border.all(
           color: s.dark
-              ? Colors.white.withValues(alpha: 0.10)
-              : Colors.white.withValues(alpha: 0.92),
+              ? Colors.white.withValues(alpha: 0.11)
+              : Colors.white.withValues(alpha: 0.96),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.14),
-            blurRadius: 64,
-            offset: const Offset(0, 24),
+            color: Colors.black.withValues(alpha: s.dark ? 0.28 : 0.16),
+            blurRadius: 56,
+            offset: const Offset(0, 22),
           ),
         ],
       ),
@@ -406,7 +409,7 @@ class ModalShell extends StatelessWidget {
               left: 0,
               right: 0,
               child: Container(
-                height: 4,
+                height: 5,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -420,37 +423,21 @@ class ModalShell extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (header != null)
                     header!
-                  else ...[
-                    iconWidget ??
-                        Text(icon, style: const TextStyle(fontSize: 44)),
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          title,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          softWrap: false,
-                          style: TextStyle(
-                            color: s.text,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            fontFamily: AppFonts.headFor(s),
-                            height: 1.0,
-                          ),
-                        ),
-                      ),
+                  else
+                    _ModalDefaultHeader(
+                      icon: icon,
+                      title: title,
+                      subtitle: subtitle,
+                      iconWidget: iconWidget,
+                      settings: s,
                     ),
-                  ],
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   Flexible(
                     fit: scrollChild ? FlexFit.loose : FlexFit.tight,
                     child: scrollChild
@@ -458,12 +445,23 @@ class ModalShell extends StatelessWidget {
                         : child,
                   ),
                   if (actions.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: actions,
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.only(top: 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                            color: s.border.withValues(alpha: 0.62),
+                          ),
+                        ),
+                      ),
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: actions,
+                      ),
                     ),
                   ],
                 ],
@@ -478,10 +476,119 @@ class ModalShell extends StatelessWidget {
       borderRadius: radius,
       child: BackdropFilter(
         filter: ImageFilter.blur(
-          sigmaX: s.lowPerf ? 0 : 28,
-          sigmaY: s.lowPerf ? 0 : 28,
+          sigmaX: s.lowPerf ? 0 : 24,
+          sigmaY: s.lowPerf ? 0 : 24,
         ),
         child: modal,
+      ),
+    );
+  }
+}
+
+class _ModalDefaultHeader extends StatelessWidget {
+  const _ModalDefaultHeader({
+    required this.icon,
+    required this.title,
+    required this.settings,
+    this.subtitle,
+    this.iconWidget,
+  });
+
+  final String icon;
+  final String title;
+  final String? subtitle;
+  final Widget? iconWidget;
+  final SettingsService settings;
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(GameConfig.coral);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: settings.surface2.withValues(
+          alpha: settings.dark ? 0.76 : 0.62,
+        ),
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(
+          color: accent.withValues(alpha: settings.dark ? 0.20 : 0.16),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: settings.dark ? 0.16 : 0.11),
+              borderRadius: BorderRadius.circular(17),
+              border: Border.all(
+                color: accent.withValues(alpha: 0.20),
+              ),
+            ),
+            child: iconWidget == null
+                ? Text(
+                    icon,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 27,
+                      height: 1,
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      child: iconWidget!,
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: TextStyle(
+                        color: settings.text,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: AppFonts.headFor(settings),
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+                if (subtitle != null && subtitle!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: settings.muted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
