@@ -607,6 +607,7 @@ class SettingsModal extends StatelessWidget {
       builder: (context, s, _) => ModalShell(
         icon: '⚙️',
         title: 'Settings',
+        subtitle: 'Make Math Challenge yours',
         actions: [
           NeoButton(
             label: 'Done',
@@ -617,71 +618,117 @@ class SettingsModal extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _section('Player Avatar', s),
+            _SettingsSectionLabel(
+              icon: Icons.person_rounded,
+              label: 'Player Avatar',
+              s: s,
+            ),
+            const SizedBox(height: 8),
             _AvatarSettingsTile(gs: gs),
-            const SizedBox(height: 16),
-            _section('Display & Audio', s),
-            SizedBox(
-              height: 136,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            const SizedBox(height: 18),
+            _SettingsSectionLabel(
+              icon: Icons.tune_rounded,
+              label: 'Display & Audio',
+              s: s,
+            ),
+            const SizedBox(height: 8),
+            _SettingsCard(
+              s: s,
+              child: Column(
                 children: [
                   _TrioBtn(
-                      icon: '🌓',
-                      label: 'Dark Mode',
-                      state: s.dark ? 'ON' : 'OFF',
-                      active: s.dark,
-                      onTap: s.toggleDark),
+                    icon: '🌓',
+                    label: 'Dark Mode',
+                    state: s.dark ? 'ON' : 'OFF',
+                    active: s.dark,
+                    onTap: s.toggleDark,
+                  ),
+                  _SettingsDivider(s: s),
                   _TrioBtn(
-                      icon: '🔊',
-                      label: 'Sound',
-                      state: s.sound ? 'ON' : 'OFF',
-                      active: s.sound,
-                      onTap: s.toggleSound),
+                    icon: '🔊',
+                    label: 'Sound',
+                    state: s.sound ? 'ON' : 'OFF',
+                    active: s.sound,
+                    onTap: s.toggleSound,
+                  ),
+                  _SettingsDivider(s: s),
                   _TrioBtn(
-                      icon: '📳',
-                      label: 'Vibration',
-                      state: s.vibration ? 'ON' : 'OFF',
-                      active: s.vibration,
-                      onTap: s.toggleVibration),
+                    icon: '📳',
+                    label: 'Vibration',
+                    state: s.vibration ? 'ON' : 'OFF',
+                    active: s.vibration,
+                    onTap: s.toggleVibration,
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            _section('Accessibility', s),
-            _AccessibilityPanel(s: s),
-            const SizedBox(height: 16),
-            _section('More', s),
-            NeoButton(
-              label: '❓ How to Play',
-              outlined: true,
-              color: GameConfig.sky,
-              onPressed: () {
-                gs.closeModal();
-                gs.showModal(GameModal.tutorial);
-              },
+            const SizedBox(height: 18),
+            _SettingsSectionLabel(
+              icon: Icons.accessibility_new_rounded,
+              label: 'Accessibility',
+              s: s,
             ),
             const SizedBox(height: 8),
-            NeoButton(
-              label: '🗑️ Reset All Data',
-              outlined: true,
+            _AccessibilityPanel(s: s),
+            const SizedBox(height: 18),
+            _SettingsSectionLabel(
+              icon: Icons.more_horiz_rounded,
+              label: 'More',
+              s: s,
+            ),
+            const SizedBox(height: 8),
+            _SettingsCard(
+              s: s,
+              child: Column(
+                children: [
+                  _SettingsActionTile(
+                    icon: Icons.help_outline_rounded,
+                    title: '❓ How to Play',
+                    subtitle:
+                        'Review rules, modes, hearts, coins, and power-ups',
+                    color: GameConfig.sky,
+                    onTap: () {
+                      gs.closeModal();
+                      gs.showModal(GameModal.tutorial);
+                    },
+                  ),
+                  _SettingsDivider(s: s),
+                  _SettingsActionTile(
+                    icon: Icons.restore_rounded,
+                    title: 'Restore Purchases',
+                    subtitle: 'Check this account for previous purchases',
+                    color: GameConfig.sky,
+                    onTap: gs.restorePurchases,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            _SettingsSectionLabel(
+              icon: Icons.storage_rounded,
+              label: 'Data',
+              s: s,
               color: GameConfig.punch,
-              onPressed: () {
+            ),
+            const SizedBox(height: 8),
+            _SettingsActionTile(
+              icon: Icons.delete_outline_rounded,
+              title: '🗑️ Reset All Data',
+              subtitle: 'Erase progress and restore default settings',
+              color: GameConfig.punch,
+              destructive: true,
+              onTap: () {
                 gs.resetAllData();
                 gs.closeModal();
               },
             ),
-            const SizedBox(height: 8),
-            NeoButton(
-              label: 'Restore Purchases',
-              outlined: true,
-              color: GameConfig.sky,
-              onPressed: () {
-                gs.restorePurchases();
-              },
+            const SizedBox(height: 18),
+            _SettingsSectionLabel(
+              icon: Icons.support_agent_rounded,
+              label: 'Support / About',
+              s: s,
             ),
-            const SizedBox(height: 16),
-            _section('Support / About', s),
+            const SizedBox(height: 8),
             _SupportLinkTile(
               icon: '✉️',
               label: 'Email',
@@ -711,19 +758,91 @@ class SettingsModal extends StatelessWidget {
     if (await LinkLauncher.open(url)) return;
     gs.showToast('Could not open link.');
   }
+}
 
-  Widget _section(String text, SettingsService s) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: s.muted,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.2,
+class _SettingsSectionLabel extends StatelessWidget {
+  const _SettingsSectionLabel({
+    required this.icon,
+    required this.label,
+    required this.s,
+    this.color = GameConfig.coral,
+  });
+
+  final IconData icon;
+  final String label;
+  final SettingsService s;
+  final int color;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Color(color);
+    return Row(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Icon(icon, color: accent, size: 16),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: s.text,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              fontFamily: AppFonts.headFor(s),
+              letterSpacing: 0.8,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SettingsCard extends StatelessWidget {
+  const _SettingsCard({
+    required this.s,
+    required this.child,
+  });
+
+  final SettingsService s;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: s.surface2.withValues(alpha: s.dark ? 0.84 : 0.58),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: s.dark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.white.withValues(alpha: 0.82),
         ),
       ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
+    );
+  }
+}
+
+class _SettingsDivider extends StatelessWidget {
+  const _SettingsDivider({required this.s});
+
+  final SettingsService s;
+
+  @override
+  Widget build(BuildContext context) {
+    return Divider(
+      height: 1,
+      indent: 58,
+      color: s.border.withValues(alpha: 0.52),
     );
   }
 }
@@ -745,17 +864,34 @@ class _SupportLinkTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
     return Material(
-      color: s.surface2.withValues(alpha: s.dark ? 0.84 : 0.56),
-      borderRadius: BorderRadius.circular(18),
+      color: s.surface2.withValues(alpha: s.dark ? 0.84 : 0.58),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: s.dark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.white.withValues(alpha: 0.82),
+            ),
+          ),
           child: Row(
             children: [
-              Text(icon, style: const TextStyle(fontSize: 20)),
-              const SizedBox(width: 10),
+              Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(GameConfig.sky).withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(icon, style: const TextStyle(fontSize: 19)),
+              ),
+              const SizedBox(width: 11),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -768,13 +904,14 @@ class _SupportLinkTile extends StatelessWidget {
                         fontFamily: AppFonts.body,
                       ),
                     ),
+                    const SizedBox(height: 1),
                     Text(
                       value,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: s.muted,
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w700,
                         fontFamily: AppFonts.body,
                       ),
@@ -782,7 +919,7 @@ class _SupportLinkTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.open_in_new, size: 18, color: s.muted),
+              Icon(Icons.open_in_new_rounded, size: 18, color: s.muted),
             ],
           ),
         ),
@@ -798,53 +935,103 @@ class _AccessibilityPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-      decoration: BoxDecoration(
-        color: s.surface2.withValues(alpha: s.dark ? 0.84 : 0.56),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.74)),
-      ),
+    return _SettingsCard(
+      s: s,
       child: Column(
         children: [
           _CheckTile(
-              label: 'Dyslexia-friendly font',
-              value: s.dyslexia,
-              onChanged: (_) => s.toggleDyslexia()),
+            icon: Icons.text_fields_rounded,
+            label: 'Dyslexia-friendly font',
+            value: s.dyslexia,
+            onChanged: (_) => s.toggleDyslexia(),
+          ),
+          _SettingsDivider(s: s),
           _CheckTile(
-              label: 'Color-blind safe palette',
-              value: s.colorblind,
-              onChanged: (_) => s.toggleColorblind()),
+            icon: Icons.palette_outlined,
+            label: 'Color-blind safe palette',
+            value: s.colorblind,
+            onChanged: (_) => s.toggleColorblind(),
+          ),
+          _SettingsDivider(s: s),
           _CheckTile(
-              label: 'Performance mode',
-              detail: 'faster on all devices',
-              value: s.lowPerf,
-              onChanged: (_) => s.toggleLowPerf()),
+            icon: Icons.speed_rounded,
+            label: 'Performance mode',
+            detail: 'faster on all devices',
+            value: s.lowPerf,
+            onChanged: (_) => s.toggleLowPerf(),
+          ),
+          _SettingsDivider(s: s),
           _CheckTile(
-              label: 'Reduce motion',
-              value: s.manualReduceMotion,
-              onChanged: (_) => s.toggleReduceMotion()),
-          Row(
-            children: [
-              const Text(
-                'Anim speed:',
-                style: TextStyle(fontWeight: FontWeight.w900),
-              ),
-              Expanded(
-                child: Slider(
-                  min: 0.3,
-                  max: 2.0,
-                  divisions: 17,
-                  value: s.animSpeed,
-                  activeColor: s.accent(GameConfig.coral),
-                  onChanged: s.setAnimSpeed,
+            icon: Icons.motion_photos_off_outlined,
+            label: 'Reduce motion',
+            value: s.manualReduceMotion,
+            onChanged: (_) => s.toggleReduceMotion(),
+          ),
+          _SettingsDivider(s: s),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color:
+                        const Color(GameConfig.coral).withValues(alpha: 0.09),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.animation_rounded,
+                    size: 19,
+                    color: Color(GameConfig.coral),
+                  ),
                 ),
-              ),
-              Text(
-                '${s.animSpeed.toStringAsFixed(1)}x',
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Anim speed:',
+                        style: TextStyle(
+                          color: s.text,
+                          fontWeight: FontWeight.w800,
+                          fontFamily: AppFonts.body,
+                        ),
+                      ),
+                      Slider(
+                        min: 0.3,
+                        max: 2.0,
+                        divisions: 17,
+                        value: s.animSpeed,
+                        activeColor: s.accent(GameConfig.coral),
+                        onChanged: s.setAnimSpeed,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  constraints: const BoxConstraints(minWidth: 48),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                  decoration: BoxDecoration(
+                    color:
+                        const Color(GameConfig.coral).withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '${s.animSpeed.toStringAsFixed(1)}x',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: s.text,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -863,24 +1050,10 @@ class _AvatarSettingsTile extends StatelessWidget {
     final s = context.watch<SettingsService>();
     final p1 = gs.p[1];
     final currentAvatar = p1.avatar.storageEmoji;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: s.surface2.withValues(alpha: s.dark ? 0.9 : 0.7),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-            color: const Color(GameConfig.coral).withValues(alpha: 0.3),
-            width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
         onTap: () async {
           final selected = await showDialog<String>(
             context: context,
@@ -894,49 +1067,82 @@ class _AvatarSettingsTile extends StatelessWidget {
             await gs.save();
           }
         },
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: const Color(GameConfig.coral).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: const Color(GameConfig.coral).withValues(alpha: 0.2),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: s.surface2.withValues(alpha: s.dark ? 0.88 : 0.64),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(GameConfig.coral).withValues(alpha: 0.22),
+              width: 1.25,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.045),
+                blurRadius: 12,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: const Color(GameConfig.coral).withValues(alpha: 0.11),
+                  borderRadius: BorderRadius.circular(17),
+                  border: Border.all(
+                    color:
+                        const Color(GameConfig.coral).withValues(alpha: 0.18),
+                  ),
+                ),
+                child: Center(
+                  child: AvatarWidget(avatar: p1.avatar, size: 36),
                 ),
               ),
-              child: Center(
-                child: AvatarWidget(avatar: p1.avatar, size: 32),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Default Avatar',
-                    style: TextStyle(
-                      color: s.text,
-                      fontWeight: FontWeight.w800,
-                      fontFamily: AppFonts.body,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Default Avatar',
+                      style: TextStyle(
+                        color: s.text,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: AppFonts.body,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Tap to change',
-                    style: TextStyle(
-                      color: s.muted,
-                      fontSize: 11,
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tap to change',
+                      style: TextStyle(
+                        color: s.muted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Icon(Icons.chevron_right, color: s.muted),
-          ],
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: const Color(GameConfig.coral).withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Color(GameConfig.coral),
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -951,115 +1157,76 @@ class _TrioBtn extends StatelessWidget {
     required this.active,
     required this.onTap,
   });
-  final String icon, label, state;
+
+  final String icon;
+  final String label;
+  final String state;
   final bool active;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-    return Expanded(
-      child: Semantics(
-        button: true,
-        toggled: active,
-        label: label,
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            decoration: BoxDecoration(
-              color: active
-                  ? const Color(GameConfig.coral).withValues(alpha: 0.15)
-                  : s.surface2.withValues(alpha: s.dark ? 0.9 : 0.7),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: active
-                    ? const Color(GameConfig.coral)
-                    : Colors.white.withValues(alpha: 0.7),
-                width: active ? 2 : 1,
+    const accent = Color(GameConfig.coral);
+
+    return Semantics(
+      button: true,
+      toggled: active,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: active
+                      ? accent.withValues(alpha: 0.13)
+                      : s.surface.withValues(alpha: s.dark ? 0.40 : 0.62),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(icon, style: const TextStyle(fontSize: 19)),
               ),
-              boxShadow: active
-                  ? [
-                      BoxShadow(
-                        color: const Color(GameConfig.coral)
-                            .withValues(alpha: 0.18),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                SizedBox(
-                  height: 38,
-                  child: Center(
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: active
-                            ? Colors.white.withValues(alpha: 0.42)
-                            : s.surface.withValues(alpha: s.dark ? 0.7 : 0.6),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.62),
-                        ),
-                      ),
-                      child: Text(icon, style: const TextStyle(fontSize: 23)),
-                    ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: s.text,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    fontFamily: AppFonts.body,
                   ),
                 ),
-                SizedBox(
-                  height: 28,
-                  child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          color: s.text,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                          fontFamily: AppFonts.head,
-                          height: 1.0,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        softWrap: false,
-                      ),
-                    ),
+              ),
+              Container(
+                constraints: const BoxConstraints(minWidth: 48),
+                alignment: Alignment.center,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: active
+                      ? accent
+                      : s.surface.withValues(alpha: s.dark ? 0.72 : 0.82),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: active ? accent : s.border.withValues(alpha: 0.72),
                   ),
                 ),
-                Container(
-                  constraints:
-                      const BoxConstraints(minWidth: 48, minHeight: 26),
-                  alignment: Alignment.center,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: active
-                        ? const Color(GameConfig.coral)
-                        : s.surface.withValues(alpha: s.dark ? 0.95 : 0.85),
-                    borderRadius: BorderRadius.circular(99),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.45),
-                    ),
-                  ),
-                  child: Text(
-                    state,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: active ? Colors.white : s.muted,
-                    ),
+                child: Text(
+                  state,
+                  style: TextStyle(
+                    color: active ? Colors.white : s.muted,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1067,12 +1234,106 @@ class _TrioBtn extends StatelessWidget {
   }
 }
 
+class _SettingsActionTile extends StatelessWidget {
+  const _SettingsActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final int color;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final accent = Color(color);
+
+    final content = InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Icon(icon, color: accent, size: 20),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: destructive ? accent : s.text,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: AppFonts.body,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: s.muted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: destructive ? accent : s.muted,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!destructive) return content;
+
+    return Material(
+      color: accent.withValues(alpha: s.dark ? 0.08 : 0.055),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: accent.withValues(alpha: 0.24)),
+        ),
+        child: content,
+      ),
+    );
+  }
+}
+
 class _CheckTile extends StatelessWidget {
-  const _CheckTile(
-      {required this.label,
-      required this.value,
-      required this.onChanged,
-      this.detail});
+  const _CheckTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.detail,
+  });
+
+  final IconData icon;
   final String label;
   final String? detail;
   final bool value;
@@ -1081,53 +1342,71 @@ class _CheckTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Checkbox(
-            value: value,
-            activeColor: const Color(GameConfig.coral),
-            visualDensity: VisualDensity.compact,
-            onChanged: (v) => onChanged(v ?? false),
-          ),
-          Expanded(
-            child: detail == null
-                ? Text(
-                    label,
-                    style: TextStyle(
-                      color: s.text,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: AppFonts.body,
+    return InkWell(
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(GameConfig.coral).withValues(alpha: 0.09),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                size: 19,
+                color: const Color(GameConfig.coral),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: detail == null
+                  ? Text(
+                      label,
+                      style: TextStyle(
+                        color: s.text,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: AppFonts.body,
+                      ),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: TextStyle(
+                            color: s.text,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: AppFonts.body,
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          detail!,
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: s.muted,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            fontFamily: AppFonts.body,
+                          ),
+                        ),
+                      ],
                     ),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style: TextStyle(
-                          color: s.text,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: AppFonts.body,
-                        ),
-                      ),
-                      Text(
-                        detail!,
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: s.muted,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          fontFamily: AppFonts.body,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ],
+            ),
+            Checkbox(
+              value: value,
+              activeColor: const Color(GameConfig.coral),
+              visualDensity: VisualDensity.compact,
+              onChanged: (v) => onChanged(v ?? false),
+            ),
+          ],
+        ),
       ),
     );
   }
