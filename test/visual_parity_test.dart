@@ -597,7 +597,36 @@ void main() {
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/04_config_1p.png'));
     });
+    testWidgets('4b. Missing Operation config forces Choice4 visually',
+        (tester) async {
+      final state = await _makeState({
+        'mc_dark': false,
+        'mc_selectedAnswerStyle': AnswerStyle.trueFalse.name,
+      });
 
+      state.goToConfig('missingOperation');
+      await state.selectNumType(NumberType.natural.name);
+
+      expect(state.currentScreen, GameScreen.config);
+      expect(state.selectedAnswerStyle, AnswerStyle.trueFalse);
+      expect(state.effectiveAnswerStyle, AnswerStyle.choice4);
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Answer Style'), findsOneWidget);
+      expect(find.text('4 Choices'), findsOneWidget);
+      expect(find.text('True / False'), findsOneWidget);
+      expectNoVisualException(tester);
+
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/04b_missing_operation_config.png'),
+      );
+    });
     testWidgets('5. Config screen 2P mode grid with restricted modes greyed',
         (tester) async {
       final state = await _makeState({'mc_dark': false});

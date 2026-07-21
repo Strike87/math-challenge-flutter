@@ -58,9 +58,7 @@ class ConfigScreen extends StatelessWidget {
                 _ModeInfoCard(mode: gs.mode, s: s),
                 const SizedBox(height: 16),
 
-                if (gs.mode == GameMode.standard &&
-                    gs.setupPlayers == 1 &&
-                    !gs.isMissingOperationPractice) ...[
+                if (gs.mode == GameMode.standard && gs.setupPlayers == 1) ...[
                   _SectionTitle('Answer Style', s),
                   _ToggleRow(
                     options: [
@@ -73,10 +71,15 @@ class ConfigScreen extends StatelessWidget {
                         '✓ ${AnswerStyle.trueFalse.label}',
                         AnswerStyle.trueFalse,
                         s.accent(GameConfig.mint),
+                        enabled: !gs.isMissingOperationPractice,
                       ),
                     ],
-                    active: gs.selectedAnswerStyle,
-                    onPick: gs.setAnswerStyle,
+                    active: gs.effectiveAnswerStyle,
+                    onPick: (style) {
+                      if (!gs.isMissingOperationPractice) {
+                        gs.setAnswerStyle(style);
+                      }
+                    },
                   ),
                   const SizedBox(height: 16),
                 ],
