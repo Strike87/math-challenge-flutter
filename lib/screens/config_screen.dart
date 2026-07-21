@@ -14,164 +14,238 @@ class ConfigScreen extends StatelessWidget {
     final gs = context.watch<GameState>();
     final s = context.watch<SettingsService>();
     final weakSkillsPlan = gs.setupWeakSkillsPlan;
+
     return SafeArea(
       child: LayoutBuilder(
         builder: (context, constraints) => SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _SetupHeader(
-                  s: s,
-                  title: 'Game Setup',
-                  onBack: () => gs.showScreen(GameScreen.numType),
-                ),
-                const SizedBox(height: 8),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _SetupHeader(
+                      s: s,
+                      title: 'Game Setup',
+                      subtitle: 'Build your challenge',
+                      onBack: () => gs.showScreen(GameScreen.numType),
+                    ),
+                    const SizedBox(height: 18),
 
-                // Players
-                _SectionTitle('Players', s),
-                _ToggleRow(
-                  options: [
-                    _ToggleOpt('👤 1 Player', 1, s.accent(GameConfig.sky)),
-                    _ToggleOpt(
-                      '👥 2 Players',
-                      2,
-                      s.accent(GameConfig.punch),
-                      enabled: weakSkillsPlan == null,
+                    // HOW YOU'LL PLAY
+                    _SetupGroup(
+                      s: s,
+                      title: 'HOW YOU\'LL PLAY',
+                      icon: Icons.sports_esports_rounded,
+                      accent: s.accent(GameConfig.sky),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _SectionTitle('Players', s),
+                          _ToggleRow(
+                            options: [
+                              _ToggleOpt(
+                                '👤 1 Player',
+                                1,
+                                s.accent(GameConfig.sky),
+                              ),
+                              _ToggleOpt(
+                                '👥 2 Players',
+                                2,
+                                s.accent(GameConfig.punch),
+                                enabled: weakSkillsPlan == null,
+                              ),
+                            ],
+                            active: gs.setupPlayers,
+                            onPick: (v) => gs.setOption('players', v),
+                          ),
+                          const SizedBox(height: 18),
+                          _SectionTitle('Game Mode', s),
+                          _ModeTabs(
+                            active: gs.mode,
+                            players: gs.setupPlayers,
+                            onPick: (m) => gs.setOption('mode', m.name),
+                          ),
+                          const SizedBox(height: 10),
+                          _ModeInfoCard(mode: gs.mode, s: s),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // QUESTION SETTINGS
+                    _SetupGroup(
+                      s: s,
+                      title: 'QUESTION SETTINGS',
+                      icon: Icons.tune_rounded,
+                      accent: s.accent(GameConfig.mango),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (gs.mode == GameMode.standard &&
+                              gs.setupPlayers == 1) ...[
+                            _SectionTitle('Answer Style', s),
+                            _ToggleRow(
+                              options: [
+                                _ToggleOpt(
+                                  '🔢 ${AnswerStyle.choice4.label}',
+                                  AnswerStyle.choice4,
+                                  s.accent(GameConfig.sky),
+                                ),
+                                _ToggleOpt(
+                                  '✓ ${AnswerStyle.trueFalse.label}',
+                                  AnswerStyle.trueFalse,
+                                  s.accent(GameConfig.mint),
+                                  enabled: !gs.isMissingOperationPractice,
+                                ),
+                              ],
+                              active: gs.effectiveAnswerStyle,
+                              onPick: (style) {
+                                if (!gs.isMissingOperationPractice) {
+                                  gs.setAnswerStyle(style);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 18),
+                          ],
+                          _SectionTitle('Difficulty', s),
+                          _ToggleRow(
+                            options: [
+                              _ToggleOpt(
+                                '🌱 Easy',
+                                'easy',
+                                s.accent(GameConfig.mint),
+                              ),
+                              _ToggleOpt(
+                                '🔥 Medium',
+                                'medium',
+                                s.accent(GameConfig.mango),
+                              ),
+                              _ToggleOpt(
+                                '💥 Hard',
+                                'hard',
+                                s.accent(GameConfig.punch),
+                              ),
+                            ],
+                            active: gs.diff.name,
+                            onPick: (v) => gs.setOption('diff', v),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _diffDesc(gs.diff),
+                            style: TextStyle(
+                              color: s.muted,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          _SectionTitle('Number of Questions', s),
+                          _ToggleRow(
+                            options: [
+                              _ToggleOpt(
+                                '10',
+                                10,
+                                s.accent(GameConfig.sky),
+                              ),
+                              _ToggleOpt(
+                                '15',
+                                15,
+                                s.accent(GameConfig.sky),
+                              ),
+                              _ToggleOpt(
+                                '20',
+                                20,
+                                s.accent(GameConfig.sky),
+                              ),
+                              _ToggleOpt(
+                                '25',
+                                25,
+                                s.accent(GameConfig.sky),
+                              ),
+                            ],
+                            active: gs.questionCount,
+                            onPick: (v) => gs.setOption('q', v),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // PERSONALIZATION
+                    _SetupGroup(
+                      s: s,
+                      title: 'PERSONALIZATION',
+                      icon: Icons.auto_awesome_rounded,
+                      accent: s.accent(GameConfig.coral),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: s
+                                  .accent(GameConfig.coral)
+                                  .withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(
+                              Icons.psychology_alt_rounded,
+                              color: s.accent(GameConfig.coral),
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Adaptive Difficulty',
+                                  style: TextStyle(
+                                    color: s.text,
+                                    fontWeight: FontWeight.w900,
+                                    fontFamily: AppFonts.head,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Automatically adjusts the challenge to your skill level',
+                                  style: TextStyle(
+                                    color: s.muted,
+                                    fontSize: 11,
+                                    height: 1.25,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Switch.adaptive(
+                            value: gs.adaptive,
+                            activeThumbColor: s.accent(GameConfig.coral),
+                            onChanged: gs.setAdaptive,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    NeoButton(
+                      label: 'Continue to Player Setup →',
+                      color: GameConfig.coral,
+                      onPressed: gs.goToPlayerSetup,
                     ),
                   ],
-                  active: gs.setupPlayers,
-                  onPick: (v) => gs.setOption('players', v),
                 ),
-                const SizedBox(height: 16),
-
-                // Mode
-                _SectionTitle('Game Mode', s),
-                _ModeTabs(
-                  active: gs.mode,
-                  players: gs.setupPlayers,
-                  onPick: (m) => gs.setOption('mode', m.name),
-                ),
-                const SizedBox(height: 8),
-                _ModeInfoCard(mode: gs.mode, s: s),
-                const SizedBox(height: 16),
-
-                if (gs.mode == GameMode.standard && gs.setupPlayers == 1) ...[
-                  _SectionTitle('Answer Style', s),
-                  _ToggleRow(
-                    options: [
-                      _ToggleOpt(
-                        '🔢 ${AnswerStyle.choice4.label}',
-                        AnswerStyle.choice4,
-                        s.accent(GameConfig.sky),
-                      ),
-                      _ToggleOpt(
-                        '✓ ${AnswerStyle.trueFalse.label}',
-                        AnswerStyle.trueFalse,
-                        s.accent(GameConfig.mint),
-                        enabled: !gs.isMissingOperationPractice,
-                      ),
-                    ],
-                    active: gs.effectiveAnswerStyle,
-                    onPick: (style) {
-                      if (!gs.isMissingOperationPractice) {
-                        gs.setAnswerStyle(style);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Difficulty
-                _SectionTitle('Difficulty', s),
-                _ToggleRow(
-                  options: [
-                    _ToggleOpt('🌱 Easy', 'easy', s.accent(GameConfig.mint)),
-                    _ToggleOpt(
-                        '🔥 Medium', 'medium', s.accent(GameConfig.mango)),
-                    _ToggleOpt('💥 Hard', 'hard', s.accent(GameConfig.punch)),
-                  ],
-                  active: gs.diff.name,
-                  onPick: (v) => gs.setOption('diff', v),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _diffDesc(gs.diff),
-                  style: TextStyle(
-                      color: s.muted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 16),
-
-                // Question count
-                _SectionTitle('Number of Questions', s),
-                _ToggleRow(
-                  options: [
-                    _ToggleOpt('10', 10, s.accent(GameConfig.sky)),
-                    _ToggleOpt('15', 15, s.accent(GameConfig.sky)),
-                    _ToggleOpt('20', 20, s.accent(GameConfig.sky)),
-                    _ToggleOpt('25', 25, s.accent(GameConfig.sky)),
-                  ],
-                  active: gs.questionCount,
-                  onPick: (v) => gs.setOption('q', v),
-                ),
-                const SizedBox(height: 16),
-
-                // Adaptive toggle
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: s.surface,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                        color: const Color(GameConfig.borderMdLight)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Adaptive Difficulty',
-                              style: TextStyle(
-                                color: s.text,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            Text(
-                              'Auto-adjusts to your skill level',
-                              style: TextStyle(color: s.muted, fontSize: 11),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Switch.adaptive(
-                        value: gs.adaptive,
-                        activeThumbColor: s.accent(GameConfig.coral),
-                        onChanged: gs.setAdaptive,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                NeoButton(
-                  label: 'Next: Player Setup →',
-                  color: GameConfig.coral,
-                  onPressed: gs.goToPlayerSetup,
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -196,35 +270,164 @@ class ConfigScreen extends StatelessWidget {
 }
 
 class _SetupHeader extends StatelessWidget {
-  const _SetupHeader(
-      {required this.s, required this.title, required this.onBack});
+  const _SetupHeader({
+    required this.s,
+    required this.title,
+    required this.subtitle,
+    required this.onBack,
+  });
+
   final SettingsService s;
   final String title;
+  final String subtitle;
   final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          icon: const Icon(Icons.arrow_back),
-          color: s.text,
-          onPressed: onBack,
+    final accent = s.accent(GameConfig.sky);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 10,
+      ),
+      decoration: BoxDecoration(
+        color: s.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: accent.withValues(alpha: 0.16),
         ),
-        Expanded(
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: s.text,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              fontFamily: AppFonts.head,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 48,
+            height: 48,
+            child: Material(
+              color: accent.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: onBack,
+                child: Icon(
+                  Icons.arrow_back_rounded,
+                  color: s.text,
+                  size: 22,
+                ),
+              ),
             ),
           ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              children: [
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: s.text,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: AppFonts.head,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: s.muted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 58),
+        ],
+      ),
+    );
+  }
+}
+
+class _SetupGroup extends StatelessWidget {
+  const _SetupGroup({
+    required this.s,
+    required this.title,
+    required this.icon,
+    required this.accent,
+    required this.child,
+  });
+
+  final SettingsService s;
+  final String title;
+  final IconData icon;
+  final Color accent;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: s.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: accent.withValues(alpha: 0.18),
         ),
-        const SizedBox(width: 48),
-      ],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: accent,
+                  size: 19,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: s.text,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: AppFonts.head,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
     );
   }
 }
@@ -590,17 +793,11 @@ class _ModeInfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: s.surface,
-        borderRadius: BorderRadius.circular(18),
+        color: const Color(GameConfig.coral).withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: const Color(GameConfig.coral).withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+          color: const Color(GameConfig.coral).withValues(alpha: 0.18),
+        ),
       ),
       child: Row(
         children: [
