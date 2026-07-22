@@ -96,11 +96,15 @@ class WeakSkillsPracticeModal extends StatelessWidget {
     final plan = gs.setupWeakSkillsPlan;
     if (plan == null) return const SizedBox.shrink();
     final s = context.watch<SettingsService>();
+
     return ModalShell(
-      icon: '🧠+',
+      icon: plan.isFallback ? '🧠' : '🎯',
       title: plan.isFallback
           ? 'Building Your Practice Profile'
           : 'Recommended Practice',
+      subtitle: plan.isFallback
+          ? 'Practice first, personalize next'
+          : 'Your personalized practice round',
       actions: [
         NeoButton(
           label: 'Cancel',
@@ -115,52 +119,359 @@ class WeakSkillsPracticeModal extends StatelessWidget {
         ),
       ],
       child: plan.isFallback
-          ? Text(
-              'This round will include all four operations.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: s.text,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+          ? _WeakSkillsFallbackCard(settings: s)
+          : _WeakSkillsFocusCard(
+              settings: s,
+              focusedOperations: plan.focusedOperations,
+            ),
+    );
+  }
+}
+
+class _WeakSkillsFocusCard extends StatelessWidget {
+  const _WeakSkillsFocusCard({
+    required this.settings,
+    required this.focusedOperations,
+  });
+
+  final SettingsService settings;
+  final List<Operation> focusedOperations;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(GameConfig.coral).withValues(alpha: 0.10),
+                const Color(GameConfig.mango).withValues(alpha: 0.08),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: const Color(GameConfig.coral).withValues(alpha: 0.18),
+            ),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(GameConfig.coral).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Text('🎯', style: TextStyle(fontSize: 23)),
               ),
-            )
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Practice areas',
+              const SizedBox(height: 8),
+              Text(
+                'Practice areas',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: settings.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 10),
+              for (var i = 0; i < focusedOperations.length; i++) ...[
+                _WeakSkillOperationTile(
+                  operation: focusedOperations[i],
+                ),
+                if (i < focusedOperations.length - 1) const SizedBox(height: 8),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: settings.surface2.withValues(
+              alpha: settings.dark ? 0.80 : 0.58,
+            ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: settings.dark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.white.withValues(alpha: 0.82),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.insights_rounded,
+                size: 20,
+                color: Color(GameConfig.sky),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  'Based on your practice history.',
                   style: TextStyle(
-                    color: s.muted,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
+                    color: settings.muted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
                   ),
                 ),
-                const SizedBox(height: 8),
-                for (final operation in plan.focusedOperations)
-                  Text(
-                    operation == Operation.multiplication
-                        ? 'Multiplication'
-                        : operation.label,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: s.text,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      fontFamily: AppFonts.headFor(s),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WeakSkillsFallbackCard extends StatelessWidget {
+  const _WeakSkillsFallbackCard({required this.settings});
+
+  final SettingsService settings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(GameConfig.sky).withValues(alpha: 0.10),
+                const Color(GameConfig.mint).withValues(alpha: 0.08),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: const Color(GameConfig.sky).withValues(alpha: 0.18),
+            ),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(GameConfig.sky).withValues(alpha: 0.11),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: const Text('🧠', style: TextStyle(fontSize: 24)),
+              ),
+              const SizedBox(height: 9),
+              Text(
+                'Keep practicing',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: settings.text,
+                  fontFamily: AppFonts.headFor(settings),
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                'Math Challenge is still learning where practice will help you most.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: settings.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: settings.surface2.withValues(
+              alpha: settings.dark ? 0.82 : 0.60,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: settings.dark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.white.withValues(alpha: 0.82),
+            ),
+          ),
+          child: Column(
+            children: [
+              Text(
+                'This round will include all four operations.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: settings.text,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: const [
+                  Expanded(
+                    child: _WeakSkillSymbolTile(
+                      symbol: '➕',
+                      label: 'Addition',
+                      color: GameConfig.mint,
                     ),
                   ),
-                const SizedBox(height: 8),
-                Text(
-                  'Based on your practice history.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: s.muted,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                  SizedBox(width: 7),
+                  Expanded(
+                    child: _WeakSkillSymbolTile(
+                      symbol: '➖',
+                      label: 'Subtraction',
+                      color: GameConfig.coral,
+                    ),
                   ),
-                ),
-              ],
+                  SizedBox(width: 7),
+                  Expanded(
+                    child: _WeakSkillSymbolTile(
+                      symbol: '✖',
+                      label: 'Multiplication',
+                      color: GameConfig.mango,
+                    ),
+                  ),
+                  SizedBox(width: 7),
+                  Expanded(
+                    child: _WeakSkillSymbolTile(
+                      symbol: '➗',
+                      label: 'Division',
+                      color: GameConfig.sky,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WeakSkillOperationTile extends StatelessWidget {
+  const _WeakSkillOperationTile({required this.operation});
+
+  final Operation operation;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final symbol = switch (operation) {
+      Operation.addition => '➕',
+      Operation.subtraction => '➖',
+      Operation.multiplication => '✖',
+      Operation.division => '➗',
+      _ => '🧠',
+    };
+    final label = operation == Operation.multiplication
+        ? 'Multiplication'
+        : operation.label;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: s.surface.withValues(alpha: s.dark ? 0.54 : 0.72),
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: s.dark ? 0.08 : 0.72),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(GameConfig.coral).withValues(alpha: 0.09),
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Text(symbol, style: const TextStyle(fontSize: 19)),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: s.text,
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                fontFamily: AppFonts.headFor(s),
+              ),
+            ),
+          ),
+          const Icon(
+            Icons.lock_clock_rounded,
+            size: 18,
+            color: Color(GameConfig.coral),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeakSkillSymbolTile extends StatelessWidget {
+  const _WeakSkillSymbolTile({
+    required this.symbol,
+    required this.label,
+    required this.color,
+  });
+
+  final String symbol;
+  final String label;
+  final int color;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final accent = Color(color);
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 68),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: s.dark ? 0.09 : 0.06),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: accent.withValues(alpha: 0.16)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(symbol, style: const TextStyle(fontSize: 19, height: 1)),
+          const SizedBox(height: 5),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              style: TextStyle(
+                color: s.text,
+                fontSize: 9.5,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
