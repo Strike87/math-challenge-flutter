@@ -193,7 +193,7 @@ class ConfigScreen extends StatelessWidget {
                               color: s
                                   .accent(GameConfig.coral)
                                   .withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
                               Icons.psychology_alt_rounded,
@@ -312,9 +312,9 @@ class _SetupHeader extends StatelessWidget {
             height: 48,
             child: Material(
               color: accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
               child: InkWell(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 onTap: onBack,
                 child: Icon(
                   Icons.arrow_back_rounded,
@@ -794,7 +794,7 @@ class _ModeInfoCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(GameConfig.coral).withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: const Color(GameConfig.coral).withValues(alpha: 0.18),
         ),
