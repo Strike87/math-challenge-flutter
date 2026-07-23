@@ -10,9 +10,9 @@ class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
 
   static const _weakSkillsGradient = <Color>[
-    Color(0xFF7C3AED), // bright violet
-    Color(0xFFDB2777), // deep pink / magenta
-    Color(0xFFFF6B6B), // coral / light red
+    Color(GameConfig.grape), // bright violet
+    Color(GameConfig.punch), // deep pink / magenta
+    Color(GameConfig.coral), // coral / light red
   ];
 
   @override
@@ -39,7 +39,7 @@ class MenuScreen extends StatelessWidget {
                   icon: '🚀',
                   title: 'Weak Skills Practice',
                   subtitle: 'Build Your Skills',
-                  color: const Color(0xFF7C3AED),
+                  color: const Color(GameConfig.grape),
                   gradientColors: _weakSkillsGradient,
                   onTap: () => gs.goToConfig('weakSkills'),
                 ),
@@ -57,9 +57,9 @@ class MenuScreen extends StatelessWidget {
                   subtitle: 'BOSS BATTLES • 5 STAGES',
                   color: s.accent(GameConfig.coral),
                   gradientColors: const [
-                    Color(0xFF6D28D9),
-                    Color(0xFF9D174D),
-                    Color(0xFFFF6B6B),
+                    Color(GameConfig.grape),
+                    Color(GameConfig.punch),
+                    Color(GameConfig.coral),
                   ],
                   onTap: () => gs.goToConfig('master'),
                 ),
@@ -72,9 +72,9 @@ class MenuScreen extends StatelessWidget {
                       : 'NEW CHALLENGE TODAY',
                   color: s.accent(GameConfig.punch),
                   gradientColors: const [
-                    Color(0xFFD94660),
-                    Color(0xFFF15A45),
-                    Color(0xFFFF8A3D),
+                    Color(GameConfig.punch),
+                    Color(GameConfig.coral),
+                    Color(GameConfig.mango),
                   ],
                   onTap: gs.isDailyBossClaimedToday ? () {} : gs.showDailyBoss,
                 ),
@@ -85,9 +85,9 @@ class MenuScreen extends StatelessWidget {
                   subtitle: '7 TRAILS • 21 STAGES',
                   color: s.accent(GameConfig.mango),
                   gradientColors: const [
-                    Color(0xFFF97316),
-                    Color(0xFFFB7185),
-                    Color(0xFFF59E0B),
+                    Color(GameConfig.mango),
+                    Color(GameConfig.punch),
+                    Color(GameConfig.mango),
                   ],
                   onTap: gs.showOperationQuest,
                 ),

@@ -198,8 +198,8 @@ class WeakSkillsRecommendationCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             gradient: const LinearGradient(
               colors: [
-                Color(0xFF7C3AED),
-                Color(0xFFDB2777),
+                Color(GameConfig.grape),
+                Color(GameConfig.punch),
                 Color(GameConfig.coral),
               ],
             ),
