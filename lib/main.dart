@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import 'engine/game_state.dart' as gs;
 import 'game_config.dart';
+import 'features/modals/presentation/toast_banner.dart';
 import 'services/storage.dart';
 import 'services/settings.dart';
 import 'services/audio.dart';
@@ -215,40 +216,16 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
                 child: Center(child: banner),
               ),
             ),
-          // Toast
+          // Toast presentation only. Queue/timing remain owned by ToastController.
           if (state.toastVisible)
             Positioned(
               top: 56,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: AnimatedOpacity(
-                  opacity: state.toastVisible ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(GameConfig.coral),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(GameConfig.coral)
-                              .withValues(alpha: 0.4),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      state.toastMessage,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
+              left: 14,
+              right: 14,
+              child: AppToastBanner(
+                key: ValueKey(state.toastMessage),
+                message: state.toastMessage,
+                settings: s,
               ),
             ),
           const Positioned.fill(
