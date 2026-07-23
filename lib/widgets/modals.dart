@@ -1509,7 +1509,7 @@ class _SupportLinkTile extends StatelessWidget {
                       style: TextStyle(
                         color: s.text,
                         fontWeight: FontWeight.w900,
-                        fontFamily: AppFonts.body,
+                        fontFamily: AppFonts.bodyFor(s),
                       ),
                     ),
                     const SizedBox(height: 1),
@@ -1521,7 +1521,7 @@ class _SupportLinkTile extends StatelessWidget {
                         color: s.muted,
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
-                        fontFamily: AppFonts.body,
+                        fontFamily: AppFonts.bodyFor(s),
                       ),
                     ),
                   ],
@@ -1604,7 +1604,7 @@ class _AccessibilityPanel extends StatelessWidget {
                         style: TextStyle(
                           color: s.text,
                           fontWeight: FontWeight.w800,
-                          fontFamily: AppFonts.body,
+                          fontFamily: AppFonts.bodyFor(s),
                         ),
                       ),
                       Slider(
@@ -1721,7 +1721,7 @@ class _AvatarSettingsTile extends StatelessWidget {
                         color: s.text,
                         fontSize: 14,
                         fontWeight: FontWeight.w900,
-                        fontFamily: AppFonts.body,
+                        fontFamily: AppFonts.bodyFor(s),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -1807,7 +1807,7 @@ class _TrioBtn extends StatelessWidget {
                     color: s.text,
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    fontFamily: AppFonts.body,
+                    fontFamily: AppFonts.bodyFor(s),
                   ),
                 ),
               ),
@@ -1890,7 +1890,7 @@ class _SettingsActionTile extends StatelessWidget {
                     style: TextStyle(
                       color: destructive ? accent : s.text,
                       fontWeight: FontWeight.w900,
-                      fontFamily: AppFonts.body,
+                      fontFamily: AppFonts.bodyFor(s),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -1977,7 +1977,7 @@ class _CheckTile extends StatelessWidget {
                       style: TextStyle(
                         color: s.text,
                         fontWeight: FontWeight.w700,
-                        fontFamily: AppFonts.body,
+                        fontFamily: AppFonts.bodyFor(s),
                       ),
                     )
                   : Column(
@@ -1988,7 +1988,7 @@ class _CheckTile extends StatelessWidget {
                           style: TextStyle(
                             color: s.text,
                             fontWeight: FontWeight.w700,
-                            fontFamily: AppFonts.body,
+                            fontFamily: AppFonts.bodyFor(s),
                           ),
                         ),
                         const SizedBox(height: 1),
@@ -2001,7 +2001,7 @@ class _CheckTile extends StatelessWidget {
                             color: s.muted,
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            fontFamily: AppFonts.body,
+                            fontFamily: AppFonts.bodyFor(s),
                           ),
                         ),
                       ],
@@ -2287,7 +2287,7 @@ class _MasterBriefStat extends StatelessWidget {
                 color: label == 'Lives' ? accent : s.text,
                 fontSize: 11,
                 fontWeight: FontWeight.w900,
-                fontFamily: AppFonts.body,
+                fontFamily: AppFonts.bodyFor(s),
               ),
             ),
           ),
@@ -2602,7 +2602,7 @@ class _DailyBossMetric extends StatelessWidget {
                 color: label == 'Lives' ? accent : s.text,
                 fontSize: 10.5,
                 fontWeight: FontWeight.w900,
-                fontFamily: AppFonts.body,
+                fontFamily: AppFonts.bodyFor(s),
               ),
             ),
           ),
@@ -2753,7 +2753,7 @@ class _ReportBoxRow extends StatelessWidget {
                   color: s.muted,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  fontFamily: AppFonts.body,
+                  fontFamily: AppFonts.bodyFor(s),
                 ),
               ),
             ),
@@ -2778,7 +2778,7 @@ class _ReportBoxRow extends StatelessWidget {
       fontSize: 13,
       fontWeight: FontWeight.w800,
       height: 1.25,
-      fontFamily: AppFonts.body,
+      fontFamily: AppFonts.bodyFor(s),
     );
   }
 }
@@ -3209,7 +3209,7 @@ class _CompareResultRow extends StatelessWidget {
       color: color ?? s.text,
       fontSize: 12.5,
       fontWeight: header ? FontWeight.w900 : FontWeight.w700,
-      fontFamily: AppFonts.body,
+      fontFamily: AppFonts.bodyFor(s),
       height: 1.2,
     );
     return Container(
@@ -3251,7 +3251,7 @@ class _ResultRow extends StatelessWidget {
       color: header ? s.muted : s.text,
       fontSize: 11.5,
       fontWeight: header ? FontWeight.w900 : FontWeight.w700,
-      fontFamily: AppFonts.body,
+      fontFamily: AppFonts.bodyFor(s),
       height: 1.2,
       letterSpacing: header ? 0.7 : 0,
     );
@@ -3370,12 +3370,12 @@ class _NewAchievementsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             '🎉 Achievements Unlocked!',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: FontWeight.w900,
-              fontFamily: AppFonts.head,
+              fontFamily: AppFonts.headFor(s),
             ),
           ),
           const SizedBox(height: 8),
@@ -5587,6 +5587,7 @@ class _CoinPriceBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsService>();
     return Container(
       constraints: const BoxConstraints(minHeight: 28),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -5601,11 +5602,11 @@ class _CoinPriceBadge extends StatelessWidget {
         '🪙 $price',
         maxLines: 1,
         softWrap: false,
-        style: const TextStyle(
+        style: TextStyle(
           color: Color(0xFF8A6200),
           fontSize: 11.5,
           fontWeight: FontWeight.w900,
-          fontFamily: AppFonts.body,
+          fontFamily: AppFonts.bodyFor(settings),
         ),
       ),
     );
@@ -5625,6 +5626,7 @@ class _ShopPricePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsService>();
     return Container(
       constraints: BoxConstraints(
         minHeight: outlined ? 38 : 30,
@@ -5661,7 +5663,7 @@ class _ShopPricePill extends StatelessWidget {
             color: owned || outlined ? const Color(0xFFB78300) : Colors.white,
             fontSize: 13,
             fontWeight: FontWeight.w900,
-            fontFamily: AppFonts.head,
+            fontFamily: AppFonts.headFor(settings),
           ),
         ),
       ),
@@ -5767,6 +5769,7 @@ class _RewardedAdCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsService>();
     return GestureDetector(
       onTap: disabled ? null : onTap,
       child: Opacity(
@@ -5808,7 +5811,7 @@ class _RewardedAdCard extends StatelessWidget {
                 child: const Text('🎬', style: TextStyle(fontSize: 27)),
               ),
               const SizedBox(width: 11),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Watch Ad',
                   maxLines: 1,
@@ -5816,7 +5819,7 @@ class _RewardedAdCard extends StatelessWidget {
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
-                    fontFamily: AppFonts.head,
+                    fontFamily: AppFonts.headFor(settings),
                     fontSize: 17,
                   ),
                 ),
@@ -5994,7 +5997,7 @@ class _IapCard extends StatelessWidget {
                         ? const Color(GameConfig.mint)
                         : const Color(GameConfig.textLight),
                     fontWeight: FontWeight.w900,
-                    fontFamily: AppFonts.head,
+                    fontFamily: AppFonts.headFor(s),
                     fontSize: 13,
                   ),
                 ),
@@ -6123,7 +6126,7 @@ class _AdultGateWarningStep extends StatelessWidget {
                 style: TextStyle(
                   color: s.text,
                   fontWeight: FontWeight.w900,
-                  fontFamily: AppFonts.head,
+                  fontFamily: AppFonts.headFor(s),
                   fontSize: 20,
                 ),
               ),
@@ -6146,7 +6149,7 @@ class _AdultGateWarningStep extends StatelessWidget {
           style: TextStyle(
             color: s.text,
             fontWeight: FontWeight.w900,
-            fontFamily: AppFonts.head,
+            fontFamily: AppFonts.headFor(s),
             fontSize: 18,
           ),
         ),
@@ -6218,7 +6221,7 @@ class _AdultGateQuestionStep extends StatelessWidget {
                     style: TextStyle(
                       color: s.text,
                       fontWeight: FontWeight.w900,
-                      fontFamily: AppFonts.head,
+                      fontFamily: AppFonts.headFor(s),
                       fontSize: 26,
                     ),
                   ),
@@ -6238,7 +6241,7 @@ class _AdultGateQuestionStep extends StatelessWidget {
                   style: TextStyle(
                     color: s.text,
                     fontWeight: FontWeight.w900,
-                    fontFamily: AppFonts.head,
+                    fontFamily: AppFonts.headFor(s),
                     fontSize: 22,
                   ),
                   decoration: InputDecoration(
@@ -6342,7 +6345,7 @@ class _DailyCalendarBadge extends StatelessWidget {
                 '${date.day}',
                 style: TextStyle(
                   color: s.text,
-                  fontFamily: AppFonts.head,
+                  fontFamily: AppFonts.headFor(s),
                   fontWeight: FontWeight.w900,
                   fontSize: 26,
                   height: 1,
