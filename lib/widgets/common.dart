@@ -597,7 +597,7 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog>
                       Color(0xFFD4681A),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 labelStyle: const TextStyle(
                   fontWeight: FontWeight.w900,

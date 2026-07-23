@@ -152,9 +152,9 @@ class _SetupHeader extends StatelessWidget {
             height: 48,
             child: Material(
               color: accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
               child: InkWell(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 onTap: onBack,
                 child: Icon(
                   Icons.arrow_back_rounded,

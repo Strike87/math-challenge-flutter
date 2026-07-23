@@ -318,7 +318,7 @@ class _DailyNavBtn extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(17),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: SizedBox(
           height: 78,
@@ -332,7 +332,7 @@ class _DailyNavBtn extends StatelessWidget {
                   height: 43,
                   decoration: BoxDecoration(
                     color: s.surface.withValues(alpha: s.dark ? 0.68 : 0.92),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: accent.withValues(alpha: 0.24),
                     ),
@@ -409,7 +409,7 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 13, 10, 13),
       decoration: BoxDecoration(
         color: s.surface.withValues(alpha: s.dark ? 0.78 : 0.90),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: Colors.white.withValues(alpha: s.dark ? 0.14 : 0.70),
         ),
@@ -516,7 +516,7 @@ class _EqualBrandIcon extends StatelessWidget {
             Color(0xFFD4681A),
           ],
         ),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: const Color(GameConfig.coral).withValues(alpha: 0.24),
@@ -618,7 +618,7 @@ class _CampaignCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         onTap: onTap,
         child: Container(
           constraints: const BoxConstraints(minHeight: 86),
@@ -629,7 +629,7 @@ class _CampaignCard extends StatelessWidget {
               end: Alignment.centerRight,
               colors: colors,
             ),
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: Colors.white.withValues(alpha: 0.30),
               width: 1,
@@ -649,7 +649,7 @@ class _CampaignCard extends StatelessWidget {
                 height: 52,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(17),
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(
                     color: Colors.white.withValues(alpha: 0.34),
                   ),
@@ -839,7 +839,7 @@ class _NavBtn extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(17),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: SizedBox(
           height: 78,
@@ -866,7 +866,7 @@ class _NavBtn extends StatelessWidget {
                     color: isHome
                         ? null
                         : accent.withValues(alpha: s.dark ? 0.12 : 0.09),
-                    borderRadius: BorderRadius.circular(isHome ? 17 : 14),
+                    borderRadius: BorderRadius.circular(isHome ? 18 : 12),
                     border: Border.all(
                       color: isHome
                           ? Colors.white.withValues(alpha: 0.30)
