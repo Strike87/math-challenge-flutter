@@ -486,7 +486,8 @@ class OperationQuestModal extends StatelessWidget {
     return ModalShell(
       icon: '🗺️',
       title: 'Operation Quest',
-      maxHeight: 620,
+      subtitle: 'Master every operation, one trail at a time',
+      maxHeight: 650,
       actions: [
         NeoButton(
           label: 'Close',
@@ -496,31 +497,38 @@ class OperationQuestModal extends StatelessWidget {
         ),
       ],
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const _OperationQuestIntroCard(),
+          const SizedBox(height: 14),
           _OperationQuestTrail(
             heading: '➕ Addition Trail',
             stages: operationQuestStagesFor(Operation.addition),
             gs: gs,
+            accent: GameConfig.mint,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           _OperationQuestTrail(
             heading: '➖ Subtraction Trail',
             stages: operationQuestStagesFor(Operation.subtraction),
             gs: gs,
+            accent: GameConfig.coral,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           _OperationQuestTrail(
             heading: '✖️ Multiplication Trail',
             stages: operationQuestStagesFor(Operation.multiplication),
             gs: gs,
+            accent: GameConfig.mango,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           _OperationQuestTrail(
             heading: '➗ Division Trail',
             stages: operationQuestStagesFor(Operation.division),
             gs: gs,
+            accent: GameConfig.sky,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           _OperationQuestTrail(
             heading: '🧮 Mixed Operations Trail',
             stages: operationQuestStages
@@ -529,8 +537,9 @@ class OperationQuestModal extends StatelessWidget {
                     stage.questionMechanic == QuestionMechanic.standard)
                 .toList(),
             gs: gs,
+            accent: GameConfig.grape,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           _OperationQuestTrail(
             heading: '❔ Missing Operation Trail',
             stages: operationQuestStages
@@ -538,8 +547,9 @@ class OperationQuestModal extends StatelessWidget {
                     stage.questionMechanic == QuestionMechanic.missingOperation)
                 .toList(),
             gs: gs,
+            accent: GameConfig.coral,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           _OperationQuestTrail(
             heading: '🔢 Missing Number Trail',
             stages: operationQuestStages
@@ -547,6 +557,79 @@ class OperationQuestModal extends StatelessWidget {
                     stage.questionMechanic == QuestionMechanic.missingNumber)
                 .toList(),
             gs: gs,
+            accent: GameConfig.sky,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OperationQuestIntroCard extends StatelessWidget {
+  const _OperationQuestIntroCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(GameConfig.mango)
+                .withValues(alpha: s.dark ? 0.13 : 0.11),
+            const Color(GameConfig.coral)
+                .withValues(alpha: s.dark ? 0.09 : 0.07),
+            const Color(GameConfig.sky).withValues(alpha: s.dark ? 0.09 : 0.07),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: const Color(GameConfig.mango).withValues(alpha: 0.22),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: s.dark ? 0.07 : 0.62),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Text('🧭', style: TextStyle(fontSize: 26)),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Choose your next trail',
+                  style: TextStyle(
+                    color: s.text,
+                    fontFamily: AppFonts.headFor(s),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    height: 1.05,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Earn stars to unlock the next stage and keep moving forward.',
+                  style: TextStyle(
+                    color: s.muted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -559,33 +642,167 @@ class _OperationQuestTrail extends StatelessWidget {
     required this.heading,
     required this.stages,
     required this.gs,
+    required this.accent,
   });
 
   final String heading;
   final List<OperationQuestStage> stages;
   final GameState gs;
+  final int accent;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          heading,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+    final s = context.watch<SettingsService>();
+    final accentColor = Color(accent);
+    final earnedStars = stages.fold<int>(
+      0,
+      (total, stage) => total + gs.operationQuestProgress.bestStars(stage.id),
+    );
+    final possibleStars = stages.length * 3;
+    final clearedStages = stages
+        .where((stage) => gs.operationQuestProgress.bestStars(stage.id) > 0)
+        .length;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(11, 11, 11, 12),
+      decoration: BoxDecoration(
+        color: s.surface2.withValues(alpha: s.dark ? 0.82 : 0.58),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: accentColor.withValues(alpha: 0.18),
+          width: 1.2,
         ),
-        const SizedBox(height: 10),
-        for (var i = 0; i < stages.length; i++) ...[
-          _OperationQuestStageCard(
-            number: i + 1,
-            stage: stages[i],
-            stars: gs.operationQuestProgress.bestStars(stages[i].id),
-            unlocked: gs.operationQuestProgress.isUnlocked(stages[i].id),
-            onTap: () => gs.startOperationQuestStage(stages[i].id),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
           ),
-          if (i < stages.length - 1) const SizedBox(height: 10),
         ],
-      ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  heading,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: s.text,
+                    fontFamily: AppFonts.headFor(s),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    height: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _OperationQuestTrailProgress(
+                clearedStages: clearedStages,
+                stageCount: stages.length,
+                earnedStars: earnedStars,
+                possibleStars: possibleStars,
+                accent: accentColor,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          for (var i = 0; i < stages.length; i++) ...[
+            _OperationQuestStageCard(
+              number: i + 1,
+              stage: stages[i],
+              stars: gs.operationQuestProgress.bestStars(stages[i].id),
+              unlocked: gs.operationQuestProgress.isUnlocked(stages[i].id),
+              onTap: () => gs.startOperationQuestStage(stages[i].id),
+              accent: accentColor,
+            ),
+            if (i < stages.length - 1)
+              _OperationQuestConnector(
+                completed:
+                    gs.operationQuestProgress.bestStars(stages[i].id) > 0,
+                accent: accentColor,
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _OperationQuestTrailProgress extends StatelessWidget {
+  const _OperationQuestTrailProgress({
+    required this.clearedStages,
+    required this.stageCount,
+    required this.earnedStars,
+    required this.possibleStars,
+    required this.accent,
+  });
+
+  final int clearedStages;
+  final int stageCount;
+  final int earnedStars;
+  final int possibleStars;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: accent.withValues(alpha: 0.20)),
+      ),
+      child: Text(
+        '$clearedStages/$stageCount  •  $earnedStars/$possibleStars ★',
+        maxLines: 1,
+        softWrap: false,
+        style: TextStyle(
+          color: s.dark ? accent.withValues(alpha: 0.95) : accent,
+          fontSize: 9.5,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _OperationQuestConnector extends StatelessWidget {
+  const _OperationQuestConnector({
+    required this.completed,
+    required this.accent,
+  });
+
+  final bool completed;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final color = completed
+        ? accent.withValues(alpha: 0.55)
+        : s.border.withValues(alpha: 0.8);
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 24),
+      child: SizedBox(
+        height: 13,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            width: 2,
+            height: 13,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -597,6 +814,7 @@ class _OperationQuestStageCard extends StatelessWidget {
     required this.stars,
     required this.unlocked,
     required this.onTap,
+    required this.accent,
   });
 
   final int number;
@@ -604,56 +822,135 @@ class _OperationQuestStageCard extends StatelessWidget {
   final int stars;
   final bool unlocked;
   final VoidCallback onTap;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
+    final isCleared = stars > 0;
+    final stageAccent = unlocked ? accent : s.muted;
+
     return Material(
       key: Key('operation-quest-stage-${stage.id.storageId}'),
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(17),
         onTap: unlocked ? onTap : null,
-        child: Container(
-          padding: const EdgeInsets.all(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
           decoration: BoxDecoration(
-            color: s.surface2,
-            borderRadius: BorderRadius.circular(18),
+            gradient: unlocked
+                ? LinearGradient(
+                    colors: [
+                      stageAccent.withValues(
+                        alpha: isCleared ? 0.10 : 0.06,
+                      ),
+                      s.surface.withValues(alpha: s.dark ? 0.48 : 0.68),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: unlocked
+                ? null
+                : s.surface.withValues(alpha: s.dark ? 0.28 : 0.42),
+            borderRadius: BorderRadius.circular(17),
             border: Border.all(
-              color: unlocked ? const Color(GameConfig.mango) : s.border,
+              color: unlocked
+                  ? stageAccent.withValues(alpha: isCleared ? 0.30 : 0.20)
+                  : s.border.withValues(alpha: 0.75),
+              width: isCleared ? 1.5 : 1.1,
             ),
           ),
           child: Row(
             children: [
-              Text(
-                unlocked ? '$number' : '🔒',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
+              Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: unlocked
+                      ? stageAccent.withValues(alpha: isCleared ? 0.16 : 0.09)
+                      : s.surface2.withValues(alpha: 0.55),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: unlocked
+                        ? stageAccent.withValues(alpha: 0.32)
+                        : s.border,
+                  ),
                 ),
+                child: unlocked
+                    ? Text(
+                        '$number',
+                        style: TextStyle(
+                          color: stageAccent,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          fontFamily: AppFonts.headFor(s),
+                        ),
+                      )
+                    : const Text('🔒', style: TextStyle(fontSize: 18)),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       stage.title,
-                      style: const TextStyle(fontWeight: FontWeight.w900),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: unlocked ? s.text : s.muted,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: AppFonts.headFor(s),
+                        height: 1.05,
+                      ),
                     ),
+                    const SizedBox(height: 4),
                     Text(
                       '${stage.difficulty.label} • ${stage.operation.label}',
-                      style: TextStyle(color: s.muted, fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: s.muted,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ],
                 ),
               ),
-              Text(
-                List.generate(3, (i) => i < stars ? '★' : '☆').join(),
-                style: TextStyle(
-                  color: unlocked ? const Color(GameConfig.mango) : s.muted,
-                  fontWeight: FontWeight.w900,
-                ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    List.generate(3, (i) => i < stars ? '★' : '☆').join(),
+                    maxLines: 1,
+                    softWrap: false,
+                    style: TextStyle(
+                      color: unlocked ? stageAccent : s.muted,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Icon(
+                    unlocked
+                        ? (isCleared
+                            ? Icons.check_circle_rounded
+                            : Icons.play_circle_outline_rounded)
+                        : Icons.lock_outline_rounded,
+                    size: 16,
+                    color: unlocked
+                        ? stageAccent.withValues(alpha: 0.90)
+                        : s.muted,
+                  ),
+                ],
               ),
             ],
           ),
