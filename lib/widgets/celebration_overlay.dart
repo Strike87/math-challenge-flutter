@@ -7,6 +7,7 @@ import '../game_config.dart';
 import '../engine/game_state.dart';
 import '../models/celebration.dart';
 import '../services/settings.dart';
+import 'common.dart';
 
 class CelebrationOverlay extends StatefulWidget {
   const CelebrationOverlay({
@@ -170,7 +171,10 @@ class _CelebrationOverlayState extends State<CelebrationOverlay> {
                 scale: _showBadge ? 1 : 0.86,
                 duration: popDuration,
                 curve: Curves.easeOutBack,
-                child: _CelebrationBadge(event: _event),
+                child: _CelebrationBadge(
+                  event: _event,
+                  settings: widget.settings,
+                ),
               ),
             ),
           ],
@@ -181,48 +185,90 @@ class _CelebrationOverlayState extends State<CelebrationOverlay> {
 }
 
 class _CelebrationBadge extends StatelessWidget {
-  const _CelebrationBadge({required this.event});
+  const _CelebrationBadge({
+    required this.event,
+    required this.settings,
+  });
 
   final CelebrationEvent event;
+  final SettingsService settings;
+
+  Color _celebrationAccent(CelebrationKind kind) {
+    return switch (kind) {
+      CelebrationKind.reward => const Color(GameConfig.mango),
+      CelebrationKind.achievement => const Color(GameConfig.grape),
+      CelebrationKind.stageClear => const Color(GameConfig.mint),
+      CelebrationKind.bossClear => const Color(GameConfig.punch),
+      CelebrationKind.win => const Color(GameConfig.coral),
+      CelebrationKind.perfect => const Color(GameConfig.mango),
+      CelebrationKind.none => const Color(GameConfig.coral),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     if (!event.isActive) return const SizedBox.shrink();
 
-    final badgeBg = Colors.white.withValues(alpha: 0.96);
-    final borderColor = const Color(GameConfig.mango).withValues(alpha: 0.65);
-    final shadowColor = Colors.black.withValues(alpha: 0.18);
+    final accent = _celebrationAccent(event.kind);
 
     return Container(
-      constraints: const BoxConstraints(maxWidth: 320),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      constraints: const BoxConstraints(maxWidth: 340),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: badgeBg,
+        gradient: LinearGradient(
+          colors: [
+            settings.surface.withValues(alpha: settings.dark ? 0.98 : 0.96),
+            settings.surface2.withValues(alpha: settings.dark ? 0.95 : 0.90),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: borderColor,
-          width: 2,
+          color: accent.withValues(alpha: 0.34),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: shadowColor,
-            blurRadius: 26,
+            color: Colors.black.withValues(alpha: settings.dark ? 0.28 : 0.14),
+            blurRadius: 24,
             offset: const Offset(0, 10),
+          ),
+          BoxShadow(
+            color: accent.withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(event.emoji, style: const TextStyle(fontSize: 34)),
-          const SizedBox(width: 10),
+          Container(
+            width: 54,
+            height: 54,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: settings.dark ? 0.15 : 0.10),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: accent.withValues(alpha: 0.22),
+              ),
+            ),
+            child: Text(
+              event.emoji,
+              style: const TextStyle(fontSize: 30),
+            ),
+          ),
+          const SizedBox(width: 11),
           Flexible(
             child: Text(
               event.message,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Color(GameConfig.textLight),
+              style: TextStyle(
+                color: settings.text,
+                fontFamily: AppFonts.headFor(settings),
                 fontWeight: FontWeight.w900,
                 fontSize: 17,
                 height: 1.08,

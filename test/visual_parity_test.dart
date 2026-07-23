@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/features/operation_quest/domain/operation_quest.dart';
+import 'package:math_challenge/features/modals/presentation/toast_banner.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/storage.dart';
@@ -138,36 +139,12 @@ class TestAppShell extends StatelessWidget {
           if (state.toastVisible)
             Positioned(
               top: 56,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: AnimatedOpacity(
-                  opacity: state.toastVisible ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(GameConfig.coral),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(GameConfig.coral)
-                              .withValues(alpha: 0.4),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      state.toastMessage,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
+              left: 14,
+              right: 14,
+              child: AppToastBanner(
+                key: ValueKey(state.toastMessage),
+                message: state.toastMessage,
+                settings: s,
               ),
             ),
           const ModalRouter(),
@@ -597,7 +574,36 @@ void main() {
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/04_config_1p.png'));
     });
+    testWidgets('4b. Missing Operation config forces Choice4 visually',
+        (tester) async {
+      final state = await _makeState({
+        'mc_dark': false,
+        'mc_selectedAnswerStyle': AnswerStyle.trueFalse.name,
+      });
 
+      state.goToConfig('missingOperation');
+      await state.selectNumType(NumberType.natural.name);
+
+      expect(state.currentScreen, GameScreen.config);
+      expect(state.selectedAnswerStyle, AnswerStyle.trueFalse);
+      expect(state.effectiveAnswerStyle, AnswerStyle.choice4);
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Answer Style'), findsOneWidget);
+      expect(find.text('4 Choices'), findsOneWidget);
+      expect(find.text('True / False'), findsOneWidget);
+      expectNoVisualException(tester);
+
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/04b_missing_operation_config.png'),
+      );
+    });
     testWidgets('5. Config screen 2P mode grid with restricted modes greyed',
         (tester) async {
       final state = await _makeState({'mc_dark': false});
@@ -1007,6 +1013,84 @@ void main() {
         find.byType(TestAppShell),
         matchesGoldenFile('goldens/15_true_false_gameplay.png'),
       );
+    });
+    testWidgets('23. Toast banner phone light and dark', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.currentScreen = GameScreen.menu;
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      state.showToast('🎁 Reward claimed! +20🪙');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 220));
+
+      expect(find.byType(AppToastBanner), findsOneWidget);
+      expect(find.text('🎁 Reward claimed! +20🪙'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/23_toast_banner_light.png'),
+      );
+
+      state.settings.toggleDark();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 20));
+
+      expect(find.byType(AppToastBanner), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/23_toast_banner_dark.png'),
+      );
+
+      // Drain the existing 2400 ms ToastController timer before the
+      // test ends. This preserves production timing and avoids a pending
+      // fake-async timer invariant failure in the golden test.
+      await tester.pump(const Duration(milliseconds: 2400));
+    });
+
+    testWidgets('24. Achievement feedback surfaces light and dark',
+        (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.currentScreen = GameScreen.menu;
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      state.unlockAch('first_win');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 280));
+
+      expect(find.text('First Victory unlocked!'), findsOneWidget);
+      expect(find.byType(AppToastBanner), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/24_achievement_feedback_light.png'),
+      );
+
+      state.settings.toggleDark();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 20));
+
+      expect(find.text('First Victory unlocked!'), findsOneWidget);
+      expect(find.byType(AppToastBanner), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/24_achievement_feedback_dark.png'),
+      );
+
+      // Drain both the existing toast timer and the shorter celebration
+      // hide timer. Production durations and trigger behavior stay unchanged.
+      await tester.pump(const Duration(milliseconds: 2400));
     });
   });
 }

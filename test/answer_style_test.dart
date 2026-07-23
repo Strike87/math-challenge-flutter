@@ -220,6 +220,88 @@ void main() {
     state.dispose();
   });
 
+  testWidgets(
+      'Missing Operation shows forced Choice4 and preserves True/False preference',
+      (tester) async {
+    final state = await _makeState({
+      'mc_selectedAnswerStyle': AnswerStyle.trueFalse.name,
+    });
+    addTearDown(state.dispose);
+
+    expect(state.selectedAnswerStyle, AnswerStyle.trueFalse);
+
+    state.goToConfig('missingOperation');
+
+    expect(state.isMissingOperationPractice, isTrue);
+    expect(state.selectedAnswerStyle, AnswerStyle.trueFalse);
+    expect(state.effectiveAnswerStyle, AnswerStyle.choice4);
+
+    await _pump(tester, state, const ConfigScreen());
+
+    expect(find.text('Answer Style'), findsOneWidget);
+    expect(find.text('4 Choices'), findsOneWidget);
+    expect(find.text('True / False'), findsOneWidget);
+
+    // Missing Operation presents Choice4 as the effective active style.
+    final choice4Button = find.ancestor(
+      of: find.text('4 Choices'),
+      matching: find.byType(InkWell),
+    );
+    expect(choice4Button, findsOneWidget);
+
+    final choice4Containers = tester.widgetList<Container>(
+      find.descendant(
+        of: choice4Button,
+        matching: find.byType(Container),
+      ),
+    );
+    expect(
+      choice4Containers.any(
+        (container) =>
+            container.decoration is BoxDecoration &&
+            (container.decoration! as BoxDecoration).gradient != null,
+      ),
+      isTrue,
+    );
+
+    // True / False remains visible but uses the existing disabled treatment.
+    final disabledOpacity = tester.widget<Opacity>(
+      find
+          .ancestor(
+            of: find.text('True / False'),
+            matching: find.byType(Opacity),
+          )
+          .first,
+    );
+    expect(disabledOpacity.opacity, 0.4);
+
+    // Tapping disabled True / False must not change either state.
+    await tester.tap(find.text('True / False'));
+    await tester.pump();
+
+    expect(state.selectedAnswerStyle, AnswerStyle.trueFalse);
+    expect(state.effectiveAnswerStyle, AnswerStyle.choice4);
+
+    // Even tapping the forced active Choice4 presentation must not overwrite
+    // the player's canonical preference.
+    await tester.tap(find.text('4 Choices'));
+    await tester.pump();
+
+    expect(state.selectedAnswerStyle, AnswerStyle.trueFalse);
+    expect(state.effectiveAnswerStyle, AnswerStyle.choice4);
+    expect(
+      Storage.getString('mc_selectedAnswerStyle', ''),
+      AnswerStyle.trueFalse.name,
+    );
+
+    // Leaving Missing Operation restores the supported global preference.
+    state.goToConfig('addition');
+
+    expect(state.isMissingOperationPractice, isFalse);
+    expect(state.selectedAnswerStyle, AnswerStyle.trueFalse);
+    expect(state.effectiveAnswerStyle, AnswerStyle.trueFalse);
+  });
+
   testWidgets('true-false proposition uses stored formatted answer stably',
       (tester) async {
     final cases = [

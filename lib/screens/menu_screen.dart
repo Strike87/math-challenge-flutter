@@ -234,18 +234,27 @@ class _BottomNavDock extends StatelessWidget {
     final s = context.watch<SettingsService>();
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+      padding: const EdgeInsets.fromLTRB(8, 9, 8, 8),
       decoration: BoxDecoration(
-        color: s.surface.withValues(alpha: s.dark ? 0.86 : 0.94),
+        gradient: LinearGradient(
+          colors: [
+            s.surface.withValues(alpha: s.dark ? 0.92 : 0.97),
+            s.surface2.withValues(alpha: s.dark ? 0.86 : 0.82),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withValues(alpha: s.dark ? 0.16 : 0.72),
+          color: s.dark
+              ? Colors.white.withValues(alpha: 0.10)
+              : Colors.white.withValues(alpha: 0.88),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: s.dark ? 0.18 : 0.07),
-            blurRadius: 18,
-            offset: const Offset(0, 7),
+            color: Colors.black.withValues(alpha: s.dark ? 0.18 : 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -254,30 +263,34 @@ class _BottomNavDock extends StatelessWidget {
         children: [
           Expanded(
             child: _NavBtn(
-              icon: Icons.emoji_events,
+              icon: Icons.emoji_events_rounded,
               label: 'Hall of Fame',
+              accent: const Color(GameConfig.mango),
               onTap: () => gs.showModal(GameModal.highScore),
             ),
           ),
           Expanded(
             child: _NavBtn(
-              icon: Icons.military_tech,
+              icon: Icons.military_tech_rounded,
               label: 'Achievements',
+              accent: const Color(GameConfig.grape),
               onTap: () => gs.showModal(GameModal.achievements),
             ),
           ),
           Expanded(
             child: _NavBtn(
-              icon: Icons.storefront,
+              icon: Icons.storefront_rounded,
               label: 'Shop',
+              accent: const Color(GameConfig.coral),
               onTap: () => gs.showModal(GameModal.coinShop),
               isHome: true,
             ),
           ),
           Expanded(
             child: _NavBtn(
-              icon: Icons.bar_chart,
+              icon: Icons.bar_chart_rounded,
               label: 'Skills',
+              accent: const Color(GameConfig.sky),
               onTap: () => gs.showModal(GameModal.skillDashboard),
             ),
           ),
@@ -300,52 +313,82 @@ class _DailyNavBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: SizedBox(
-        height: 76,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: s.surface,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.75),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.07),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+    final accent = const Color(GameConfig.coral);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(17),
+        onTap: onTap,
+        child: SizedBox(
+          height: 78,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(2, 2, 2, 0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Container(
+                  width: 43,
+                  height: 43,
+                  decoration: BoxDecoration(
+                    color: s.surface.withValues(alpha: s.dark ? 0.68 : 0.92),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: accent.withValues(alpha: 0.24),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accent.withValues(alpha: 0.10),
+                        blurRadius: 9,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.calendar_today_outlined,
-                  size: 22,
-                  color: s.muted,
+                  clipBehavior: Clip.antiAlias,
+                  child: Stack(
+                    children: [
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: Container(
+                          height: 8,
+                          color: accent.withValues(alpha: 0.92),
+                        ),
+                      ),
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Icon(
+                            Icons.calendar_today_outlined,
+                            size: 20,
+                            color: accent,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: 20,
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Daily',
+                      maxLines: 1,
+                      softWrap: false,
+                      style: TextStyle(
+                        fontSize: 10,
+                        height: 1,
+                        fontWeight: FontWeight.w800,
+                        color: s.muted,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 5),
-            Text(
-              'Daily',
-              style: TextStyle(
-                fontSize: 9.5,
-                fontWeight: FontWeight.w700,
-                color: s.muted,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -778,12 +821,14 @@ class _NavBtn extends StatelessWidget {
   const _NavBtn({
     required this.icon,
     required this.label,
+    required this.accent,
     required this.onTap,
     this.isHome = false,
   });
 
   final IconData icon;
   final String label;
+  final Color accent;
   final VoidCallback onTap;
   final bool isHome;
 
@@ -791,68 +836,80 @@ class _NavBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: SizedBox(
-        height: 76,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Container(
-              width: isHome ? 52 : 42,
-              height: isHome ? 52 : 42,
-              decoration: BoxDecoration(
-                gradient: isHome
-                    ? const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(GameConfig.coral),
-                          Color(0xFFD4681A),
-                        ],
-                      )
-                    : null,
-                color: isHome ? null : s.surface,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isHome
-                      ? Colors.white.withValues(alpha: 0.35)
-                      : Colors.white.withValues(alpha: 0.75),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color:
-                        (isHome ? const Color(GameConfig.coral) : Colors.black)
-                            .withValues(alpha: isHome ? 0.30 : 0.06),
-                    blurRadius: isHome ? 16 : 10,
-                    offset: const Offset(0, 4),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(17),
+        onTap: onTap,
+        child: SizedBox(
+          height: 78,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(2, 2, 2, 0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  width: isHome ? 50 : 43,
+                  height: isHome ? 50 : 43,
+                  decoration: BoxDecoration(
+                    gradient: isHome
+                        ? const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(GameConfig.coral),
+                              Color(0xFFD4681A),
+                            ],
+                          )
+                        : null,
+                    color: isHome
+                        ? null
+                        : accent.withValues(alpha: s.dark ? 0.12 : 0.09),
+                    borderRadius: BorderRadius.circular(isHome ? 17 : 14),
+                    border: Border.all(
+                      color: isHome
+                          ? Colors.white.withValues(alpha: 0.30)
+                          : accent.withValues(alpha: 0.22),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isHome ? const Color(GameConfig.coral) : accent)
+                            .withValues(alpha: isHome ? 0.27 : 0.10),
+                        blurRadius: isHome ? 14 : 9,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Icon(
-                icon,
-                color: isHome ? Colors.white : s.muted,
-                size: isHome ? 24 : 20,
-              ),
-            ),
-            const SizedBox(height: 5),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 9.2,
-                  height: 1.05,
-                  fontWeight: FontWeight.w700,
-                  color: s.muted,
+                  child: Icon(
+                    icon,
+                    color: isHome ? Colors.white : accent,
+                    size: isHome ? 24 : 21,
+                  ),
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+                SizedBox(height: isHome ? 2 : 6),
+                SizedBox(
+                  height: isHome ? 24 : 20,
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: TextStyle(
+                        fontSize: isHome ? 10.2 : 9.5,
+                        height: 1,
+                        fontWeight: isHome ? FontWeight.w900 : FontWeight.w800,
+                        color: isHome ? const Color(GameConfig.coral) : s.muted,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
