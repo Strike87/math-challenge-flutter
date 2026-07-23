@@ -132,7 +132,7 @@ class _SetupHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
       decoration: BoxDecoration(
         color: s.surface,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: accent.withValues(alpha: 0.16),
         ),
@@ -151,10 +151,10 @@ class _SetupHeader extends StatelessWidget {
             height: 44,
             child: Material(
               color: accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(18),
               child: InkWell(
                 key: const Key('player-setup-back'),
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(18),
                 onTap: onBack,
                 child: Icon(
                   Icons.arrow_back_rounded,
@@ -216,7 +216,7 @@ class _PlayerProgress extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: s.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: coral.withValues(alpha: 0.14),
         ),
@@ -340,7 +340,7 @@ class _PlayerSection extends StatelessWidget {
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: s.surface,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: coral.withValues(alpha: 0.20),
         ),
@@ -393,7 +393,7 @@ class _PlayerSection extends StatelessWidget {
                     height: 54,
                     decoration: BoxDecoration(
                       color: coral.withValues(alpha: 0.13),
-                      borderRadius: BorderRadius.circular(17),
+                      borderRadius: BorderRadius.circular(18),
                       border: Border.all(
                         color: coral.withValues(alpha: 0.24),
                       ),
@@ -509,15 +509,15 @@ class _PlayerSection extends StatelessWidget {
                 vertical: 11,
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 borderSide: BorderSide(color: s.border),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 borderSide: BorderSide(color: s.border),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 borderSide: const BorderSide(
                   color: Color(GameConfig.coral),
                   width: 2,
@@ -555,7 +555,7 @@ class _CompactSectionLabel extends StatelessWidget {
           height: 26,
           decoration: BoxDecoration(
             color: coral.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             icon,
@@ -630,7 +630,7 @@ class _AvatarOption extends StatelessWidget {
           color: selected
               ? coral.withValues(alpha: 0.15)
               : s.surface2.withValues(alpha: s.dark ? 0.90 : 0.70),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: selected ? coral : s.border,
             width: selected ? 2 : 1,
