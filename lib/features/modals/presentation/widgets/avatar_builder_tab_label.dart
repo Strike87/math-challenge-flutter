@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../../services/settings.dart';
 import '../../../../widgets/common.dart';
 
 class AvatarBuilderTabLabel extends StatelessWidget {
@@ -14,6 +16,7 @@ class AvatarBuilderTabLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsService>();
     return FittedBox(
       fit: BoxFit.scaleDown,
       child: Column(
@@ -24,10 +27,10 @@ class AvatarBuilderTabLabel extends StatelessWidget {
             label,
             maxLines: 1,
             softWrap: false,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w900,
-              fontFamily: AppFonts.body,
+              fontFamily: AppFonts.bodyFor(settings),
             ),
           ),
         ],

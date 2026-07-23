@@ -284,7 +284,7 @@ class CoinPill extends StatelessWidget {
           style: TextStyle(
             color: settings.text,
             fontWeight: FontWeight.w800,
-            fontFamily: AppFonts.body,
+            fontFamily: AppFonts.bodyFor(settings),
           ),
         ),
       ]),
@@ -559,7 +559,7 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog>
                         color: settings.text,
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
-                        fontFamily: AppFonts.head,
+                        fontFamily: AppFonts.headFor(settings),
                         height: 1,
                       ),
                     ),
@@ -599,14 +599,14 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog>
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                labelStyle: const TextStyle(
+                labelStyle: TextStyle(
                   fontWeight: FontWeight.w900,
-                  fontFamily: AppFonts.head,
+                  fontFamily: AppFonts.headFor(settings),
                   fontSize: 13,
                 ),
-                unselectedLabelStyle: const TextStyle(
+                unselectedLabelStyle: TextStyle(
                   fontWeight: FontWeight.w800,
-                  fontFamily: AppFonts.head,
+                  fontFamily: AppFonts.headFor(settings),
                   fontSize: 13,
                 ),
                 tabs: _categories.map((c) => Tab(text: c.name)).toList(),
@@ -727,6 +727,7 @@ class AvatarSelectorTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsService>();
     return ListTile(
       leading: Container(
         width: 48,
@@ -741,9 +742,9 @@ class AvatarSelectorTile extends StatelessWidget {
       ),
       title: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.w800,
-          fontFamily: AppFonts.body,
+          fontFamily: AppFonts.bodyFor(settings),
         ),
       ),
       subtitle: const Text('Tap to change'),

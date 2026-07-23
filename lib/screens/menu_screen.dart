@@ -491,7 +491,7 @@ class _Header extends StatelessWidget {
       color: s.text,
       fontSize: 24,
       fontWeight: FontWeight.w900,
-      fontFamily: AppFonts.head,
+      fontFamily: AppFonts.headFor(s),
       height: 0.82,
     );
   }
@@ -677,11 +677,11 @@ class _CampaignCard extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
-                        fontFamily: AppFonts.head,
+                        fontFamily: AppFonts.headFor(s),
                       ),
                     ),
                     const SizedBox(height: 3),

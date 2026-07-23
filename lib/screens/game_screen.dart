@@ -302,7 +302,7 @@ class _TimerCircle extends StatelessWidget {
                         : const Color(0xFF0098E5),
                     fontWeight: FontWeight.w900,
                     fontSize: 18,
-                    fontFamily: AppFonts.head,
+                    fontFamily: AppFonts.headFor(s),
                   ),
                 ),
               ),
@@ -422,7 +422,7 @@ class _ScoreProgress extends StatelessWidget {
       color: s.muted,
       fontSize: 16,
       fontWeight: FontWeight.w900,
-      fontFamily: AppFonts.head,
+      fontFamily: AppFonts.headFor(s),
     );
   }
 }
@@ -709,11 +709,11 @@ class _PlayerCard extends StatelessWidget {
                           children: [
                             Text(
                               '${pl.score}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w900,
                                 color: Color(GameConfig.coral),
-                                fontFamily: AppFonts.head,
+                                fontFamily: AppFonts.headFor(s),
                                 height: 1,
                               ),
                             ),
@@ -917,11 +917,11 @@ class _MasterInfo extends StatelessWidget {
           ),
           Text(
             progress,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w900,
               color: Color(GameConfig.mango),
-              fontFamily: AppFonts.head,
+              fontFamily: AppFonts.headFor(s),
             ),
           ),
         ],
@@ -1109,7 +1109,7 @@ class _PowerUpHud extends StatelessWidget {
                                   color: color,
                                   fontWeight: FontWeight.w900,
                                   fontSize: 16,
-                                  fontFamily: AppFonts.head,
+                                  fontFamily: AppFonts.headFor(s),
                                 ),
                               ),
                             ),
@@ -1386,7 +1386,7 @@ class _QuestionCard extends StatelessWidget {
                                 color: s.muted,
                                 fontSize: headerFont,
                                 fontWeight: FontWeight.w900,
-                                fontFamily: AppFonts.head,
+                                fontFamily: AppFonts.headFor(s),
                               ),
                             ),
                           )
@@ -1406,7 +1406,7 @@ class _QuestionCard extends StatelessWidget {
                           color: s.muted,
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
-                          fontFamily: AppFonts.head,
+                          fontFamily: AppFonts.headFor(s),
                           height: 1.08,
                         ),
                       ),
@@ -1460,7 +1460,7 @@ class _QuestionCard extends StatelessWidget {
                     fontSize: 44,
                     fontWeight: FontWeight.w900,
                     color: s.text,
-                    fontFamily: AppFonts.head,
+                    fontFamily: AppFonts.headFor(s),
                     height: 1.2,
                   ),
                   children: _spans(questionText, s),
@@ -1579,7 +1579,7 @@ class _QuestionCard extends StatelessWidget {
                 color: Colors.white,
                 fontSize: 36,
                 fontWeight: FontWeight.w900,
-                fontFamily: AppFonts.head,
+                fontFamily: AppFonts.headFor(s),
               ),
             ),
           ),
@@ -1697,7 +1697,7 @@ class _AnswersGrid extends StatelessWidget {
                         fontSize: 26,
                         fontWeight: FontWeight.w900,
                         color: answerTextColor,
-                        fontFamily: AppFonts.head,
+                        fontFamily: AppFonts.headFor(s),
                       ),
                     ),
                   ),
