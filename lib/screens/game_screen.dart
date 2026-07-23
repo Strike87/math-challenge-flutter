@@ -1082,7 +1082,7 @@ class _PowerUpHud extends StatelessWidget {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.64),
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(18),
                             border: Border.all(
                               color:
                                   color.withValues(alpha: active ? 0.95 : 0.36),
@@ -1264,7 +1264,7 @@ class _ShieldArmedPulse extends StatelessWidget {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(18),
                     ),
                   ),
                 ),
@@ -1345,7 +1345,7 @@ class _QuestionCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: s.surface,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: danger ? const Color(GameConfig.punch) : s.border,
           width: danger ? 2 : 1,
@@ -1571,7 +1571,7 @@ class _QuestionCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: BoxDecoration(
               color: const Color(GameConfig.coral),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               '?',
@@ -1668,7 +1668,7 @@ class _AnswersGrid extends StatelessWidget {
             return Material(
               color: Colors.transparent,
               child: InkWell(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 onTap: gs.rt.accepting
                     ? () {
                         gs.onAnswer(c);
