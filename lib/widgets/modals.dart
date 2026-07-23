@@ -988,7 +988,7 @@ class ModalShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-    final radius = BorderRadius.circular(30);
+    final radius = BorderRadius.circular(28);
     final modal = Container(
       decoration: BoxDecoration(
         color: s.dark ? const Color(0xF01B1815) : const Color(0xF7FFFFFF),
@@ -1119,7 +1119,7 @@ class _ModalDefaultHeader extends StatelessWidget {
         color: settings.surface2.withValues(
           alpha: settings.dark ? 0.76 : 0.62,
         ),
-        borderRadius: BorderRadius.circular(21),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: accent.withValues(alpha: settings.dark ? 0.20 : 0.16),
         ),
@@ -1132,7 +1132,7 @@ class _ModalDefaultHeader extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: accent.withValues(alpha: settings.dark ? 0.16 : 0.11),
-              borderRadius: BorderRadius.circular(17),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: accent.withValues(alpha: 0.20),
               ),
