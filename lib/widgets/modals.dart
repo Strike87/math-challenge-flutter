@@ -3062,18 +3062,21 @@ class AvatarBuilderModal extends StatelessWidget {
     return ModalShell(
       icon: '🎨',
       title: 'Avatar Builder',
+      subtitle: 'Create a look that feels like you',
       maxHeight: 700,
       scrollChild: false,
       actions: [
         NeoButton(
-            label: 'Save Avatar',
-            color: GameConfig.coral,
-            onPressed: gs.saveCustomAvatar),
+          label: 'Save Avatar',
+          color: GameConfig.coral,
+          onPressed: gs.saveCustomAvatar,
+        ),
         NeoButton(
-            label: 'Cancel',
-            outlined: true,
-            color: GameConfig.mutedLight,
-            onPressed: gs.closeModal),
+          label: 'Cancel',
+          outlined: true,
+          color: GameConfig.mutedLight,
+          onPressed: gs.closeModal,
+        ),
       ],
       child: DefaultTabController(
         length: 4,
@@ -3086,11 +3089,20 @@ class AvatarBuilderModal extends StatelessWidget {
               key: const Key('avatar-builder-tabs'),
               padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
-                color: s.surface2.withValues(alpha: s.dark ? 0.85 : 0.62),
+                color: s.surface2.withValues(alpha: s.dark ? 0.90 : 0.64),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.78),
+                  color: s.dark
+                      ? Colors.white.withValues(alpha: 0.09)
+                      : Colors.white.withValues(alpha: 0.86),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: const TabBar(
                 labelPadding: EdgeInsets.zero,
@@ -3098,8 +3110,11 @@ class AvatarBuilderModal extends StatelessWidget {
                   Tab(child: AvatarBuilderTabLabel(icon: '🐾', label: 'Base')),
                   Tab(child: AvatarBuilderTabLabel(icon: '🎩', label: 'Hat')),
                   Tab(
-                      child: AvatarBuilderTabLabel(
-                          icon: '🎒', label: 'Accessory')),
+                    child: AvatarBuilderTabLabel(
+                      icon: '🎒',
+                      label: 'Accessory',
+                    ),
+                  ),
                   Tab(child: AvatarBuilderTabLabel(icon: '🎨', label: 'Color')),
                 ],
                 labelColor: Colors.white,
@@ -3112,46 +3127,74 @@ class AvatarBuilderModal extends StatelessWidget {
                     ],
                   ),
                   borderRadius: BorderRadius.all(Radius.circular(15)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x33F05B42),
+                      blurRadius: 8,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
                 ),
                 indicatorSize: TabBarIndicatorSize.tab,
                 dividerColor: Colors.transparent,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Expanded(
               child: TabBarView(
                 key: const Key('avatar-builder-picker'),
                 children: [
-                  _AvatarButtonGrid(
-                    key: const Key('avatar-base-grid'),
-                    items: gs.availableAvatarBases,
-                    selected: gs.builderAvatar.base,
-                    onTap: gs.setBuilderBase,
+                  _AvatarPickerPanel(
+                    icon: '🐾',
+                    title: 'Choose your base',
+                    hint: 'Start with your favorite character.',
+                    child: _AvatarButtonGrid(
+                      key: const Key('avatar-base-grid'),
+                      items: gs.availableAvatarBases,
+                      selected: gs.builderAvatar.base,
+                      onTap: gs.setBuilderBase,
+                    ),
                   ),
-                  _AvatarButtonGrid(
-                    key: const Key('avatar-hat-grid'),
-                    items: [
-                      '',
-                      ...gs.availableAvatarHats.where((hat) => hat.isNotEmpty),
-                    ],
-                    selected: gs.builderAvatar.hat,
-                    emptyLabel: '🚫',
-                    onTap: gs.setBuilderHat,
+                  _AvatarPickerPanel(
+                    icon: '🎩',
+                    title: 'Pick a hat',
+                    hint: 'Add a little personality on top.',
+                    child: _AvatarButtonGrid(
+                      key: const Key('avatar-hat-grid'),
+                      items: [
+                        '',
+                        ...gs.availableAvatarHats
+                            .where((hat) => hat.isNotEmpty),
+                      ],
+                      selected: gs.builderAvatar.hat,
+                      emptyLabel: '🚫',
+                      onTap: gs.setBuilderHat,
+                    ),
                   ),
-                  _AvatarButtonGrid(
-                    key: const Key('avatar-accessory-grid'),
-                    items: [
-                      '',
-                      ...GameConfig.avatarAccessories
-                          .where((accessory) => accessory.isNotEmpty),
-                    ],
-                    selected: gs.builderAvatar.accessory,
-                    emptyLabel: '🚫',
-                    onTap: gs.setBuilderAccessory,
+                  _AvatarPickerPanel(
+                    icon: '🎒',
+                    title: 'Choose an accessory',
+                    hint: 'Finish the look with an extra detail.',
+                    child: _AvatarButtonGrid(
+                      key: const Key('avatar-accessory-grid'),
+                      items: [
+                        '',
+                        ...GameConfig.avatarAccessories
+                            .where((accessory) => accessory.isNotEmpty),
+                      ],
+                      selected: gs.builderAvatar.accessory,
+                      emptyLabel: '🚫',
+                      onTap: gs.setBuilderAccessory,
+                    ),
                   ),
-                  _AvatarColorGrid(
-                    key: const Key('avatar-color-grid'),
-                    gs: gs,
+                  _AvatarPickerPanel(
+                    icon: '🎨',
+                    title: 'Choose a color',
+                    hint: 'Give your avatar a signature backdrop.',
+                    child: _AvatarColorGrid(
+                      key: const Key('avatar-color-grid'),
+                      gs: gs,
+                    ),
                   ),
                 ],
               ),
@@ -3173,86 +3216,121 @@ class _AvatarBuilderPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final avatar = gs.builderAvatar;
     final bg = avatar.color == null ? null : _avatarBuilderColor(avatar.color!);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 380;
-        final slotSize = compact ? 62.0 : 70.0;
+        final stageSize = compact ? 92.0 : 104.0;
 
         return Container(
           key: const Key('avatar-builder-preview'),
           width: double.infinity,
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(compact ? 12 : 14),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                settings.surface2.withValues(alpha: settings.dark ? 0.88 : 0.7),
+                const Color(GameConfig.coral)
+                    .withValues(alpha: settings.dark ? 0.13 : 0.10),
+                const Color(GameConfig.mango)
+                    .withValues(alpha: settings.dark ? 0.10 : 0.08),
                 const Color(GameConfig.sky)
-                    .withValues(alpha: settings.dark ? 0.10 : 0.13),
+                    .withValues(alpha: settings.dark ? 0.10 : 0.08),
               ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.78)),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: settings.dark
+                  ? Colors.white.withValues(alpha: 0.09)
+                  : Colors.white.withValues(alpha: 0.86),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+                color: Colors.black.withValues(alpha: 0.07),
+                blurRadius: 18,
+                offset: const Offset(0, 7),
               ),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
             children: [
-              Text(
-                'Player ${gs.builderPid} Avatar',
-                maxLines: 1,
-                softWrap: false,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: settings.text,
-                  fontFamily: AppFonts.head,
-                  fontSize: compact ? 17 : 19,
-                  fontWeight: FontWeight.w900,
-                  height: 1.0,
+              Container(
+                width: stageSize,
+                height: stageSize,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: bg ??
+                      settings.surface.withValues(
+                        alpha: settings.dark ? 0.82 : 0.76,
+                      ),
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(
+                    color: Colors.white.withValues(
+                      alpha: settings.dark ? 0.14 : 0.84,
+                    ),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (bg ?? const Color(GameConfig.coral))
+                          .withValues(alpha: 0.18),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: AvatarWidget(
+                  avatar: AvatarData.custom(avatar),
+                  size: stageSize - 14,
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _AvatarStudioSlot(
-                    size: slotSize,
-                    child: AvatarWidget(
-                      avatar: AvatarData.custom(avatar),
-                      size: slotSize - 8,
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'PLAYER ${gs.builderPid}',
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: const Color(GameConfig.coral),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.1,
+                      ),
                     ),
-                  ),
-                  _AvatarStudioSlot(
-                    size: slotSize,
-                    child: Text(avatar.hat.isEmpty ? '🚫' : avatar.hat),
-                  ),
-                  _AvatarStudioSlot(
-                    size: slotSize,
-                    child: Text(
-                      avatar.accessory.isEmpty ? '🚫' : avatar.accessory,
+                    const SizedBox(height: 3),
+                    Text(
+                      'Player ${gs.builderPid} Avatar',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: settings.text,
+                        fontFamily: AppFonts.headFor(settings),
+                        fontSize: compact ? 18 : 20,
+                        fontWeight: FontWeight.w900,
+                        height: 1.05,
+                      ),
                     ),
-                  ),
-                  _AvatarStudioSlot(
-                    size: slotSize,
-                    child: bg == null
-                        ? const Text('🚫')
-                        : Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: bg,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                          ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _AvatarPreviewSlot(
+                          value: avatar.hat,
+                        ),
+                        const SizedBox(width: 8),
+                        _AvatarPreviewSlot(
+                          value: avatar.accessory,
+                        ),
+                        const SizedBox(width: 8),
+                        _AvatarPreviewSlot(
+                          color: bg,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -3262,31 +3340,139 @@ class _AvatarBuilderPreview extends StatelessWidget {
   }
 }
 
-class _AvatarStudioSlot extends StatelessWidget {
-  const _AvatarStudioSlot({required this.size, required this.child});
+class _AvatarPreviewSlot extends StatelessWidget {
+  const _AvatarPreviewSlot({
+    this.value,
+    this.color,
+  });
 
-  final double size;
+  final String? value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final hasValue = value != null && value!.isNotEmpty;
+    final hasColor = color != null;
+
+    return Container(
+      width: 42,
+      height: 42,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: hasColor
+            ? color
+            : s.surface.withValues(alpha: s.dark ? 0.58 : 0.78),
+        border: Border.all(
+          color: hasColor
+              ? Colors.white.withValues(alpha: 0.92)
+              : Colors.white.withValues(alpha: s.dark ? 0.10 : 0.78),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: hasColor
+                ? color!.withValues(alpha: 0.24)
+                : Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: hasColor
+          ? const Icon(
+              Icons.check_rounded,
+              size: 18,
+              color: Colors.white,
+            )
+          : Text(
+              hasValue ? value! : '🚫',
+              style: const TextStyle(
+                fontSize: 20,
+                height: 1,
+              ),
+            ),
+    );
+  }
+}
+
+class _AvatarPickerPanel extends StatelessWidget {
+  const _AvatarPickerPanel({
+    required this.icon,
+    required this.title,
+    required this.hint,
+    required this.child,
+  });
+
+  final String icon;
+  final String title;
+  final String hint;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Container(
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(11, 10, 11, 8),
+      decoration: BoxDecoration(
+        color: s.surface2.withValues(alpha: s.dark ? 0.72 : 0.48),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
           color: s.dark
-              ? Colors.white.withValues(alpha: 0.08)
-              : Colors.white.withValues(alpha: 0.72),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.70)),
+              ? Colors.white.withValues(alpha: 0.07)
+              : Colors.white.withValues(alpha: 0.78),
         ),
-        child: DefaultTextStyle(
-          style: TextStyle(color: s.text, fontSize: 26, height: 1),
-          child: FittedBox(fit: BoxFit.scaleDown, child: child),
-        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 31,
+                height: 31,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(GameConfig.coral).withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(icon, style: const TextStyle(fontSize: 16)),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: s.text,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      hint,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: s.muted,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(child: child),
+        ],
       ),
     );
   }
@@ -3360,38 +3546,63 @@ class _AvatarChoiceButton extends StatelessWidget {
           gradient: selected
               ? LinearGradient(
                   colors: [
-                    const Color(GameConfig.coral).withValues(alpha: 0.16),
-                    const Color(GameConfig.mango).withValues(alpha: 0.16),
+                    const Color(GameConfig.coral).withValues(alpha: 0.18),
+                    const Color(GameConfig.mango).withValues(alpha: 0.14),
                   ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 )
               : null,
           color: selected
               ? null
-              : s.surface2.withValues(alpha: s.dark ? 0.85 : 0.62),
-          borderRadius: BorderRadius.circular(14),
+              : s.surface.withValues(alpha: s.dark ? 0.48 : 0.72),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: selected
                 ? const Color(GameConfig.coral)
-                : Colors.white.withValues(alpha: 0.85),
-            width: selected ? 2 : 1.5,
+                : Colors.white.withValues(alpha: s.dark ? 0.08 : 0.78),
+            width: selected ? 2 : 1.2,
           ),
           boxShadow: [
             BoxShadow(
               color: selected
-                  ? const Color(GameConfig.coral).withValues(alpha: 0.2)
-                  : Colors.black.withValues(alpha: 0.06),
-              blurRadius: selected ? 12 : 8,
-              offset: const Offset(0, 2),
+                  ? const Color(GameConfig.coral).withValues(alpha: 0.20)
+                  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: selected ? 12 : 7,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: value.isEmpty ? s.muted : null,
-            fontSize: value.isEmpty ? 20 : 26,
-            fontWeight: FontWeight.w900,
-          ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: value.isEmpty ? s.muted : null,
+                fontSize: value.isEmpty ? 20 : 27,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            if (selected)
+              Positioned(
+                right: 5,
+                top: 5,
+                child: Container(
+                  width: 17,
+                  height: 17,
+                  decoration: const BoxDecoration(
+                    color: Color(GameConfig.coral),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    size: 12,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -3430,34 +3641,46 @@ class _AvatarColorGrid extends StatelessWidget {
               onTap: () => gs.setBuilderColor(color),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 160),
-                width: 46,
-                height: 46,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: parsed ??
-                      s.surface2.withValues(alpha: s.dark ? 0.88 : 0.66),
+                      s.surface.withValues(alpha: s.dark ? 0.54 : 0.76),
                   border: Border.all(
                     color: selected
                         ? const Color(GameConfig.coral)
-                        : Colors.white.withValues(alpha: 0.9),
-                    width: selected ? 3 : 2.5,
+                        : Colors.white.withValues(
+                            alpha: s.dark ? 0.10 : 0.88,
+                          ),
+                    width: selected ? 3 : 2,
                   ),
                   boxShadow: [
                     BoxShadow(
                       color: selected
                           ? const Color(GameConfig.coral)
                               .withValues(alpha: 0.28)
-                          : Colors.black.withValues(alpha: 0.12),
-                      blurRadius: selected ? 12 : 8,
-                      offset: const Offset(0, 2),
+                          : Colors.black.withValues(alpha: 0.08),
+                      blurRadius: selected ? 13 : 7,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
                 child: color == null
-                    ? const Text('🚫', style: TextStyle(fontSize: 22))
+                    ? const Text('🚫', style: TextStyle(fontSize: 21))
                     : selected
-                        ? const Icon(Icons.check, color: Colors.white, size: 18)
+                        ? Container(
+                            width: 23,
+                            height: 23,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.20),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          )
                         : null,
               ),
             );
