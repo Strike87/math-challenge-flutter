@@ -2816,19 +2816,82 @@ class StageClearedModal extends StatelessWidget {
   Widget build(BuildContext context) {
     final cleared = gs.clearedMasterLevel;
     final next = gs.nextMasterLevel;
+    final s = context.watch<SettingsService>();
+
     return ModalShell(
       icon: '🌟',
       title: cleared == null ? 'Stage Cleared!' : '${cleared.name} Cleared! 🌟',
+      subtitle: next == null ? 'Adventure complete' : 'The journey continues',
       actions: [
         NeoButton(
-            label: next == null ? 'Continue' : 'Enter ${next.name}',
-            color: GameConfig.coral,
-            onPressed: gs.advanceStage),
+          label: next == null ? 'Continue' : 'Enter ${next.name}',
+          color: GameConfig.coral,
+          onPressed: gs.advanceStage,
+        ),
       ],
-      child: Text(
-        cleared?.story ?? 'You defeated the boss! The next stage awaits...',
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 14, height: 1.5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(GameConfig.mango)
+                      .withValues(alpha: s.dark ? 0.14 : 0.12),
+                  const Color(GameConfig.coral)
+                      .withValues(alpha: s.dark ? 0.10 : 0.08),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: const Color(GameConfig.mango).withValues(alpha: 0.24),
+              ),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: s.dark ? 0.08 : 0.66),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(
+                        alpha: s.dark ? 0.10 : 0.76,
+                      ),
+                    ),
+                  ),
+                  child: const Text('🏆', style: TextStyle(fontSize: 31)),
+                ),
+                const SizedBox(height: 11),
+                Text(
+                  cleared?.story ??
+                      'You defeated the boss! The next stage awaits...',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: s.text,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (next != null) ...[
+            const SizedBox(height: 11),
+            _ResultInfoStrip(
+              icon: Icons.flag_rounded,
+              label: 'Upcoming stage',
+              value: next.name,
+              accent: const Color(GameConfig.coral),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -2847,9 +2910,12 @@ class WinModal extends StatelessWidget {
     final p2 = gs.p[2];
     final canReplay =
         !(gs.rt.challenge == Operation.dailyBoss && gs.rt.dailyBossWon);
+
     return ModalShell(
       icon: gs.resultIcon,
       title: gs.resultTitle,
+      subtitle: 'Round complete',
+      maxHeight: 650,
       actions: [
         if (canReplay)
           NeoButton(
@@ -2867,12 +2933,12 @@ class WinModal extends StatelessWidget {
         ),
       ],
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (gs.resultDescription.isNotEmpty) ...[
-            Text(
-              gs.resultDescription,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.w800, height: 1.4),
+            _ResultHeroMessage(
+              icon: gs.resultIcon,
+              message: gs.resultDescription,
             ),
             const SizedBox(height: 12),
           ],
@@ -2880,62 +2946,77 @@ class WinModal extends StatelessWidget {
             _CompareResultReport(p1: p1, p2: p2)
           else
             _SingleResultReport(player: p1),
-          const SizedBox(height: 12),
-          if (p1.maxStreak > 0)
-            Text(
-              '🔥 Best streak: ${p1.maxStreak}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          if (gs.newlyUnlocked.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            const SizedBox(
-              width: double.infinity,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  '🎉 Achievements Unlocked!',
-                  maxLines: 1,
-                  softWrap: false,
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ),
-            ),
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(top: 8),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(GameConfig.coin).withValues(alpha: 0.13),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: const Color(GameConfig.coin).withValues(alpha: 0.35),
-                ),
-              ),
-              child: Column(
-                children: gs.newlyUnlocked
-                    .map(
-                      (a) => Container(
-                        margin: const EdgeInsets.symmetric(vertical: 3),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.72),
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Text(
-                          '${a.icon} ${a.name}',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
+          if (p1.maxStreak > 0) ...[
+            const SizedBox(height: 10),
+            _ResultInfoStrip(
+              icon: Icons.local_fire_department_rounded,
+              label: 'Best streak',
+              value: '${p1.maxStreak}',
+              accent: const Color(GameConfig.mango),
             ),
           ],
+          if (gs.newlyUnlocked.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _NewAchievementsCard(achievements: gs.newlyUnlocked),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ResultHeroMessage extends StatelessWidget {
+  const _ResultHeroMessage({
+    required this.icon,
+    required this.message,
+  });
+
+  final String icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(GameConfig.coral)
+                .withValues(alpha: s.dark ? 0.11 : 0.08),
+            const Color(GameConfig.mango)
+                .withValues(alpha: s.dark ? 0.09 : 0.07),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(GameConfig.coral).withValues(alpha: 0.18),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: s.dark ? 0.07 : 0.62),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Text(icon, style: const TextStyle(fontSize: 23)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              textAlign: TextAlign.left,
+              style: TextStyle(
+                color: s.text,
+                fontWeight: FontWeight.w800,
+                height: 1.35,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -2950,35 +3031,40 @@ class _SingleResultReport extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final wrong = player.total - player.correct - player.skipped;
-    return Column(
-      children: [
-        Text(
-          "${player.name}'s Report",
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontWeight: FontWeight.w900,
-            fontFamily: AppFonts.head,
-            letterSpacing: 1.0,
+    return _ResultPanel(
+      title: "${player.name}'s Report",
+      icon: '📊',
+      child: Column(
+        children: [
+          _ReportBox(
+            rows: [
+              _ReportRow('Final Score', '${player.score}'),
+              _ReportRow('Accuracy', '${player.accuracy.round()}%'),
+              _ReportRow(
+                '✓ Correct',
+                '${player.correct}',
+                color: const Color(GameConfig.mint),
+              ),
+              _ReportRow(
+                '✗ Wrong',
+                '$wrong',
+                color: const Color(GameConfig.punch),
+              ),
+              _ReportRow('Skipped', '${player.skipped}'),
+              _ReportRow(
+                'Time Bonus',
+                '${player.bonus}pts',
+                color: const Color(GameConfig.grape),
+              ),
+              _ReportRow('Best Streak', '${player.maxStreak}'),
+              _ReportRow(
+                'Avg Time',
+                '${(player.avgMs / 1000).toStringAsFixed(1)}s',
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 8),
-        _ReportBox(
-          rows: [
-            _ReportRow('Final Score', '${player.score}'),
-            _ReportRow('Accuracy', '${player.accuracy.round()}%'),
-            _ReportRow('✓ Correct', '${player.correct}',
-                color: const Color(GameConfig.mint)),
-            _ReportRow('✗ Wrong', '$wrong',
-                color: const Color(GameConfig.punch)),
-            _ReportRow('Skipped', '${player.skipped}'),
-            _ReportRow('Time Bonus', '${player.bonus}pts',
-                color: const Color(GameConfig.grape)),
-            _ReportRow('Best Streak', '${player.maxStreak}'),
-            _ReportRow(
-                'Avg Time', '${(player.avgMs / 1000).toStringAsFixed(1)}s'),
-          ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -2991,22 +3077,38 @@ class _CompareResultReport extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _CompareResultRow('Stat', p1.name, p2.name, header: true),
-        _CompareResultRow('Score', '${p1.score}', '${p2.score}'),
-        _CompareResultRow(
-            'Accuracy', '${p1.accuracy.round()}%', '${p2.accuracy.round()}%'),
-        _CompareResultRow('✓ Correct', '${p1.correct}', '${p2.correct}',
-            color: const Color(GameConfig.mint)),
-        _CompareResultRow('✗ Wrong', '${_wrongCount(p1)}', '${_wrongCount(p2)}',
-            color: const Color(GameConfig.punch)),
-        _CompareResultRow('Skipped', '${p1.skipped}', '${p2.skipped}'),
-        _CompareResultRow(
+    return _ResultPanel(
+      title: 'Head-to-Head Report',
+      icon: '⚔️',
+      child: Column(
+        children: [
+          _CompareResultRow('Stat', p1.name, p2.name, header: true),
+          _CompareResultRow('Score', '${p1.score}', '${p2.score}'),
+          _CompareResultRow(
+            'Accuracy',
+            '${p1.accuracy.round()}%',
+            '${p2.accuracy.round()}%',
+          ),
+          _CompareResultRow(
+            '✓ Correct',
+            '${p1.correct}',
+            '${p2.correct}',
+            color: const Color(GameConfig.mint),
+          ),
+          _CompareResultRow(
+            '✗ Wrong',
+            '${_wrongCount(p1)}',
+            '${_wrongCount(p2)}',
+            color: const Color(GameConfig.punch),
+          ),
+          _CompareResultRow('Skipped', '${p1.skipped}', '${p2.skipped}'),
+          _CompareResultRow(
             'Avg Time',
             '${(p1.avgMs / 1000).toStringAsFixed(1)}s',
-            '${(p2.avgMs / 1000).toStringAsFixed(1)}s'),
-      ],
+            '${(p2.avgMs / 1000).toStringAsFixed(1)}s',
+          ),
+        ],
+      ),
     );
   }
 
@@ -3014,9 +3116,85 @@ class _CompareResultReport extends StatelessWidget {
       player.total - player.correct - player.skipped;
 }
 
+class _ResultPanel extends StatelessWidget {
+  const _ResultPanel({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
+
+  final String title;
+  final String icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 11, 12, 10),
+      decoration: BoxDecoration(
+        color: s.surface2.withValues(alpha: s.dark ? 0.84 : 0.62),
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(
+          color: s.dark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.white.withValues(alpha: 0.82),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(GameConfig.sky).withValues(alpha: 0.09),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Text(icon, style: const TextStyle(fontSize: 18)),
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: s.text,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: AppFonts.headFor(s),
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 7),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
 class _CompareResultRow extends StatelessWidget {
-  const _CompareResultRow(this.label, this.first, this.second,
-      {this.header = false, this.color});
+  const _CompareResultRow(
+    this.label,
+    this.first,
+    this.second, {
+    this.header = false,
+    this.color,
+  });
 
   final String label;
   final String first;
@@ -3029,7 +3207,7 @@ class _CompareResultRow extends StatelessWidget {
     final s = context.watch<SettingsService>();
     final style = TextStyle(
       color: color ?? s.text,
-      fontSize: 13,
+      fontSize: 12.5,
       fontWeight: header ? FontWeight.w900 : FontWeight.w700,
       fontFamily: AppFonts.body,
       height: 1.2,
@@ -3038,7 +3216,7 @@ class _CompareResultRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 7),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: s.border.withValues(alpha: 0.45)),
+          bottom: BorderSide(color: s.border.withValues(alpha: 0.42)),
         ),
       ),
       child: Row(
@@ -3071,17 +3249,17 @@ class _ResultRow extends StatelessWidget {
     final s = context.watch<SettingsService>();
     final style = TextStyle(
       color: header ? s.muted : s.text,
-      fontSize: 12,
+      fontSize: 11.5,
       fontWeight: header ? FontWeight.w900 : FontWeight.w700,
       fontFamily: AppFonts.body,
       height: 1.2,
-      letterSpacing: header ? 0.8 : 0,
+      letterSpacing: header ? 0.7 : 0,
     );
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 7),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: s.border.withValues(alpha: 0.42)),
+          bottom: BorderSide(color: s.border.withValues(alpha: 0.38)),
         ),
       ),
       child: Row(
@@ -3114,32 +3292,185 @@ class _ResultRow extends StatelessWidget {
   }
 }
 
+class _ResultInfoStrip extends StatelessWidget {
+  const _ResultInfoStrip({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.accent,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 19, color: accent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: s.muted,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            value,
+            style: TextStyle(
+              color: s.text,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NewAchievementsCard extends StatelessWidget {
+  const _NewAchievementsCard({required this.achievements});
+
+  final List<Achievement> achievements;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(GameConfig.coin).withValues(alpha: 0.14),
+            const Color(GameConfig.mango).withValues(alpha: 0.08),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(GameConfig.coin).withValues(alpha: 0.32),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            '🎉 Achievements Unlocked!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontFamily: AppFonts.head,
+            ),
+          ),
+          const SizedBox(height: 8),
+          for (final a in achievements)
+            Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: s.surface.withValues(alpha: s.dark ? 0.52 : 0.70),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(
+                '${a.icon} ${a.name}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: s.text,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Quit Confirm Modal
 // ═══════════════════════════════════════════════════════════════
 class QuitConfirmModal extends StatelessWidget {
   const QuitConfirmModal({super.key, required this.gs});
   final GameState gs;
+
   @override
-  Widget build(BuildContext context) => ModalShell(
-        icon: '❌',
-        title: 'Quit Game?',
-        actions: [
-          NeoButton(
-              label: 'Yes, Quit',
-              color: GameConfig.punch,
-              onPressed: gs.quitToMenu),
-          NeoButton(
-              label: 'Cancel',
-              outlined: true,
-              color: GameConfig.mutedLight,
-              onPressed: gs.closeModal),
-        ],
-        child: const Text(
-          'Your current progress will be lost. Are you sure?',
-          textAlign: TextAlign.center,
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return ModalShell(
+      icon: '❌',
+      title: 'Quit Game?',
+      subtitle: 'Leave the current round',
+      actions: [
+        NeoButton(
+          label: 'Yes, Quit',
+          color: GameConfig.punch,
+          onPressed: gs.quitToMenu,
         ),
-      );
+        NeoButton(
+          label: 'Cancel',
+          outlined: true,
+          color: GameConfig.mutedLight,
+          onPressed: gs.closeModal,
+        ),
+      ],
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(GameConfig.punch).withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(GameConfig.punch).withValues(alpha: 0.18),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(GameConfig.punch).withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: Color(GameConfig.punch),
+                size: 25,
+              ),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Text(
+                'Your current progress will be lost. Are you sure?',
+                style: TextStyle(
+                  color: s.text,
+                  fontWeight: FontWeight.w800,
+                  height: 1.35,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3154,31 +3485,59 @@ class HighScoreModal extends StatelessWidget {
     return ModalShell(
       icon: '🏆',
       title: 'Hall of Fame',
+      subtitle: 'Your best Math Challenge runs',
+      maxHeight: 570,
       actions: [
         NeoButton(
-            label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
+          label: 'Close',
+          color: GameConfig.coral,
+          onPressed: gs.closeModal,
+        ),
       ],
       child: gs.highScores.isEmpty
-          ? const Text(
-              'No scores yet. Play a game!',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+          ? const _EmptyModalState(
+              icon: '🏁',
+              title: 'No scores yet. Play a game!',
+              message: 'Your best completed runs will appear here.',
             )
-          : Column(
-              children: [
-                _ResultRow('Name', 'Score', 'Mode', 'Date', header: true),
-                ...gs.highScores.map((s) => _ResultRow(
-                      s.name,
-                      '${s.score}',
-                      [
-                        s.mode.label,
-                        if (s.difficulty != null) s.difficulty!.label,
-                        s.answerStyle.label,
-                      ].join(' · '),
-                      s.date.length >= 5 ? s.date.substring(5) : s.date,
-                    )),
-              ],
+          : _HallOfFameTable(scores: gs.highScores),
+    );
+  }
+}
+
+class _HallOfFameTable extends StatelessWidget {
+  const _HallOfFameTable({required this.scores});
+
+  final List<HighScore> scores;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Container(
+      padding: const EdgeInsets.fromLTRB(11, 9, 11, 7),
+      decoration: BoxDecoration(
+        color: s.surface2.withValues(alpha: s.dark ? 0.84 : 0.62),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(GameConfig.coin).withValues(alpha: 0.20),
+        ),
+      ),
+      child: Column(
+        children: [
+          _ResultRow('Name', 'Score', 'Mode', 'Date', header: true),
+          for (final score in scores)
+            _ResultRow(
+              score.name,
+              '${score.score}',
+              [
+                score.mode.label,
+                if (score.difficulty != null) score.difficulty!.label,
+                score.answerStyle.label,
+              ].join(' · '),
+              score.date.length >= 5 ? score.date.substring(5) : score.date,
             ),
+        ],
+      ),
     );
   }
 }
@@ -3192,85 +3551,206 @@ class AchievementsModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsService>();
+    final unlockedCount = GameConfig.achievementsDef
+        .where((a) => gs.achievements[a.id] == true)
+        .length;
+
     return ModalShell(
       icon: '🎯',
       title: 'Achievements',
-      maxHeight: 540,
+      subtitle:
+          '$unlockedCount / ${GameConfig.achievementsDef.length} unlocked',
+      maxHeight: 560,
       actions: [
         NeoButton(
-            label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
+          label: 'Close',
+          color: GameConfig.coral,
+          onPressed: gs.closeModal,
+        ),
       ],
       child: Column(
-        children: GameConfig.achievementsDef.map((a) {
-          final unlocked = gs.achievements[a.id] == true;
-          return Container(
-            margin: const EdgeInsets.symmetric(vertical: 5),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: unlocked
-                  ? settings.surface2
-                      .withValues(alpha: settings.dark ? 0.9 : 0.72)
-                  : settings.surface2
-                      .withValues(alpha: settings.dark ? 0.55 : 0.42),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: unlocked
-                    ? const Color(GameConfig.mint).withValues(alpha: 0.42)
-                    : Colors.white.withValues(alpha: 0.55),
-              ),
-              boxShadow: unlocked
-                  ? [
-                      BoxShadow(
-                        color: const Color(GameConfig.mint)
-                            .withValues(alpha: 0.12),
-                        blurRadius: 14,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                  : null,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _AchievementProgressHero(
+            unlocked: unlockedCount,
+            total: GameConfig.achievementsDef.length,
+          ),
+          const SizedBox(height: 10),
+          for (final a in GameConfig.achievementsDef)
+            _AchievementCard(
+              achievement: a,
+              unlocked: gs.achievements[a.id] == true,
             ),
-            child: Row(
+        ],
+      ),
+    );
+  }
+}
+
+class _AchievementProgressHero extends StatelessWidget {
+  const _AchievementProgressHero({
+    required this.unlocked,
+    required this.total,
+  });
+
+  final int unlocked;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final progress = total == 0 ? 0.0 : unlocked / total;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(GameConfig.mint)
+                .withValues(alpha: s.dark ? 0.11 : 0.09),
+            const Color(GameConfig.sky).withValues(alpha: s.dark ? 0.08 : 0.06),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(GameConfig.mint).withValues(alpha: 0.20),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(GameConfig.mint).withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: const Text('🏅', style: TextStyle(fontSize: 25)),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Opacity(
-                  opacity: unlocked ? 1 : 0.32,
-                  child: Text(a.icon, style: const TextStyle(fontSize: 32)),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        a.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontFamily: AppFonts.head,
-                          color: unlocked ? settings.text : settings.muted,
-                          height: 1.0,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        a.desc,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: settings.muted,
-                          height: 1.2,
-                        ),
-                      ),
-                    ],
+                Text(
+                  '$unlocked of $total unlocked',
+                  style: TextStyle(
+                    color: s.text,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: AppFonts.headFor(s),
+                    fontSize: 14,
                   ),
                 ),
-                Icon(
-                  unlocked ? Icons.check_circle : Icons.lock_outline,
-                  color:
-                      unlocked ? const Color(GameConfig.mint) : settings.muted,
+                const SizedBox(height: 7),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 7,
+                    backgroundColor: s.surface.withValues(alpha: 0.65),
+                    color: const Color(GameConfig.mint),
+                  ),
                 ),
               ],
             ),
-          );
-        }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AchievementCard extends StatelessWidget {
+  const _AchievementCard({
+    required this.achievement,
+    required this.unlocked,
+  });
+
+  final Achievement achievement;
+  final bool unlocked;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: unlocked
+            ? s.surface2.withValues(alpha: s.dark ? 0.88 : 0.70)
+            : s.surface2.withValues(alpha: s.dark ? 0.50 : 0.40),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: unlocked
+              ? const Color(GameConfig.mint).withValues(alpha: 0.32)
+              : s.border.withValues(alpha: 0.65),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: unlocked
+                  ? const Color(GameConfig.mint).withValues(alpha: 0.10)
+                  : s.surface.withValues(alpha: 0.42),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Opacity(
+              opacity: unlocked ? 1 : 0.30,
+              child: Text(
+                achievement.icon,
+                style: const TextStyle(fontSize: 25),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  achievement.name,
+                  style: TextStyle(
+                    color: unlocked ? s.text : s.muted,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: AppFonts.headFor(s),
+                    height: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  achievement.desc,
+                  style: TextStyle(
+                    color: s.muted,
+                    fontSize: 11.5,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: unlocked
+                  ? const Color(GameConfig.mint).withValues(alpha: 0.10)
+                  : s.surface.withValues(alpha: 0.38),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              unlocked ? Icons.check_rounded : Icons.lock_outline_rounded,
+              size: 18,
+              color: unlocked ? const Color(GameConfig.mint) : s.muted,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -3288,58 +3768,197 @@ class TutorialModal extends StatelessWidget {
     return ModalShell(
       icon: '❓',
       title: 'How to Play',
+      subtitle: 'Everything you need for your next challenge',
+      maxHeight: 610,
       actions: [
         NeoButton(
-            label: 'Got it!',
-            color: GameConfig.coral,
-            onPressed: gs.closeModal),
+          label: 'Got it!',
+          color: GameConfig.coral,
+          onPressed: gs.closeModal,
+        ),
       ],
       child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _TutorialSection(
+            icon: '🎯',
+            title: 'How to play',
+            body:
+                'Answer math questions, earn coins, unlock rewards, and beat bosses.',
+          ),
+          _TutorialSection(
+            icon: '👾',
+            title: 'Boss fights',
+            body:
+                'Defeat the boss by answering enough questions correctly. Wrong answers or timeouts cost hearts. Reach the goal before your hearts run out to win.',
+          ),
+          _TutorialSection(
+            icon: '❤️',
+            title: 'Hearts',
+            body:
+                'Hearts protect you in boss and survival challenges. Lose all hearts and the challenge ends.',
+          ),
+          _TutorialSection(
+            icon: '🪙',
+            title: 'Coins',
+            body:
+                'Earn coins by playing, beating bosses, claiming daily rewards, and completing challenges. Use coins to unlock avatars, hats, number types, and power-ups.',
+          ),
+          _TutorialSection(
+            icon: '⚡',
+            title: 'Power-ups',
+            body:
+                'Power-ups can help during tough questions. Use them carefully when the boss gets stronger.',
+          ),
+          _TutorialSection(
+            icon: '🧠',
+            title: 'Practice',
+            body:
+                'Practice addition, subtraction, multiplication, and division through quick challenges and boss battles.',
+          ),
+          _TutorialSection(
+            icon: '🎮',
+            title: 'Game Modes',
+            body: '• Standard: Answer questions before time runs out\n'
+                '• Blitz ⚡: 60 seconds — answer as many as possible\n'
+                '• Death 💀: One wrong answer = Game Over!\n'
+                '• Master 🏆: Story mode with boss battles\n'
+                '• Survival 💪: 3 hearts, endless questions — difficulty rises every 5 correct\n'
+                '• Combo 🔥: Build streaks for bigger multipliers',
+          ),
+          _TutorialSection(
+            icon: '🔢',
+            title: 'Number Types',
+            body: '• Natural: 1, 2, 3, …\n'
+                '• Integers: includes negatives\n'
+                '• Rationals: decimal numbers',
+            last: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TutorialSection extends StatelessWidget {
+  const _TutorialSection({
+    required this.icon,
+    required this.title,
+    required this.body,
+    this.last = false,
+  });
+
+  final String icon;
+  final String title;
+  final String body;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Container(
+      margin: EdgeInsets.only(bottom: last ? 0 : 9),
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: s.surface2.withValues(alpha: s.dark ? 0.76 : 0.54),
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(
+          color: s.dark
+              ? Colors.white.withValues(alpha: 0.07)
+              : Colors.white.withValues(alpha: 0.74),
+        ),
+      ),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('How to play', style: TextStyle(fontWeight: FontWeight.w900)),
-          SizedBox(height: 8),
+          Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(GameConfig.coral).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Text(icon, style: const TextStyle(fontSize: 19)),
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: s.text,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: AppFonts.headFor(s),
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  body,
+                  style: TextStyle(
+                    color: s.muted,
+                    fontSize: 11.5,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyModalState extends StatelessWidget {
+  const _EmptyModalState({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  final String icon;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
+      decoration: BoxDecoration(
+        color: s.surface2.withValues(alpha: s.dark ? 0.72 : 0.50),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: s.border.withValues(alpha: 0.60)),
+      ),
+      child: Column(
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 32)),
+          const SizedBox(height: 8),
           Text(
-              'Answer math questions, earn coins, unlock rewards, and beat bosses.'),
-          SizedBox(height: 12),
-          Text('Boss fights', style: TextStyle(fontWeight: FontWeight.w900)),
-          SizedBox(height: 8),
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: s.text,
+              fontWeight: FontWeight.w900,
+              fontFamily: AppFonts.headFor(s),
+            ),
+          ),
+          const SizedBox(height: 5),
           Text(
-              'Defeat the boss by answering enough questions correctly. Wrong answers or timeouts cost hearts. Reach the goal before your hearts run out to win.'),
-          SizedBox(height: 12),
-          Text('Hearts', style: TextStyle(fontWeight: FontWeight.w900)),
-          SizedBox(height: 8),
-          Text(
-              'Hearts protect you in boss and survival challenges. Lose all hearts and the challenge ends.'),
-          SizedBox(height: 12),
-          Text('Coins', style: TextStyle(fontWeight: FontWeight.w900)),
-          SizedBox(height: 8),
-          Text(
-              'Earn coins by playing, beating bosses, claiming daily rewards, and completing challenges. Use coins to unlock avatars, hats, number types, and power-ups.'),
-          SizedBox(height: 12),
-          Text('Power-ups', style: TextStyle(fontWeight: FontWeight.w900)),
-          SizedBox(height: 8),
-          Text(
-              'Power-ups can help during tough questions. Use them carefully when the boss gets stronger.'),
-          SizedBox(height: 12),
-          Text(
-              'Practice addition, subtraction, multiplication, and division through quick challenges and boss battles.'),
-          SizedBox(height: 12),
-          Text('Game Modes', style: TextStyle(fontWeight: FontWeight.w900)),
-          SizedBox(height: 8),
-          Text('• Standard: Answer questions before time runs out'),
-          Text('• Blitz ⚡: 60 seconds — answer as many as possible'),
-          Text('• Death 💀: One wrong answer = Game Over!'),
-          Text('• Master 🏆: Story mode with boss battles'),
-          Text(
-              '• Survival 💪: 3 hearts, endless questions — difficulty rises every 5 correct'),
-          Text('• Combo 🔥: Build streaks for bigger multipliers'),
-          SizedBox(height: 12),
-          Text('Number Types', style: TextStyle(fontWeight: FontWeight.w900)),
-          SizedBox(height: 8),
-          Text('• Natural: 1, 2, 3, …'),
-          Text('• Integers: includes negatives'),
-          Text('• Rationals: decimal numbers'),
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: s.muted,
+              fontSize: 11.5,
+              height: 1.3,
+            ),
+          ),
         ],
       ),
     );
@@ -5688,11 +6307,13 @@ class _DailyCalendarBadge extends StatelessWidget {
       height: 58,
       decoration: BoxDecoration(
         color: s.surface2,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: s.border),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(GameConfig.coral).withValues(alpha: 0.22),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -5742,7 +6363,10 @@ class DailyChallengesModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = context.watch<SettingsService>();
+    final completed = gs.activeDailyChallenges
+        .where((c) => gs.dailyCompleted[c.id] == true)
+        .length;
+
     return ModalShell(
       icon: '📅',
       iconWidget: Padding(
@@ -5750,90 +6374,250 @@ class DailyChallengesModal extends StatelessWidget {
         child: _DailyCalendarBadge(date: today ?? DateTime.now()),
       ),
       title: 'Daily Challenges',
-      maxHeight: 540,
+      subtitle:
+          '$completed / ${gs.activeDailyChallenges.length} completed today',
+      maxHeight: 560,
       actions: [
         NeoButton(
-            label: 'Close', color: GameConfig.coral, onPressed: gs.closeModal),
+          label: 'Close',
+          color: GameConfig.coral,
+          onPressed: gs.closeModal,
+        ),
       ],
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SizedBox(height: 6),
-          ...gs.activeDailyChallenges.map((c) {
-            final cur = gs.dailyProgress[c.id] ?? 0;
-            final done = gs.dailyCompleted[c.id] == true;
-            return Container(
-              margin: const EdgeInsets.symmetric(vertical: 4),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: done
-                    ? const Color(GameConfig.mint).withValues(alpha: 0.12)
-                    : s.surface2.withValues(alpha: s.dark ? 0.9 : 0.72),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: done
-                      ? const Color(GameConfig.mint)
-                      : Colors.white.withValues(alpha: 0.68),
-                  width: 1.5,
+          _DailyChallengeSummary(
+            completed: completed,
+            total: gs.activeDailyChallenges.length,
+          ),
+          const SizedBox(height: 10),
+          for (final challenge in gs.activeDailyChallenges)
+            _DailyChallengeCard(
+              challenge: challenge,
+              current: gs.dailyProgress[challenge.id] ?? 0,
+              done: gs.dailyCompleted[challenge.id] == true,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DailyChallengeSummary extends StatelessWidget {
+  const _DailyChallengeSummary({
+    required this.completed,
+    required this.total,
+  });
+
+  final int completed;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final progress = total == 0 ? 0.0 : completed / total;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(GameConfig.coral)
+                .withValues(alpha: s.dark ? 0.10 : 0.08),
+            const Color(GameConfig.mango)
+                .withValues(alpha: s.dark ? 0.08 : 0.06),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(GameConfig.coral).withValues(alpha: 0.18),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(GameConfig.coral).withValues(alpha: 0.09),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Text('🔥', style: TextStyle(fontSize: 23)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$completed of $total complete',
+                  style: TextStyle(
+                    color: s.text,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: AppFonts.headFor(s),
+                    fontSize: 13.5,
+                  ),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 7,
+                    backgroundColor: s.surface.withValues(alpha: 0.62),
+                    color: const Color(GameConfig.coral),
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DailyChallengeCard extends StatelessWidget {
+  const _DailyChallengeCard({
+    required this.challenge,
+    required this.current,
+    required this.done,
+  });
+
+  final DailyChallenge challenge;
+  final int current;
+  final bool done;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final shownCurrent = current.clamp(0, challenge.target);
+    final progress = (current / challenge.target).clamp(0.0, 1.0);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: done
+            ? const Color(GameConfig.mint).withValues(alpha: 0.09)
+            : s.surface2.withValues(alpha: s.dark ? 0.84 : 0.62),
+        borderRadius: BorderRadius.circular(19),
+        border: Border.all(
+          color: done
+              ? const Color(GameConfig.mint).withValues(alpha: 0.34)
+              : s.border.withValues(alpha: 0.65),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: (done
+                      ? const Color(GameConfig.mint)
+                      : const Color(GameConfig.coral))
+                  .withValues(alpha: 0.09),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(
+              done ? Icons.check_rounded : Icons.flag_rounded,
+              color: done
+                  ? const Color(GameConfig.mint)
+                  : const Color(GameConfig.coral),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  challenge.title,
+                  style: TextStyle(
+                    color: s.text,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                    fontFamily: AppFonts.headFor(s),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  challenge.desc,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    color: s.muted,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    backgroundColor: s.surface.withValues(alpha: 0.62),
+                    color: done
+                        ? const Color(GameConfig.mint)
+                        : const Color(GameConfig.coral),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$shownCurrent / ${challenge.target}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: s.muted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 9),
+          Container(
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+            decoration: BoxDecoration(
+              color: (done
+                      ? const Color(GameConfig.mint)
+                      : const Color(GameConfig.coin))
+                  .withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: (done
+                        ? const Color(GameConfig.mint)
+                        : const Color(GameConfig.coin))
+                    .withValues(alpha: 0.20),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          c.title,
-                          style: TextStyle(
-                            color: s.text,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 13,
-                          ),
-                        ),
-                        Text(c.desc,
-                            style: TextStyle(fontSize: 11, color: s.muted)),
-                        const SizedBox(height: 4),
-                        LinearProgressIndicator(
-                          value: (cur / c.target).clamp(0.0, 1.0),
-                          minHeight: 6,
-                          backgroundColor: s.surface.withValues(alpha: 0.65),
-                          color: done
-                              ? const Color(GameConfig.mint)
-                              : const Color(GameConfig.coral),
-                        ),
-                        Text(
-                          '${cur.clamp(0, c.target)} / ${c.target}',
-                          style: TextStyle(fontSize: 10, color: s.muted),
-                        ),
-                      ],
-                    ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  done ? '✓' : '+${challenge.reward}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: done
+                        ? const Color(GameConfig.mint)
+                        : const Color(0xFF9A6D00),
                   ),
-                  const SizedBox(width: 8),
-                  Column(
-                    children: [
-                      Text(
-                        done ? '✓' : '+${c.reward}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          color:
-                              Color(done ? GameConfig.mint : GameConfig.coin),
-                        ),
-                      ),
-                      Text(done ? 'Done' : '🪙',
-                          style: const TextStyle(fontSize: 16)),
-                    ],
+                ),
+                Text(
+                  done ? 'Done' : '🪙',
+                  style: TextStyle(
+                    fontSize: done ? 9.5 : 14,
+                    fontWeight: FontWeight.w800,
+                    color: done ? const Color(GameConfig.mint) : null,
                   ),
-                ],
-              ),
-            );
-          }),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
