@@ -632,13 +632,13 @@ class _PlayerCard extends StatelessWidget {
       if (pl.shieldActive) '🛡️',
     ];
     return AnimatedScale(
-      duration: const Duration(milliseconds: 200),
+      duration: s.duration(200),
       scale: active ? 1 : 0.96,
       child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
+        duration: s.duration(200),
         opacity: active ? 1 : 0.65,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: s.duration(200),
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
           decoration: BoxDecoration(
             color: s.surface,

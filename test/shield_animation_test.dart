@@ -142,6 +142,64 @@ void main() {
       state.dispose();
     });
 
+    testWidgets('two player cards use shared motion durations', (tester) async {
+      final cases = [
+        (
+          name: 'normal',
+          animSpeed: 1.0,
+          reduceMotion: false,
+          platform: false,
+          expected: const Duration(milliseconds: 200)
+        ),
+        (
+          name: 'low performance',
+          animSpeed: 0.3,
+          reduceMotion: false,
+          platform: false,
+          expected: const Duration(milliseconds: 60)
+        ),
+        (
+          name: 'manual reduce motion',
+          animSpeed: 1.0,
+          reduceMotion: true,
+          platform: false,
+          expected: Duration.zero
+        ),
+        (
+          name: 'platform reduce motion',
+          animSpeed: 1.0,
+          reduceMotion: false,
+          platform: true,
+          expected: Duration.zero
+        ),
+      ];
+
+      for (final testCase in cases) {
+        final state = await _makeState(
+          animSpeed: testCase.animSpeed,
+          lowPerf: testCase.animSpeed == 0.3,
+          reduceMotion: testCase.reduceMotion,
+          platformReduceMotion: testCase.platform,
+        );
+        _startTwoPlayerStandard(state);
+        await _pumpGame(tester, state);
+
+        final scales = tester
+            .widgetList<AnimatedScale>(find.byType(AnimatedScale))
+            .where((widget) => widget.child is AnimatedOpacity)
+            .toList();
+        expect(scales, hasLength(2), reason: testCase.name);
+        for (final scale in scales) {
+          final opacity = scale.child as AnimatedOpacity;
+          final container = opacity.child as AnimatedContainer;
+          expect(scale.duration, testCase.expected, reason: testCase.name);
+          expect(opacity.duration, testCase.expected, reason: testCase.name);
+          expect(container.duration, testCase.expected, reason: testCase.name);
+        }
+        state.rt.timer?.cancel();
+      }
+    });
+
     testWidgets('skip and timeout do not consume an armed shield',
         (tester) async {
       final state = await _makeState();
@@ -213,6 +271,8 @@ void main() {
 Future<GameState> _makeState({
   bool reduceMotion = false,
   bool lowPerf = false,
+  double animSpeed = 1,
+  bool platformReduceMotion = false,
 }) async {
   SharedPreferences.setMockInitialValues({});
   await Storage.init();
@@ -225,8 +285,9 @@ Future<GameState> _makeState({
       colorblind: false,
       lowPerf: lowPerf,
       reduceMotion: reduceMotion,
-      animSpeed: 1,
+      animSpeed: animSpeed,
     );
+  settings.setPlatformReduceMotion(platformReduceMotion);
   final state = GameState(settings: settings, audio: AudioService(settings));
   await state.load();
   addTearDown(state.dispose);
