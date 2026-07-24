@@ -2029,6 +2029,7 @@ class MasterIntroModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
     return ModalShell(
       icon: '🏆🗺️',
       title: 'The Master Challenge',
@@ -2042,7 +2043,7 @@ class MasterIntroModal extends StatelessWidget {
         NeoButton(
           label: 'Cancel',
           outlined: true,
-          color: GameConfig.mutedLight,
+          color: s.muted.toARGB32(),
           onPressed: () {
             gs.closeModal();
             gs.showScreen(GameScreen.menu);
@@ -2357,7 +2358,7 @@ class DailyBossModal extends StatelessWidget {
         NeoButton(
           label: 'Cancel',
           outlined: true,
-          color: GameConfig.mutedLight,
+          color: s.muted.toARGB32(),
           onPressed: gs.closeModal,
         ),
       ],
@@ -3426,7 +3427,7 @@ class QuitConfirmModal extends StatelessWidget {
         NeoButton(
           label: 'Cancel',
           outlined: true,
-          color: GameConfig.mutedLight,
+          color: s.muted.toARGB32(),
           onPressed: gs.closeModal,
         ),
       ],
@@ -3990,7 +3991,7 @@ class AvatarBuilderModal extends StatelessWidget {
         NeoButton(
           label: 'Cancel',
           outlined: true,
-          color: GameConfig.mutedLight,
+          color: s.muted.toARGB32(),
           onPressed: gs.closeModal,
         ),
       ],
@@ -6060,6 +6061,7 @@ class _AdultGateModalState extends State<AdultGateModal> {
     final challenge = gs.adultGateChallenge;
     final product = gs.pendingIapProduct;
     final price = product == null ? '' : gs.iapPriceFor(product);
+    final s = context.watch<SettingsService>();
 
     return ModalShell(
       icon: '🔐',
@@ -6082,8 +6084,8 @@ class _AdultGateModalState extends State<AdultGateModal> {
         NeoButton(
           label: 'Cancel',
           outlined: true,
-          color: GameConfig.textLight,
-          textColor: const Color(GameConfig.textLight),
+          color: s.text.toARGB32(),
+          textColor: s.text,
           onPressed: gs.cancelAdultGate,
         ),
       ],
@@ -6116,7 +6118,7 @@ class _AdultGateWarningStep extends StatelessWidget {
           decoration: BoxDecoration(
             color: s.surface2.withValues(alpha: s.dark ? 0.9 : 0.78),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+            border: Border.all(color: s.border),
           ),
           child: Column(
             children: [

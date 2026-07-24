@@ -43,7 +43,9 @@ class NeoButton extends StatelessWidget {
           padding: padding ??
               const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.52),
+            color: settings.dark
+                ? settings.surface2
+                : Colors.white.withValues(alpha: 0.52),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: c.withValues(alpha: 0.75), width: 1.5),
           ),
