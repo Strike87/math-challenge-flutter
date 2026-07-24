@@ -200,6 +200,68 @@ void main() {
       }
     });
 
+    testWidgets('boss and shield floating honor motion speed and static modes',
+        (tester) async {
+      final animatedCases = [
+        (name: 'normal', animSpeed: 1.0, quarter: 750),
+        (name: 'fast', animSpeed: 0.3, quarter: 225),
+        (name: 'slow', animSpeed: 2.0, quarter: 1500),
+      ];
+
+      for (final testCase in animatedCases) {
+        final state = await _makeState(animSpeed: testCase.animSpeed);
+        _startDailyBossWithShield(state);
+        await _pumpGame(tester, state);
+
+        await tester.pump(Duration(milliseconds: testCase.quarter));
+        final offsets = _nonZeroVerticalTranslations(tester);
+        expect(offsets, hasLength(2), reason: testCase.name);
+        for (final offset in offsets) {
+          expect(offset, closeTo(-4.5, 0.01), reason: testCase.name);
+        }
+        state.rt.timer?.cancel();
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+
+      final staticCases = [
+        (
+          name: 'manual reduce motion',
+          reduceMotion: true,
+          lowPerf: false,
+          platform: false
+        ),
+        (
+          name: 'platform reduce motion',
+          reduceMotion: false,
+          lowPerf: false,
+          platform: true
+        ),
+        (
+          name: 'low performance',
+          reduceMotion: false,
+          lowPerf: true,
+          platform: false
+        ),
+      ];
+
+      for (final testCase in staticCases) {
+        final state = await _makeState(
+          animSpeed: 0.3,
+          lowPerf: testCase.lowPerf,
+          reduceMotion: testCase.reduceMotion,
+          platformReduceMotion: testCase.platform,
+        );
+        _startDailyBossWithShield(state);
+        await _pumpGame(tester, state);
+
+        await tester.pump(const Duration(milliseconds: 750));
+        expect(_nonZeroVerticalTranslations(tester), isEmpty,
+            reason: testCase.name);
+        state.rt.timer?.cancel();
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+    });
+
     testWidgets('skip and timeout do not consume an armed shield',
         (tester) async {
       final state = await _makeState();
@@ -312,6 +374,13 @@ void _startTwoPlayerStandard(GameState state) {
   state.startGame();
 }
 
+void _startDailyBossWithShield(GameState state) {
+  state.dailyBoss = GameConfig.dailyBosses.first;
+  state.startDailyBoss();
+  state.startGame();
+  state.p[1].shieldActive = true;
+}
+
 Future<void> _pumpGame(WidgetTester tester, GameState state) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(390, 844);
@@ -332,6 +401,14 @@ Future<void> _pumpGame(WidgetTester tester, GameState state) async {
     ),
   );
   await tester.pump();
+}
+
+List<double> _nonZeroVerticalTranslations(WidgetTester tester) {
+  return tester
+      .widgetList<Transform>(find.byType(Transform))
+      .map((transform) => transform.transform.getTranslation().y)
+      .where((offset) => offset.abs() > 0.01)
+      .toList();
 }
 
 List<num> _wrongChoices(GameState state) {

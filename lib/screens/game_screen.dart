@@ -531,7 +531,7 @@ class _BossCircleState extends State<_BossCircle>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final s = Provider.of<SettingsService>(context);
-    _syncFloat(!s.reduceMotion && !s.lowPerf);
+    _syncFloat(s, !s.reduceMotion && !s.lowPerf);
   }
 
   @override
@@ -540,9 +540,10 @@ class _BossCircleState extends State<_BossCircle>
     super.dispose();
   }
 
-  void _syncFloat(bool enabled) {
+  void _syncFloat(SettingsService s, bool enabled) {
     _effectsEnabled = enabled;
     if (enabled) {
+      _float.duration = s.duration(3000);
       if (!_float.isAnimating) _float.repeat();
     } else {
       _float.stop();
@@ -808,14 +809,14 @@ class _FloatingShieldBadgeState extends State<_FloatingShieldBadge>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final s = Provider.of<SettingsService>(context);
-    _syncFloat(widget.active && !s.reduceMotion && !s.lowPerf);
+    _syncFloat(s, widget.active && !s.reduceMotion && !s.lowPerf);
   }
 
   @override
   void didUpdateWidget(covariant _FloatingShieldBadge oldWidget) {
     super.didUpdateWidget(oldWidget);
     final s = Provider.of<SettingsService>(context, listen: false);
-    _syncFloat(widget.active && !s.reduceMotion && !s.lowPerf);
+    _syncFloat(s, widget.active && !s.reduceMotion && !s.lowPerf);
   }
 
   @override
@@ -824,9 +825,10 @@ class _FloatingShieldBadgeState extends State<_FloatingShieldBadge>
     super.dispose();
   }
 
-  void _syncFloat(bool enabled) {
+  void _syncFloat(SettingsService s, bool enabled) {
     _effectsEnabled = enabled;
     if (enabled) {
+      _float.duration = s.duration(3000);
       if (!_float.isAnimating) _float.repeat();
     } else {
       _float.stop();
