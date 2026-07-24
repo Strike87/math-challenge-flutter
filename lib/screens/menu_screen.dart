@@ -849,7 +849,7 @@ class _NavBtn extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
+                  duration: s.duration(160),
                   width: isHome ? 50 : 43,
                   height: isHome ? 50 : 43,
                   decoration: BoxDecoration(

@@ -837,7 +837,7 @@ class _OperationQuestStageCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(17),
         onTap: unlocked ? onTap : null,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
+          duration: s.duration(160),
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
           decoration: BoxDecoration(
             gradient: unlocked
@@ -4456,7 +4456,7 @@ class _AvatarChoiceButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
+        duration: s.duration(160),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           gradient: selected
@@ -4556,7 +4556,7 @@ class _AvatarColorGrid extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: () => gs.setBuilderColor(color),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
+                duration: s.duration(160),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -5363,7 +5363,7 @@ class _ShopItemCard extends StatelessWidget {
       child: Opacity(
         opacity: canBuy || owned ? 1 : 0.48,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
+          duration: s.duration(160),
           padding: const EdgeInsets.all(10),
           decoration: _shopCardDecoration(
             s,

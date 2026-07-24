@@ -33,8 +33,11 @@ class _CelebrationOverlayState extends State<CelebrationOverlay> {
   @override
   void initState() {
     super.initState();
+    final confettiDuration = widget.settings.duration(950);
     _confettiController = ConfettiController(
-      duration: const Duration(milliseconds: 950),
+      duration: confettiDuration == Duration.zero
+          ? const Duration(milliseconds: 1)
+          : confettiDuration,
     );
   }
 
