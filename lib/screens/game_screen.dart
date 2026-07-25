@@ -155,7 +155,9 @@ class _GameTopBar extends StatelessWidget {
         decoration: BoxDecoration(
           color: s.surface.withValues(alpha: 0.92),
           borderRadius: BorderRadius.circular(34),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+          border: Border.all(
+            color: s.dark ? s.border : Colors.white.withValues(alpha: 0.8),
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.08),
@@ -272,9 +274,11 @@ class _TimerCircle extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: danger
-                      ? const Color(0xFFFFF0F3)
-                      : const Color(0xFFE8F7FF),
+                  color: s.dark
+                      ? s.surface2
+                      : danger
+                          ? const Color(0xFFFFF0F3)
+                          : const Color(0xFFE8F7FF),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: danger
@@ -299,7 +303,9 @@ class _TimerCircle extends StatelessWidget {
                   style: TextStyle(
                     color: danger
                         ? const Color(GameConfig.punch)
-                        : const Color(0xFF0098E5),
+                        : s.dark
+                            ? const Color(GameConfig.sky)
+                            : const Color(0xFF0098E5),
                     fontWeight: FontWeight.w900,
                     fontSize: 18,
                     fontFamily: AppFonts.headFor(s),
@@ -396,7 +402,8 @@ class _ScoreProgress extends StatelessWidget {
             child: LinearProgressIndicator(
               value: value,
               minHeight: 8,
-              backgroundColor: Colors.white.withValues(alpha: 0.72),
+              backgroundColor:
+                  s.dark ? s.surface2 : Colors.white.withValues(alpha: 0.72),
               valueColor: const AlwaysStoppedAnimation<Color>(
                 Color(GameConfig.coral),
               ),
@@ -870,8 +877,10 @@ class _MasterInfo extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 68),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFF7E0), Color(0xFFFFF0C8)],
+        gradient: LinearGradient(
+          colors: s.dark
+              ? [s.surface, s.surface2]
+              : const [Color(0xFFFFF7E0), Color(0xFFFFF0C8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -1046,7 +1055,9 @@ class _PowerUpHud extends StatelessWidget {
       decoration: BoxDecoration(
         color: s.surface.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
+        border: Border.all(
+          color: s.dark ? s.border : Colors.white.withValues(alpha: 0.85),
+        ),
         boxShadow: [
           BoxShadow(
             color: const Color(GameConfig.mint).withValues(alpha: 0.16),
@@ -1083,7 +1094,9 @@ class _PowerUpHud extends StatelessWidget {
                           height: 52,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.64),
+                            color: s.dark
+                                ? s.surface2
+                                : Colors.white.withValues(alpha: 0.64),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
                               color:
