@@ -1,6 +1,8 @@
 @Tags(<String>['golden'])
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +14,7 @@ import 'package:math_challenge/features/operation_quest/domain/operation_quest.d
 import 'package:math_challenge/features/modals/presentation/toast_banner.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/audio.dart';
+import 'package:math_challenge/services/iap.dart';
 import 'package:math_challenge/services/storage.dart';
 import 'package:math_challenge/theme.dart';
 import 'package:math_challenge/game_config.dart';
@@ -25,6 +28,7 @@ import 'package:math_challenge/screens/config_screen.dart';
 import 'package:math_challenge/screens/player_screen.dart';
 import 'package:math_challenge/screens/game_screen.dart' as game_screen;
 import 'package:math_challenge/widgets/celebration_overlay.dart';
+import 'package:math_challenge/widgets/common.dart';
 import 'package:math_challenge/widgets/modals.dart';
 
 Future<void> loadAppFonts() async {
@@ -704,6 +708,18 @@ void main() {
         find.byType(TestAppShell),
         matchesGoldenFile('goldens/18_weak_skills_popup_focused.png'),
       );
+
+      state.settings.toggleDark();
+      await tester.pumpAndSettle();
+      expect(find.text('Recommended Practice'), findsOneWidget);
+      expect(find.text('Practice areas'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.byType(NeoButton), findsWidgets);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/18_weak_skills_popup_focused_dark.png'),
+      );
     });
 
     testWidgets('19. Weak Skills fallback popup', (tester) async {
@@ -826,6 +842,16 @@ void main() {
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/09_daily_boss_modal.png'));
+
+      state.settings.toggleDark();
+      await tester.pumpAndSettle();
+      expect(find.text('Mission'), findsOneWidget);
+      expect(find.text('Rules'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/09_daily_boss_modal_dark.png'),
+      );
     });
 
     testWidgets('10. Stage cleared modal uses real Master stage state',
@@ -903,6 +929,16 @@ void main() {
       expectNoVisualException(tester);
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/12_coin_shop_modal.png'));
+
+      state.settings.toggleDark();
+      await tester.pumpAndSettle();
+      expect(find.text('Coin Shop'), findsOneWidget);
+      expect(find.byKey(const Key('shopHub_buy')), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/12_coin_shop_modal_dark.png'),
+      );
     });
 
     testWidgets(
@@ -1091,6 +1127,82 @@ void main() {
       // Drain both the existing toast timer and the shorter celebration
       // hide timer. Production durations and trigger behavior stay unchanged.
       await tester.pump(const Duration(milliseconds: 2400));
+    });
+
+    testWidgets('25. Master gameplay timer normal and warning dark', (
+      tester,
+    ) async {
+      final state = await _makeState({'mc_dark': false});
+      state.debugSetMasterStage(1);
+      state.currentScreen = GameScreen.game;
+      state.p[1].resetForGame(isSinglePlayer: true, isMasterOrBoss: true);
+      state.rt = RuntimeState()
+        ..challenge = Operation.master
+        ..gameActive = true
+        ..state = 'playing'
+        ..isWarmUp = false
+        ..maxTurns = state.currentMasterLevel!.goal
+        ..accepting = true
+        ..timer = Timer(const Duration(days: 1), () {})
+        ..timerStart = 0
+        ..timerDurationMs = 6000
+        ..q = const Question(
+          type: Operation.subtraction,
+          key: 'visual-master-timer',
+          text: '9 - 4',
+          ans: 5,
+          choices: [3, 4, 5, 6],
+          diff: Difficulty.medium,
+          numType: NumberType.natural,
+        );
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      state.settings.toggleDark();
+      await tester.pumpAndSettle();
+      expect(find.text('Stage 2'), findsOneWidget);
+      expect(find.text('06'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/25_master_gameplay_timer_normal_dark.png'),
+      );
+
+      state.rt.timerDurationMs = 2000;
+      state.notifyListeners();
+      await tester.pump();
+      expect(find.text('02'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/25_master_gameplay_timer_warning_dark.png'),
+      );
+
+      state.rt.timer?.cancel();
+    });
+
+    testWidgets('26. Adult Gate initial warning dark', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.currentScreen = GameScreen.menu;
+      state.beginIapPurchase(IapProducts.small);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      state.settings.toggleDark();
+      await tester.pumpAndSettle();
+      expect(find.text('Adult Gate'), findsOneWidget);
+      expect(find.text('Grown-up check'), findsOneWidget);
+      expect(find.text('Continue'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.byKey(const Key('adultGateAnswerField')), findsNothing);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/26_adult_gate_dark.png'),
+      );
     });
   });
 }
