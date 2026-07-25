@@ -534,7 +534,8 @@ class OperationQuestModal extends StatelessWidget {
             stages: operationQuestStages
                 .where((stage) =>
                     stage.operation == Operation.mixed &&
-                    stage.questionMechanic == QuestionMechanic.standard)
+                    stage.questionMechanic == QuestionMechanic.standard &&
+                    stage.answerStyle == AnswerStyle.choice4)
                 .toList(),
             gs: gs,
             accent: GameConfig.grape,
@@ -558,6 +559,15 @@ class OperationQuestModal extends StatelessWidget {
                 .toList(),
             gs: gs,
             accent: GameConfig.sky,
+          ),
+          const SizedBox(height: 14),
+          _OperationQuestTrail(
+            heading: '✅ True / False Quest',
+            stages: operationQuestStages
+                .where((stage) => stage.answerStyle == AnswerStyle.trueFalse)
+                .toList(),
+            gs: gs,
+            accent: GameConfig.mint,
           ),
         ],
       ),

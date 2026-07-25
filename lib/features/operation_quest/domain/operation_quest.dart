@@ -25,7 +25,10 @@ enum OperationQuestStageId {
   missingOperationHard('missing_operation_hard'),
   missingNumberEasy('missing_number_easy'),
   missingNumberMedium('missing_number_medium'),
-  missingNumberHard('missing_number_hard');
+  missingNumberHard('missing_number_hard'),
+  trueFalseEasy('true_false_easy'),
+  trueFalseMedium('true_false_medium'),
+  trueFalseHard('true_false_hard');
 
   const OperationQuestStageId(this.storageId);
 
@@ -46,6 +49,7 @@ class OperationQuestStage {
     required this.operation,
     required this.difficulty,
     this.questionMechanic = QuestionMechanic.standard,
+    this.answerStyle = AnswerStyle.choice4,
   });
 
   final OperationQuestStageId id;
@@ -53,6 +57,7 @@ class OperationQuestStage {
   final Operation operation;
   final Difficulty difficulty;
   final QuestionMechanic questionMechanic;
+  final AnswerStyle answerStyle;
   NumberType get numberType => NumberType.natural;
   int get questionTarget => 10;
 }
@@ -190,6 +195,27 @@ const operationQuestStages = <OperationQuestStage>[
     difficulty: Difficulty.hard,
     questionMechanic: QuestionMechanic.missingNumber,
   ),
+  OperationQuestStage(
+    id: OperationQuestStageId.trueFalseEasy,
+    title: 'True / False Start',
+    operation: Operation.mixed,
+    difficulty: Difficulty.easy,
+    answerStyle: AnswerStyle.trueFalse,
+  ),
+  OperationQuestStage(
+    id: OperationQuestStageId.trueFalseMedium,
+    title: 'Fact Checker',
+    operation: Operation.mixed,
+    difficulty: Difficulty.medium,
+    answerStyle: AnswerStyle.trueFalse,
+  ),
+  OperationQuestStage(
+    id: OperationQuestStageId.trueFalseHard,
+    title: 'True / False Master',
+    operation: Operation.mixed,
+    difficulty: Difficulty.hard,
+    answerStyle: AnswerStyle.trueFalse,
+  ),
 ];
 
 OperationQuestStage operationQuestStage(OperationQuestStageId id) =>
@@ -293,6 +319,12 @@ class OperationQuestProgress {
           bestStars(OperationQuestStageId.missingNumberEasy) >= 1,
         OperationQuestStageId.missingNumberHard =>
           bestStars(OperationQuestStageId.missingNumberMedium) >= 1,
+        OperationQuestStageId.trueFalseEasy =>
+          bestStars(OperationQuestStageId.missingNumberHard) >= 1,
+        OperationQuestStageId.trueFalseMedium =>
+          bestStars(OperationQuestStageId.trueFalseEasy) >= 1,
+        OperationQuestStageId.trueFalseHard =>
+          bestStars(OperationQuestStageId.trueFalseMedium) >= 1,
       };
 
   OperationQuestProgress recordBest(OperationQuestStageId id, int value) {

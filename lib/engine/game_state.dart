@@ -1633,7 +1633,7 @@ class GameState extends ChangeNotifier {
       operation: stage.operation,
       difficulty: stage.difficulty,
       numberType: stage.numberType,
-      answerStyle: AnswerStyle.choice4,
+      answerStyle: stage.answerStyle,
       players: 1,
       questionTarget: stage.questionTarget,
       operationQuestStageId: id,
@@ -2574,16 +2574,19 @@ class GameState extends ChangeNotifier {
         _runSnapshot!.operationQuestStageId!,
       );
       resultIcon = operationQuestResultStars == 0
-          ? switch (stage.questionMechanic) {
-              QuestionMechanic.missingOperation => '❔',
-              QuestionMechanic.missingNumber => '🔢',
-              _ => switch (stage.operation) {
-                  Operation.addition => '➕',
-                  Operation.subtraction => '➖',
-                  Operation.multiplication => '✖️',
-                  Operation.division => '➗',
-                  Operation.mixed => '🧮',
-                  _ => '⭐',
+          ? switch (stage.answerStyle) {
+              AnswerStyle.trueFalse => '✅',
+              _ => switch (stage.questionMechanic) {
+                  QuestionMechanic.missingOperation => '❔',
+                  QuestionMechanic.missingNumber => '🔢',
+                  _ => switch (stage.operation) {
+                      Operation.addition => '➕',
+                      Operation.subtraction => '➖',
+                      Operation.multiplication => '✖️',
+                      Operation.division => '➗',
+                      Operation.mixed => '🧮',
+                      _ => '⭐',
+                    },
                 },
             }
           : '⭐';
@@ -2595,12 +2598,16 @@ class GameState extends ChangeNotifier {
         Operation.mixed
             when stage.questionMechanic == QuestionMechanic.missingNumber =>
           'Missing Number',
+        Operation.mixed when stage.answerStyle == AnswerStyle.trueFalse =>
+          'True / False Quest',
         Operation.mixed => 'Mixed Operations',
         _ => stage.operation.label,
       };
       resultTitle =
           stage.difficulty == Difficulty.hard && operationQuestResultStars >= 1
-              ? '$trailName Trail Complete'
+              ? stage.answerStyle == AnswerStyle.trueFalse
+                  ? '$trailName Complete'
+                  : '$trailName Trail Complete'
               : '${stage.title} Complete';
       final stars = List.filled(operationQuestResultStars, '⭐').join();
       final emptyStars = List.filled(3 - operationQuestResultStars, '☆').join();
