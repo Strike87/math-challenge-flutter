@@ -34,13 +34,17 @@ class _CelebrationOverlayState extends State<CelebrationOverlay> {
   void initState() {
     super.initState();
     _confettiController = ConfettiController(
-      duration: const Duration(milliseconds: 950),
+      duration: _confettiDuration(),
     );
   }
 
   @override
   void didUpdateWidget(covariant CelebrationOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final confettiDuration = _confettiDuration();
+    if (_confettiController.duration != confettiDuration) {
+      _confettiController.duration = confettiDuration;
+    }
     final next = widget.state.celebration;
     if (next.isActive && next.id != _lastEventId) {
       _lastEventId = next.id;
@@ -54,6 +58,13 @@ class _CelebrationOverlayState extends State<CelebrationOverlay> {
 
   bool get _confettiAllowed =>
       !widget.settings.reduceMotion && !widget.settings.lowPerf;
+
+  Duration _confettiDuration() {
+    final duration = widget.settings.duration(950);
+    return duration == Duration.zero
+        ? const Duration(milliseconds: 1)
+        : duration;
+  }
 
   void _play(CelebrationEvent event) {
     _hideTimer?.cancel();

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../game_config.dart';
+import '../../../../services/settings.dart';
 import '../../../../widgets/common.dart';
 
 class QuitPill extends StatelessWidget {
@@ -10,6 +12,8 @@ class QuitPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsService>();
+
     return Material(
       color: const Color(GameConfig.punch).withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(18),
@@ -25,22 +29,22 @@ class QuitPill extends StatelessWidget {
               width: 1.8,
             ),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              const Icon(
                 Icons.close_rounded,
                 color: Color(GameConfig.punch),
                 size: 24,
               ),
-              SizedBox(width: 5),
+              const SizedBox(width: 5),
               Text(
                 'Quit',
                 style: TextStyle(
-                  color: Color(GameConfig.punch),
+                  color: const Color(GameConfig.punch),
                   fontWeight: FontWeight.w900,
                   fontSize: 17,
-                  fontFamily: AppFonts.head,
+                  fontFamily: AppFonts.headFor(settings),
                 ),
               ),
             ],

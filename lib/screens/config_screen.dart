@@ -193,7 +193,7 @@ class ConfigScreen extends StatelessWidget {
                               color: s
                                   .accent(GameConfig.coral)
                                   .withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
                               Icons.psychology_alt_rounded,
@@ -211,7 +211,7 @@ class ConfigScreen extends StatelessWidget {
                                   style: TextStyle(
                                     color: s.text,
                                     fontWeight: FontWeight.w900,
-                                    fontFamily: AppFonts.head,
+                                    fontFamily: AppFonts.headFor(s),
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -312,9 +312,9 @@ class _SetupHeader extends StatelessWidget {
             height: 48,
             child: Material(
               color: accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
               child: InkWell(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 onTap: onBack,
                 child: Icon(
                   Icons.arrow_back_rounded,
@@ -335,7 +335,7 @@ class _SetupHeader extends StatelessWidget {
                     color: s.text,
                     fontSize: 21,
                     fontWeight: FontWeight.w900,
-                    fontFamily: AppFonts.head,
+                    fontFamily: AppFonts.headFor(s),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -417,7 +417,7 @@ class _SetupGroup extends StatelessWidget {
                     color: s.text,
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
-                    fontFamily: AppFonts.head,
+                    fontFamily: AppFonts.headFor(s),
                     letterSpacing: 0.8,
                   ),
                 ),
@@ -568,7 +568,7 @@ class _ToggleButton<T> extends StatelessWidget {
                         color: isActive ? Colors.white : o.color,
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
-                        fontFamily: AppFonts.head,
+                        fontFamily: AppFonts.headFor(s),
                         letterSpacing: 0.2,
                       ),
                     ),
@@ -719,7 +719,7 @@ class _ModeTabButton extends StatelessWidget {
                     color: active ? Colors.white : settings.muted,
                     fontWeight: FontWeight.w900,
                     fontSize: compact ? 11 : 12,
-                    fontFamily: AppFonts.head,
+                    fontFamily: AppFonts.headFor(settings),
                     height: 1,
                   ),
                 ),
@@ -794,7 +794,7 @@ class _ModeInfoCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(GameConfig.coral).withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: const Color(GameConfig.coral).withValues(alpha: 0.18),
         ),

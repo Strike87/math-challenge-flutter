@@ -99,7 +99,7 @@ class SkillMasteryCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: settings.surface2,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: settings.border, width: 1.25),
       ),
       child: Row(
@@ -110,7 +110,7 @@ class SkillMasteryCard extends StatelessWidget {
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: accentColor.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               symbol,
@@ -198,8 +198,8 @@ class WeakSkillsRecommendationCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             gradient: const LinearGradient(
               colors: [
-                Color(0xFF7C3AED),
-                Color(0xFFDB2777),
+                Color(GameConfig.grape),
+                Color(GameConfig.punch),
                 Color(GameConfig.coral),
               ],
             ),

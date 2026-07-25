@@ -43,7 +43,9 @@ class NeoButton extends StatelessWidget {
           padding: padding ??
               const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.52),
+            color: settings.dark
+                ? settings.surface2
+                : Colors.white.withValues(alpha: 0.52),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: c.withValues(alpha: 0.75), width: 1.5),
           ),
@@ -284,7 +286,7 @@ class CoinPill extends StatelessWidget {
           style: TextStyle(
             color: settings.text,
             fontWeight: FontWeight.w800,
-            fontFamily: AppFonts.body,
+            fontFamily: AppFonts.bodyFor(settings),
           ),
         ),
       ]),
@@ -559,7 +561,7 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog>
                         color: settings.text,
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
-                        fontFamily: AppFonts.head,
+                        fontFamily: AppFonts.headFor(settings),
                         height: 1,
                       ),
                     ),
@@ -597,16 +599,16 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog>
                       Color(0xFFD4681A),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                labelStyle: const TextStyle(
+                labelStyle: TextStyle(
                   fontWeight: FontWeight.w900,
-                  fontFamily: AppFonts.head,
+                  fontFamily: AppFonts.headFor(settings),
                   fontSize: 13,
                 ),
-                unselectedLabelStyle: const TextStyle(
+                unselectedLabelStyle: TextStyle(
                   fontWeight: FontWeight.w800,
-                  fontFamily: AppFonts.head,
+                  fontFamily: AppFonts.headFor(settings),
                   fontSize: 13,
                 ),
                 tabs: _categories.map((c) => Tab(text: c.name)).toList(),
@@ -727,6 +729,7 @@ class AvatarSelectorTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsService>();
     return ListTile(
       leading: Container(
         width: 48,
@@ -741,9 +744,9 @@ class AvatarSelectorTile extends StatelessWidget {
       ),
       title: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.w800,
-          fontFamily: AppFonts.body,
+          fontFamily: AppFonts.bodyFor(settings),
         ),
       ),
       subtitle: const Text('Tap to change'),

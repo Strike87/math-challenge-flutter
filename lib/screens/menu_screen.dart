@@ -10,9 +10,9 @@ class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
 
   static const _weakSkillsGradient = <Color>[
-    Color(0xFF7C3AED), // bright violet
-    Color(0xFFDB2777), // deep pink / magenta
-    Color(0xFFFF6B6B), // coral / light red
+    Color(GameConfig.grape), // bright violet
+    Color(GameConfig.punch), // deep pink / magenta
+    Color(GameConfig.coral), // coral / light red
   ];
 
   @override
@@ -39,7 +39,7 @@ class MenuScreen extends StatelessWidget {
                   icon: '🚀',
                   title: 'Weak Skills Practice',
                   subtitle: 'Build Your Skills',
-                  color: const Color(0xFF7C3AED),
+                  color: const Color(GameConfig.grape),
                   gradientColors: _weakSkillsGradient,
                   onTap: () => gs.goToConfig('weakSkills'),
                 ),
@@ -57,9 +57,9 @@ class MenuScreen extends StatelessWidget {
                   subtitle: 'BOSS BATTLES • 5 STAGES',
                   color: s.accent(GameConfig.coral),
                   gradientColors: const [
-                    Color(0xFF6D28D9),
-                    Color(0xFF9D174D),
-                    Color(0xFFFF6B6B),
+                    Color(GameConfig.grape),
+                    Color(GameConfig.punch),
+                    Color(GameConfig.coral),
                   ],
                   onTap: () => gs.goToConfig('master'),
                 ),
@@ -72,9 +72,9 @@ class MenuScreen extends StatelessWidget {
                       : 'NEW CHALLENGE TODAY',
                   color: s.accent(GameConfig.punch),
                   gradientColors: const [
-                    Color(0xFFD94660),
-                    Color(0xFFF15A45),
-                    Color(0xFFFF8A3D),
+                    Color(GameConfig.punch),
+                    Color(GameConfig.coral),
+                    Color(GameConfig.mango),
                   ],
                   onTap: gs.isDailyBossClaimedToday ? () {} : gs.showDailyBoss,
                 ),
@@ -85,9 +85,9 @@ class MenuScreen extends StatelessWidget {
                   subtitle: '7 TRAILS • 21 STAGES',
                   color: s.accent(GameConfig.mango),
                   gradientColors: const [
-                    Color(0xFFF97316),
-                    Color(0xFFFB7185),
-                    Color(0xFFF59E0B),
+                    Color(GameConfig.mango),
+                    Color(GameConfig.punch),
+                    Color(GameConfig.mango),
                   ],
                   onTap: gs.showOperationQuest,
                 ),
@@ -318,7 +318,7 @@ class _DailyNavBtn extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(17),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: SizedBox(
           height: 78,
@@ -332,7 +332,7 @@ class _DailyNavBtn extends StatelessWidget {
                   height: 43,
                   decoration: BoxDecoration(
                     color: s.surface.withValues(alpha: s.dark ? 0.68 : 0.92),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: accent.withValues(alpha: 0.24),
                     ),
@@ -409,7 +409,7 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 13, 10, 13),
       decoration: BoxDecoration(
         color: s.surface.withValues(alpha: s.dark ? 0.78 : 0.90),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: Colors.white.withValues(alpha: s.dark ? 0.14 : 0.70),
         ),
@@ -491,7 +491,7 @@ class _Header extends StatelessWidget {
       color: s.text,
       fontSize: 24,
       fontWeight: FontWeight.w900,
-      fontFamily: AppFonts.head,
+      fontFamily: AppFonts.headFor(s),
       height: 0.82,
     );
   }
@@ -516,7 +516,7 @@ class _EqualBrandIcon extends StatelessWidget {
             Color(0xFFD4681A),
           ],
         ),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: const Color(GameConfig.coral).withValues(alpha: 0.24),
@@ -618,7 +618,7 @@ class _CampaignCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         onTap: onTap,
         child: Container(
           constraints: const BoxConstraints(minHeight: 86),
@@ -629,7 +629,7 @@ class _CampaignCard extends StatelessWidget {
               end: Alignment.centerRight,
               colors: colors,
             ),
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: Colors.white.withValues(alpha: 0.30),
               width: 1,
@@ -649,7 +649,7 @@ class _CampaignCard extends StatelessWidget {
                 height: 52,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(17),
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(
                     color: Colors.white.withValues(alpha: 0.34),
                   ),
@@ -677,11 +677,11 @@ class _CampaignCard extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
-                        fontFamily: AppFonts.head,
+                        fontFamily: AppFonts.headFor(s),
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -839,7 +839,7 @@ class _NavBtn extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(17),
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: SizedBox(
           height: 78,
@@ -849,7 +849,7 @@ class _NavBtn extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
+                  duration: s.duration(160),
                   width: isHome ? 50 : 43,
                   height: isHome ? 50 : 43,
                   decoration: BoxDecoration(
@@ -866,7 +866,7 @@ class _NavBtn extends StatelessWidget {
                     color: isHome
                         ? null
                         : accent.withValues(alpha: s.dark ? 0.12 : 0.09),
-                    borderRadius: BorderRadius.circular(isHome ? 17 : 14),
+                    borderRadius: BorderRadius.circular(isHome ? 18 : 12),
                     border: Border.all(
                       color: isHome
                           ? Colors.white.withValues(alpha: 0.30)

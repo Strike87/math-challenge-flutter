@@ -155,7 +155,9 @@ class _GameTopBar extends StatelessWidget {
         decoration: BoxDecoration(
           color: s.surface.withValues(alpha: 0.92),
           borderRadius: BorderRadius.circular(34),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+          border: Border.all(
+            color: s.dark ? s.border : Colors.white.withValues(alpha: 0.8),
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.08),
@@ -272,9 +274,11 @@ class _TimerCircle extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: danger
-                      ? const Color(0xFFFFF0F3)
-                      : const Color(0xFFE8F7FF),
+                  color: s.dark
+                      ? s.surface2
+                      : danger
+                          ? const Color(0xFFFFF0F3)
+                          : const Color(0xFFE8F7FF),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: danger
@@ -299,10 +303,12 @@ class _TimerCircle extends StatelessWidget {
                   style: TextStyle(
                     color: danger
                         ? const Color(GameConfig.punch)
-                        : const Color(0xFF0098E5),
+                        : s.dark
+                            ? const Color(GameConfig.sky)
+                            : const Color(0xFF0098E5),
                     fontWeight: FontWeight.w900,
                     fontSize: 18,
-                    fontFamily: AppFonts.head,
+                    fontFamily: AppFonts.headFor(s),
                   ),
                 ),
               ),
@@ -396,7 +402,8 @@ class _ScoreProgress extends StatelessWidget {
             child: LinearProgressIndicator(
               value: value,
               minHeight: 8,
-              backgroundColor: Colors.white.withValues(alpha: 0.72),
+              backgroundColor:
+                  s.dark ? s.surface2 : Colors.white.withValues(alpha: 0.72),
               valueColor: const AlwaysStoppedAnimation<Color>(
                 Color(GameConfig.coral),
               ),
@@ -422,7 +429,7 @@ class _ScoreProgress extends StatelessWidget {
       color: s.muted,
       fontSize: 16,
       fontWeight: FontWeight.w900,
-      fontFamily: AppFonts.head,
+      fontFamily: AppFonts.headFor(s),
     );
   }
 }
@@ -531,7 +538,7 @@ class _BossCircleState extends State<_BossCircle>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final s = Provider.of<SettingsService>(context);
-    _syncFloat(!s.reduceMotion && !s.lowPerf);
+    _syncFloat(s, !s.reduceMotion && !s.lowPerf);
   }
 
   @override
@@ -540,9 +547,10 @@ class _BossCircleState extends State<_BossCircle>
     super.dispose();
   }
 
-  void _syncFloat(bool enabled) {
+  void _syncFloat(SettingsService s, bool enabled) {
     _effectsEnabled = enabled;
     if (enabled) {
+      _float.duration = s.duration(3000);
       if (!_float.isAnimating) _float.repeat();
     } else {
       _float.stop();
@@ -632,13 +640,13 @@ class _PlayerCard extends StatelessWidget {
       if (pl.shieldActive) '🛡️',
     ];
     return AnimatedScale(
-      duration: const Duration(milliseconds: 200),
+      duration: s.duration(200),
       scale: active ? 1 : 0.96,
       child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
+        duration: s.duration(200),
         opacity: active ? 1 : 0.65,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: s.duration(200),
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
           decoration: BoxDecoration(
             color: s.surface,
@@ -709,11 +717,11 @@ class _PlayerCard extends StatelessWidget {
                           children: [
                             Text(
                               '${pl.score}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w900,
                                 color: Color(GameConfig.coral),
-                                fontFamily: AppFonts.head,
+                                fontFamily: AppFonts.headFor(s),
                                 height: 1,
                               ),
                             ),
@@ -808,14 +816,14 @@ class _FloatingShieldBadgeState extends State<_FloatingShieldBadge>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final s = Provider.of<SettingsService>(context);
-    _syncFloat(widget.active && !s.reduceMotion && !s.lowPerf);
+    _syncFloat(s, widget.active && !s.reduceMotion && !s.lowPerf);
   }
 
   @override
   void didUpdateWidget(covariant _FloatingShieldBadge oldWidget) {
     super.didUpdateWidget(oldWidget);
     final s = Provider.of<SettingsService>(context, listen: false);
-    _syncFloat(widget.active && !s.reduceMotion && !s.lowPerf);
+    _syncFloat(s, widget.active && !s.reduceMotion && !s.lowPerf);
   }
 
   @override
@@ -824,9 +832,10 @@ class _FloatingShieldBadgeState extends State<_FloatingShieldBadge>
     super.dispose();
   }
 
-  void _syncFloat(bool enabled) {
+  void _syncFloat(SettingsService s, bool enabled) {
     _effectsEnabled = enabled;
     if (enabled) {
+      _float.duration = s.duration(3000);
       if (!_float.isAnimating) _float.repeat();
     } else {
       _float.stop();
@@ -868,8 +877,10 @@ class _MasterInfo extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 68),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFF7E0), Color(0xFFFFF0C8)],
+        gradient: LinearGradient(
+          colors: s.dark
+              ? [s.surface, s.surface2]
+              : const [Color(0xFFFFF7E0), Color(0xFFFFF0C8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -917,11 +928,11 @@ class _MasterInfo extends StatelessWidget {
           ),
           Text(
             progress,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w900,
               color: Color(GameConfig.mango),
-              fontFamily: AppFonts.head,
+              fontFamily: AppFonts.headFor(s),
             ),
           ),
         ],
@@ -1044,7 +1055,9 @@ class _PowerUpHud extends StatelessWidget {
       decoration: BoxDecoration(
         color: s.surface.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
+        border: Border.all(
+          color: s.dark ? s.border : Colors.white.withValues(alpha: 0.85),
+        ),
         boxShadow: [
           BoxShadow(
             color: const Color(GameConfig.mint).withValues(alpha: 0.16),
@@ -1081,8 +1094,10 @@ class _PowerUpHud extends StatelessWidget {
                           height: 52,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.64),
-                            borderRadius: BorderRadius.circular(16),
+                            color: s.dark
+                                ? s.surface2
+                                : Colors.white.withValues(alpha: 0.64),
+                            borderRadius: BorderRadius.circular(18),
                             border: Border.all(
                               color:
                                   color.withValues(alpha: active ? 0.95 : 0.36),
@@ -1109,7 +1124,7 @@ class _PowerUpHud extends StatelessWidget {
                                   color: color,
                                   fontWeight: FontWeight.w900,
                                   fontSize: 16,
-                                  fontFamily: AppFonts.head,
+                                  fontFamily: AppFonts.headFor(s),
                                 ),
                               ),
                             ),
@@ -1264,7 +1279,7 @@ class _ShieldArmedPulse extends StatelessWidget {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(18),
                     ),
                   ),
                 ),
@@ -1345,7 +1360,7 @@ class _QuestionCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: s.surface,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: danger ? const Color(GameConfig.punch) : s.border,
           width: danger ? 2 : 1,
@@ -1386,7 +1401,7 @@ class _QuestionCard extends StatelessWidget {
                                 color: s.muted,
                                 fontSize: headerFont,
                                 fontWeight: FontWeight.w900,
-                                fontFamily: AppFonts.head,
+                                fontFamily: AppFonts.headFor(s),
                               ),
                             ),
                           )
@@ -1406,7 +1421,7 @@ class _QuestionCard extends StatelessWidget {
                           color: s.muted,
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
-                          fontFamily: AppFonts.head,
+                          fontFamily: AppFonts.headFor(s),
                           height: 1.08,
                         ),
                       ),
@@ -1460,7 +1475,7 @@ class _QuestionCard extends StatelessWidget {
                     fontSize: 44,
                     fontWeight: FontWeight.w900,
                     color: s.text,
-                    fontFamily: AppFonts.head,
+                    fontFamily: AppFonts.headFor(s),
                     height: 1.2,
                   ),
                   children: _spans(questionText, s),
@@ -1571,7 +1586,7 @@ class _QuestionCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: BoxDecoration(
               color: const Color(GameConfig.coral),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               '?',
@@ -1579,7 +1594,7 @@ class _QuestionCard extends StatelessWidget {
                 color: Colors.white,
                 fontSize: 36,
                 fontWeight: FontWeight.w900,
-                fontFamily: AppFonts.head,
+                fontFamily: AppFonts.headFor(s),
               ),
             ),
           ),
@@ -1668,7 +1683,7 @@ class _AnswersGrid extends StatelessWidget {
             return Material(
               color: Colors.transparent,
               child: InkWell(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 onTap: gs.rt.accepting
                     ? () {
                         gs.onAnswer(c);
@@ -1697,7 +1712,7 @@ class _AnswersGrid extends StatelessWidget {
                         fontSize: 26,
                         fontWeight: FontWeight.w900,
                         color: answerTextColor,
-                        fontFamily: AppFonts.head,
+                        fontFamily: AppFonts.headFor(s),
                       ),
                     ),
                   ),

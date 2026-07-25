@@ -152,9 +152,9 @@ class _SetupHeader extends StatelessWidget {
             height: 48,
             child: Material(
               color: accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
               child: InkWell(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 onTap: onBack,
                 child: Icon(
                   Icons.arrow_back_rounded,
@@ -175,7 +175,7 @@ class _SetupHeader extends StatelessWidget {
                     color: s.text,
                     fontSize: 21,
                     fontWeight: FontWeight.w900,
-                    fontFamily: AppFonts.head,
+                    fontFamily: AppFonts.headFor(s),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -240,7 +240,7 @@ class _SectionHeading extends StatelessWidget {
                     color: s.text,
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
-                    fontFamily: AppFonts.head,
+                    fontFamily: AppFonts.headFor(s),
                     letterSpacing: 0.8,
                   ),
                 ),
@@ -343,7 +343,7 @@ class _NumTypeCard extends StatelessWidget {
                         color: locked ? s.muted : s.text,
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
-                        fontFamily: AppFonts.head,
+                        fontFamily: AppFonts.headFor(s),
                       ),
                     ),
                     const SizedBox(height: 3),

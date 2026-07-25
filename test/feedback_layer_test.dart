@@ -409,6 +409,43 @@ void main() {
       }
     });
 
+    testWidgets('mounted celebration resyncs confetti duration from settings',
+        (tester) async {
+      final state = await _makeState(lowPerf: false, reduceMotion: false);
+      try {
+        await tester.pumpWidget(_overlayHost(state));
+        state.unlockAch('first_win');
+        await tester.pumpWidget(_overlayHost(state));
+        await tester.pump();
+
+        final controller = tester
+            .widget<ConfettiWidget>(find.byType(ConfettiWidget))
+            .confettiController;
+        expect(controller.duration, const Duration(milliseconds: 950));
+
+        state.settings.setAnimSpeed(0.3);
+        await tester.pumpWidget(_overlayHost(state));
+        expect(controller.duration, const Duration(milliseconds: 285));
+
+        state.settings.setAnimSpeed(2);
+        await tester.pumpWidget(_overlayHost(state));
+        expect(controller.duration, const Duration(milliseconds: 1900));
+
+        state.settings.toggleReduceMotion();
+        await tester.pumpWidget(_overlayHost(state));
+        expect(controller.duration, const Duration(milliseconds: 1));
+        expect(controller.state, ConfettiControllerState.stopped);
+        expect(find.byType(ConfettiWidget), findsNothing);
+
+        state.settings.toggleReduceMotion();
+        await tester.pumpWidget(_overlayHost(state));
+        expect(controller.duration, const Duration(milliseconds: 1900));
+        expect(find.byType(ConfettiWidget), findsOneWidget);
+      } finally {
+        state.dispose();
+      }
+    });
+
     test('sound and vibration toggles gate service calls', () async {
       var audioCalls = 0;
       var hapticCalls = 0;
