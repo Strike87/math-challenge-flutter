@@ -191,6 +191,27 @@ void main() {
           NumberType.natural,
           10
         ),
+        (
+          'True / False Start',
+          Difficulty.easy,
+          Operation.mixed,
+          NumberType.natural,
+          10
+        ),
+        (
+          'Fact Checker',
+          Difficulty.medium,
+          Operation.mixed,
+          NumberType.natural,
+          10
+        ),
+        (
+          'True / False Master',
+          Difficulty.hard,
+          Operation.mixed,
+          NumberType.natural,
+          10
+        ),
       ],
     );
     expect(
@@ -217,6 +238,9 @@ void main() {
         'missing_number_easy',
         'missing_number_medium',
         'missing_number_hard',
+        'true_false_easy',
+        'true_false_medium',
+        'true_false_hard',
       ],
     );
     expect(
@@ -225,6 +249,14 @@ void main() {
         ...List.filled(15, QuestionMechanic.standard),
         ...List.filled(3, QuestionMechanic.missingOperation),
         ...List.filled(3, QuestionMechanic.missingNumber),
+        ...List.filled(3, QuestionMechanic.standard),
+      ],
+    );
+    expect(
+      operationQuestStages.map((stage) => stage.answerStyle),
+      [
+        ...List.filled(21, AnswerStyle.choice4),
+        ...List.filled(3, AnswerStyle.trueFalse),
       ],
     );
     expect(
@@ -417,6 +449,37 @@ void main() {
       OperationQuestProgress({
         OperationQuestStageId.missingOperationMedium: 3,
       }).isUnlocked(OperationQuestStageId.missingNumberEasy),
+      isFalse,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.missingNumberHard: 1,
+      }).isUnlocked(OperationQuestStageId.trueFalseEasy),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress().isUnlocked(OperationQuestStageId.trueFalseEasy),
+      isFalse,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.trueFalseEasy: 1,
+      }).isUnlocked(OperationQuestStageId.trueFalseMedium),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress()
+          .isUnlocked(OperationQuestStageId.trueFalseMedium),
+      isFalse,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.trueFalseMedium: 1,
+      }).isUnlocked(OperationQuestStageId.trueFalseHard),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress().isUnlocked(OperationQuestStageId.trueFalseHard),
       isFalse,
     );
     expect(
@@ -1279,6 +1342,57 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
   });
 
+  testWidgets(
+      'True / False Quest snapshots its stage style and preserves preference',
+      (tester) async {
+    final saved = jsonEncode({
+      'version': 1,
+      'stars': {
+        'missing_number_hard': 1,
+        'true_false_easy': 1,
+        'true_false_medium': 1,
+      },
+    });
+    final state = await _makeState({'mc_operationQuestProgress': saved});
+    addTearDown(state.dispose);
+    state.selectedAnswerStyle = AnswerStyle.choice4;
+
+    state.startOperationQuestStage(OperationQuestStageId.trueFalseHard);
+    state.startGame();
+    expect(state.selectedAnswerStyle, AnswerStyle.choice4);
+    expect(state.activeRunSnapshot?.answerStyle, AnswerStyle.trueFalse);
+    expect(state.rt.answerStyle, AnswerStyle.trueFalse);
+
+    await _finishQuest(tester, state, correctAnswers: 6);
+    expect(state.resultIcon, '⭐');
+    expect(state.resultTitle, 'True / False Quest Complete');
+    await state.replayGame();
+    state.rt.timer?.cancel();
+    expect(state.activeRunSnapshot?.operationQuestStageId,
+        OperationQuestStageId.trueFalseHard);
+    expect(state.rt.answerStyle, AnswerStyle.trueFalse);
+    expect(state.selectedAnswerStyle, AnswerStyle.choice4);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  test('existing Quest stages retain Choice4 despite True / False preference',
+      () async {
+    final state = await _makeState({
+      'mc_operationQuestProgress': jsonEncode({
+        'version': 1,
+        'stars': {'addition_easy': 1},
+      }),
+    });
+    addTearDown(state.dispose);
+    state.selectedAnswerStyle = AnswerStyle.trueFalse;
+    state.startOperationQuestStage(OperationQuestStageId.additionMedium);
+    state.startGame();
+
+    expect(state.activeRunSnapshot?.answerStyle, AnswerStyle.choice4);
+    expect(state.rt.answerStyle, AnswerStyle.choice4);
+    expect(state.selectedAnswerStyle, AnswerStyle.trueFalse);
+  });
+
   testWidgets('Campaign card shows all trails and locked stages do not start',
       (tester) async {
     final state = await _makeState();
@@ -1290,7 +1404,7 @@ void main() {
     );
 
     expect(find.text('Operation Quest'), findsOneWidget);
-    expect(find.text('7 TRAILS • 21 STAGES'), findsOneWidget);
+    expect(find.text('8 TRAILS • 24 STAGES'), findsOneWidget);
     await tester.tap(find.text('Operation Quest'));
     await tester.pump();
     expect(find.text('➕ Addition Trail'), findsOneWidget);
@@ -1300,6 +1414,7 @@ void main() {
     expect(find.text('🧮 Mixed Operations Trail'), findsOneWidget);
     expect(find.text('❔ Missing Operation Trail'), findsOneWidget);
     expect(find.text('🔢 Missing Number Trail'), findsOneWidget);
+    expect(find.text('✅ True / False Quest'), findsOneWidget);
     expect(find.text('First Sums'), findsOneWidget);
     expect(find.text('Bigger Sums'), findsOneWidget);
     expect(find.text('Addition Challenge'), findsOneWidget);
@@ -1321,7 +1436,10 @@ void main() {
     expect(find.text('Find the Number'), findsOneWidget);
     expect(find.text('Number Detective'), findsOneWidget);
     expect(find.text('Missing Number Master'), findsOneWidget);
-    expect(find.text('🔒'), findsNWidgets(20));
+    expect(find.text('True / False Start'), findsOneWidget);
+    expect(find.text('Fact Checker'), findsOneWidget);
+    expect(find.text('True / False Master'), findsOneWidget);
+    expect(find.text('🔒'), findsNWidgets(23));
 
     state.startOperationQuestStage(OperationQuestStageId.subtractionEasy);
     expect(state.currentScreen, GameScreen.menu);
