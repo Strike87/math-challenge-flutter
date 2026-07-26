@@ -1050,6 +1050,45 @@ void main() {
         matchesGoldenFile('goldens/15_true_false_gameplay.png'),
       );
     });
+    testWidgets('Integer Quest renders signed subtraction directly',
+        (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.currentScreen = GameScreen.game;
+      state.p[1].resetForGame(isSinglePlayer: true, isMasterOrBoss: false);
+      state.rt = RuntimeState()
+        ..challenge = Operation.subtraction
+        ..gameActive = true
+        ..state = 'playing'
+        ..isWarmUp = false
+        ..maxTurns = 10
+        ..accepting = true
+        ..q = const Question(
+          type: Operation.subtraction,
+          key: 'visual-integer-subtraction',
+          text: '(-7) − 9 = ?',
+          ans: -16,
+          choices: [-16, -15, -17, 16],
+          diff: Difficulty.easy,
+          numType: NumberType.integers,
+        );
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is RichText &&
+              widget.text.toPlainText().contains('(-7) − 9 = '),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('?'), findsOneWidget);
+      expect(find.text('-16'), findsOneWidget);
+      expectNoVisualException(tester);
+    });
     testWidgets('23. Toast banner phone light and dark', (tester) async {
       final state = await _makeState({'mc_dark': false});
       state.currentScreen = GameScreen.menu;

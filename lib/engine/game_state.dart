@@ -164,6 +164,8 @@ class GameRunSnapshot {
     required this.questionTarget,
     this.operationQuestStageId,
     this.questionMechanic = QuestionMechanic.standard,
+    this.operationPool,
+    this.integerQuest = false,
     this.weakSkillsPlan,
   });
 
@@ -177,6 +179,8 @@ class GameRunSnapshot {
   final int questionTarget;
   final OperationQuestStageId? operationQuestStageId;
   final QuestionMechanic questionMechanic;
+  final List<Operation>? operationPool;
+  final bool integerQuest;
   final WeakSkillsPlan? weakSkillsPlan;
 }
 
@@ -1638,6 +1642,10 @@ class GameState extends ChangeNotifier {
       questionTarget: stage.questionTarget,
       operationQuestStageId: id,
       questionMechanic: stage.questionMechanic,
+      operationPool: stage.operationPool == null
+          ? null
+          : List.unmodifiable(stage.operationPool!),
+      integerQuest: stage.integerQuest,
     );
   }
 
@@ -1715,7 +1723,10 @@ class GameState extends ChangeNotifier {
           GameConfig.phaseKeys[rt.survivalPhase.clamp(0, 4)]);
     }
 
-    if (type == Operation.mixed || type == Operation.survival) {
+    final operationPool = _runSnapshot?.operationPool;
+    if (operationPool != null) {
+      type = operationPool[_rng.nextInt(operationPool.length)];
+    } else if (type == Operation.mixed || type == Operation.survival) {
       final weakSkillsPlan = _runSnapshot?.weakSkillsPlan;
       if (weakSkillsPlan != null) {
         type = weakSkillsPlan.operationAt(rt.weakSkillsScheduleIndex++);
@@ -1741,13 +1752,22 @@ class GameState extends ChangeNotifier {
     final filtersQuestQuestions = isMissingOperation || isMissingNumberQuest;
     Question? q = filtersQuestQuestions
         ? null
-        : _qgen.build(type: type, diff: d, numType: generatedNumType);
+        : _qgen.build(
+            type: type,
+            diff: d,
+            numType: generatedNumType,
+            integerQuest: _runSnapshot?.integerQuest ?? false,
+          );
     Question? retainedMissingOperationQuestion;
     String? retainedMissingOperationKey;
     bool foundUnique = false;
     for (var attempt = 0; attempt < 500; attempt++) {
-      final candidate =
-          _qgen.build(type: type, diff: d, numType: generatedNumType);
+      final candidate = _qgen.build(
+        type: type,
+        diff: d,
+        numType: generatedNumType,
+        integerQuest: _runSnapshot?.integerQuest ?? false,
+      );
       final question = switch (_runSnapshot?.questionMechanic) {
         QuestionMechanic.missingOperation =>
           missingOperationQuestion(candidate, _rng),
@@ -1778,7 +1798,12 @@ class GameState extends ChangeNotifier {
         );
       } else {
         rt.usedFacts.clear();
-        q = _qgen.build(type: type, diff: d, numType: generatedNumType);
+        q = _qgen.build(
+          type: type,
+          diff: d,
+          numType: generatedNumType,
+          integerQuest: _runSnapshot?.integerQuest ?? false,
+        );
         rt.usedFacts.add(q.key);
       }
     }
@@ -2573,6 +2598,19 @@ class GameState extends ChangeNotifier {
       final stage = operationQuestStage(
         _runSnapshot!.operationQuestStageId!,
       );
+      if (stage.integerQuest) {
+        resultIcon = '🔢';
+        resultTitle = stage.difficulty == Difficulty.hard &&
+                operationQuestResultStars >= 1
+            ? 'Integer Quest Complete'
+            : '${stage.title} Complete';
+        final stars = List.filled(operationQuestResultStars, '⭐').join();
+        final emptyStars =
+            List.filled(3 - operationQuestResultStars, '☆').join();
+        resultDescription =
+            '${p1.correct}/${stage.questionTarget} correct • $stars$emptyStars';
+        return;
+      }
       resultIcon = operationQuestResultStars == 0
           ? switch (stage.answerStyle) {
               AnswerStyle.trueFalse => '✅',

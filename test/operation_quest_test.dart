@@ -212,6 +212,27 @@ void main() {
           NumberType.natural,
           10
         ),
+        (
+          'Integer Foundations',
+          Difficulty.easy,
+          Operation.mixed,
+          NumberType.integers,
+          10
+        ),
+        (
+          'Signed Products',
+          Difficulty.medium,
+          Operation.mixed,
+          NumberType.integers,
+          10
+        ),
+        (
+          'Integer Quest Master',
+          Difficulty.hard,
+          Operation.mixed,
+          NumberType.integers,
+          10
+        ),
       ],
     );
     expect(
@@ -241,6 +262,9 @@ void main() {
         'true_false_easy',
         'true_false_medium',
         'true_false_hard',
+        'integers_easy',
+        'integers_medium',
+        'integers_hard',
       ],
     );
     expect(
@@ -250,6 +274,7 @@ void main() {
         ...List.filled(3, QuestionMechanic.missingOperation),
         ...List.filled(3, QuestionMechanic.missingNumber),
         ...List.filled(3, QuestionMechanic.standard),
+        ...List.filled(3, QuestionMechanic.standard),
       ],
     );
     expect(
@@ -257,6 +282,7 @@ void main() {
       [
         ...List.filled(21, AnswerStyle.choice4),
         ...List.filled(3, AnswerStyle.trueFalse),
+        ...List.filled(3, AnswerStyle.choice4),
       ],
     );
     expect(
@@ -481,6 +507,24 @@ void main() {
     expect(
       OperationQuestProgress().isUnlocked(OperationQuestStageId.trueFalseHard),
       isFalse,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.trueFalseHard: 1,
+      }).isUnlocked(OperationQuestStageId.integersEasy),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.integersEasy: 1,
+      }).isUnlocked(OperationQuestStageId.integersMedium),
+      isTrue,
+    );
+    expect(
+      OperationQuestProgress({
+        OperationQuestStageId.integersMedium: 1,
+      }).isUnlocked(OperationQuestStageId.integersHard),
+      isTrue,
     );
     expect(
       progress
@@ -1404,7 +1448,7 @@ void main() {
     );
 
     expect(find.text('Operation Quest'), findsOneWidget);
-    expect(find.text('8 TRAILS • 24 STAGES'), findsOneWidget);
+    expect(find.text('9 TRAILS • 27 STAGES'), findsOneWidget);
     await tester.tap(find.text('Operation Quest'));
     await tester.pump();
     expect(find.text('➕ Addition Trail'), findsOneWidget);
@@ -1415,6 +1459,7 @@ void main() {
     expect(find.text('❔ Missing Operation Trail'), findsOneWidget);
     expect(find.text('🔢 Missing Number Trail'), findsOneWidget);
     expect(find.text('✅ True / False Quest'), findsOneWidget);
+    expect(find.text('🔢 Integer Quest'), findsOneWidget);
     expect(find.text('First Sums'), findsOneWidget);
     expect(find.text('Bigger Sums'), findsOneWidget);
     expect(find.text('Addition Challenge'), findsOneWidget);
@@ -1439,7 +1484,10 @@ void main() {
     expect(find.text('True / False Start'), findsOneWidget);
     expect(find.text('Fact Checker'), findsOneWidget);
     expect(find.text('True / False Master'), findsOneWidget);
-    expect(find.text('🔒'), findsNWidgets(23));
+    expect(find.text('Integer Foundations'), findsOneWidget);
+    expect(find.text('Signed Products'), findsOneWidget);
+    expect(find.text('Integer Quest Master'), findsOneWidget);
+    expect(find.text('🔒'), findsNWidgets(26));
 
     state.startOperationQuestStage(OperationQuestStageId.subtractionEasy);
     expect(state.currentScreen, GameScreen.menu);
@@ -1538,6 +1586,80 @@ void main() {
     expect(state.operationQuestProgress.stars, isEmpty);
     expect(state.operationQuestResultStars, 0);
     expect(state.activeRunSnapshot, isNull);
+  });
+  testWidgets(
+      'Integer Quest snapshots its pool without changing normal Integers',
+      (tester) async {
+    final state = await _makeState();
+    addTearDown(state.dispose);
+    state.numType = NumberType.natural;
+    state.operationQuestProgress = OperationQuestProgress({
+      OperationQuestStageId.trueFalseHard: 1,
+    });
+    state.startOperationQuestStage(OperationQuestStageId.integersEasy);
+    state.startGame();
+    state.rt.timer?.cancel();
+
+    expect(state.numType, NumberType.natural);
+    expect(state.activeRunSnapshot?.numberType, NumberType.integers);
+    expect(state.activeRunSnapshot?.integerQuest, isTrue);
+    expect(state.activeRunSnapshot?.operationPool,
+        [Operation.addition, Operation.subtraction]);
+    expect(state.rt.q?.type, isIn([Operation.addition, Operation.subtraction]));
+    expect(state.rt.q?.text, endsWith(' = ?'));
+    expect(state.numTypeUnlocked['integers'], 0);
+  });
+
+  test('Integer Quest medium and hard stages retain their operation pools',
+      () async {
+    final state = await _makeState();
+    addTearDown(state.dispose);
+    for (final stage in [
+      OperationQuestStageId.integersMedium,
+      OperationQuestStageId.integersHard,
+    ]) {
+      state.operationQuestProgress = OperationQuestProgress({
+        stage == OperationQuestStageId.integersMedium
+            ? OperationQuestStageId.integersEasy
+            : OperationQuestStageId.integersMedium: 1,
+      });
+      state.startOperationQuestStage(stage);
+      state.startGame();
+      state.rt.timer?.cancel();
+      final pool = state.activeRunSnapshot!.operationPool!;
+      expect(state.rt.q!.type, isIn(pool));
+      expect(
+          pool,
+          stage == OperationQuestStageId.integersMedium
+              ? [Operation.multiplication, Operation.division]
+              : [
+                  Operation.addition,
+                  Operation.subtraction,
+                  Operation.multiplication,
+                  Operation.division,
+                ]);
+      await state.replayGame();
+      state.rt.timer?.cancel();
+      expect(state.activeRunSnapshot!.operationQuestStageId, stage);
+      expect(state.rt.q!.type, isIn(pool));
+    }
+  });
+
+  testWidgets('Integer Quest hard completion keeps its result identity',
+      (tester) async {
+    final state = await _makeState();
+    addTearDown(state.dispose);
+    state.operationQuestProgress = OperationQuestProgress({
+      OperationQuestStageId.integersMedium: 1,
+    });
+    state.startOperationQuestStage(OperationQuestStageId.integersHard);
+    state.startGame();
+    await _finishQuest(tester, state, correctAnswers: 6);
+
+    expect(state.resultIcon, '🔢');
+    expect(state.resultTitle, 'Integer Quest Complete');
+    expect(state.operationQuestResultStars, 1);
+    await tester.pump(const Duration(seconds: 3));
   });
 }
 
