@@ -28,7 +28,10 @@ enum OperationQuestStageId {
   missingNumberHard('missing_number_hard'),
   trueFalseEasy('true_false_easy'),
   trueFalseMedium('true_false_medium'),
-  trueFalseHard('true_false_hard');
+  trueFalseHard('true_false_hard'),
+  integersEasy('integers_easy'),
+  integersMedium('integers_medium'),
+  integersHard('integers_hard');
 
   const OperationQuestStageId(this.storageId);
 
@@ -50,6 +53,9 @@ class OperationQuestStage {
     required this.difficulty,
     this.questionMechanic = QuestionMechanic.standard,
     this.answerStyle = AnswerStyle.choice4,
+    this.numberType = NumberType.natural,
+    this.operationPool,
+    this.integerQuest = false,
   });
 
   final OperationQuestStageId id;
@@ -58,7 +64,9 @@ class OperationQuestStage {
   final Difficulty difficulty;
   final QuestionMechanic questionMechanic;
   final AnswerStyle answerStyle;
-  NumberType get numberType => NumberType.natural;
+  final NumberType numberType;
+  final List<Operation>? operationPool;
+  final bool integerQuest;
   int get questionTarget => 10;
 }
 
@@ -216,6 +224,38 @@ const operationQuestStages = <OperationQuestStage>[
     difficulty: Difficulty.hard,
     answerStyle: AnswerStyle.trueFalse,
   ),
+  OperationQuestStage(
+    id: OperationQuestStageId.integersEasy,
+    title: 'Integer Foundations',
+    operation: Operation.mixed,
+    difficulty: Difficulty.easy,
+    numberType: NumberType.integers,
+    operationPool: [Operation.addition, Operation.subtraction],
+    integerQuest: true,
+  ),
+  OperationQuestStage(
+    id: OperationQuestStageId.integersMedium,
+    title: 'Signed Products',
+    operation: Operation.mixed,
+    difficulty: Difficulty.medium,
+    numberType: NumberType.integers,
+    operationPool: [Operation.multiplication, Operation.division],
+    integerQuest: true,
+  ),
+  OperationQuestStage(
+    id: OperationQuestStageId.integersHard,
+    title: 'Integer Quest Master',
+    operation: Operation.mixed,
+    difficulty: Difficulty.hard,
+    numberType: NumberType.integers,
+    operationPool: [
+      Operation.addition,
+      Operation.subtraction,
+      Operation.multiplication,
+      Operation.division,
+    ],
+    integerQuest: true,
+  ),
 ];
 
 OperationQuestStage operationQuestStage(OperationQuestStageId id) =>
@@ -325,6 +365,12 @@ class OperationQuestProgress {
           bestStars(OperationQuestStageId.trueFalseEasy) >= 1,
         OperationQuestStageId.trueFalseHard =>
           bestStars(OperationQuestStageId.trueFalseMedium) >= 1,
+        OperationQuestStageId.integersEasy =>
+          bestStars(OperationQuestStageId.trueFalseHard) >= 1,
+        OperationQuestStageId.integersMedium =>
+          bestStars(OperationQuestStageId.integersEasy) >= 1,
+        OperationQuestStageId.integersHard =>
+          bestStars(OperationQuestStageId.integersMedium) >= 1,
       };
 
   OperationQuestProgress recordBest(OperationQuestStageId id, int value) {

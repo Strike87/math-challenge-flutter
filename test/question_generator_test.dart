@@ -275,6 +275,100 @@ void main() {
 
       expect(state.p[1].correct, 1);
     });
+
+    test('Integer Quest uses signed direct questions with exact ranges', () {
+      final generator = QuestionGenerator(rng: Random(17));
+      final ranges = {
+        (Difficulty.easy, Operation.addition): _IntRange(1, 10),
+        (Difficulty.easy, Operation.subtraction): _IntRange(1, 9),
+        (Difficulty.medium, Operation.multiplication): _IntRange(2, 10),
+        (Difficulty.medium, Operation.division): _IntRange(2, 10),
+        (Difficulty.hard, Operation.addition): _IntRange(25, 99),
+        (Difficulty.hard, Operation.subtraction): _IntRange(15, 79),
+        (Difficulty.hard, Operation.multiplication): _IntRange(3, 12),
+        (Difficulty.hard, Operation.division): _IntRange(3, 12),
+      };
+      for (final entry in ranges.entries) {
+        for (var i = 0; i < 40; i++) {
+          final q = generator.build(
+            type: entry.key.$2,
+            diff: entry.key.$1,
+            numType: NumberType.integers,
+            integerQuest: true,
+          );
+          expect(q.text, endsWith(' = ?'));
+          _expectChoicesAreValid(q);
+          final values = RegExp(r'-?\d+')
+              .allMatches(q.text)
+              .map((m) => int.parse(m.group(0)!))
+              .toList();
+          if (entry.key.$2 == Operation.division) {
+            expect(values[1].abs(),
+                inInclusiveRange(entry.value.min, entry.value.max));
+            expect(q.ans.abs(),
+                inInclusiveRange(entry.value.min, entry.value.max));
+            expect(values[0], values[1] * q.ans);
+          } else {
+            for (final value in values) {
+              expect(value.abs(),
+                  inInclusiveRange(entry.value.min, entry.value.max));
+            }
+          }
+        }
+      }
+    });
+
+    test('Integer Quest preserves signed subtraction and division arithmetic',
+        () {
+      final subtraction = QuestionGenerator(rng: Random(29));
+      final subtractionSigns = <(bool, bool)>{};
+      var crossesZero = false;
+      for (var i = 0; i < 400; i++) {
+        final q = subtraction.build(
+          type: Operation.subtraction,
+          diff: Difficulty.easy,
+          numType: NumberType.integers,
+          integerQuest: true,
+        );
+        final match =
+            RegExp(r'^\(?(-?\d+)\)? − \(?(-?\d+)\)? = \?$').firstMatch(q.text)!;
+        final a = int.parse(match.group(1)!);
+        final b = int.parse(match.group(2)!);
+        subtractionSigns.add((a < 0, b < 0));
+        crossesZero = crossesZero || (a > 0 && b > 0 && q.ans < 0);
+        expect(q.ans, a - b);
+      }
+      expect(
+          subtractionSigns,
+          containsAll(<(bool, bool)>{
+            (false, false),
+            (false, true),
+            (true, false),
+            (true, true)
+          }));
+      expect(crossesZero, isTrue);
+
+      final division = QuestionGenerator(rng: Random(37));
+      var foundNegativeDivisor = false;
+      var foundNegativeQuotient = false;
+      for (var i = 0; i < 400; i++) {
+        final q = division.build(
+          type: Operation.division,
+          diff: Difficulty.medium,
+          numType: NumberType.integers,
+          integerQuest: true,
+        );
+        final values = RegExp(r'-?\d+')
+            .allMatches(q.text)
+            .map((match) => int.parse(match.group(0)!))
+            .toList();
+        foundNegativeDivisor = foundNegativeDivisor || values[1] < 0;
+        foundNegativeQuotient = foundNegativeQuotient || q.ans < 0;
+        expect(values[0], values[1] * q.ans);
+      }
+      expect(foundNegativeDivisor, isTrue);
+      expect(foundNegativeQuotient, isTrue);
+    });
   });
 }
 

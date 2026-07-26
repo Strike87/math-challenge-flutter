@@ -16,9 +16,11 @@ class QuestionGenerator {
     required Operation type,
     required Difficulty diff,
     required NumberType numType,
+    bool integerQuest = false,
   }) {
-    var q = _buildBase(type, diff);
-    q = _applyNumType(q, type, diff, numType);
+    var q = integerQuest
+        ? _buildIntegerQuest(type, diff)
+        : _applyNumType(_buildBase(type, diff), type, diff, numType);
     final choices = _buildChoices(q, numType);
     return Question(
       type: q.type,
@@ -30,6 +32,59 @@ class QuestionGenerator {
       numType: numType,
       ratDP: q.ratDP,
     );
+  }
+
+  _QBase _buildIntegerQuest(Operation type, Difficulty diff) {
+    int magnitude(int easyMin, int easyMax, int hardMin, int hardMax) =>
+        _randInt(
+          diff == Difficulty.hard ? hardMin : easyMin,
+          diff == Difficulty.hard ? hardMax : easyMax,
+        );
+    int signed(int value) => _rng.nextBool() ? -value : value;
+    String wrap(int value) => value < 0 ? '($value)' : '$value';
+
+    switch (type) {
+      case Operation.addition:
+        final a = signed(magnitude(1, 10, 25, 99));
+        final b = signed(magnitude(1, 10, 25, 99));
+        return _QBase(
+          type: type,
+          key: 'qi+$a+$b',
+          text: '${wrap(a)} + ${wrap(b)} = ?',
+          ans: a + b,
+        );
+      case Operation.subtraction:
+        final a = signed(magnitude(1, 9, 15, 79));
+        final b = signed(magnitude(1, 9, 15, 79));
+        return _QBase(
+          type: type,
+          key: 'qi-$a-$b',
+          text: '${wrap(a)} − ${wrap(b)} = ?',
+          ans: a - b,
+        );
+      case Operation.multiplication:
+        final a = signed(magnitude(2, 10, 3, 12));
+        final b = signed(magnitude(2, 10, 3, 12));
+        return _QBase(
+          type: type,
+          key: 'qix${a}x$b',
+          text: '${wrap(a)} × ${wrap(b)} = ?',
+          ans: a * b,
+        );
+      case Operation.division:
+        final divisor = signed(magnitude(2, 10, 3, 12));
+        final quotient = signed(magnitude(2, 10, 3, 12));
+        final dividend = divisor * quotient;
+        return _QBase(
+          type: type,
+          key: 'qid$dividend/$divisor',
+          text: '${wrap(dividend)} ÷ ${wrap(divisor)} = ?',
+          ans: quotient,
+        );
+      default:
+        throw ArgumentError.value(
+            type, 'type', 'Integer Quest needs a basic operation.');
+    }
   }
 
   // ─── Base builder ───────────────────────────────────────────
