@@ -17,10 +17,13 @@ class QuestionGenerator {
     required Difficulty diff,
     required NumberType numType,
     bool integerQuest = false,
+    bool decimalQuest = false,
   }) {
     var q = integerQuest
         ? _buildIntegerQuest(type, diff)
-        : _applyNumType(_buildBase(type, diff), type, diff, numType);
+        : decimalQuest
+            ? _buildDecimalQuest(type, diff)
+            : _applyNumType(_buildBase(type, diff), type, diff, numType);
     final choices = _buildChoices(q, numType);
     return Question(
       type: q.type,
@@ -32,6 +35,64 @@ class QuestionGenerator {
       numType: numType,
       ratDP: q.ratDP,
     );
+  }
+
+  _QBase _buildDecimalQuest(Operation type, Difficulty diff) {
+    final decimalPlaces = diff == Difficulty.hard ? 2 : 1;
+    final factor = pow(10, decimalPlaces).toInt();
+    double decimal(int minWhole, int maxWhole) => double.parse(
+        (_randInt(minWhole * factor + 1, (maxWhole + 1) * factor - 1) / factor)
+            .toStringAsFixed(decimalPlaces));
+    double quantize(num value) =>
+        double.parse(value.toStringAsFixed(decimalPlaces));
+
+    switch (type) {
+      case Operation.addition:
+        final a = decimal(1, 15);
+        final b = decimal(1, 15);
+        return _QBase(
+          type: type,
+          key: 'dqa$a+$b',
+          text: '$a + $b = ?',
+          ans: quantize(a + b),
+          ratDP: decimalPlaces,
+        );
+      case Operation.subtraction:
+        final b = decimal(1, 15);
+        final result = decimal(1, 8);
+        final a = quantize(b + result);
+        return _QBase(
+          type: type,
+          key: 'dqs$a-$b',
+          text: '$a − $b = ?',
+          ans: result,
+          ratDP: decimalPlaces,
+        );
+      case Operation.multiplication:
+        final a = decimal(1, 15);
+        final b = _randInt(2, 9);
+        return _QBase(
+          type: type,
+          key: 'dqm${a}x$b',
+          text: '$a × $b = ?',
+          ans: quantize(a * b),
+          ratDP: decimalPlaces,
+        );
+      case Operation.division:
+        final b = _randInt(2, 9);
+        final result = decimal(1, 15);
+        final a = quantize(b * result);
+        return _QBase(
+          type: type,
+          key: 'dqd$a/$b',
+          text: '$a ÷ $b = ?',
+          ans: result,
+          ratDP: decimalPlaces,
+        );
+      default:
+        throw ArgumentError.value(
+            type, 'type', 'Decimal Quest needs a basic operation.');
+    }
   }
 
   _QBase _buildIntegerQuest(Operation type, Difficulty diff) {

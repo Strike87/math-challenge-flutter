@@ -166,6 +166,7 @@ class GameRunSnapshot {
     this.questionMechanic = QuestionMechanic.standard,
     this.operationPool,
     this.integerQuest = false,
+    this.decimalQuest = false,
     this.weakSkillsPlan,
   });
 
@@ -181,6 +182,7 @@ class GameRunSnapshot {
   final QuestionMechanic questionMechanic;
   final List<Operation>? operationPool;
   final bool integerQuest;
+  final bool decimalQuest;
   final WeakSkillsPlan? weakSkillsPlan;
 }
 
@@ -1646,6 +1648,7 @@ class GameState extends ChangeNotifier {
           ? null
           : List.unmodifiable(stage.operationPool!),
       integerQuest: stage.integerQuest,
+      decimalQuest: stage.decimalQuest,
     );
   }
 
@@ -1757,6 +1760,7 @@ class GameState extends ChangeNotifier {
             diff: d,
             numType: generatedNumType,
             integerQuest: _runSnapshot?.integerQuest ?? false,
+            decimalQuest: _runSnapshot?.decimalQuest ?? false,
           );
     Question? retainedMissingOperationQuestion;
     String? retainedMissingOperationKey;
@@ -1767,6 +1771,7 @@ class GameState extends ChangeNotifier {
         diff: d,
         numType: generatedNumType,
         integerQuest: _runSnapshot?.integerQuest ?? false,
+        decimalQuest: _runSnapshot?.decimalQuest ?? false,
       );
       final question = switch (_runSnapshot?.questionMechanic) {
         QuestionMechanic.missingOperation =>
@@ -1803,6 +1808,7 @@ class GameState extends ChangeNotifier {
           diff: d,
           numType: generatedNumType,
           integerQuest: _runSnapshot?.integerQuest ?? false,
+          decimalQuest: _runSnapshot?.decimalQuest ?? false,
         );
         rt.usedFacts.add(q.key);
       }
@@ -2603,6 +2609,19 @@ class GameState extends ChangeNotifier {
         resultTitle = stage.difficulty == Difficulty.hard &&
                 operationQuestResultStars >= 1
             ? 'Integer Quest Complete'
+            : '${stage.title} Complete';
+        final stars = List.filled(operationQuestResultStars, '⭐').join();
+        final emptyStars =
+            List.filled(3 - operationQuestResultStars, '☆').join();
+        resultDescription =
+            '${p1.correct}/${stage.questionTarget} correct • $stars$emptyStars';
+        return;
+      }
+      if (stage.decimalQuest) {
+        resultIcon = '💧';
+        resultTitle = stage.difficulty == Difficulty.hard &&
+                operationQuestResultStars >= 1
+            ? 'Decimal Quest Complete'
             : '${stage.title} Complete';
         final stars = List.filled(operationQuestResultStars, '⭐').join();
         final emptyStars =

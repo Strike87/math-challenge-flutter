@@ -369,7 +369,59 @@ void main() {
       expect(foundNegativeDivisor, isTrue);
       expect(foundNegativeQuotient, isTrue);
     });
+
+    test('Decimal Quest includes its exact operand and subtraction bounds', () {
+      for (final entry in <(Difficulty, double, double, double)>[
+        (Difficulty.easy, 1.1, 15.9, 8.9),
+        (Difficulty.hard, 1.01, 15.99, 8.99),
+      ]) {
+        for (final upperBound in [false, true]) {
+          final expectedOperand = upperBound ? entry.$3 : entry.$2;
+          final expectedDifference = upperBound ? entry.$4 : entry.$2;
+          for (final operation in _ops) {
+            final q = QuestionGenerator(rng: _BoundRandom(upperBound)).build(
+              type: operation,
+              diff: entry.$1,
+              numType: NumberType.rationals,
+              decimalQuest: true,
+            );
+            expect(q.text, endsWith(' = ?'));
+            expect(q.ratDP, entry.$1 == Difficulty.hard ? 2 : 1);
+            switch (operation) {
+              case Operation.addition:
+                expect(q.text, contains(expectedOperand.toString()));
+              case Operation.subtraction:
+                expect(q.ans, expectedDifference);
+              case Operation.multiplication:
+                expect(q.text, startsWith('$expectedOperand ×'));
+              case Operation.division:
+                expect(q.ans, expectedOperand);
+              case Operation.mixed:
+              case Operation.master:
+              case Operation.dailyBoss:
+              case Operation.survival:
+                fail('Unexpected Decimal Quest operation: $operation');
+            }
+          }
+        }
+      }
+    });
   });
+}
+
+class _BoundRandom implements Random {
+  const _BoundRandom(this.upperBound);
+
+  final bool upperBound;
+
+  @override
+  bool nextBool() => upperBound;
+
+  @override
+  double nextDouble() => upperBound ? 1 : 0;
+
+  @override
+  int nextInt(int max) => upperBound ? max - 1 : 0;
 }
 
 Future<GameState> _makeState() async {

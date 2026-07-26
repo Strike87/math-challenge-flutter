@@ -1089,6 +1089,37 @@ void main() {
       expect(find.text('-16'), findsOneWidget);
       expectNoVisualException(tester);
     });
+    testWidgets('Decimal Quest renders clean decimal choices', (tester) async {
+      final state = await _makeState({
+        'mc_dark': false,
+        'mc_operationQuestProgress':
+            '{"version":1,"stars":{"integers_hard":1}}',
+      });
+      state.startOperationQuestStage(OperationQuestStageId.decimalsEasy);
+      state.startGame();
+      state.rt.timer?.cancel();
+      state.rt.timer = null;
+      state.rt.q = const Question(
+        type: Operation.addition,
+        key: 'visual-decimal-quest',
+        text: '1.1 + 0.2 = ?',
+        ans: 1.3,
+        choices: [1.1, 1.2, 1.3, 1.4],
+        diff: Difficulty.easy,
+        numType: NumberType.rationals,
+        ratDP: 1,
+      );
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+
+      expect(state.isOperationQuest, isTrue);
+      expect(find.text('1.3'), findsOneWidget);
+      expect(find.textContaining('00000000000000004'), findsNothing);
+      expectNoVisualException(tester);
+    });
     testWidgets('23. Toast banner phone light and dark', (tester) async {
       final state = await _makeState({'mc_dark': false});
       state.currentScreen = GameScreen.menu;
