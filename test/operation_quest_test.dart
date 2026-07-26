@@ -233,6 +233,27 @@ void main() {
           NumberType.integers,
           10
         ),
+        (
+          'Decimal Foundations',
+          Difficulty.easy,
+          Operation.mixed,
+          NumberType.rationals,
+          10
+        ),
+        (
+          'Decimal Products',
+          Difficulty.medium,
+          Operation.mixed,
+          NumberType.rationals,
+          10
+        ),
+        (
+          'Decimal Quest Master',
+          Difficulty.hard,
+          Operation.mixed,
+          NumberType.rationals,
+          10
+        ),
       ],
     );
     expect(
@@ -265,6 +286,9 @@ void main() {
         'integers_easy',
         'integers_medium',
         'integers_hard',
+        'decimals_easy',
+        'decimals_medium',
+        'decimals_hard',
       ],
     );
     expect(
@@ -275,6 +299,7 @@ void main() {
         ...List.filled(3, QuestionMechanic.missingNumber),
         ...List.filled(3, QuestionMechanic.standard),
         ...List.filled(3, QuestionMechanic.standard),
+        ...List.filled(3, QuestionMechanic.standard),
       ],
     );
     expect(
@@ -282,6 +307,7 @@ void main() {
       [
         ...List.filled(21, AnswerStyle.choice4),
         ...List.filled(3, AnswerStyle.trueFalse),
+        ...List.filled(3, AnswerStyle.choice4),
         ...List.filled(3, AnswerStyle.choice4),
       ],
     );
@@ -1448,7 +1474,7 @@ void main() {
     );
 
     expect(find.text('Operation Quest'), findsOneWidget);
-    expect(find.text('9 TRAILS • 27 STAGES'), findsOneWidget);
+    expect(find.text('10 TRAILS • 30 STAGES'), findsOneWidget);
     await tester.tap(find.text('Operation Quest'));
     await tester.pump();
     expect(find.text('➕ Addition Trail'), findsOneWidget);
@@ -1460,6 +1486,7 @@ void main() {
     expect(find.text('🔢 Missing Number Trail'), findsOneWidget);
     expect(find.text('✅ True / False Quest'), findsOneWidget);
     expect(find.text('🔢 Integer Quest'), findsOneWidget);
+    expect(find.text('💧 Decimal Quest'), findsOneWidget);
     expect(find.text('First Sums'), findsOneWidget);
     expect(find.text('Bigger Sums'), findsOneWidget);
     expect(find.text('Addition Challenge'), findsOneWidget);
@@ -1487,7 +1514,10 @@ void main() {
     expect(find.text('Integer Foundations'), findsOneWidget);
     expect(find.text('Signed Products'), findsOneWidget);
     expect(find.text('Integer Quest Master'), findsOneWidget);
-    expect(find.text('🔒'), findsNWidgets(26));
+    expect(find.text('Decimal Foundations'), findsOneWidget);
+    expect(find.text('Decimal Products'), findsOneWidget);
+    expect(find.text('Decimal Quest Master'), findsOneWidget);
+    expect(find.text('🔒'), findsNWidgets(29));
 
     state.startOperationQuestStage(OperationQuestStageId.subtractionEasy);
     expect(state.currentScreen, GameScreen.menu);
@@ -1563,7 +1593,7 @@ void main() {
     await tester.drag(scrollable, const Offset(0, -300));
     await tester.pump();
     expect(scrollState.position.pixels, greaterThan(0));
-    await tester.ensureVisible(find.text('Missing Number Master'));
+    await tester.ensureVisible(find.text('Decimal Quest Master'));
     expect(find.text('Close').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -1658,6 +1688,91 @@ void main() {
 
     expect(state.resultIcon, '🔢');
     expect(state.resultTitle, 'Integer Quest Complete');
+    expect(state.operationQuestResultStars, 1);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  test('Decimal Quest snapshots direct-only pools without normal unlock costs',
+      () async {
+    final state = await _makeState();
+    addTearDown(state.dispose);
+    state
+      ..numType = NumberType.integers
+      ..coins = 1200
+      ..numTypeUnlocked = {'integers': 1, 'rationals': 0}
+      ..operationQuestProgress = OperationQuestProgress({
+        OperationQuestStageId.integersHard: 1,
+      });
+
+    state.startOperationQuestStage(OperationQuestStageId.decimalsEasy);
+    state.startGame();
+    state.rt.timer?.cancel();
+
+    expect(state.numType, NumberType.integers);
+    expect(state.coins, 1200);
+    expect(state.numTypeUnlocked, {'integers': 1, 'rationals': 0});
+    expect(state.activeRunSnapshot?.numberType, NumberType.rationals);
+    expect(state.activeRunSnapshot?.decimalQuest, isTrue);
+    expect(state.activeRunSnapshot?.operationPool,
+        [Operation.addition, Operation.subtraction]);
+    expect(state.rt.q?.type, isIn([Operation.addition, Operation.subtraction]));
+    expect(state.rt.q?.text, endsWith(' = ?'));
+
+    await state.replayGame();
+    state.rt.timer?.cancel();
+    expect(state.activeRunSnapshot?.operationQuestStageId,
+        OperationQuestStageId.decimalsEasy);
+    expect(state.activeRunSnapshot?.decimalQuest, isTrue);
+    expect(state.rt.q?.type, isIn([Operation.addition, Operation.subtraction]));
+    expect(state.rt.q?.text, endsWith(' = ?'));
+  });
+
+  test('Decimal Quest medium and hard stages retain their direct pools',
+      () async {
+    final state = await _makeState();
+    addTearDown(state.dispose);
+    for (final stage in [
+      OperationQuestStageId.decimalsMedium,
+      OperationQuestStageId.decimalsHard,
+    ]) {
+      state.operationQuestProgress = OperationQuestProgress({
+        stage == OperationQuestStageId.decimalsMedium
+            ? OperationQuestStageId.decimalsEasy
+            : OperationQuestStageId.decimalsMedium: 1,
+      });
+      state.startOperationQuestStage(stage);
+      state.startGame();
+      state.rt.timer?.cancel();
+      final pool = state.activeRunSnapshot!.operationPool!;
+      expect(state.rt.q!.type, isIn(pool));
+      expect(state.rt.q!.text, endsWith(' = ?'));
+      expect(
+        pool,
+        stage == OperationQuestStageId.decimalsMedium
+            ? [Operation.multiplication, Operation.division]
+            : [
+                Operation.addition,
+                Operation.subtraction,
+                Operation.multiplication,
+                Operation.division,
+              ],
+      );
+    }
+  });
+
+  testWidgets('Decimal Quest hard completion keeps its result identity',
+      (tester) async {
+    final state = await _makeState();
+    addTearDown(state.dispose);
+    state.operationQuestProgress = OperationQuestProgress({
+      OperationQuestStageId.decimalsMedium: 1,
+    });
+    state.startOperationQuestStage(OperationQuestStageId.decimalsHard);
+    state.startGame();
+    await _finishQuest(tester, state, correctAnswers: 6);
+
+    expect(state.resultIcon, '💧');
+    expect(state.resultTitle, 'Decimal Quest Complete');
     expect(state.operationQuestResultStars, 1);
     await tester.pump(const Duration(seconds: 3));
   });

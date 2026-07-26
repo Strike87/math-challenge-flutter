@@ -579,6 +579,15 @@ class OperationQuestModal extends StatelessWidget {
             gs: gs,
             accent: GameConfig.grape,
           ),
+          const SizedBox(height: 14),
+          _OperationQuestTrail(
+            heading: '💧 Decimal Quest',
+            stages: operationQuestStages
+                .where((stage) => stage.decimalQuest)
+                .toList(),
+            gs: gs,
+            accent: GameConfig.sky,
+          ),
         ],
       ),
     );
