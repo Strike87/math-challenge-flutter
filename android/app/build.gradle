@@ -71,4 +71,5 @@ flutter {
 dependencies {
     implementation "androidx.window:window:1.2.0"
     implementation "androidx.window:window-java:1.2.0"
+    implementation "com.google.android.gms:play-services-games-v2:21.0.0"
 }

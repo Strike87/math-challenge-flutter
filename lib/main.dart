@@ -12,6 +12,7 @@ import 'services/settings.dart';
 import 'services/audio.dart';
 import 'services/admob.dart';
 import 'services/iap.dart';
+import 'services/play_games.dart';
 import 'screens/menu_screen.dart';
 import 'screens/numtype_screen.dart';
 import 'screens/config_screen.dart';
@@ -49,10 +50,12 @@ class MathChallengeApp extends StatelessWidget {
     super.key,
     required this.adService,
     required this.iapAdapter,
+    this.playGamesService,
   });
 
   final AdMobService adService;
   final IapPurchaseAdapter iapAdapter;
+  final PlayGamesService? playGamesService;
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +84,7 @@ class MathChallengeApp extends StatelessWidget {
             settings: s,
             audio: a,
             adService: adService,
+            playGamesService: playGamesService,
             iapAdapter: iapAdapter,
             iapPurchaseStream: iapAdapter is NativeIapPurchaseAdapter
                 ? (iapAdapter as NativeIapPurchaseAdapter).purchaseStream
@@ -149,6 +153,10 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(context.read<gs.GameState>().checkPlayGamesConnection());
+    });
   }
 
   @override

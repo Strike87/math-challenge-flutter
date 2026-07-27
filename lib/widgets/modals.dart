@@ -15,6 +15,7 @@ import '../models/game_data.dart';
 import '../models/player.dart';
 import '../services/iap.dart';
 import '../services/link_launcher.dart';
+import '../services/play_games.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
 
@@ -1331,6 +1332,31 @@ class SettingsModal extends StatelessWidget {
                   ),
                   _SettingsDivider(s: s),
                   _SettingsActionTile(
+                    icon: Icons.sports_esports_rounded,
+                    title: 'Play Games',
+                    subtitle: switch (gs.playGamesConnectionState) {
+                      PlayGamesConnectionState.checking => 'Checking...',
+                      PlayGamesConnectionState.connected => 'Connected',
+                      PlayGamesConnectionState.disconnected ||
+                      PlayGamesConnectionState.unavailable =>
+                        'Not connected',
+                    },
+                    actionLabel: switch (gs.playGamesConnectionState) {
+                      PlayGamesConnectionState.disconnected ||
+                      PlayGamesConnectionState.unavailable =>
+                        'Connect Play Games',
+                      _ => null,
+                    },
+                    color: GameConfig.sky,
+                    onTap: switch (gs.playGamesConnectionState) {
+                      PlayGamesConnectionState.disconnected ||
+                      PlayGamesConnectionState.unavailable =>
+                        gs.connectPlayGames,
+                      _ => null,
+                    },
+                  ),
+                  _SettingsDivider(s: s),
+                  _SettingsActionTile(
                     icon: Icons.restore_rounded,
                     title: 'Restore Purchases',
                     subtitle: 'Check this account for previous purchases',
@@ -1879,14 +1905,16 @@ class _SettingsActionTile extends StatelessWidget {
     required this.color,
     required this.onTap,
     this.destructive = false,
+    this.actionLabel,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final int color;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool destructive;
+  final String? actionLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -1935,11 +1963,21 @@ class _SettingsActionTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: destructive ? accent : s.muted,
-            ),
+            if (actionLabel case final label?)
+              Text(
+                label,
+                style: TextStyle(
+                  color: accent,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              )
+            else if (onTap != null)
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: destructive ? accent : s.muted,
+              ),
           ],
         ),
       ),
