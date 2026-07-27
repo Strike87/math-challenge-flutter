@@ -7,11 +7,63 @@ import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
 import 'package:math_challenge/widgets/modals.dart';
+import 'package:math_challenge/features/modals/presentation/widgets/skill_dashboard_cards.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets(
+    'dashboard shows zero only for untouched skill mastery',
+    (tester) async {
+      final state = await _makeState();
+      addTearDown(state.dispose);
+
+      state.skillMap = {
+        Operation.addition.name: SkillData(mastery: 20, count: 0),
+        Operation.subtraction.name: SkillData(mastery: 63, count: 5),
+        Operation.multiplication.name: SkillData(mastery: 20, count: 0),
+        Operation.division.name: SkillData(mastery: 20, count: 0),
+      };
+
+      state.showModal(GameModal.skillDashboard);
+      await _pumpDashboard(tester, state);
+
+      expect(find.text('0%'), findsNWidgets(3));
+      expect(find.text('63%'), findsOneWidget);
+
+      final additionCard = find.byWidgetPredicate(
+        (widget) => widget is SkillMasteryCard && widget.label == 'Addition',
+      );
+      final subtractionCard = find.byWidgetPredicate(
+        (widget) => widget is SkillMasteryCard && widget.label == 'Subtraction',
+      );
+
+      expect(
+        tester
+            .widget<LinearProgressIndicator>(
+              find.descendant(
+                of: additionCard,
+                matching: find.byType(LinearProgressIndicator),
+              ),
+            )
+            .value,
+        0,
+      );
+      expect(
+        tester
+            .widget<LinearProgressIndicator>(
+              find.descendant(
+                of: subtractionCard,
+                matching: find.byType(LinearProgressIndicator),
+              ),
+            )
+            .value,
+        0.63,
+      );
+    },
+  );
 
   testWidgets(
     'dashboard shows exactly four canonical mastery skills and is read-only',

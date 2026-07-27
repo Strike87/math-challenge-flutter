@@ -4722,6 +4722,22 @@ class SkillDashboardModal extends StatelessWidget {
         color: const Color(GameConfig.sky),
       ),
     ];
+    final skillCards = <Widget>[];
+    for (var i = 0; i < skills.length; i++) {
+      final skill = gs.skillMap[skills[i].operation.name];
+      final displayMastery =
+          skill == null || skill.count == 0 ? 0.0 : skill.mastery;
+      skillCards.add(
+        SkillMasteryCard(
+          settings: s,
+          symbol: skills[i].symbol,
+          label: skills[i].label,
+          masteryPercent: displayMastery,
+          accentColor: skills[i].color,
+        ),
+      );
+      if (i < skills.length - 1) skillCards.add(const SizedBox(height: 10));
+    }
 
     return ModalShell(
       icon: '📈',
@@ -4753,17 +4769,7 @@ class SkillDashboardModal extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          for (var i = 0; i < skills.length; i++) ...[
-            SkillMasteryCard(
-              settings: s,
-              symbol: skills[i].symbol,
-              label: skills[i].label,
-              masteryPercent:
-                  gs.skillMap[skills[i].operation.name]?.mastery ?? 0,
-              accentColor: skills[i].color,
-            ),
-            if (i < skills.length - 1) const SizedBox(height: 10),
-          ],
+          ...skillCards,
           const SizedBox(height: 22),
           WeakSkillsRecommendationCard(
             settings: s,
