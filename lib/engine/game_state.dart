@@ -23,6 +23,7 @@ import '../services/settings.dart';
 import '../services/audio.dart';
 import '../services/iap.dart';
 import '../services/admob.dart';
+import '../services/play_games.dart';
 import 'question_generator.dart';
 
 /// Screen identifier — mirrors the original HTML section IDs.
@@ -225,10 +226,12 @@ class GameState extends ChangeNotifier {
     IapPurchaseAdapter? iapAdapter,
     Stream<List<IapPurchase>>? iapPurchaseStream,
     AdMobService? adService,
+    PlayGamesService? playGamesService,
     AdultGateChallenge Function()? adultGateFactory,
     int Function()? nowMillisProvider,
   })  : iapAdapter = iapAdapter ?? const UnavailableIapPurchaseAdapter(),
         adService = adService ?? const UnavailableAdMobService(),
+        playGamesService = playGamesService ?? NativePlayGamesService(),
         _nowMillis =
             nowMillisProvider ?? (() => DateTime.now().millisecondsSinceEpoch),
         _adultGateFactory =
@@ -322,6 +325,7 @@ class GameState extends ChangeNotifier {
   final AudioService audio;
   final IapPurchaseAdapter iapAdapter;
   final AdMobService adService;
+  final PlayGamesService playGamesService;
   final AdultGateChallenge Function() _adultGateFactory;
   final int Function() _nowMillis;
   final QuestionGenerator _qgen = QuestionGenerator();
@@ -389,6 +393,9 @@ class GameState extends ChangeNotifier {
   int adGameCount = 0;
   int lastRewardedAt = 0;
   bool _pendingInterstitialAd = false;
+  bool _playGamesBusy = false;
+  PlayGamesConnectionState playGamesConnectionState =
+      PlayGamesConnectionState.checking;
   final Stopwatch _diagnosticClock = Stopwatch()..start();
 
   GameRunSnapshot? get activeRunSnapshot => _runSnapshot;
@@ -600,6 +607,66 @@ class GameState extends ChangeNotifier {
     await Storage.setString('mc_p1_avatar', p[1].avatar.storageEmoji);
     await Storage.setString('mc_p2_name', p[2].name);
     await Storage.setString('mc_p2_avatar', p[2].avatar.storageEmoji);
+  }
+
+  Future<void> checkPlayGamesConnection() async {
+    if (_playGamesBusy) return;
+    _playGamesBusy = true;
+    _setPlayGamesConnectionState(PlayGamesConnectionState.checking);
+    try {
+      final connected = await playGamesService.isAuthenticated();
+      if (_disposed) return;
+      _setPlayGamesConnectionState(
+        connected
+            ? PlayGamesConnectionState.connected
+            : PlayGamesConnectionState.disconnected,
+      );
+      if (connected) await _reconcilePlayGamesAchievements();
+    } catch (_) {
+      if (!_disposed) {
+        _setPlayGamesConnectionState(PlayGamesConnectionState.unavailable);
+      }
+    } finally {
+      _playGamesBusy = false;
+    }
+  }
+
+  Future<void> connectPlayGames() async {
+    if (_playGamesBusy ||
+        playGamesConnectionState == PlayGamesConnectionState.connected) {
+      return;
+    }
+    _playGamesBusy = true;
+    _setPlayGamesConnectionState(PlayGamesConnectionState.checking);
+    try {
+      final connected = await playGamesService.connect();
+      if (_disposed) return;
+      _setPlayGamesConnectionState(
+        connected
+            ? PlayGamesConnectionState.connected
+            : PlayGamesConnectionState.disconnected,
+      );
+      if (connected) await _reconcilePlayGamesAchievements();
+    } catch (_) {
+      if (!_disposed) {
+        _setPlayGamesConnectionState(PlayGamesConnectionState.unavailable);
+      }
+    } finally {
+      _playGamesBusy = false;
+    }
+  }
+
+  void _setPlayGamesConnectionState(PlayGamesConnectionState value) {
+    playGamesConnectionState = value;
+    if (!_disposed) notifyListeners();
+  }
+
+  Future<void> _reconcilePlayGamesAchievements() async {
+    try {
+      await playGamesService.reconcileUnlockedAchievements(achievements);
+    } catch (_) {
+      // Remote sync is best effort and never mutates local progress.
+    }
   }
 
   Future<void> _persistLoadedMigrationState() async {
@@ -2896,6 +2963,17 @@ class GameState extends ChangeNotifier {
       message: '${a.name} unlocked!',
     );
     showToast('${a.icon} ${a.name} unlocked!');
+    if (playGamesConnectionState == PlayGamesConnectionState.connected) {
+      unawaited(_mirrorPlayGamesAchievement(id));
+    }
+  }
+
+  Future<void> _mirrorPlayGamesAchievement(String id) async {
+    try {
+      await playGamesService.unlockAchievement(id);
+    } catch (_) {
+      // Local achievement state and feedback remain canonical.
+    }
   }
 
   // ─── Daily challenges ───────────────────────────────────────
