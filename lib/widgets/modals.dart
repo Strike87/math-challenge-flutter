@@ -1336,7 +1336,7 @@ class SettingsModal extends StatelessWidget {
                     title: 'Play Games',
                     subtitle: switch (gs.playGamesConnectionState) {
                       PlayGamesConnectionState.checking => 'Checking...',
-                      PlayGamesConnectionState.connected => 'Connected',
+                      PlayGamesConnectionState.connected => '',
                       PlayGamesConnectionState.disconnected ||
                       PlayGamesConnectionState.unavailable =>
                         'Not connected',
@@ -1344,7 +1344,8 @@ class SettingsModal extends StatelessWidget {
                     actionLabel: switch (gs.playGamesConnectionState) {
                       PlayGamesConnectionState.disconnected ||
                       PlayGamesConnectionState.unavailable =>
-                        'Connect Play Games',
+                        'Connect',
+                      PlayGamesConnectionState.connected => 'Connected',
                       _ => null,
                     },
                     color: GameConfig.sky,

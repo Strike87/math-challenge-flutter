@@ -132,7 +132,8 @@ void main() {
     expect(state.achievements.values, everyElement(isFalse));
   });
 
-  testWidgets('Settings shows states and dispatches Connect exactly once',
+  testWidgets(
+      'Settings shows compact Play Games states and dispatches Connect once',
       (tester) async {
     final pendingConnect = Completer<bool>();
     final service = _FakePlayGamesService()
@@ -143,27 +144,32 @@ void main() {
       ..playGamesConnectionState = PlayGamesConnectionState.disconnected
       ..showModal(GameModal.settings);
 
-    await tester.pumpWidget(_modalHost(state));
+    await tester.pumpWidget(_modalHost(state, size: const Size(320, 700)));
     await tester.pump();
 
     expect(find.text('Play Games'), findsOneWidget);
     expect(find.text('Not connected'), findsOneWidget);
-    expect(find.text('Connect Play Games'), findsOneWidget);
+    expect(find.text('Connect'), findsOneWidget);
+    expect(find.text('Restore Purchases'), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
-    await tester.ensureVisible(find.text('Connect Play Games'));
+    await tester.ensureVisible(find.text('Connect'));
     await tester.pump();
-    await tester.tap(find.text('Connect Play Games'));
-    await tester.tap(find.text('Connect Play Games'));
+    await tester.tap(find.text('Connect'));
+    await tester.tap(find.text('Connect'));
     await tester.pump();
 
     expect(service.connectCalls, 1);
+    expect(find.text('Play Games'), findsOneWidget);
     expect(find.text('Checking...'), findsOneWidget);
+    expect(find.text('Connect'), findsNothing);
 
     pendingConnect.complete(true);
     await tester.pumpAndSettle();
 
+    expect(find.text('Play Games'), findsOneWidget);
     expect(find.text('Connected'), findsOneWidget);
-    expect(find.text('Connect Play Games'), findsNothing);
+    expect(find.text('Connect'), findsNothing);
   });
 
   testWidgets('post-frame authentication never blocks startup', (tester) async {
@@ -275,15 +281,15 @@ Future<GameState> _makeState(PlayGamesService playGamesService) async {
   return state;
 }
 
-Widget _modalHost(GameState state) {
+Widget _modalHost(GameState state, {Size size = const Size(390, 700)}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<GameState>.value(value: state),
       ChangeNotifierProvider<SettingsService>.value(value: state.settings),
     ],
-    child: const MaterialApp(
+    child: MaterialApp(
       home: MediaQuery(
-        data: MediaQueryData(size: Size(390, 700)),
+        data: MediaQueryData(size: size),
         child: Scaffold(body: Stack(children: [ModalRouter()])),
       ),
     ),
