@@ -458,7 +458,7 @@ class GameState extends ChangeNotifier {
   bool _disposed = false;
 
   MasterLevel? get clearedMasterLevel {
-    final idx = _masterLevel - 1;
+    final idx = _masterLevel;
     if (currentModal != GameModal.stageCleared ||
         idx < 0 ||
         idx >= GameConfig.masterLevels.length) {
@@ -468,10 +468,11 @@ class GameState extends ChangeNotifier {
   }
 
   MasterLevel? get nextMasterLevel {
-    if (_masterLevel < 0 || _masterLevel >= GameConfig.masterLevels.length) {
+    final idx = _masterLevel + 1;
+    if (idx < 0 || idx >= GameConfig.masterLevels.length) {
       return null;
     }
-    return GameConfig.masterLevels[_masterLevel];
+    return GameConfig.masterLevels[idx];
   }
 
   MasterLevel? get currentMasterLevel {
@@ -2234,13 +2235,12 @@ class GameState extends ChangeNotifier {
     if (isMaster) {
       final lvl = GameConfig.masterLevels[_masterLevel];
       if (_masterProgress >= lvl.goal) {
-        _masterLevel++;
-        if (_masterLevel >= GameConfig.masterLevels.length) {
+        if (_masterLevel == GameConfig.masterLevels.length - 1) {
           // Beat the game!
           unlockAch('math_legend');
           _endGameAfterFeedback(true, false);
         } else {
-          if (_masterLevel >= 3) unlockAch('math_wizard');
+          if (_masterLevel + 1 >= 3) unlockAch('math_wizard');
           _updateDailyProgress('master_stage');
           _showStageClearedAfterFeedback(lvl);
         }
@@ -2768,6 +2768,7 @@ class GameState extends ChangeNotifier {
     closeModal();
     _clearAnswerFeedback();
     rt.state = 'playing';
+    if (_masterLevel < GameConfig.masterLevels.length - 1) _masterLevel++;
     _masterProgress = 0;
     _nextTurn();
   }

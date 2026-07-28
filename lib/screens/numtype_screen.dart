@@ -29,7 +29,7 @@ class NumTypeScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _SetupHeader(
-                      title: 'Choose Number Type',
+                      title: 'Number Type',
                       subtitle: 'Pick your number world',
                       onBack: () => gs.showScreen(GameScreen.menu),
                       s: s,

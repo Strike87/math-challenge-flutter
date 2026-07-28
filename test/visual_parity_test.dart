@@ -857,29 +857,35 @@ void main() {
     testWidgets('10. Stage cleared modal uses real Master stage state',
         (tester) async {
       final state = await _makeState({'mc_dark': false});
-      state.debugSetMasterStage(1);
-      state.currentScreen = GameScreen.game;
-      state.p[1].resetForGame(
-        isSinglePlayer: true,
-        isMasterOrBoss: true,
-      );
-      state.rt = RuntimeState()
-        ..challenge = Operation.master
-        ..gameActive = true
-        ..state = 'playing'
-        ..isWarmUp = false
-        ..maxTurns = state.currentMasterLevel!.goal
-        ..accepting = true
-        ..q = const Question(
-          type: Operation.subtraction,
-          key: '9-4',
-          text: '9 - 4',
-          ans: 5,
-          choices: [3, 4, 5, 6],
-          diff: Difficulty.medium,
-          numType: NumberType.natural,
-        );
-      state.showModal(GameModal.stageCleared);
+      final stage = GameConfig.masterLevels.first;
+      state.debugSetMasterStage(0);
+      state.startGame();
+      for (var i = 0; i < stage.goal; i++) {
+        if (i == stage.goal - 1) {
+          state.rt.q = const Question(
+            type: Operation.addition,
+            key: 'a1+1',
+            text: '1 + 1 = ?',
+            ans: 2,
+            choices: [2, 3, 1, 12],
+            boss: '🦍',
+            diff: Difficulty.easy,
+            numType: NumberType.natural,
+          );
+        }
+        state.onAnswer(state.rt.q!.ans);
+        if (i < stage.goal - 1) {
+          await tester.pump(const Duration(milliseconds: 1300));
+        }
+      }
+      await tester.pump(const Duration(milliseconds: 1300));
+      await tester.pump(const Duration(milliseconds: 1250));
+
+      expect(state.currentModal, GameModal.stageCleared);
+      expect(state.masterLevel, 0);
+      expect(state.masterProgress, stage.goal);
+      expect(state.clearedMasterLevel?.goal, stage.goal);
+      expect(state.currentMasterLevel?.goal, stage.goal);
       await setTestDevice(tester, logicalSize: phoneSize);
       await tester.pumpWidget(
           TestAppWrapper(state: state, child: const TestAppShell()));

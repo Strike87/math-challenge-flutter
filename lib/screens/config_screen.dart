@@ -215,22 +215,29 @@ class ConfigScreen extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                Text(
-                                  'Automatically adjusts the challenge to your skill level',
-                                  style: TextStyle(
-                                    color: s.muted,
-                                    fontSize: 11,
-                                    height: 1.25,
-                                  ),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Automatically adjusts the challenge to your skill level',
+                                        style: TextStyle(
+                                          color: s.muted,
+                                          fontSize: 11,
+                                          height: 1.25,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Switch.adaptive(
+                                      value: gs.adaptive,
+                                      activeThumbColor:
+                                          s.accent(GameConfig.coral),
+                                      onChanged: gs.setAdaptive,
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Switch.adaptive(
-                            value: gs.adaptive,
-                            activeThumbColor: s.accent(GameConfig.coral),
-                            onChanged: gs.setAdaptive,
                           ),
                         ],
                       ),
