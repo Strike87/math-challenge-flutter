@@ -113,13 +113,14 @@ void main() {
 
   CloudProgressDocument document({
     CloudProgress? progress,
+    int revision = 1,
     String revisionId = 'revision',
     String? parentRevisionId,
     List<String> mergeParentRevisionIds = const [],
     int resetGeneration = 0,
   }) =>
       CloudProgressDocument(
-        revision: 1,
+        revision: revision,
         revisionId: revisionId,
         parentRevisionId: parentRevisionId,
         mergeParentRevisionIds: mergeParentRevisionIds,
@@ -228,17 +229,20 @@ void main() {
   test('metadata defaults and reset generation persist', () async {
     final game = await state();
     expect(game.cloudResetGeneration, 0);
+    expect(game.cloudRevision, isNull);
     expect(game.cloudRevisionId, isNull);
     expect(game.cloudParentRevisionId, isNull);
     expect(game.cloudMergeParentRevisionIds, isEmpty);
     expect(game.cloudLastSyncedRevisionId, isNull);
     expect(game.cloudDirty, isFalse);
+    game.cloudRevision = 7;
     game.cloudRevisionId = 'revision';
     game.cloudParentRevisionId = 'parent';
     game.cloudLastSyncedRevisionId = 'synced';
     game.cloudDirty = true;
     await game.save();
     final persisted = await reload();
+    expect(persisted.cloudRevision, 7);
     expect(persisted.cloudRevisionId, 'revision');
     expect(persisted.cloudParentRevisionId, 'parent');
     expect(persisted.cloudMergeParentRevisionIds, isEmpty);
@@ -246,6 +250,7 @@ void main() {
     expect(persisted.cloudDirty, isTrue);
     for (final key in [
       'cloudResetGeneration',
+      'cloudRevision',
       'cloudRevisionId',
       'cloudParentRevisionId',
       'cloudLastSyncedRevisionId',
@@ -257,6 +262,7 @@ void main() {
     await persisted.resetAllData();
     expect(persisted.cloudResetGeneration, 1);
     expect(persisted.cloudDirty, isTrue);
+    expect(persisted.cloudRevision, isNull);
     expect(persisted.cloudRevisionId, isNull);
     expect(persisted.cloudParentRevisionId, isNull);
     expect(persisted.cloudMergeParentRevisionIds, isEmpty);
@@ -265,6 +271,7 @@ void main() {
     final reset = await reload();
     expect(reset.cloudResetGeneration, 1);
     expect(reset.cloudDirty, isTrue);
+    expect(reset.cloudRevision, isNull);
     final decision = const CloudProgressPolicy().decide(
       CloudProgressDocument(
         revision: 0,
@@ -286,7 +293,7 @@ void main() {
     expect(decision.kind, CloudProgressDecisionKind.useCloud);
   });
 
-  test('merge metadata reloads and malformed stored metadata is ignored',
+  test('legacy missing, malformed, and negative cloud revisions load as null',
       () async {
     final game = await state({
       'mc_cloudRevisionId': 'merge',
@@ -294,6 +301,7 @@ void main() {
       'mc_cloudLastSyncedRevisionId': 'merge',
       'mc_cloudDirty': false,
     });
+    expect(game.cloudRevision, isNull);
     expect(game.cloudRevisionId, 'merge');
     expect(game.cloudParentRevisionId, isNull);
     expect(game.cloudMergeParentRevisionIds, ['parent_a', 'parent_b']);
@@ -303,10 +311,19 @@ void main() {
         throwsUnsupportedError);
 
     final malformed = await state({
+      'mc_cloudRevision': 'not-a-revision',
+      'mc_cloudRevisionId': 'linear',
+      'mc_cloudParentRevisionId': 'root',
       'mc_cloudMergeParentRevisionIds': ['parent_a'],
     });
+    expect(malformed.cloudRevision, isNull);
+    expect(malformed.cloudRevisionId, 'linear');
+    expect(malformed.cloudParentRevisionId, 'root');
     expect(malformed.cloudMergeParentRevisionIds, isEmpty);
+    final negative = await state({'mc_cloudRevision': -1});
+    expect(negative.cloudRevision, isNull);
     final missing = await state();
+    expect(missing.cloudRevision, isNull);
     expect(missing.cloudMergeParentRevisionIds, isEmpty);
   });
 
@@ -319,6 +336,7 @@ void main() {
     var notifications = 0;
     game.addListener(() => notifications++);
     final merge = document(
+      revision: 0,
       revisionId: 'merge',
       mergeParentRevisionIds: const ['parent_a', 'parent_b'],
       resetGeneration: 3,
@@ -327,6 +345,7 @@ void main() {
         isTrue);
     expect(game.exportCloudProgress(), local);
     expect(game.cloudResetGeneration, 3);
+    expect(game.cloudRevision, 0);
     expect(game.cloudRevisionId, 'merge');
     expect(game.cloudParentRevisionId, isNull);
     expect(game.cloudMergeParentRevisionIds, ['parent_a', 'parent_b']);
@@ -334,6 +353,7 @@ void main() {
     expect(game.cloudDirty, isFalse);
     expect(notifications, 1);
     final mergedReload = await reload();
+    expect(mergedReload.cloudRevision, 0);
     expect(mergedReload.cloudRevisionId, 'merge');
     expect(mergedReload.cloudParentRevisionId, isNull);
     expect(mergedReload.cloudMergeParentRevisionIds, ['parent_a', 'parent_b']);
@@ -341,6 +361,7 @@ void main() {
     expect(mergedReload.cloudDirty, isFalse);
 
     final linear = document(
+      revision: 8,
       revisionId: 'child',
       parentRevisionId: 'merge',
       resetGeneration: 3,
@@ -349,8 +370,10 @@ void main() {
         await game.acceptCloudProgressDocument(linear, importProgress: false),
         isTrue);
     expect(game.cloudParentRevisionId, 'merge');
+    expect(game.cloudRevision, 8);
     expect(game.cloudMergeParentRevisionIds, isEmpty);
     final reloaded = await reload();
+    expect(reloaded.cloudRevision, 8);
     expect(reloaded.cloudRevisionId, 'child');
     expect(reloaded.cloudParentRevisionId, 'merge');
     expect(reloaded.cloudMergeParentRevisionIds, isEmpty);
@@ -371,6 +394,7 @@ void main() {
     game.showModal(GameModal.settings);
     final merge = document(
       progress: populatedProgress(),
+      revision: 12,
       revisionId: 'merge',
       mergeParentRevisionIds: const ['parent_a', 'parent_b'],
       resetGeneration: 4,
@@ -378,6 +402,7 @@ void main() {
     expect(await game.acceptCloudProgressDocument(merge, importProgress: true),
         isTrue);
     expect(game.exportCloudProgress(), populatedProgress());
+    expect(game.cloudRevision, 12);
     expect(game.adaptLvlRaw, 9);
     expect(game.adaptLvl, 9);
     expect(game.cloudParentRevisionId, isNull);
@@ -387,11 +412,13 @@ void main() {
     expect(game.currentScreen, GameScreen.config);
     expect(game.currentModal, GameModal.settings);
 
-    final reset = document(revisionId: 'reset', resetGeneration: 5);
+    final reset =
+        document(revision: 9, revisionId: 'reset', resetGeneration: 5);
     expect(await game.acceptCloudProgressDocument(reset, importProgress: true),
         isTrue);
     expect(game.exportCloudProgress(), CloudProgress.empty());
     expect(game.cloudResetGeneration, 5);
+    expect(game.cloudRevision, 9);
     expect(game.cloudParentRevisionId, isNull);
     expect(game.cloudMergeParentRevisionIds, isEmpty);
     expect(game.cloudDirty, isFalse);
@@ -409,6 +436,7 @@ void main() {
         ),
         isTrue);
     await game.resetAllData();
+    expect(game.cloudRevision, isNull);
     expect(game.cloudRevisionId, isNull);
     expect(game.cloudParentRevisionId, isNull);
     expect(game.cloudMergeParentRevisionIds, isEmpty);
@@ -416,6 +444,7 @@ void main() {
     expect(game.cloudResetGeneration, 1);
     expect(game.cloudDirty, isTrue);
     final reset = await reload();
+    expect(reset.cloudRevision, isNull);
     expect(reset.cloudRevisionId, isNull);
     expect(reset.cloudParentRevisionId, isNull);
     expect(reset.cloudMergeParentRevisionIds, isEmpty);
@@ -425,7 +454,7 @@ void main() {
 
     final v1 = CloudProgressDocument.decode(jsonEncode({
       'schemaVersion': 1,
-      'revision': 1,
+      'revision': 7,
       'revisionId': 'v1',
       'parentRevisionId': 'root',
       'resetGeneration': 1,
@@ -434,12 +463,36 @@ void main() {
     })).document!;
     expect(await reset.acceptCloudProgressDocument(v1, importProgress: false),
         isTrue);
+    expect(reset.cloudRevision, 7);
     expect(reset.cloudParentRevisionId, 'root');
     expect(reset.cloudMergeParentRevisionIds, isEmpty);
 
     expect(await reset.importCloudProgress(populatedProgress()), isTrue);
+    expect(reset.cloudRevision, 7);
     expect(reset.cloudParentRevisionId, 'root');
     expect(reset.cloudMergeParentRevisionIds, isEmpty);
+
+    expect(
+      await reset.acceptCloudProgressDocument(
+        document(revision: 0, revisionId: 'root'),
+        importProgress: false,
+      ),
+      isTrue,
+    );
+    expect(reset.cloudRevision, 0);
+    expect(reset.cloudRevisionId, 'root');
+    expect(reset.cloudParentRevisionId, isNull);
+    expect(reset.cloudMergeParentRevisionIds, isEmpty);
+    expect(reset.cloudLastSyncedRevisionId, 'root');
+    expect(reset.cloudDirty, isFalse);
+    expect(
+      await reset.acceptCloudProgressDocument(
+        document(revision: 9, revisionId: 'next', parentRevisionId: 'root'),
+        importProgress: false,
+      ),
+      isTrue,
+    );
+    expect(reset.cloudRevision, 9);
   });
 
   test('cloud-owned and excluded mutation checkpoints dirty correctly',

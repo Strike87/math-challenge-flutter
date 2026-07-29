@@ -369,6 +369,7 @@ class GameState extends ChangeNotifier {
   set coins(int value) => _coinLedger.balance = value;
   int gamesPlayed = 0;
   int cloudResetGeneration = 0;
+  int? cloudRevision;
   String? cloudRevisionId;
   String? cloudParentRevisionId;
   List<String> _cloudMergeParentRevisionIds = [];
@@ -546,6 +547,8 @@ class GameState extends ChangeNotifier {
   // ─── Load / save ────────────────────────────────────────────
   Future<void> load() async {
     cloudResetGeneration = Storage.getInt('mc_cloudResetGeneration', 0);
+    final storedCloudRevision = Storage.getInt('mc_cloudRevision', -1);
+    cloudRevision = storedCloudRevision >= 0 ? storedCloudRevision : null;
     cloudRevisionId = _cloudString('mc_cloudRevisionId');
     cloudParentRevisionId = _cloudString('mc_cloudParentRevisionId');
     _cloudMergeParentRevisionIds =
@@ -625,6 +628,11 @@ class GameState extends ChangeNotifier {
     await Storage.setString('mc_p2_name', p[2].name);
     await Storage.setString('mc_p2_avatar', p[2].avatar.storageEmoji);
     await Storage.setInt('mc_cloudResetGeneration', cloudResetGeneration);
+    if (cloudRevision == null) {
+      await Storage.remove('mc_cloudRevision');
+    } else {
+      await Storage.setInt('mc_cloudRevision', cloudRevision!);
+    }
     await Storage.setString('mc_cloudRevisionId', cloudRevisionId ?? '');
     await Storage.setString(
         'mc_cloudParentRevisionId', cloudParentRevisionId ?? '');
@@ -706,6 +714,7 @@ class GameState extends ChangeNotifier {
   }) async {
     final previousProgress = importProgress ? exportCloudProgress() : null;
     final previousResetGeneration = cloudResetGeneration;
+    final previousRevision = cloudRevision;
     final previousRevisionId = cloudRevisionId;
     final previousParentRevisionId = cloudParentRevisionId;
     final previousMergeParentRevisionIds = _cloudMergeParentRevisionIds;
@@ -728,6 +737,7 @@ class GameState extends ChangeNotifier {
     } catch (_) {
       if (previousProgress != null) _applyCloudProgress(previousProgress);
       cloudResetGeneration = previousResetGeneration;
+      cloudRevision = previousRevision;
       cloudRevisionId = previousRevisionId;
       cloudParentRevisionId = previousParentRevisionId;
       _cloudMergeParentRevisionIds = previousMergeParentRevisionIds;
@@ -739,6 +749,7 @@ class GameState extends ChangeNotifier {
 
   void _applyCloudSyncMetadata(CloudProgressDocument document) {
     cloudResetGeneration = document.resetGeneration;
+    cloudRevision = document.revision;
     cloudRevisionId = document.revisionId;
     cloudParentRevisionId = document.parentRevisionId;
     _cloudMergeParentRevisionIds = List.of(document.mergeParentRevisionIds);
@@ -3571,12 +3582,14 @@ class GameState extends ChangeNotifier {
     }
     _resetInMemoryData();
     cloudResetGeneration = nextCloudResetGeneration;
+    cloudRevision = null;
     cloudRevisionId = null;
     cloudParentRevisionId = null;
     _cloudMergeParentRevisionIds = [];
     cloudLastSyncedRevisionId = null;
     cloudDirty = true;
     await Storage.setInt('mc_cloudResetGeneration', cloudResetGeneration);
+    await Storage.remove('mc_cloudRevision');
     await Storage.setString('mc_cloudRevisionId', '');
     await Storage.setString('mc_cloudParentRevisionId', '');
     await Storage.setStringList('mc_cloudMergeParentRevisionIds', []);
