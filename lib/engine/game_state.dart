@@ -371,6 +371,9 @@ class GameState extends ChangeNotifier {
   int cloudResetGeneration = 0;
   String? cloudRevisionId;
   String? cloudParentRevisionId;
+  List<String> _cloudMergeParentRevisionIds = [];
+  List<String> get cloudMergeParentRevisionIds =>
+      List.unmodifiable(_cloudMergeParentRevisionIds);
   String? cloudLastSyncedRevisionId;
   bool cloudDirty = false;
   OperationQuestProgress operationQuestProgress = OperationQuestProgress();
@@ -545,6 +548,8 @@ class GameState extends ChangeNotifier {
     cloudResetGeneration = Storage.getInt('mc_cloudResetGeneration', 0);
     cloudRevisionId = _cloudString('mc_cloudRevisionId');
     cloudParentRevisionId = _cloudString('mc_cloudParentRevisionId');
+    _cloudMergeParentRevisionIds =
+        cloudParentRevisionId == null ? _loadCloudMergeParentRevisionIds() : [];
     cloudLastSyncedRevisionId = _cloudString('mc_cloudLastSyncedRevisionId');
     cloudDirty = Storage.getBool('mc_cloudDirty', false);
     coins = Storage.getInt('mc_coins', 0);
@@ -623,6 +628,8 @@ class GameState extends ChangeNotifier {
     await Storage.setString('mc_cloudRevisionId', cloudRevisionId ?? '');
     await Storage.setString(
         'mc_cloudParentRevisionId', cloudParentRevisionId ?? '');
+    await Storage.setStringList(
+        'mc_cloudMergeParentRevisionIds', _cloudMergeParentRevisionIds);
     await Storage.setString(
         'mc_cloudLastSyncedRevisionId', cloudLastSyncedRevisionId ?? '');
     await Storage.setBool('mc_cloudDirty', cloudDirty);
@@ -631,6 +638,15 @@ class GameState extends ChangeNotifier {
   String? _cloudString(String key) {
     final value = Storage.getString(key, '');
     return value.isEmpty ? null : value;
+  }
+
+  List<String> _loadCloudMergeParentRevisionIds() {
+    final parents = Storage.getStringList('mc_cloudMergeParentRevisionIds', []);
+    return parents.length == 2 &&
+            parents.every((parent) => parent.isNotEmpty) &&
+            parents.toSet().length == 2
+        ? parents
+        : [];
   }
 
   CloudProgress exportCloudProgress() => CloudProgress(
@@ -683,6 +699,52 @@ class GameState extends ChangeNotifier {
 
   Future<bool> importCloudProgressDocument(CloudProgressDocument document) =>
       importCloudProgress(document.progress);
+
+  Future<bool> acceptCloudProgressDocument(
+    CloudProgressDocument document, {
+    required bool importProgress,
+  }) async {
+    final previousProgress = importProgress ? exportCloudProgress() : null;
+    final previousResetGeneration = cloudResetGeneration;
+    final previousRevisionId = cloudRevisionId;
+    final previousParentRevisionId = cloudParentRevisionId;
+    final previousMergeParentRevisionIds = _cloudMergeParentRevisionIds;
+    final previousLastSyncedRevisionId = cloudLastSyncedRevisionId;
+    final previousDirty = cloudDirty;
+    if (importProgress) _applyCloudProgress(document.progress);
+    _applyCloudSyncMetadata(document);
+    try {
+      await save();
+      if (importProgress) {
+        _savePowerUpBonus({
+          for (final entry in document.progress.economy.powerUpBonus.entries)
+            PowerUp.values.byName(entry.key): entry.value,
+        });
+        await Storage.setInt(
+            'mc_livesBonus', document.progress.economy.livesBonus);
+      }
+      notifyListeners();
+      return true;
+    } catch (_) {
+      if (previousProgress != null) _applyCloudProgress(previousProgress);
+      cloudResetGeneration = previousResetGeneration;
+      cloudRevisionId = previousRevisionId;
+      cloudParentRevisionId = previousParentRevisionId;
+      _cloudMergeParentRevisionIds = previousMergeParentRevisionIds;
+      cloudLastSyncedRevisionId = previousLastSyncedRevisionId;
+      cloudDirty = previousDirty;
+      return false;
+    }
+  }
+
+  void _applyCloudSyncMetadata(CloudProgressDocument document) {
+    cloudResetGeneration = document.resetGeneration;
+    cloudRevisionId = document.revisionId;
+    cloudParentRevisionId = document.parentRevisionId;
+    _cloudMergeParentRevisionIds = List.of(document.mergeParentRevisionIds);
+    cloudLastSyncedRevisionId = document.revisionId;
+    cloudDirty = false;
+  }
 
   void _applyCloudProgress(CloudProgress progress) {
     coins = progress.coins;
@@ -3511,11 +3573,13 @@ class GameState extends ChangeNotifier {
     cloudResetGeneration = nextCloudResetGeneration;
     cloudRevisionId = null;
     cloudParentRevisionId = null;
+    _cloudMergeParentRevisionIds = [];
     cloudLastSyncedRevisionId = null;
     cloudDirty = true;
     await Storage.setInt('mc_cloudResetGeneration', cloudResetGeneration);
     await Storage.setString('mc_cloudRevisionId', '');
     await Storage.setString('mc_cloudParentRevisionId', '');
+    await Storage.setStringList('mc_cloudMergeParentRevisionIds', []);
     await Storage.setString('mc_cloudLastSyncedRevisionId', '');
     await _markCloudDirty();
     showToast('All data reset');
