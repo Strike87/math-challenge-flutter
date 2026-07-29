@@ -7,7 +7,8 @@ import '../../../models/enums.dart';
 import '../../../models/game_data.dart';
 import '../../../models/player.dart';
 
-const _schemaVersion = 1;
+const _schemaVersion = 2;
+const _v1SchemaVersion = 1;
 const _skillKeys = {'addition', 'subtraction', 'multiplication', 'division'};
 final _achievementIds =
     GameConfig.achievementsDef.map((item) => item.id).toSet();
@@ -33,20 +34,49 @@ final _hatValues = {
 };
 
 class CloudProgressDocument {
-  const CloudProgressDocument({
+  CloudProgressDocument({
     this.schemaVersion = _schemaVersion,
     required this.revision,
     required this.revisionId,
     this.parentRevisionId,
+    List<String> mergeParentRevisionIds = const [],
     required this.resetGeneration,
     required this.updatedAtUtcMs,
     required this.progress,
-  });
+  }) : mergeParentRevisionIds = List.unmodifiable(
+          mergeParentRevisionIds.toList()..sort(),
+        ) {
+    if (schemaVersion != _v1SchemaVersion && schemaVersion != _schemaVersion) {
+      throw ArgumentError.value(schemaVersion, 'schemaVersion');
+    }
+    if (parentRevisionId == revisionId) {
+      throw ArgumentError.value(parentRevisionId, 'parentRevisionId');
+    }
+    if (schemaVersion == _v1SchemaVersion &&
+        mergeParentRevisionIds.isNotEmpty) {
+      throw ArgumentError.value(
+          mergeParentRevisionIds, 'mergeParentRevisionIds');
+    }
+    if (mergeParentRevisionIds.isNotEmpty &&
+        mergeParentRevisionIds.length != 2) {
+      throw ArgumentError.value(
+          mergeParentRevisionIds, 'mergeParentRevisionIds');
+    }
+    if (mergeParentRevisionIds.any((id) => id == revisionId) ||
+        mergeParentRevisionIds.toSet().length !=
+            mergeParentRevisionIds.length ||
+        mergeParentRevisionIds.any((id) => !_isRevisionId(id)) ||
+        (parentRevisionId != null && mergeParentRevisionIds.isNotEmpty)) {
+      throw ArgumentError.value(
+          mergeParentRevisionIds, 'mergeParentRevisionIds');
+    }
+  }
 
   final int schemaVersion;
   final int revision;
   final String revisionId;
   final String? parentRevisionId;
+  final List<String> mergeParentRevisionIds;
   final int resetGeneration;
   final int updatedAtUtcMs;
   final CloudProgress progress;
@@ -54,6 +84,7 @@ class CloudProgressDocument {
   factory CloudProgressDocument.empty({
     required String revisionId,
     String? parentRevisionId,
+    List<String> mergeParentRevisionIds = const [],
     int revision = 0,
     int resetGeneration = 0,
     int updatedAtUtcMs = 0,
@@ -62,16 +93,23 @@ class CloudProgressDocument {
         revision: revision,
         revisionId: revisionId,
         parentRevisionId: parentRevisionId,
+        mergeParentRevisionIds: mergeParentRevisionIds,
         resetGeneration: resetGeneration,
         updatedAtUtcMs: updatedAtUtcMs,
         progress: CloudProgress.empty(),
       );
+
+  List<String> get directParentRevisionIds => parentRevisionId == null
+      ? mergeParentRevisionIds
+      : List.unmodifiable([parentRevisionId!]);
 
   Map<String, Object?> toJson() => {
         'schemaVersion': schemaVersion,
         'revision': revision,
         'revisionId': revisionId,
         'parentRevisionId': parentRevisionId,
+        if (schemaVersion == _schemaVersion)
+          'mergeParentRevisionIds': mergeParentRevisionIds,
         'resetGeneration': resetGeneration,
         'updatedAtUtcMs': updatedAtUtcMs,
         'progress': progress.toJson(),
@@ -91,34 +129,53 @@ class CloudProgressDocument {
       if (decoded is! Map)
         return const CloudProgressParseResult.failure('root must be an object');
       final root = Map<String, Object?>.from(decoded);
-      _onlyKeys(root, const {
-        'schemaVersion',
-        'revision',
-        'revisionId',
-        'parentRevisionId',
-        'resetGeneration',
-        'updatedAtUtcMs',
-        'progress',
-      });
       final schemaVersion = _int(root, 'schemaVersion');
-      if (schemaVersion != _schemaVersion) {
+      if (schemaVersion != _v1SchemaVersion &&
+          schemaVersion != _schemaVersion) {
         return CloudProgressParseResult.failure(
           schemaVersion > _schemaVersion
               ? 'unsupported future schema'
               : 'unsupported schema',
         );
       }
+      _onlyKeys(
+          root,
+          schemaVersion == _v1SchemaVersion
+              ? const {
+                  'schemaVersion',
+                  'revision',
+                  'revisionId',
+                  'parentRevisionId',
+                  'resetGeneration',
+                  'updatedAtUtcMs',
+                  'progress',
+                }
+              : const {
+                  'schemaVersion',
+                  'revision',
+                  'revisionId',
+                  'parentRevisionId',
+                  'mergeParentRevisionIds',
+                  'resetGeneration',
+                  'updatedAtUtcMs',
+                  'progress',
+                });
       final revision = _nonNegative(root, 'revision');
       final resetGeneration = _nonNegative(root, 'resetGeneration');
       final updatedAtUtcMs = _nonNegative(root, 'updatedAtUtcMs');
       final revisionId = _revisionId(root['revisionId']);
       final parent = root['parentRevisionId'];
       final parentRevisionId = parent == null ? null : _revisionId(parent);
+      final mergeParentRevisionIds = schemaVersion == _v1SchemaVersion
+          ? const <String>[]
+          : _revisionIdList(root, 'mergeParentRevisionIds');
       final progress = CloudProgress._fromJson(_map(root, 'progress'));
       return CloudProgressParseResult.success(CloudProgressDocument(
+        schemaVersion: schemaVersion,
         revision: revision,
         revisionId: revisionId,
         parentRevisionId: parentRevisionId,
+        mergeParentRevisionIds: mergeParentRevisionIds,
         resetGeneration: resetGeneration,
         updatedAtUtcMs: updatedAtUtcMs,
         progress: progress,
@@ -429,11 +486,18 @@ int _nonNegative(Map<String, Object?> source, String key) {
 }
 
 String _revisionId(Object? value) {
-  if (value is! String ||
-      !RegExp(r'^[A-Za-z0-9._~-]{1,100}$').hasMatch(value)) {
+  if (value is! String || !_isRevisionId(value)) {
     throw const FormatException('invalid revision ID');
   }
   return value;
+}
+
+bool _isRevisionId(String value) =>
+    RegExp(r'^[A-Za-z0-9._~-]{1,100}$').hasMatch(value);
+
+List<String> _revisionIdList(Map<String, Object?> source, String key) {
+  final values = _list(source, key).map(_revisionId).toList()..sort();
+  return values;
 }
 
 Map<String, bool> _boolMap(
