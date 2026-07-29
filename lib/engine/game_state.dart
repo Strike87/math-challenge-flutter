@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../features/adaptive/domain/adaptive_difficulty_engine.dart';
+import '../features/cloud_save/domain/cloud_progress_document.dart';
 import '../features/economy/domain/coin_ledger.dart';
 import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/economy/domain/number_type_unlock_policy.dart';
@@ -367,6 +368,11 @@ class GameState extends ChangeNotifier {
   int get coins => _coinLedger.balance;
   set coins(int value) => _coinLedger.balance = value;
   int gamesPlayed = 0;
+  int cloudResetGeneration = 0;
+  String? cloudRevisionId;
+  String? cloudParentRevisionId;
+  String? cloudLastSyncedRevisionId;
+  bool cloudDirty = false;
   OperationQuestProgress operationQuestProgress = OperationQuestProgress();
   int operationQuestResultStars = 0;
   double adaptLvlRaw = 0;
@@ -536,6 +542,11 @@ class GameState extends ChangeNotifier {
 
   // ─── Load / save ────────────────────────────────────────────
   Future<void> load() async {
+    cloudResetGeneration = Storage.getInt('mc_cloudResetGeneration', 0);
+    cloudRevisionId = _cloudString('mc_cloudRevisionId');
+    cloudParentRevisionId = _cloudString('mc_cloudParentRevisionId');
+    cloudLastSyncedRevisionId = _cloudString('mc_cloudLastSyncedRevisionId');
+    cloudDirty = Storage.getBool('mc_cloudDirty', false);
     coins = Storage.getInt('mc_coins', 0);
     gamesPlayed = Storage.getInt('mc_gamesPlayed', 0);
     selectedAnswerStyle = AnswerStyle.fromString(
@@ -608,6 +619,99 @@ class GameState extends ChangeNotifier {
     await Storage.setString('mc_p1_avatar', p[1].avatar.storageEmoji);
     await Storage.setString('mc_p2_name', p[2].name);
     await Storage.setString('mc_p2_avatar', p[2].avatar.storageEmoji);
+    await Storage.setInt('mc_cloudResetGeneration', cloudResetGeneration);
+    await Storage.setString('mc_cloudRevisionId', cloudRevisionId ?? '');
+    await Storage.setString(
+        'mc_cloudParentRevisionId', cloudParentRevisionId ?? '');
+    await Storage.setString(
+        'mc_cloudLastSyncedRevisionId', cloudLastSyncedRevisionId ?? '');
+    await Storage.setBool('mc_cloudDirty', cloudDirty);
+  }
+
+  String? _cloudString(String key) {
+    final value = Storage.getString(key, '');
+    return value.isEmpty ? null : value;
+  }
+
+  CloudProgress exportCloudProgress() => CloudProgress(
+        coins: coins,
+        gamesPlayed: gamesPlayed,
+        achievements: achievements,
+        operationQuestStars: {
+          for (final entry in operationQuestProgress.stars.entries)
+            entry.key.storageId: entry.value,
+        },
+        highScores: highScores,
+        skillMap: skillMap,
+        profile: CloudProfile(
+          player1: CloudPlayerProfile(
+              name: p[1].name,
+              selectedAvatar: p[1].avatar.storageEmoji,
+              customAvatar: avatarCustom['1']!),
+          player2: CloudPlayerProfile(
+              name: p[2].name,
+              selectedAvatar: p[2].avatar.storageEmoji,
+              customAvatar: avatarCustom['2']!),
+        ),
+        economy: CloudEconomy(
+            numberTypeUnlocks: numTypeUnlocked,
+            shopOwned: shopOwned,
+            unlockedAvatars: unlockedAvatars,
+            unlockedHats: unlockedHats,
+            powerUpBonus: _loadPowerUpBonus()
+                .map((key, value) => MapEntry(key.name, value)),
+            livesBonus: Storage.getInt('mc_livesBonus', 0)),
+      );
+
+  Future<bool> importCloudProgress(CloudProgress progress) async {
+    final previous = exportCloudProgress();
+    _applyCloudProgress(progress);
+    try {
+      await save();
+      _savePowerUpBonus({
+        for (final entry in progress.economy.powerUpBonus.entries)
+          PowerUp.values.byName(entry.key): entry.value,
+      });
+      await Storage.setInt('mc_livesBonus', progress.economy.livesBonus);
+      notifyListeners();
+      return true;
+    } catch (_) {
+      _applyCloudProgress(previous);
+      return false;
+    }
+  }
+
+  Future<bool> importCloudProgressDocument(CloudProgressDocument document) =>
+      importCloudProgress(document.progress);
+
+  void _applyCloudProgress(CloudProgress progress) {
+    coins = progress.coins;
+    gamesPlayed = progress.gamesPlayed;
+    achievements = Map<String, bool>.from(progress.achievements);
+    operationQuestProgress = OperationQuestProgress({
+      for (final entry in progress.operationQuestStars.entries)
+        OperationQuestStageId.fromStorageId(entry.key)!: entry.value,
+    });
+    highScores = List<HighScore>.from(progress.highScores);
+    skillMap = Map<String, SkillData>.from(progress.skillMap);
+    p[1].name = progress.profile.player1.name;
+    p[1].avatar = AvatarData.emoji(progress.profile.player1.selectedAvatar);
+    p[2].name = progress.profile.player2.name;
+    p[2].avatar = AvatarData.emoji(progress.profile.player2.selectedAvatar);
+    avatarCustom = {
+      '1': progress.profile.player1.customAvatar,
+      '2': progress.profile.player2.customAvatar,
+    };
+    numTypeUnlocked = Map<String, int>.from(progress.economy.numberTypeUnlocks);
+    shopOwned = List<String>.from(progress.economy.shopOwned);
+    unlockedAvatars = List<String>.from(progress.economy.unlockedAvatars);
+    unlockedHats = List<String>.from(progress.economy.unlockedHats);
+    _recomputeAdaptiveLevel();
+  }
+
+  Future<void> _markCloudDirty() async {
+    cloudDirty = true;
+    await Storage.setBool('mc_cloudDirty', true);
   }
 
   Future<void> checkPlayGamesConnection() async {
@@ -1200,6 +1304,7 @@ class GameState extends ChangeNotifier {
 
   // ─── Coin operations ────────────────────────────────────────
   void addCoins(int amount, [bool silent = false]) {
+    if (amount != 0) unawaited(_markCloudDirty());
     _coinLedger.adjust(amount);
     if (!silent) {
       showToast(amount >= 0 ? '+$amount 🪙' : '$amount 🪙');
@@ -1594,6 +1699,7 @@ class GameState extends ChangeNotifier {
   }
 
   void pickAvatar(int pid, String av) {
+    if (p[pid].avatar.storageEmoji != av) unawaited(_markCloudDirty());
     p[pid].avatar = av;
     notifyListeners();
   }
@@ -2510,6 +2616,7 @@ class GameState extends ChangeNotifier {
     _logPerformance('end game entered');
     _cancelDelayedLossEnd();
     if (!rt.gameActive || rt.state == 'ended') return;
+    unawaited(_markCloudDirty());
     rt.gameActive = false;
     rt.state = 'ended';
     rt.timer?.cancel();
@@ -2624,6 +2731,7 @@ class GameState extends ChangeNotifier {
     );
     if (identical(updated, operationQuestProgress)) return Future.value();
     operationQuestProgress = updated;
+    unawaited(_markCloudDirty());
     return Storage.setString(
       'mc_operationQuestProgress',
       operationQuestProgress.encode(),
@@ -2887,6 +2995,7 @@ class GameState extends ChangeNotifier {
     sd.count++;
     _updateMastery(sd, correct, timeMs);
     skillMap[type.name] = sd;
+    unawaited(_markCloudDirty());
   }
 
   void _updateMastery(SkillData sd, bool correct, int timeMs) {
@@ -2956,6 +3065,7 @@ class GameState extends ChangeNotifier {
   void unlockAch(String id) {
     if (achievements[id] == true) return;
     achievements[id] = true;
+    unawaited(_markCloudDirty());
     final a = GameConfig.achievementsDef.firstWhere((e) => e.id == id);
     newlyUnlocked.add(a);
     _celebrate(
@@ -3166,6 +3276,7 @@ class GameState extends ChangeNotifier {
 
   void saveCustomAvatar() {
     avatarCustom['$builderPid'] = builderAvatar;
+    unawaited(_markCloudDirty());
     p[builderPid].avatar = AvatarData.custom(builderAvatar);
     unlockAch('avatar_artist');
     closeModal();
@@ -3186,6 +3297,7 @@ class GameState extends ChangeNotifier {
       showToast('Not enough 🪙');
       return;
     }
+    await _markCloudDirty();
     addCoins(-item.price, true);
     if (!item.consumable) shopOwned.add(item.id);
 
@@ -3388,6 +3500,7 @@ class GameState extends ChangeNotifier {
   }
 
   Future<void> resetAllData() async {
+    final nextCloudResetGeneration = cloudResetGeneration + 1;
     rt.timer?.cancel();
     _cancelDelayedLossEnd();
     _turnSeq++;
@@ -3395,6 +3508,16 @@ class GameState extends ChangeNotifier {
       await Storage.remove(key);
     }
     _resetInMemoryData();
+    cloudResetGeneration = nextCloudResetGeneration;
+    cloudRevisionId = null;
+    cloudParentRevisionId = null;
+    cloudLastSyncedRevisionId = null;
+    cloudDirty = true;
+    await Storage.setInt('mc_cloudResetGeneration', cloudResetGeneration);
+    await Storage.setString('mc_cloudRevisionId', '');
+    await Storage.setString('mc_cloudParentRevisionId', '');
+    await Storage.setString('mc_cloudLastSyncedRevisionId', '');
+    await _markCloudDirty();
     showToast('All data reset');
   }
 
@@ -3492,6 +3615,7 @@ class GameState extends ChangeNotifier {
   }
 
   void setPlayerName(int pid, String name) {
+    if (p[pid].name != name) unawaited(_markCloudDirty());
     p[pid].name = name;
     notifyListeners();
   }
