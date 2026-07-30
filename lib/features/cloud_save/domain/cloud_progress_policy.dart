@@ -14,16 +14,30 @@ enum CloudProgressDecisionKind {
   noChange,
   useLocal,
   useCloud,
+  mergeRequired,
   needsUserChoice,
   invalidLineage,
+}
+
+class CloudProgressMergePlan {
+  CloudProgressMergePlan({
+    required Iterable<String> parentRevisionIds,
+    required this.revision,
+  }) : parentRevisionIds =
+            List.unmodifiable(parentRevisionIds.toList()..sort());
+
+  final List<String> parentRevisionIds;
+  final int revision;
 }
 
 class CloudProgressDecision {
   const CloudProgressDecision._(
     this.kind, {
     required this.relation,
+    this.mergedCandidate,
     this.keepLocalCandidate,
     this.useCloudCandidate,
+    this.mergePlan,
   });
 
   const CloudProgressDecision.noChange(CloudProgressRelation relation)
@@ -34,21 +48,35 @@ class CloudProgressDecision {
       : this._(CloudProgressDecisionKind.useCloud, relation: relation);
   const CloudProgressDecision.invalidLineage(CloudProgressRelation relation)
       : this._(CloudProgressDecisionKind.invalidLineage, relation: relation);
+  const CloudProgressDecision.mergeRequired(
+    CloudProgressRelation relation,
+    CloudProgress mergedCandidate,
+    CloudProgressMergePlan mergePlan,
+  ) : this._(
+          CloudProgressDecisionKind.mergeRequired,
+          relation: relation,
+          mergedCandidate: mergedCandidate,
+          mergePlan: mergePlan,
+        );
   const CloudProgressDecision.needsUserChoice(
     CloudProgressRelation relation,
     CloudProgress keepLocalCandidate,
     CloudProgress useCloudCandidate,
+    CloudProgressMergePlan mergePlan,
   ) : this._(
           CloudProgressDecisionKind.needsUserChoice,
           relation: relation,
           keepLocalCandidate: keepLocalCandidate,
           useCloudCandidate: useCloudCandidate,
+          mergePlan: mergePlan,
         );
 
   final CloudProgressDecisionKind kind;
   final CloudProgressRelation relation;
+  final CloudProgress? mergedCandidate;
   final CloudProgress? keepLocalCandidate;
   final CloudProgress? useCloudCandidate;
+  final CloudProgressMergePlan? mergePlan;
 }
 
 class CloudProgressPolicy {
@@ -67,6 +95,17 @@ class CloudProgressPolicy {
           : const CloudProgressDecision.useCloud(
               CloudProgressRelation.unrelated);
     }
+    if (relation == CloudProgressRelation.same) {
+      return local.hasSameProgressAs(cloud)
+          ? CloudProgressDecision.noChange(relation)
+          : CloudProgressDecision.invalidLineage(relation);
+    }
+    if (relation == CloudProgressRelation.cloudDirectDescendant) {
+      return CloudProgressDecision.useCloud(relation);
+    }
+    if (relation == CloudProgressRelation.localDirectDescendant) {
+      return CloudProgressDecision.useLocal(relation);
+    }
     if (local.isSemanticallyEqualTo(cloud)) {
       return CloudProgressDecision.noChange(relation);
     }
@@ -78,21 +117,20 @@ class CloudProgressPolicy {
       return CloudProgressDecision.useCloud(relation);
     if (cloud.progress == empty)
       return CloudProgressDecision.useLocal(relation);
-    if (relation == CloudProgressRelation.same) {
-      return CloudProgressDecision.invalidLineage(relation);
-    }
-    if (relation == CloudProgressRelation.cloudDirectDescendant) {
-      return CloudProgressDecision.useCloud(relation);
-    }
-    if (relation == CloudProgressRelation.localDirectDescendant) {
-      return CloudProgressDecision.useLocal(relation);
-    }
     final safe = _safeProgress(local.progress, cloud.progress);
-    return CloudProgressDecision.needsUserChoice(
-      relation,
-      _withAtomicGroups(safe, local.progress),
-      _withAtomicGroups(safe, cloud.progress),
+    final keepLocalCandidate = _withAtomicGroups(safe, local.progress);
+    final useCloudCandidate = _withAtomicGroups(safe, cloud.progress);
+    final mergePlan = CloudProgressMergePlan(
+      parentRevisionIds: [local.revisionId, cloud.revisionId],
+      revision:
+          (local.revision > cloud.revision ? local.revision : cloud.revision) +
+              1,
     );
+    return keepLocalCandidate == useCloudCandidate
+        ? CloudProgressDecision.mergeRequired(
+            relation, keepLocalCandidate, mergePlan)
+        : CloudProgressDecision.needsUserChoice(
+            relation, keepLocalCandidate, useCloudCandidate, mergePlan);
   }
 
   CloudProgressRelation _relation(
@@ -101,15 +139,15 @@ class CloudProgressPolicy {
     String? lastSyncedRevisionId,
   ) {
     if (local.revisionId == cloud.revisionId) return CloudProgressRelation.same;
-    if (local.parentRevisionId == cloud.revisionId) {
+    if (local.directParentRevisionIds.contains(cloud.revisionId)) {
       return CloudProgressRelation.localDirectDescendant;
     }
-    if (cloud.parentRevisionId == local.revisionId) {
+    if (cloud.directParentRevisionIds.contains(local.revisionId)) {
       return CloudProgressRelation.cloudDirectDescendant;
     }
     if (lastSyncedRevisionId != null &&
-        local.parentRevisionId == lastSyncedRevisionId &&
-        cloud.parentRevisionId == lastSyncedRevisionId) {
+        local.directParentRevisionIds.contains(lastSyncedRevisionId) &&
+        cloud.directParentRevisionIds.contains(lastSyncedRevisionId)) {
       return CloudProgressRelation.knownViaLastSynced;
     }
     return CloudProgressRelation.unrelated;

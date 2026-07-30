@@ -75,5 +75,10 @@ class MainActivity: FlutterActivity() {
                 result.error("PGS_UNAVAILABLE", error.message, null)
             }
         }
+
+        PlayGamesSavedGamesTransport(
+            this,
+            flutterEngine.dartExecutor.binaryMessenger,
+        ).register()
     }
 }

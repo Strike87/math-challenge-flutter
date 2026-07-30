@@ -10,12 +10,90 @@ void main() {
   Map<String, dynamic> jsonOf(CloudProgressDocument document) =>
       jsonDecode(document.encode()) as Map<String, dynamic>;
 
-  test('round trips canonical v1 deterministically', () {
+  test('new documents use deterministic schema v2 encoding', () {
     final document = fresh();
     final decoded = CloudProgressDocument.decode(document.encode());
     expect(decoded.isSuccess, isTrue, reason: decoded.error);
     expect(decoded.document!.isSemanticallyEqualTo(document), isTrue);
     expect(decoded.document!.encode(), document.encode());
+  });
+
+  test('strict v1 documents remain readable and v1-shaped', () {
+    final v1 = CloudProgressDocument(
+      schemaVersion: 1,
+      revision: 0,
+      revisionId: 'v1',
+      resetGeneration: 0,
+      updatedAtUtcMs: 0,
+      progress: CloudProgress.empty(),
+    );
+    final decoded = CloudProgressDocument.decode(v1.encode());
+    expect(decoded.isSuccess, isTrue, reason: decoded.error);
+    expect(decoded.document!.schemaVersion, 1);
+    expect(decoded.document!.mergeParentRevisionIds, isEmpty);
+    expect(decoded.document!.encode(), v1.encode());
+    expect(jsonOf(v1), isNot(contains('mergeParentRevisionIds')));
+    final invalid = jsonOf(v1)..['mergeParentRevisionIds'] = <String>[];
+    expect(
+        CloudProgressDocument.decode(jsonEncode(invalid)).isSuccess, isFalse);
+  });
+
+  test('v1 progress, economy, and profile payloads remain compatible', () {
+    final v1 = jsonOf(fresh())
+      ..['schemaVersion'] = 1
+      ..remove('mergeParentRevisionIds');
+    final progress = v1['progress'] as Map<String, dynamic>;
+    progress['coins'] = 5;
+    progress['economy']['numberTypeUnlocks']['integers'] = 1;
+    progress['profile']['player1']['name'] = 'Ada';
+    final decoded = CloudProgressDocument.decode(jsonEncode(v1));
+    expect(decoded.isSuccess, isTrue, reason: decoded.error);
+    expect(decoded.document!.schemaVersion, 1);
+    expect(decoded.document!.progress.coins, 5);
+    expect(decoded.document!.progress.economy.numberTypeUnlocks['integers'], 1);
+    expect(decoded.document!.progress.profile.player1.name, 'Ada');
+  });
+
+  test('validates and canonicalizes v2 merge parents', () {
+    final merge = CloudProgressDocument(
+      revision: 4,
+      revisionId: 'merge',
+      mergeParentRevisionIds: const ['b', 'a'],
+      resetGeneration: 0,
+      updatedAtUtcMs: 2,
+      progress: CloudProgress.empty(),
+    );
+    expect(merge.mergeParentRevisionIds, ['a', 'b']);
+    expect(merge.directParentRevisionIds, ['a', 'b']);
+    final reversed = jsonOf(merge)
+      ..['mergeParentRevisionIds'] = <String>['b', 'a'];
+    expect(
+        CloudProgressDocument.decode(jsonEncode(reversed)).document!.encode(),
+        merge.encode());
+  });
+
+  test('rejects invalid v2 lineage combinations', () {
+    final base = jsonOf(fresh(id: 'self'));
+    for (final mergeParents in <Object?>[
+      <String>['a'],
+      <String>['a', 'b', 'c'],
+      <String>['a', 'a'],
+      <String>['', 'a'],
+      <String>['self', 'a'],
+    ]) {
+      final json = Map<String, dynamic>.from(base)
+        ..['mergeParentRevisionIds'] = mergeParents;
+      expect(CloudProgressDocument.decode(jsonEncode(json)).isSuccess, isFalse);
+    }
+    final scalarAndMerge = Map<String, dynamic>.from(base)
+      ..['parentRevisionId'] = 'a'
+      ..['mergeParentRevisionIds'] = <String>['b', 'c'];
+    expect(CloudProgressDocument.decode(jsonEncode(scalarAndMerge)).isSuccess,
+        isFalse);
+    final scalarSelf = Map<String, dynamic>.from(base)
+      ..['parentRevisionId'] = 'self';
+    expect(CloudProgressDocument.decode(jsonEncode(scalarSelf)).isSuccess,
+        isFalse);
   });
 
   test('empty progress uses current production defaults', () {
@@ -133,7 +211,7 @@ void main() {
   });
 
   test('rejects future schema versions explicitly', () {
-    final json = jsonOf(fresh())..['schemaVersion'] = 2;
+    final json = jsonOf(fresh())..['schemaVersion'] = 3;
     expect(CloudProgressDocument.decode(jsonEncode(json)).isSuccess, isFalse);
   });
 

@@ -12,6 +12,7 @@ void main() {
   CloudProgressDocument doc({
     String id = 'local',
     String? parent,
+    List<String> mergeParents = const [],
     int revision = 0,
     int reset = 0,
     int time = 0,
@@ -21,6 +22,7 @@ void main() {
         revision: revision,
         revisionId: id,
         parentRevisionId: parent,
+        mergeParentRevisionIds: mergeParents,
         resetGeneration: reset,
         updatedAtUtcMs: time,
         progress: progress ?? CloudProgress.empty(),
@@ -208,9 +210,122 @@ void main() {
     final cloud = doc(
         id: 'cloud',
         progress: populated(scores: [score('L9', 9), score('C', 99)]));
-    final scores = policy.decide(local, cloud).keepLocalCandidate!.highScores;
+    final scores = policy.decide(local, cloud).mergedCandidate!.highScores;
     expect(scores.length, 10);
     expect(scores.first.score, 99);
     expect(scores.where((item) => item.name == 'L9'), hasLength(1));
+  });
+
+  test('safe divergence creates a policy-owned merge plan', () {
+    final local = doc(
+      id: 'a',
+      revision: 3,
+      progress: populated(
+        games: 1,
+        achievements: {
+          ...CloudProgress.empty().achievements,
+          'first_win': true
+        },
+      ),
+    );
+    final cloud = doc(
+      id: 'b',
+      revision: 5,
+      progress: populated(
+        games: 2,
+        achievements: {
+          ...CloudProgress.empty().achievements,
+          'speed_demon': true
+        },
+      ),
+    );
+    final result = policy.decide(local, cloud);
+    expect(result.kind, CloudProgressDecisionKind.mergeRequired);
+    expect(result.mergedCandidate!.gamesPlayed, 2);
+    expect(result.mergedCandidate!.achievements['first_win'], isTrue);
+    expect(result.mergedCandidate!.achievements['speed_demon'], isTrue);
+    expect(result.mergePlan!.parentRevisionIds, ['a', 'b']);
+    expect(result.mergePlan!.revision, 6);
+  });
+
+  test('safe sibling divergence requires a merge revision', () {
+    final result = policy.decide(
+      doc(
+        id: 'a',
+        parent: 'c',
+        revision: 2,
+        progress: populated(
+          achievements: {
+            ...CloudProgress.empty().achievements,
+            'first_win': true,
+          },
+        ),
+      ),
+      doc(
+        id: 'b',
+        parent: 'c',
+        revision: 4,
+        progress: populated(
+          achievements: {
+            ...CloudProgress.empty().achievements,
+            'speed_demon': true,
+          },
+        ),
+      ),
+      lastSyncedRevisionId: 'c',
+    );
+    expect(result.kind, CloudProgressDecisionKind.mergeRequired);
+    expect(result.relation, CloudProgressRelation.knownViaLastSynced);
+    expect(result.mergePlan!.parentRevisionIds, ['a', 'b']);
+    expect(result.mergePlan!.revision, 5);
+  });
+
+  test('merge parents are direct descendants before semantic equality', () {
+    final a = doc(id: 'a', revision: 1, progress: populated());
+    final b = doc(id: 'b', revision: 2, progress: populated());
+    final merge = doc(
+      id: 'm',
+      revision: 3,
+      mergeParents: const ['b', 'a'],
+      progress: populated(),
+    );
+    for (final parent in [a, b]) {
+      expect(policy.decide(parent, merge).kind,
+          CloudProgressDecisionKind.useCloud);
+      expect(policy.decide(merge, parent).kind,
+          CloudProgressDecisionKind.useLocal);
+    }
+  });
+
+  test('unsafe divergence keeps both candidates and the same merge plan', () {
+    final result = policy.decide(
+      doc(id: 'a', parent: 'c', revision: 2, progress: populated(coins: 1)),
+      doc(id: 'b', parent: 'c', revision: 4, progress: populated(coins: 2)),
+      lastSyncedRevisionId: 'c',
+    );
+    expect(result.kind, CloudProgressDecisionKind.needsUserChoice);
+    expect(result.relation, CloudProgressRelation.knownViaLastSynced);
+    expect(result.mergePlan!.parentRevisionIds, ['a', 'b']);
+    expect(result.mergePlan!.revision, 5);
+  });
+
+  test('simple outcomes do not request a merge plan', () {
+    expect(policy.decide(doc(), doc(id: 'cloud')).mergePlan, isNull);
+    expect(
+      policy
+          .decide(doc(id: 'a', progress: populated()),
+              doc(id: 'b', parent: 'a', progress: populated(coins: 2)))
+          .mergePlan,
+      isNull,
+    );
+    expect(
+      policy
+          .decide(
+            doc(id: 'b', parent: 'a', progress: populated(coins: 2)),
+            doc(id: 'a', progress: populated()),
+          )
+          .mergePlan,
+      isNull,
+    );
   });
 }
