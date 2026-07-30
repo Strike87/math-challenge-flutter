@@ -7,6 +7,9 @@ import 'package:provider/provider.dart';
 import 'engine/game_state.dart' as gs;
 import 'game_config.dart';
 import 'features/modals/presentation/toast_banner.dart';
+import 'features/cloud_save/application/cloud_save_controller.dart';
+import 'features/cloud_save/application/cloud_save_service.dart';
+import 'features/cloud_save/data/play_games_saved_games_transport.dart';
 import 'services/storage.dart';
 import 'services/settings.dart';
 import 'services/audio.dart';
@@ -90,9 +93,23 @@ class MathChallengeApp extends StatelessWidget {
                 ? (iapAdapter as NativeIapPurchaseAdapter).purchaseStream
                 : null,
           );
-          state.load();
           return state;
         }),
+        ChangeNotifierProvider<CloudSaveController>(
+          lazy: false,
+          create: (ctx) {
+            final state = ctx.read<gs.GameState>();
+            final localLoad = state.load();
+            return CloudSaveController(
+              state: state,
+              localLoad: localLoad,
+              service: CloudSaveService(
+                state: state,
+                transport: MethodChannelSavedGamesTransport(),
+              ),
+            );
+          },
+        ),
       ],
       child: Consumer<SettingsService>(
         builder: (context, s, _) => MaterialApp(
@@ -155,7 +172,7 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      unawaited(context.read<gs.GameState>().checkPlayGamesConnection());
+      unawaited(context.read<CloudSaveController>().startAfterFirstFrame());
     });
   }
 
