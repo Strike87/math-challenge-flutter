@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
+import 'package:math_challenge/features/cloud_save/application/cloud_save_controller.dart';
+import 'package:math_challenge/features/cloud_save/application/cloud_save_service.dart';
+import 'package:math_challenge/features/cloud_save/data/play_games_saved_games_transport.dart';
 import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/models/game_data.dart';
 import 'package:math_challenge/models/enums.dart';
@@ -813,6 +816,13 @@ Widget _modalHost(GameState state, {Size size = const Size(390, 700)}) {
     providers: [
       ChangeNotifierProvider<GameState>.value(value: state),
       ChangeNotifierProvider<SettingsService>.value(value: state.settings),
+      ChangeNotifierProvider<CloudSaveController>(
+        create: (_) => CloudSaveController(
+          state: state,
+          service: CloudSaveService(state: state, transport: _NoopTransport()),
+          localLoad: Future.value(),
+        ),
+      ),
     ],
     child: MaterialApp(
       home: MediaQuery(
@@ -827,6 +837,20 @@ Widget _modalHost(GameState state, {Size size = const Size(390, 700)}) {
       ),
     ),
   );
+}
+
+class _NoopTransport implements SavedGamesTransport {
+  @override
+  Future<SavedGamesCommitResult> commit(Uint8List bytes) async =>
+      SavedGamesCommitted();
+
+  @override
+  Future<SavedGamesOpenResult> open() async => SavedGamesOpenedEmpty();
+
+  @override
+  Future<SavedGamesResolveResult> resolve(
+          String handle, Uint8List bytes) async =>
+      SavedGamesResolved();
 }
 
 Widget _dailyChallengesHost(GameState state, DateTime today) {

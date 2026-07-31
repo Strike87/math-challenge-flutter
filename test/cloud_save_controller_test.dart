@@ -435,7 +435,322 @@ void main() {
     expect(controller.status, CloudSaveStatus.requiresAttention);
     expect(state.cloudDirty, isTrue);
   });
+
+  test('settings sync is allowed only from an inactive menu', () async {
+    final pair = makeController(_Transport());
+    expect(pair.controller.canSyncFromSettings, isTrue);
+    pair.state.currentScreen = GameScreen.game;
+    expect(pair.controller.canSyncFromSettings, isFalse);
+    pair.state.currentScreen = GameScreen.menu;
+    pair.state.rt.gameActive = true;
+    expect(pair.controller.canSyncFromSettings, isFalse);
+  });
+
+  test('settings manual sync protects unsafe and pending state', () async {
+    final transport = _Transport();
+    final pair = makeController(transport);
+    pair.state
+      ..playGamesConnectionState = PlayGamesConnectionState.connected
+      ..cloudDirty = true
+      ..currentScreen = GameScreen.game;
+    await pair.controller.syncFromSettings();
+    expect(transport.opens, 0);
+    expect(pair.state.cloudDirty, isTrue);
+
+    pair.state.currentScreen = GameScreen.menu;
+    await pair.controller.syncFromSettings();
+    final pending = pair.controller.pendingChoice;
+    expect(transport.opens, 1);
+    if (pending != null) {
+      await pair.controller.syncFromSettings();
+      expect(identical(pair.controller.pendingChoice, pending), isTrue);
+    }
+  });
+
+  test('connect then sync coalesces and defers unsafe sync', () async {
+    final playGames = _PlayGames()..connectResult = true;
+    final transport = _Transport();
+    final pair = makeController(transport, playGames: playGames);
+    await Future.wait([
+      pair.controller.connectThenSync(),
+      pair.controller.syncFromSettings(),
+    ]);
+    expect(playGames.connects, 1);
+    expect(transport.opens, 1);
+
+    final unsafe = makeController(_Transport(),
+        playGames: _PlayGames()..connectResult = true);
+    unsafe.state.rt.gameActive = true;
+    await unsafe.controller.connectThenSync();
+    expect(unsafe.state.playGamesConnectionState,
+        PlayGamesConnectionState.connected);
+  });
+
+  test('failed connect does not sync or mutate local cloud state', () async {
+    final playGames = _PlayGames();
+    final transport = _Transport();
+    final pair = makeController(transport, playGames: playGames);
+    pair.state
+      ..coins = 9
+      ..cloudDirty = true;
+    await pair.controller.connectThenSync();
+    expect(playGames.connects, 1);
+    expect(transport.opens, 0);
+    expect(pair.controller.status, CloudSaveStatus.notAuthenticated);
+    expect(pair.state.coins, 9);
+    expect(pair.state.cloudDirty, isTrue);
+  });
+
+  test('post-connect sync waits for connection and reconciles once', () async {
+    final gate = Completer<bool>();
+    final playGames = _PlayGames()
+      ..connectGate = gate
+      ..connectResult = true;
+    final transport = _Transport();
+    final pair = makeController(transport, playGames: playGames);
+    pair.state.achievements['first_win'] = true;
+    final operation = pair.controller.connectThenSync();
+    expect(playGames.connects, 1);
+    expect(transport.opens, 0);
+    gate.complete(true);
+    await operation;
+    expect(playGames.unlocked, ['first_win']);
+    expect(transport.opens, 1);
+  });
+
+  test('ordinary and native pending choices block manual and post-connect sync',
+      () async {
+    ({
+      CloudSyncNeedsUserChoice? pending,
+      CloudSaveStatus status,
+      bool dirty,
+      int coins,
+      int games,
+      int? revision,
+      String? revisionId,
+      String? parentId,
+      List<String> mergeParents,
+      int opens,
+    }) baseline(({CloudSaveController controller, GameState state}) pair,
+            _Transport transport) =>
+        (
+          pending: pair.controller.pendingChoice,
+          status: pair.controller.status,
+          dirty: pair.state.cloudDirty,
+          coins: pair.state.coins,
+          games: pair.state.gamesPlayed,
+          revision: pair.state.cloudRevision,
+          revisionId: pair.state.cloudRevisionId,
+          parentId: pair.state.cloudParentRevisionId,
+          mergeParents: pair.state.cloudMergeParentRevisionIds,
+          opens: transport.opens,
+        );
+    final ordinaryTransport = _Transport()
+      ..openResult = SavedGamesOpenedData(_bytes(
+        _document(id: 'cloud', revision: 5, progress: _progress(20, 2)),
+      ));
+    final ordinary = makeController(ordinaryTransport,
+        playGames: _PlayGames()..connectResult = true);
+    await ordinary.state.acceptCloudProgressDocument(
+      _document(id: 'local', revision: 3, progress: _progress(10, 1)),
+      importProgress: true,
+    );
+    ordinary.state.cloudDirty = true;
+    await ordinary.controller.sync();
+    final ordinaryBaseline = baseline(ordinary, ordinaryTransport);
+    final ordinaryProgress = _cloudSnapshot(ordinary.state);
+    final ordinaryPending = ordinaryBaseline.pending;
+    expect(ordinaryPending, isA<CloudSyncDeviceCloudChoice>());
+    await ordinary.controller.syncFromSettings();
+    await ordinary.controller.connectThenSync();
+    expect(ordinaryTransport.opens, ordinaryBaseline.opens);
+    expect(
+        identical(ordinary.controller.pendingChoice, ordinaryPending), isTrue);
+    expect(ordinary.controller.status, CloudSaveStatus.needsOrdinaryChoice);
+    expect(ordinary.state.cloudDirty, ordinaryBaseline.dirty);
+    expect(ordinary.state.coins, ordinaryBaseline.coins);
+    expect(ordinary.state.gamesPlayed, ordinaryBaseline.games);
+    expect(ordinary.state.cloudRevision, ordinaryBaseline.revision);
+    expect(ordinary.state.cloudRevisionId, ordinaryBaseline.revisionId);
+    expect(ordinary.state.cloudParentRevisionId, ordinaryBaseline.parentId);
+    expect(ordinary.state.cloudMergeParentRevisionIds,
+        ordinaryBaseline.mergeParents);
+    expect(_cloudSnapshot(ordinary.state), ordinaryProgress);
+
+    final nativeTransport = _Transport()
+      ..openResult = SavedGamesConflict(
+        handle: 'choice',
+        snapshotBytes:
+            _bytes(_document(id: 'a', revision: 2, progress: _progress(1, 1))),
+        conflictingSnapshotBytes:
+            _bytes(_document(id: 'b', revision: 4, progress: _progress(2, 2))),
+      );
+    final native = makeController(nativeTransport,
+        playGames: _PlayGames()..connectResult = true);
+    native.state.cloudDirty = true;
+    await native.controller.sync();
+    final nativeBaseline = baseline(native, nativeTransport);
+    final nativeProgress = _cloudSnapshot(native.state);
+    final nativePending = nativeBaseline.pending;
+    expect(nativePending, isA<CloudSyncNativeCloudChoice>());
+    await native.controller.syncFromSettings();
+    await native.controller.connectThenSync();
+    expect(nativeTransport.opens, nativeBaseline.opens);
+    expect(identical(native.controller.pendingChoice, nativePending), isTrue);
+    expect(native.controller.status, CloudSaveStatus.needsNativeCloudChoice);
+    expect(native.state.cloudDirty, nativeBaseline.dirty);
+    expect(native.state.coins, nativeBaseline.coins);
+    expect(native.state.gamesPlayed, nativeBaseline.games);
+    expect(native.state.cloudRevision, nativeBaseline.revision);
+    expect(native.state.cloudRevisionId, nativeBaseline.revisionId);
+    expect(native.state.cloudParentRevisionId, nativeBaseline.parentId);
+    expect(
+        native.state.cloudMergeParentRevisionIds, nativeBaseline.mergeParents);
+    expect(_cloudSnapshot(native.state), nativeProgress);
+  });
+
+  test('unsafe connect defers until an explicit later settings sync', () async {
+    final transport = _Transport();
+    final pair = makeController(transport,
+        playGames: _PlayGames()..connectResult = true);
+    pair.state
+      ..coins = 7
+      ..cloudDirty = true
+      ..rt.gameActive = true;
+    final baseline = (
+      pair.state.coins,
+      pair.state.gamesPlayed,
+      pair.state.cloudDirty,
+      pair.state.cloudRevision,
+      pair.state.cloudRevisionId,
+      pair.state.cloudParentRevisionId,
+      pair.state.cloudMergeParentRevisionIds,
+      pair.controller.status,
+      transport.opens,
+    );
+    final progress = _cloudSnapshot(pair.state);
+    await pair.controller.connectThenSync();
+    expect(transport.opens, baseline.$9);
+    expect(pair.state.coins, baseline.$1);
+    expect(pair.state.gamesPlayed, baseline.$2);
+    expect(pair.state.cloudDirty, baseline.$3);
+    expect(pair.state.cloudRevision, baseline.$4);
+    expect(pair.state.cloudRevisionId, baseline.$5);
+    expect(pair.state.cloudParentRevisionId, baseline.$6);
+    expect(pair.state.cloudMergeParentRevisionIds, baseline.$7);
+    expect(pair.controller.status, baseline.$8);
+    expect(_cloudSnapshot(pair.state), progress);
+    pair.state.rt.gameActive = false;
+    await Future<void>.delayed(Duration.zero);
+    expect(transport.opens, 0);
+    await pair.controller.syncFromSettings();
+    expect(transport.opens, 1);
+  });
+
+  test('non-menu inactive settings sync preserves every cloud baseline',
+      () async {
+    final transport = _Transport();
+    final pair = makeController(transport);
+    pair.state
+      ..currentScreen = GameScreen.config
+      ..coins = 8
+      ..gamesPlayed = 4
+      ..cloudDirty = true
+      ..cloudRevision = 3
+      ..cloudRevisionId = 'revision'
+      ..cloudParentRevisionId = 'parent';
+    final baseline = (
+      pair.state.coins,
+      pair.state.gamesPlayed,
+      pair.state.cloudDirty,
+      pair.state.cloudRevision,
+      pair.state.cloudRevisionId,
+      pair.state.cloudParentRevisionId,
+      pair.state.cloudMergeParentRevisionIds,
+      pair.controller.status,
+      transport.opens,
+    );
+    final progress = _cloudSnapshot(pair.state);
+    await pair.controller.syncFromSettings();
+    expect(transport.opens, baseline.$9);
+    expect(pair.state.coins, baseline.$1);
+    expect(pair.state.gamesPlayed, baseline.$2);
+    expect(pair.state.cloudDirty, baseline.$3);
+    expect(pair.state.cloudRevision, baseline.$4);
+    expect(pair.state.cloudRevisionId, baseline.$5);
+    expect(pair.state.cloudParentRevisionId, baseline.$6);
+    expect(pair.state.cloudMergeParentRevisionIds, baseline.$7);
+    expect(pair.controller.status, baseline.$8);
+    expect(_cloudSnapshot(pair.state), progress);
+  });
+
+  test('failed connect releases the gate for one successful retry', () async {
+    final games = _PlayGames();
+    final transport = _Transport();
+    final pair = makeController(transport, playGames: games);
+    pair.state.cloudDirty = true;
+    await pair.controller.connectThenSync();
+    expect(games.connects, 1);
+    expect(transport.opens, 0);
+    expect(pair.controller.status, CloudSaveStatus.notAuthenticated);
+    games.connectResult = true;
+    await pair.controller.connectThenSync();
+    expect(games.connects, 2);
+    expect(transport.opens, 1);
+  });
+
+  test('post-connect waits for independently gated reconciliation', () async {
+    final events = <String>[];
+    final connectGate = Completer<bool>();
+    final reconcileGate = Completer<void>();
+    final games = _PlayGames()
+      ..connectGate = connectGate
+      ..unlockGate = reconcileGate
+      ..events = events;
+    final transport = _Transport()..events = events;
+    final pair = makeController(transport, playGames: games);
+    pair.state.achievements['first_win'] = true;
+    final operation = pair.controller.connectThenSync();
+    expect(events, ['connect-start']);
+    connectGate.complete(true);
+    await Future<void>.delayed(Duration.zero);
+    expect(events, ['connect-start', 'connect-complete', 'reconcile-start']);
+    expect(transport.opens, 0);
+    reconcileGate.complete();
+    await operation;
+    expect(events, [
+      'connect-start',
+      'connect-complete',
+      'reconcile-start',
+      'reconcile-complete',
+      'sync-postConnect',
+    ]);
+    expect(transport.opens, 1);
+  });
+
+  test('gated Connect and manual requests coalesce without a second sync',
+      () async {
+    final gate = Completer<bool>();
+    final games = _PlayGames()
+      ..connectGate = gate
+      ..connectResult = true;
+    final transport = _Transport();
+    final pair = makeController(transport, playGames: games);
+    final first = pair.controller.connectThenSync();
+    final second = pair.controller.connectThenSync();
+    final manual = pair.controller.syncFromSettings();
+    expect(games.connects, 1);
+    expect(transport.opens, 0);
+    gate.complete(true);
+    await Future.wait([first, second, manual]);
+    expect(transport.opens, 1);
+    await Future<void>.delayed(Duration.zero);
+    expect(transport.opens, 1);
+  });
 }
+
+String _cloudSnapshot(GameState state) =>
+    jsonEncode(state.exportCloudProgress().toJson());
 
 CloudProgress _progress(int coins, int games, [String? achievement]) {
   final empty = CloudProgress.empty();
@@ -483,9 +798,11 @@ class _Transport implements SavedGamesTransport {
   final openResults = <SavedGamesOpenResult>[];
   SavedGamesCommitResult commitResult = SavedGamesCommitted();
   SavedGamesResolveResult resolveResult = SavedGamesResolved();
+  List<String>? events;
   @override
   Future<SavedGamesOpenResult> open() {
     opens++;
+    events?.add('sync-postConnect');
     return openGate?.future ??
         Future.value(
             openResults.isEmpty ? openResult : openResults.removeAt(0));
@@ -534,6 +851,11 @@ class _PlayGames extends PlayGamesService {
   int checks = 0;
   int connects = 0;
   bool authenticated = false;
+  bool connectResult = false;
+  Completer<bool>? connectGate;
+  Completer<void>? unlockGate;
+  List<String>? events;
+  final unlocked = <String>[];
 
   @override
   Future<bool> isAuthenticated() async {
@@ -544,9 +866,19 @@ class _PlayGames extends PlayGamesService {
   @override
   Future<bool> connect() async {
     connects++;
-    return false;
+    events?.add('connect-start');
+    final gate = connectGate;
+    final result = gate == null ? connectResult : await gate.future;
+    events?.add('connect-complete');
+    return result;
   }
 
   @override
-  Future<void> unlockAchievement(String localAchievementId) async {}
+  Future<void> unlockAchievement(String localAchievementId) async {
+    unlocked.add(localAchievementId);
+    events?.add('reconcile-start');
+    final gate = unlockGate;
+    if (gate != null) await gate.future;
+    events?.add('reconcile-complete');
+  }
 }

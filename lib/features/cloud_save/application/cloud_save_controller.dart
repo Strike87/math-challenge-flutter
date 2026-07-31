@@ -57,6 +57,8 @@ class CloudSaveController extends ChangeNotifier {
       _status == CloudSaveStatus.upToDate && _state.cloudDirty
           ? CloudSaveStatus.changesPendingLocally
           : _status;
+  bool get canSyncFromSettings =>
+      _state.currentScreen == GameScreen.menu && !_state.rt.gameActive;
 
   Future<void> startAfterFirstFrame() {
     if (_startupAttempted) return _operation ?? Future.value();
@@ -77,6 +79,27 @@ class CloudSaveController extends ChangeNotifier {
   Future<void> sync(
           {CloudSaveSyncSource source = CloudSaveSyncSource.manual}) =>
       _run(() => _sync(source));
+
+  Future<void> syncFromSettings() => _run(() async {
+        if (!canSyncFromSettings || _pendingChoice != null) return;
+        if (_state.playGamesConnectionState !=
+            PlayGamesConnectionState.connected) {
+          _set(CloudSaveStatus.notAuthenticated, pending: null);
+          return;
+        }
+        await _sync(CloudSaveSyncSource.manual);
+      });
+
+  Future<void> connectThenSync() => _run(() async {
+        await _state.connectPlayGames();
+        if (_state.playGamesConnectionState !=
+            PlayGamesConnectionState.connected) {
+          _set(CloudSaveStatus.notAuthenticated, pending: _pendingChoice);
+          return;
+        }
+        if (!canSyncFromSettings || _pendingChoice != null) return;
+        await _sync(CloudSaveSyncSource.postConnect);
+      });
 
   Future<void> resolvePendingChoice(CloudSyncChoice choice) {
     final pending = _pendingChoice;

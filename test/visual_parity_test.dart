@@ -10,11 +10,15 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:math_challenge/engine/game_state.dart';
+import 'package:math_challenge/features/cloud_save/application/cloud_save_controller.dart';
+import 'package:math_challenge/features/cloud_save/application/cloud_save_service.dart';
+import 'package:math_challenge/features/cloud_save/data/play_games_saved_games_transport.dart';
 import 'package:math_challenge/features/operation_quest/domain/operation_quest.dart';
 import 'package:math_challenge/features/modals/presentation/toast_banner.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/iap.dart';
+import 'package:math_challenge/services/play_games.dart';
 import 'package:math_challenge/services/storage.dart';
 import 'package:math_challenge/theme.dart';
 import 'package:math_challenge/game_config.dart';
@@ -70,11 +74,13 @@ void expectNoVisualException(WidgetTester tester) {
 class TestAppWrapper extends StatelessWidget {
   final Widget child;
   final GameState state;
+  final CloudSaveController? cloudSaveController;
 
   const TestAppWrapper({
     super.key,
     required this.child,
     required this.state,
+    this.cloudSaveController,
   });
 
   @override
@@ -84,6 +90,8 @@ class TestAppWrapper extends StatelessWidget {
         ChangeNotifierProvider<SettingsService>.value(value: state.settings),
         Provider<AudioService>.value(value: state.audio),
         ChangeNotifierProvider<GameState>.value(value: state),
+        if (cloudSaveController case final controller?)
+          ChangeNotifierProvider<CloudSaveController>.value(value: controller),
       ],
       child: Consumer<SettingsService>(
         builder: (context, s, _) => MaterialApp(
@@ -224,6 +232,28 @@ Future<GameState> _makeState([Map<String, Object> prefs = const {}]) async {
   state.dailyBossDateKey = '2026-06-28';
   addTearDown(state.dispose);
   return state;
+}
+
+class _NoChangeCloudSaveService extends CloudSaveService {
+  _NoChangeCloudSaveService({required super.state})
+      : super(transport: _UnusedTransport());
+
+  @override
+  Future<CloudSyncResult> sync() async => CloudSyncNoChange();
+}
+
+class _UnusedTransport implements SavedGamesTransport {
+  @override
+  Future<SavedGamesCommitResult> commit(Uint8List bytes) async =>
+      SavedGamesCommitted();
+
+  @override
+  Future<SavedGamesOpenResult> open() async => SavedGamesOpenedEmpty();
+
+  @override
+  Future<SavedGamesResolveResult> resolve(
+          String handle, Uint8List bytes) async =>
+      SavedGamesResolved();
 }
 
 void expectQuickPracticeSemantics() {
@@ -953,9 +983,17 @@ void main() {
       final state = await _makeState({'mc_dark': false});
       state.currentScreen = GameScreen.menu;
       state.showModal(GameModal.settings);
+      final controller = CloudSaveController(
+        state: state,
+        localLoad: Future.value(),
+        service: _NoChangeCloudSaveService(state: state),
+      );
       await setTestDevice(tester, logicalSize: phoneSize);
-      await tester.pumpWidget(
-          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpWidget(TestAppWrapper(
+        state: state,
+        cloudSaveController: controller,
+        child: const TestAppShell(),
+      ));
       await tester.pumpAndSettle();
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Player Avatar'), findsOneWidget);
@@ -1279,6 +1317,71 @@ void main() {
         find.byType(TestAppShell),
         matchesGoldenFile('goldens/26_adult_gate_dark.png'),
       );
+    });
+
+    testWidgets('cloud save settings light', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..currentScreen = GameScreen.menu
+        ..playGamesConnectionState = PlayGamesConnectionState.connected
+        ..showModal(GameModal.settings);
+      final controller = CloudSaveController(
+        state: state,
+        localLoad: Future.value(),
+        service: _NoChangeCloudSaveService(state: state),
+      );
+      await controller.sync();
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(TestAppWrapper(
+        state: state,
+        cloudSaveController: controller,
+        child: const TestAppShell(),
+      ));
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byType(SingleChildScrollView).last,
+        const Offset(0, -650),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Play Games'), findsOneWidget);
+      expect(find.text('Up to date'), findsOneWidget);
+      expect(find.text('SYNC NOW'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(find.byType(TestAppShell),
+          matchesGoldenFile('goldens/27_cloud_save_settings_light.png'));
+    });
+
+    testWidgets('cloud save settings dark', (tester) async {
+      final state = await _makeState({'mc_dark': true});
+      state
+        ..currentScreen = GameScreen.menu
+        ..playGamesConnectionState = PlayGamesConnectionState.connected
+        ..showModal(GameModal.settings);
+      final controller = CloudSaveController(
+        state: state,
+        localLoad: Future.value(),
+        service: _NoChangeCloudSaveService(state: state),
+      );
+      await controller.sync();
+      await setTestDevice(tester, logicalSize: phoneSize);
+      state.settings.toggleDark();
+      await tester.pumpWidget(TestAppWrapper(
+        state: state,
+        cloudSaveController: controller,
+        child: const TestAppShell(),
+      ));
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byType(SingleChildScrollView).last,
+        const Offset(0, -650),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Play Games'), findsOneWidget);
+      expect(find.text('Up to date'), findsOneWidget);
+      expect(find.text('SYNC NOW'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(find.byType(TestAppShell),
+          matchesGoldenFile('goldens/27_cloud_save_settings_dark.png'));
     });
   });
 }
