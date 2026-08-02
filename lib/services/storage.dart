@@ -1,10 +1,17 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Tiny type-safe wrapper over `shared_preferences` for JSON-serialisable
 /// values. Mirrors the original `LS` helper from the HTML game.
 class Storage {
   static SharedPreferences? _prefs;
+
+  @visibleForTesting
+  static void Function(String key, String operation)? writeFailureHook;
+
+  static void _beforeWrite(String key, String operation) =>
+      writeFailureHook?.call(key, operation);
 
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -34,7 +41,10 @@ class Storage {
     return def;
   }
 
-  static Future<void> setBool(String k, bool v) => _p.setBool(k, v);
+  static Future<void> setBool(String k, bool v) {
+    _beforeWrite(k, 'setBool');
+    return _p.setBool(k, v);
+  }
 
   static int getInt(String k, int def) {
     final v = _p.get(k);
@@ -51,7 +61,10 @@ class Storage {
     return def;
   }
 
-  static Future<void> setInt(String k, int v) => _p.setInt(k, v);
+  static Future<void> setInt(String k, int v) {
+    _beforeWrite(k, 'setInt');
+    return _p.setInt(k, v);
+  }
 
   static double getDouble(String k, double def) {
     final v = _p.get(k);
@@ -67,14 +80,20 @@ class Storage {
     return def;
   }
 
-  static Future<void> setDouble(String k, double v) => _p.setDouble(k, v);
+  static Future<void> setDouble(String k, double v) {
+    _beforeWrite(k, 'setDouble');
+    return _p.setDouble(k, v);
+  }
 
   static String getString(String k, String def) {
     final v = _p.get(k);
     return v is String ? v : def;
   }
 
-  static Future<void> setString(String k, String v) => _p.setString(k, v);
+  static Future<void> setString(String k, String v) {
+    _beforeWrite(k, 'setString');
+    return _p.setString(k, v);
+  }
 
   static List<String> getStringList(String k, List<String> def) {
     final v = _p.get(k);
@@ -90,8 +109,10 @@ class Storage {
     return def;
   }
 
-  static Future<void> setStringList(String k, List<String> v) =>
-      _p.setStringList(k, v);
+  static Future<void> setStringList(String k, List<String> v) {
+    _beforeWrite(k, 'setStringList');
+    return _p.setStringList(k, v);
+  }
 
   static bool containsKey(String k) => _p.containsKey(k);
 
@@ -109,7 +130,7 @@ class Storage {
   }
 
   static Future<void> setObject(String k, Object value) =>
-      _p.setString(k, jsonEncode(value));
+      setString(k, jsonEncode(value));
 
   static List<T> getObjectList<T>(
       String k, T Function(Map<String, dynamic>) fromJson,
@@ -127,7 +148,10 @@ class Storage {
   }
 
   static Future<void> setObjectList<T>(String k, List<T> values) =>
-      _p.setString(k, jsonEncode(values));
+      setString(k, jsonEncode(values));
 
-  static Future<void> remove(String k) => _p.remove(k);
+  static Future<void> remove(String k) {
+    _beforeWrite(k, 'remove');
+    return _p.remove(k);
+  }
 }

@@ -1389,6 +1389,43 @@ void main() {
           matchesGoldenFile('goldens/27_cloud_save_settings_dark.png'));
     });
 
+    testWidgets('29. Reset Everywhere confirmation light and dark',
+        (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..currentScreen = GameScreen.menu
+        ..showModal(GameModal.settings);
+      final controller = CloudSaveController(
+        state: state,
+        localLoad: Future.value(),
+        service: _NoChangeCloudSaveService(state: state),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(TestAppWrapper(
+        state: state,
+        cloudSaveController: controller,
+        child: const TestAppShell(),
+      ));
+      await tester.pumpAndSettle();
+      await tester.drag(
+          find.byType(SingleChildScrollView).last, const Offset(0, -900));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('RESET EVERYWHERE'));
+      await tester.pumpAndSettle();
+      expect(find.text('Reset Everywhere'), findsWidgets);
+      await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile(
+              'goldens/29_cloud_save_reset_everywhere_light.png'));
+      await tester.tap(find.text('Cancel'));
+      state.settings.toggleDark();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('RESET EVERYWHERE'));
+      await tester.pumpAndSettle();
+      await expectLater(find.byType(MaterialApp),
+          matchesGoldenFile('goldens/29_cloud_save_reset_everywhere_dark.png'));
+    });
+
     testWidgets('28. cloud save conflict ordinary light', (tester) async {
       final state = await _makeState({'mc_dark': false});
       state

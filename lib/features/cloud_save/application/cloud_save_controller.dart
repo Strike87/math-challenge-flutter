@@ -45,6 +45,8 @@ class CloudSaveController extends ChangeNotifier {
   final CloudSaveService _service;
   final Future<void> _localLoad;
   Future<void>? _operation;
+  Future<void>? _resetOperation;
+  int _epoch = 0;
   bool _startupAttempted = false;
   CloudSaveStatus _status = CloudSaveStatus.neverAttempted;
   CloudSyncNeedsUserChoice? _pendingChoice;
@@ -52,74 +54,149 @@ class CloudSaveController extends ChangeNotifier {
   CloudSaveStatus get status => _status;
   CloudSyncNeedsUserChoice? get pendingChoice => _pendingChoice;
   bool get isBusy => _operation != null;
+  bool get isResetting => _resetOperation != null;
   bool get startupAttempted => _startupAttempted;
   CloudSaveStatus get effectiveStatus =>
       _status == CloudSaveStatus.upToDate && _state.cloudDirty
           ? CloudSaveStatus.changesPendingLocally
           : _status;
   bool get canSyncFromSettings =>
-      _state.currentScreen == GameScreen.menu && !_state.rt.gameActive;
+      !_state.cloudResetRecoveryBlocked &&
+      _state.currentScreen == GameScreen.menu &&
+      !_state.rt.gameActive;
+
+  Future<void> resetEverywhere() {
+    final existing = _resetOperation;
+    if (existing != null) return existing;
+    if (_state.currentScreen != GameScreen.menu || _state.rt.gameActive) {
+      return Future.value();
+    }
+    final epoch = ++_epoch;
+    _set(CloudSaveStatus.syncing, pending: null);
+    final before = _operation;
+    final completion = Completer<void>();
+    final reset = completion.future;
+    _resetOperation = reset;
+    () async {
+      try {
+        if (before != null) {
+          try {
+            await before;
+          } catch (_) {}
+        }
+        if (epoch != _epoch) return;
+        _operation = reset;
+        notifyListeners();
+        final localReset = await _state.resetCloudProgressEverywhere();
+        if (epoch != _epoch) return;
+        if (!localReset || _state.cloudResetRecoveryBlocked) {
+          _set(CloudSaveStatus.requiresAttention, pending: null);
+          return;
+        }
+        if (_state.playGamesConnectionState !=
+            PlayGamesConnectionState.connected) {
+          _set(CloudSaveStatus.notAuthenticated, pending: null);
+          return;
+        }
+        await _sync(CloudSaveSyncSource.postReset, epoch);
+      } catch (_) {
+        if (epoch == _epoch)
+          _set(CloudSaveStatus.requiresAttention, pending: null);
+      } finally {
+        if (identical(_operation, reset)) _operation = null;
+        if (identical(_resetOperation, reset)) _resetOperation = null;
+        completion.complete();
+        notifyListeners();
+      }
+    }();
+    return reset;
+  }
 
   Future<void> startAfterFirstFrame() {
     if (_startupAttempted) return _operation ?? Future.value();
     _startupAttempted = true;
     notifyListeners();
     return _run(() async {
+      final epoch = _epoch;
       await _localLoad;
+      if (epoch != _epoch) return;
+      if (_blockSyncForResetRecovery()) return;
       await _state.checkPlayGamesConnection();
+      if (epoch != _epoch) return;
       if (_state.playGamesConnectionState !=
           PlayGamesConnectionState.connected) {
         _set(CloudSaveStatus.notAuthenticated, pending: null);
         return;
       }
-      await _sync(CloudSaveSyncSource.startup);
+      await _sync(CloudSaveSyncSource.startup, epoch);
     });
   }
 
   Future<void> sync(
           {CloudSaveSyncSource source = CloudSaveSyncSource.manual}) =>
-      _run(() => _sync(source));
+      _resetOperation ?? _run(() => _sync(source, _epoch));
 
-  Future<void> syncFromSettings() => _run(() async {
+  Future<void> syncFromSettings() =>
+      _resetOperation ??
+      _run(() async {
+        if (_resetOperation != null) return;
+        if (_blockSyncForResetRecovery()) return;
         if (!canSyncFromSettings || _pendingChoice != null) return;
         if (_state.playGamesConnectionState !=
             PlayGamesConnectionState.connected) {
           _set(CloudSaveStatus.notAuthenticated, pending: null);
           return;
         }
-        await _sync(CloudSaveSyncSource.manual);
+        await _sync(CloudSaveSyncSource.manual, _epoch);
       });
 
-  Future<void> connectThenSync() => _run(() async {
+  Future<void> connectThenSync() =>
+      _resetOperation ??
+      _run(() async {
+        if (_resetOperation != null) return;
+        if (_blockSyncForResetRecovery()) return;
+        final epoch = _epoch;
         await _state.connectPlayGames();
+        if (epoch != _epoch) return;
         if (_state.playGamesConnectionState !=
             PlayGamesConnectionState.connected) {
           _set(CloudSaveStatus.notAuthenticated, pending: _pendingChoice);
           return;
         }
         if (!canSyncFromSettings || _pendingChoice != null) return;
-        await _sync(CloudSaveSyncSource.postConnect);
+        await _sync(CloudSaveSyncSource.postConnect, epoch);
       });
 
   Future<void> resolvePendingChoice(CloudSyncChoice choice) {
     final pending = _pendingChoice;
     if (pending == null) return Future.value();
     return _run(() async {
+      if (_blockSyncForResetRecovery()) return;
+      final epoch = _epoch;
       _set(CloudSaveStatus.syncing);
       final result = await _service.resolveUserChoice(pending, choice);
+      if (epoch != _epoch) return;
       _apply(result);
       if (result is CloudSyncNativeConflictResolvedResyncRequired) {
-        await _sync(CloudSaveSyncSource.nativeFollowUp);
+        await _sync(CloudSaveSyncSource.nativeFollowUp, epoch);
       }
     });
   }
 
-  Future<void> _sync(CloudSaveSyncSource source) async {
+  Future<void> _sync(CloudSaveSyncSource source, int epoch) async {
+    if (epoch != _epoch) return;
+    if (_blockSyncForResetRecovery()) return;
     _set(CloudSaveStatus.syncing);
     debugPrint('[cloud-save] sync ${source.name}');
     final result = await _service.sync();
     debugPrint('[cloud-save] result ${result.runtimeType}');
-    _apply(result);
+    if (epoch == _epoch) _apply(result);
+  }
+
+  bool _blockSyncForResetRecovery() {
+    if (!_state.cloudResetRecoveryBlocked) return false;
+    _set(CloudSaveStatus.requiresAttention, pending: null);
+    return true;
   }
 
   Future<void> _run(Future<void> Function() action) {

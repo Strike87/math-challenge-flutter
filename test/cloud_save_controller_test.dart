@@ -152,6 +152,26 @@ void main() {
     expect(result.status, CloudSaveStatus.notAuthenticated);
   });
 
+  test('reset wins over startup still waiting to sync', () async {
+    final transport = _Transport();
+    final authenticated = Completer<bool>();
+    final playGames = _PlayGames()..authenticationGate = authenticated;
+    final pair = makeController(
+      transport,
+      playGames: playGames,
+    );
+    final startup = pair.controller.startAfterFirstFrame();
+    await Future<void>.delayed(Duration.zero);
+    expect(playGames.checks, 1);
+    final reset = pair.controller.resetEverywhere();
+
+    authenticated.complete(true);
+    await Future.wait([startup, reset]);
+
+    expect(transport.opens, 1);
+    expect(pair.state.cloudResetGeneration, 1);
+  });
+
   test('coalesces listener-triggered sync calls before the service completes',
       () async {
     final transport = _Transport()
@@ -829,6 +849,83 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(transport.opens, 1);
   });
+
+  test('reset wins over a connecting sync before it reaches cloud sync',
+      () async {
+    final connectGate = Completer<bool>();
+    final transport = _Transport();
+    final pair = makeController(
+      transport,
+      playGames: _PlayGames()
+        ..connectGate = connectGate
+        ..connectResult = true,
+    );
+    final connect = pair.controller.connectThenSync();
+    final reset = pair.controller.resetEverywhere();
+
+    connectGate.complete(true);
+    await Future.wait([connect, reset]);
+
+    expect(transport.opens, 1);
+    expect(pair.state.cloudResetGeneration, 1);
+  });
+
+  test('Reset Everywhere is local-first when unauthenticated', () async {
+    final pair = makeController(_Transport());
+    await pair.state.load();
+    pair.state.coins = 42;
+
+    await pair.controller.resetEverywhere();
+
+    expect(pair.state.exportCloudProgress(), CloudProgress.empty());
+    expect(pair.state.cloudResetGeneration, 1);
+    expect(pair.state.cloudDirty, isTrue);
+    expect(pair.controller.status, CloudSaveStatus.notAuthenticated);
+  });
+
+  test('reset persistence failure blocks every cloud sync route', () async {
+    final transport = _Transport();
+    final pair = makeController(transport,
+        playGames: _PlayGames()..authenticated = true);
+    await pair.state.load();
+    Storage.writeFailureHook = (key, _) {
+      if (key == 'mc_puBonus') throw StateError('injected');
+    };
+    addTearDown(() => Storage.writeFailureHook = null);
+
+    await pair.controller.resetEverywhere();
+    expect(pair.state.cloudResetRecoveryBlocked, isTrue);
+    expect(transport.opens, 0);
+
+    await pair.controller.sync();
+    await pair.controller.syncFromSettings();
+    await pair.controller.connectThenSync();
+    expect(transport.opens, 0);
+    expect(pair.controller.status, CloudSaveStatus.requiresAttention);
+  });
+
+  test('Reset Everywhere coalesces callers and runs once after an active sync',
+      () async {
+    final transport = _Transport()
+      ..openGate = Completer<SavedGamesOpenResult>();
+    final pair = makeController(transport);
+    await pair.state.load();
+    pair.state.playGamesConnectionState = PlayGamesConnectionState.connected;
+    final sync = pair.controller.sync();
+    final first = pair.controller.resetEverywhere();
+    final second = pair.controller.resetEverywhere();
+    expect(identical(first, second), isTrue);
+    expect(transport.opens, 1);
+
+    transport.openGate!.complete(SavedGamesOpenedEmpty());
+    await sync;
+    await first;
+
+    expect(pair.state.cloudResetGeneration, 1);
+    expect(pair.state.exportCloudProgress(), CloudProgress.empty());
+    expect(transport.opens, 2);
+    expect(pair.controller.status, CloudSaveStatus.uploaded);
+  });
 }
 
 String _cloudSnapshot(GameState state) =>
@@ -937,6 +1034,7 @@ class _PlayGames extends PlayGamesService {
   int checks = 0;
   int connects = 0;
   bool authenticated = false;
+  Completer<bool>? authenticationGate;
   bool connectResult = false;
   Completer<bool>? connectGate;
   Completer<void>? unlockGate;
@@ -946,7 +1044,8 @@ class _PlayGames extends PlayGamesService {
   @override
   Future<bool> isAuthenticated() async {
     checks++;
-    return authenticated;
+    final gate = authenticationGate;
+    return gate == null ? authenticated : await gate.future;
   }
 
   @override

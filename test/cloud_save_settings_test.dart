@@ -39,6 +39,7 @@ void main() {
       () => _completedPair(const CloudSyncLocalPersistenceFailure()),
       () => _ordinaryPendingPair(),
       () => _nativePendingPair(),
+      _blockedPair,
       () => _unsafePair(active: true),
       () => _unsafePair(active: false),
     ];
@@ -58,6 +59,7 @@ void main() {
       ('Cloud save needs attention', 'TRY AGAIN', true),
       ('Cloud save needs review', 'REVIEW', true),
       ('Cloud save needs review', 'REVIEW', true),
+      ('Reset recovery required', null, false),
       ('Sync available from Main Menu', 'SYNC NOW', false),
       ('Sync available from Main Menu', 'SYNC NOW', false),
     ];
@@ -77,6 +79,7 @@ void main() {
       CloudSaveStatus.requiresAttention,
       CloudSaveStatus.needsOrdinaryChoice,
       CloudSaveStatus.needsNativeCloudChoice,
+      CloudSaveStatus.neverAttempted,
       CloudSaveStatus.neverAttempted,
       CloudSaveStatus.neverAttempted,
     ];
@@ -576,6 +579,83 @@ void main() {
     await _expectRow(
         tester, 'Sync available from Main Menu', 'SYNC NOW', false);
   });
+
+  testWidgets(
+      'Reset Everywhere is available from the menu and confirmation is mutation-free until submitted',
+      (tester) async {
+    final pair = await _pair(const CloudSyncNoChange(), connected: false);
+    await _pump(tester, pair);
+    final resetRow = find.ancestor(
+      of: find.text('RESET EVERYWHERE'),
+      matching: find.byType(InkWell),
+    );
+    expect(resetRow, findsOneWidget);
+    await tester.ensureVisible(resetRow);
+    await tester.tap(resetRow);
+    await tester.pumpAndSettle();
+    expect(find.text('Reset Everywhere'), findsNWidgets(2));
+    expect(
+      find.text(
+          'Erase cloud-saved progress on this device now. If you’re offline, cloud deletion will sync later. Older cloud progress cannot restore this data. This can’t be undone.'),
+      findsOneWidget,
+    );
+    expect(pair.state.cloudResetGeneration, 0);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(pair.state.cloudResetGeneration, 0);
+  });
+
+  testWidgets('Reset Everywhere only dismisses its barrier before submission',
+      (tester) async {
+    final pair = await _pair(const CloudSyncNoChange());
+    pair.service.gate = Completer<CloudSyncResult>();
+    await _pump(tester, pair);
+    final resetRow = find.ancestor(
+      of: find.text('RESET EVERYWHERE'),
+      matching: find.byType(InkWell),
+    );
+    await tester.ensureVisible(resetRow);
+    await tester.tap(resetRow);
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pumpAndSettle();
+    expect(find.text('Reset Everywhere'), findsNothing);
+
+    await tester.tap(resetRow);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reset Everywhere').last);
+    await tester.pump();
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pump();
+    expect(find.text('Reset Everywhere'), findsNWidgets(2));
+    expect(pair.state.cloudResetGeneration, 1);
+
+    pair.service.gate!.complete(const CloudSyncNoChange());
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+      'Reset Everywhere dispatches once and remains unavailable outside the safe menu',
+      (tester) async {
+    final pair = await _pair(const CloudSyncNoChange());
+    await _pump(tester, pair);
+    final resetRow = find.ancestor(
+      of: find.text('RESET EVERYWHERE'),
+      matching: find.byType(InkWell),
+    );
+    await tester.ensureVisible(resetRow);
+    await tester.tap(resetRow);
+    await tester.pump();
+    await tester.tap(find.text('Reset Everywhere').last);
+    await tester.tap(find.text('Reset Everywhere').last, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(pair.state.cloudResetGeneration, 1);
+    expect(pair.service.calls, 1);
+
+    pair.state.showScreen(GameScreen.game);
+    await tester.pumpAndSettle();
+    expect(tester.widget<InkWell>(resetRow).onTap, isNull);
+  });
 }
 
 Future<void> _expectRow(
@@ -682,6 +762,12 @@ Future<_Pair> _unsafePair({required bool active}) async {
   } else {
     pair.state.currentScreen = GameScreen.game;
   }
+  return pair;
+}
+
+Future<_Pair> _blockedPair() async {
+  final pair = await _pair(const CloudSyncNoChange());
+  pair.state.cloudResetRecoveryBlocked = true;
   return pair;
 }
 

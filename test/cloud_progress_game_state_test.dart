@@ -10,6 +10,7 @@ import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/models/game_data.dart';
 import 'package:math_challenge/models/player.dart';
 import 'package:math_challenge/services/audio.dart';
+import 'package:math_challenge/services/iap.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -128,6 +129,86 @@ void main() {
         updatedAtUtcMs: 1,
         progress: progress ?? CloudProgress.empty(),
       );
+
+  Map<String, Object> blockedRecoveryValues(
+    String intent, {
+    int loginDayOffset = 0,
+  }) {
+    final today = DateTime.now();
+    final date = '${today.year.toString().padLeft(4, '0')}-'
+        '${today.month.toString().padLeft(2, '0')}-'
+        '${today.day.toString().padLeft(2, '0')}';
+    return {
+      'mc_cloudResetIntent': intent,
+      'mc_cloudResetGeneration': 3,
+      'mc_cloudRevision': 8,
+      'mc_cloudRevisionId': 'old-revision',
+      'mc_cloudParentRevisionId': 'old-parent',
+      'mc_cloudMergeParentRevisionIds': ['left', 'right'],
+      'mc_cloudLastSyncedRevisionId': 'old-synced',
+      'mc_cloudDirty': false,
+      'mc_coins': 99,
+      'mc_gamesPlayed': 7,
+      'mc_operationQuestProgress': 'addition_easy=3',
+      'mc_skillMap': jsonEncode({
+        'addition': {'mastery': 99, 'count': 5},
+      }),
+      'mc_p1_name': 'Old Player',
+      'mc_p1_avatar': '🐱',
+      'mc_puBonus': jsonEncode({
+        for (final powerUp in PowerUp.values) powerUp.name: 7,
+      }),
+      'mc_livesBonus': 5,
+      'mc_selectedAnswerStyle': AnswerStyle.trueFalse.name,
+      'mc_loginStreak': 8,
+      'mc_lastLoginDay':
+          DateTime(today.year, today.month, today.day).millisecondsSinceEpoch ~/
+                  const Duration(days: 1).inMilliseconds +
+              loginDayOffset,
+      'mc_dailyProgress': jsonEncode({
+        'blitz_15': {'current': 4, 'completed': false},
+      }),
+      'mc_dailyChallenges': jsonEncode({
+        'date': date,
+        'challenges': ['blitz_15'],
+      }),
+      'mc_dailyCoinsDate': date,
+      'mc_dailyBossClaimed': date,
+      'mc_adsRemoved': true,
+      'mc_iapDeliveredTxs': ['tx-1'],
+      'mc_adGameCount': 11,
+      'mc_lastRewardedAt': 123456,
+    };
+  }
+
+  void expectBlockedRecovery(
+    GameState game, {
+    required int generation,
+    int loginStreak = 8,
+  }) {
+    expect(game.exportCloudProgress(), CloudProgress.empty());
+    expect(game.cloudResetGeneration, generation);
+    expect(game.cloudRevision, isNull);
+    expect(game.cloudRevisionId, isNull);
+    expect(game.cloudParentRevisionId, isNull);
+    expect(game.cloudMergeParentRevisionIds, isEmpty);
+    expect(game.cloudLastSyncedRevisionId, isNull);
+    expect(game.cloudDirty, isTrue);
+    expect(game.cloudResetRecoveryBlocked, isTrue);
+    expect(game.p[1].name, 'Player 1');
+    expect(game.selectedAnswerStyle, AnswerStyle.trueFalse);
+    expect(game.loginStreak, loginStreak);
+    expect(game.dailyProgress, {'blitz_15': 4});
+    expect(game.adsRemoved, isTrue);
+    expect(game.iapDeliveredTxs, ['tx-1']);
+    expect(game.adGameCount, 11);
+    expect(game.lastRewardedAt, 123456);
+    expect(Storage.containsKey('mc_cloudResetIntent'), isTrue);
+    game.startGame();
+    expect(game.p[1].pups, isEmpty);
+    game.startMasterMode();
+    expect(game.masterLives, 3);
+  }
 
   test('exports canonical empty CloudProgress and no metadata', () async {
     final game = await state();
@@ -564,6 +645,197 @@ void main() {
     await shop.buyShopItem(
         const ShopItem(id: 'av_cat', emoji: '🐱', name: 'Cat', price: 1));
     expect(shop.cloudDirty, isFalse);
+  });
+
+  test(
+      'Reset Everywhere writes intent first, clears cloud progress, and preserves excluded state',
+      () async {
+    final game = await state();
+    game
+      ..coins = 99
+      ..gamesPlayed = 7
+      ..cloudRevision = 4
+      ..cloudRevisionId = 'revision'
+      ..cloudParentRevisionId = 'parent'
+      ..cloudDirty = false
+      ..dailyProgress = {'daily': 1}
+      ..adsRemoved = true;
+    game.setAnswerStyle(AnswerStyle.trueFalse);
+    await game.save();
+    final writes = <String>[];
+    Storage.writeFailureHook = (key, _) => writes.add(key);
+    addTearDown(() => Storage.writeFailureHook = null);
+
+    expect(await game.resetCloudProgressEverywhere(), isTrue);
+
+    expect(writes.first, 'mc_cloudResetIntent');
+    expect(game.exportCloudProgress(), CloudProgress.empty());
+    expect(game.cloudResetGeneration, 1);
+    expect(game.cloudRevision, isNull);
+    expect(game.cloudRevisionId, isNull);
+    expect(game.cloudDirty, isTrue);
+    expect(game.dailyProgress, {'daily': 1});
+    expect(game.adsRemoved, isTrue);
+    expect(game.selectedAnswerStyle, AnswerStyle.trueFalse);
+    expect(Storage.containsKey('mc_cloudResetIntent'), isFalse);
+  });
+
+  test(
+      'Reset Everywhere recovery replays a durable intent without another generation',
+      () async {
+    final game = await state();
+    game.coins = 42;
+    await game.save();
+    Storage.writeFailureHook = (key, _) {
+      if (key == 'mc_coins') throw StateError('injected');
+    };
+    addTearDown(() => Storage.writeFailureHook = null);
+
+    expect(await game.resetCloudProgressEverywhere(), isFalse);
+    expect(game.exportCloudProgress(), CloudProgress.empty());
+    expect(game.cloudResetGeneration, 1);
+    expect(Storage.containsKey('mc_cloudResetIntent'), isTrue);
+
+    Storage.writeFailureHook = null;
+    final recovered = await reload();
+    expect(recovered.exportCloudProgress(), CloudProgress.empty());
+    expect(recovered.cloudResetGeneration, 1);
+    expect(recovered.cloudDirty, isTrue);
+    expect(Storage.containsKey('mc_cloudResetIntent'), isFalse);
+  });
+
+  test('malformed reset intent loads preserved state while failing closed',
+      () async {
+    final game = await state(blockedRecoveryValues('{bad'));
+
+    expectBlockedRecovery(game, generation: 3);
+  });
+
+  test('blocked load restores ads without saving cloud-owned state', () async {
+    final values = blockedRecoveryValues('{bad')..['mc_adsRemoved'] = false;
+    SharedPreferences.setMockInitialValues(values);
+    await Storage.init();
+    final settings = SettingsService()
+      ..load(
+          dark: false,
+          sound: false,
+          vibration: false,
+          dyslexia: false,
+          colorblind: false,
+          lowPerf: true,
+          reduceMotion: true,
+          animSpeed: 1);
+    final game = GameState(
+      settings: settings,
+      audio: AudioService(settings),
+      iapAdapter: const DevIapPurchaseAdapter(
+        isNativeRelease: false,
+        restoredPurchases: [
+          IapPurchase(
+            productId: IapProducts.removeAdsId,
+            status: IapPurchaseStatus.approved,
+          ),
+        ],
+      ),
+    );
+    addTearDown(game.dispose);
+    final writes = <String>[];
+    var notifications = 0;
+    game.addListener(() => notifications++);
+    Storage.writeFailureHook = (key, _) => writes.add(key);
+    try {
+      await game.load();
+      expect(notifications, 1);
+      expect(game.adsRemoved, isTrue);
+      expect(game.iapDeliveredTxs, ['tx-1']);
+      expect(game.exportCloudProgress(), CloudProgress.empty());
+      expect(writes, contains('mc_adsRemoved'));
+      const cloudKeys = {
+        'mc_coins',
+        'mc_gamesPlayed',
+        'mc_achievements',
+        'mc_operationQuestProgress',
+        'mc_scores',
+        'mc_skillMap',
+        'mc_numTypeUnlocked_integers',
+        'mc_numTypeUnlocked_rationals',
+        'mc_avatarCustom1',
+        'mc_avatarCustom2',
+        'mc_p1_name',
+        'mc_p1_avatar',
+        'mc_p2_name',
+        'mc_p2_avatar',
+        'mc_shopOwned',
+        'mc_unlockedAvatars',
+        'mc_unlockedHats',
+        'mc_cloudResetGeneration',
+        'mc_cloudRevision',
+        'mc_cloudRevisionId',
+        'mc_cloudParentRevisionId',
+        'mc_cloudMergeParentRevisionIds',
+        'mc_cloudLastSyncedRevisionId',
+        'mc_cloudDirty',
+      };
+      expect(writes.where(cloudKeys.contains), isEmpty);
+    } finally {
+      Storage.writeFailureHook = null;
+    }
+  });
+
+  test('future reset intent loads preserved state while failing closed',
+      () async {
+    final game = await state(
+      blockedRecoveryValues(
+        jsonEncode({'v': 2, 'targetResetGeneration': 5}),
+      ),
+    );
+
+    expectBlockedRecovery(game, generation: 3);
+  });
+
+  test('failed reset-intent replay loads preserved state while blocked',
+      () async {
+    final values = blockedRecoveryValues(
+      jsonEncode({'v': 1, 'targetResetGeneration': 4}),
+      loginDayOffset: -1,
+    );
+    SharedPreferences.setMockInitialValues(values);
+    await Storage.init();
+    final settings = SettingsService()
+      ..load(
+          dark: false,
+          sound: false,
+          vibration: false,
+          dyslexia: false,
+          colorblind: false,
+          lowPerf: true,
+          reduceMotion: true,
+          animSpeed: 1);
+    final game = GameState(settings: settings, audio: AudioService(settings));
+    addTearDown(game.dispose);
+    var notifications = 0;
+    game.addListener(() => notifications++);
+    Storage.writeFailureHook = (key, _) {
+      if (key == 'mc_coins') throw StateError('injected');
+    };
+    try {
+      await game.load();
+      expect(notifications, 1);
+      expectBlockedRecovery(game, generation: 4, loginStreak: 9);
+    } finally {
+      Storage.writeFailureHook = null;
+    }
+  });
+
+  test('reset persistence failure blocks cloud recovery', () async {
+    final game = await state();
+    Storage.writeFailureHook = (key, _) {
+      if (key == 'mc_puBonus') throw StateError('injected');
+    };
+    addTearDown(() => Storage.writeFailureHook = null);
+
+    expect(await game.resetCloudProgressEverywhere(), isFalse);
+    expect(game.cloudResetRecoveryBlocked, isTrue);
   });
 
   testWidgets('real completed game dirties once and import replays no flow',

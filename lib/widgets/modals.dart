@@ -1340,6 +1340,8 @@ class SettingsModal extends StatelessWidget {
                     _SettingsDivider(s: s),
                     _CloudSaveSettingsTile(controller: cloud, state: gs),
                     _SettingsDivider(s: s),
+                    _ResetEverywhereSettingsTile(controller: cloud, state: gs),
+                    _SettingsDivider(s: s),
                     _SettingsActionTile(
                       icon: Icons.restore_rounded,
                       title: 'Restore Purchases',
@@ -1467,17 +1469,19 @@ class _CloudSaveSettingsTile extends StatelessWidget {
     final connected =
         state.playGamesConnectionState == PlayGamesConnectionState.connected;
     final pending = controller.pendingChoice != null;
+    final blocked = state.cloudResetRecoveryBlocked;
     final unsafe = !controller.canSyncFromSettings;
     final busy = controller.isBusy;
     final status = controller.effectiveStatus;
-    final retry = switch (status) {
-      CloudSaveStatus.offlineOrTransportFailure ||
-      CloudSaveStatus.changedLocalState ||
-      CloudSaveStatus.resyncRequired ||
-      CloudSaveStatus.requiresAttention =>
-        true,
-      _ => false,
-    };
+    final retry = !blocked &&
+        switch (status) {
+          CloudSaveStatus.offlineOrTransportFailure ||
+          CloudSaveStatus.changedLocalState ||
+          CloudSaveStatus.resyncRequired ||
+          CloudSaveStatus.requiresAttention =>
+            true,
+          _ => false,
+        };
     final enabled = connected && !busy && !pending && !unsafe;
     final canReview = pending && !busy && !unsafe;
     final subtitle = busy
@@ -1486,33 +1490,35 @@ class _CloudSaveSettingsTile extends StatelessWidget {
             ? 'Cloud save needs review'
             : !connected
                 ? 'Connect Play Games to sync'
-                : unsafe
-                    ? 'Sync available from Main Menu'
-                    : switch (status) {
-                        CloudSaveStatus.neverAttempted => 'Ready to sync',
-                        CloudSaveStatus.changesPendingLocally =>
-                          'Changes waiting to sync',
-                        CloudSaveStatus.upToDate => 'Up to date',
-                        CloudSaveStatus.uploaded => 'Sync accepted',
-                        CloudSaveStatus.restoredFromCloud =>
-                          'Progress restored',
-                        CloudSaveStatus.automaticallyMerged ||
-                        CloudSaveStatus.userChoiceResolved =>
-                          'Progress merged',
-                        CloudSaveStatus.offlineOrTransportFailure =>
-                          'Couldn’t sync',
-                        CloudSaveStatus.changedLocalState ||
-                        CloudSaveStatus.resyncRequired =>
-                          'Sync again to use the latest progress',
-                        CloudSaveStatus.requiresAttention =>
-                          'Cloud save needs attention',
-                        CloudSaveStatus.notAuthenticated =>
-                          'Connect Play Games to sync',
-                        CloudSaveStatus.syncing => 'Syncing…',
-                        CloudSaveStatus.needsOrdinaryChoice ||
-                        CloudSaveStatus.needsNativeCloudChoice =>
-                          'Cloud save needs review',
-                      };
+                : blocked
+                    ? 'Reset recovery required'
+                    : unsafe
+                        ? 'Sync available from Main Menu'
+                        : switch (status) {
+                            CloudSaveStatus.neverAttempted => 'Ready to sync',
+                            CloudSaveStatus.changesPendingLocally =>
+                              'Changes waiting to sync',
+                            CloudSaveStatus.upToDate => 'Up to date',
+                            CloudSaveStatus.uploaded => 'Sync accepted',
+                            CloudSaveStatus.restoredFromCloud =>
+                              'Progress restored',
+                            CloudSaveStatus.automaticallyMerged ||
+                            CloudSaveStatus.userChoiceResolved =>
+                              'Progress merged',
+                            CloudSaveStatus.offlineOrTransportFailure =>
+                              'Couldn’t sync',
+                            CloudSaveStatus.changedLocalState ||
+                            CloudSaveStatus.resyncRequired =>
+                              'Sync again to use the latest progress',
+                            CloudSaveStatus.requiresAttention =>
+                              'Cloud save needs attention',
+                            CloudSaveStatus.notAuthenticated =>
+                              'Connect Play Games to sync',
+                            CloudSaveStatus.syncing => 'Syncing…',
+                            CloudSaveStatus.needsOrdinaryChoice ||
+                            CloudSaveStatus.needsNativeCloudChoice =>
+                              'Cloud save needs review',
+                          };
     return _SettingsActionTile(
       icon: Icons.cloud_sync_rounded,
       title: 'Cloud Save',
@@ -1520,13 +1526,15 @@ class _CloudSaveSettingsTile extends StatelessWidget {
       color: GameConfig.sky,
       actionLabel: busy
           ? 'SYNC NOW'
-          : pending
-              ? 'REVIEW'
-              : !connected
-                  ? null
-                  : retry
-                      ? 'TRY AGAIN'
-                      : 'SYNC NOW',
+          : blocked
+              ? null
+              : pending
+                  ? 'REVIEW'
+                  : !connected
+                      ? null
+                      : retry
+                          ? 'TRY AGAIN'
+                          : 'SYNC NOW',
       onTap: canReview
           ? () {
               final capturedPending = controller.pendingChoice;
@@ -1546,6 +1554,120 @@ class _CloudSaveSettingsTile extends StatelessWidget {
               : null,
     );
   }
+}
+
+class _ResetEverywhereSettingsTile extends StatelessWidget {
+  const _ResetEverywhereSettingsTile(
+      {required this.controller, required this.state});
+
+  final CloudSaveController controller;
+  final GameState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = state.currentScreen == GameScreen.menu &&
+        !state.rt.gameActive &&
+        !controller.isResetting;
+    return _SettingsActionTile(
+      icon: Icons.cloud_off_rounded,
+      title: 'RESET EVERYWHERE',
+      subtitle:
+          'Erase saved progress on this device and prevent older cloud progress from returning.',
+      color: GameConfig.punch,
+      destructive: true,
+      onTap: !enabled
+          ? null
+          : () {
+              final submitted = ValueNotifier(false);
+              Navigator.of(context).push(
+                _ResetEverywhereDialogRoute(
+                  context: context,
+                  controller: controller,
+                  submitted: submitted,
+                ),
+              );
+            },
+    );
+  }
+}
+
+class _ResetEverywhereDialogRoute extends DialogRoute<void> {
+  _ResetEverywhereDialogRoute({
+    required super.context,
+    required CloudSaveController controller,
+    required this.submitted,
+  }) : super(
+          barrierDismissible: true,
+          builder: (_) => _ResetEverywhereDialog(
+            controller: controller,
+            submitted: submitted,
+          ),
+        ) {
+    submitted.addListener(changedInternalState);
+  }
+
+  final ValueNotifier<bool> submitted;
+
+  @override
+  bool get barrierDismissible => !submitted.value;
+
+  @override
+  void dispose() {
+    submitted
+      ..removeListener(changedInternalState)
+      ..dispose();
+    super.dispose();
+  }
+}
+
+class _ResetEverywhereDialog extends StatefulWidget {
+  const _ResetEverywhereDialog({
+    required this.controller,
+    required this.submitted,
+  });
+
+  final CloudSaveController controller;
+  final ValueNotifier<bool> submitted;
+
+  @override
+  State<_ResetEverywhereDialog> createState() => _ResetEverywhereDialogState();
+}
+
+class _ResetEverywhereDialogState extends State<_ResetEverywhereDialog> {
+  bool _submitted = false;
+
+  Future<void> _reset() async {
+    if (_submitted) return;
+    setState(() {
+      _submitted = true;
+      widget.submitted.value = true;
+    });
+    await widget.controller.resetEverywhere();
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+        canPop: !_submitted,
+        child: AlertDialog(
+          title: const Text('Reset Everywhere'),
+          content: Text(_submitted
+              ? widget.controller.isBusy
+                  ? 'Resetting progress…'
+                  : 'Reset queued'
+              : 'Erase cloud-saved progress on this device now. If you’re offline, cloud deletion will sync later. Older cloud progress cannot restore this data. This can’t be undone.'),
+          actions: [
+            TextButton(
+              onPressed: _submitted ? null : () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: _submitted ? null : _reset,
+              child: const Text('Reset Everywhere'),
+            ),
+          ],
+        ),
+      );
 }
 
 class _CloudSaveConflictReviewDialog extends StatefulWidget {
