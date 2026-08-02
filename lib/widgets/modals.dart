@@ -1354,25 +1354,6 @@ class SettingsModal extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               _SettingsSectionLabel(
-                icon: Icons.storage_rounded,
-                label: 'Data',
-                s: s,
-                color: GameConfig.punch,
-              ),
-              const SizedBox(height: 8),
-              _SettingsActionTile(
-                icon: Icons.delete_outline_rounded,
-                title: '🗑️ Reset All Data',
-                subtitle: 'Erase progress and restore default settings',
-                color: GameConfig.punch,
-                destructive: true,
-                onTap: () {
-                  gs.resetAllData();
-                  gs.closeModal();
-                },
-              ),
-              const SizedBox(height: 18),
-              _SettingsSectionLabel(
                 icon: Icons.support_agent_rounded,
                 label: 'Support / About',
                 s: s,
@@ -1570,9 +1551,9 @@ class _ResetEverywhereSettingsTile extends StatelessWidget {
         !controller.isResetting;
     return _SettingsActionTile(
       icon: Icons.cloud_off_rounded,
-      title: 'RESET EVERYWHERE',
+      title: 'RESTART GAME PROGRESS',
       subtitle:
-          'Erase saved progress on this device and prevent older cloud progress from returning.',
+          'Erase game progress on this device and all connected devices. Settings and purchases will be kept.',
       color: GameConfig.punch,
       destructive: true,
       onTap: !enabled
@@ -1650,12 +1631,12 @@ class _ResetEverywhereDialogState extends State<_ResetEverywhereDialog> {
   Widget build(BuildContext context) => PopScope(
         canPop: !_submitted,
         child: AlertDialog(
-          title: const Text('Reset Everywhere'),
+          title: const Text('Restart Game Progress?'),
           content: Text(_submitted
               ? widget.controller.isBusy
                   ? 'Resetting progress…'
                   : 'Reset queued'
-              : 'Erase cloud-saved progress on this device now. If you’re offline, cloud deletion will sync later. Older cloud progress cannot restore this data. This can’t be undone.'),
+              : 'Coins, scores, mastery, achievements, player names, avatars, and Quest progress will be erased. Older cloud saves will not restore them. Settings and purchases will remain. This can’t be undone.'),
           actions: [
             TextButton(
               onPressed: _submitted ? null : () => Navigator.of(context).pop(),
@@ -1663,7 +1644,7 @@ class _ResetEverywhereDialogState extends State<_ResetEverywhereDialog> {
             ),
             TextButton(
               onPressed: _submitted ? null : _reset,
-              child: const Text('Reset Everywhere'),
+              child: const Text('Restart Progress'),
             ),
           ],
         ),
@@ -1901,17 +1882,15 @@ class _SettingsSectionLabel extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.s,
-    this.color = GameConfig.coral,
   });
 
   final IconData icon;
   final String label;
   final SettingsService s;
-  final int color;
 
   @override
   Widget build(BuildContext context) {
-    final accent = Color(color);
+    final accent = Color(GameConfig.coral);
     return Row(
       children: [
         Container(
