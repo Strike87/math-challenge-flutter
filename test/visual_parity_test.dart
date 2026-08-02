@@ -2,6 +2,7 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +14,7 @@ import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/features/cloud_save/application/cloud_save_controller.dart';
 import 'package:math_challenge/features/cloud_save/application/cloud_save_service.dart';
 import 'package:math_challenge/features/cloud_save/data/play_games_saved_games_transport.dart';
+import 'package:math_challenge/features/cloud_save/domain/cloud_progress_document.dart';
 import 'package:math_challenge/features/operation_quest/domain/operation_quest.dart';
 import 'package:math_challenge/features/modals/presentation/toast_banner.dart';
 import 'package:math_challenge/services/settings.dart';
@@ -94,12 +96,15 @@ class TestAppWrapper extends StatelessWidget {
           ChangeNotifierProvider<CloudSaveController>.value(value: controller),
       ],
       child: Consumer<SettingsService>(
-        builder: (context, s, _) => MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light(s),
-          darkTheme: AppTheme.dark(s),
-          themeMode: s.dark ? ThemeMode.dark : ThemeMode.light,
-          home: child,
+        builder: (context, s, _) => RepaintBoundary(
+          key: const ValueKey('visual-root'),
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light(s),
+            darkTheme: AppTheme.dark(s),
+            themeMode: s.dark ? ThemeMode.dark : ThemeMode.light,
+            home: child,
+          ),
         ),
       ),
     );
@@ -1383,5 +1388,262 @@ void main() {
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/27_cloud_save_settings_dark.png'));
     });
+
+    testWidgets('28. cloud save conflict ordinary light', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..currentScreen = GameScreen.menu
+        ..playGamesConnectionState = PlayGamesConnectionState.connected
+        ..showModal(GameModal.settings);
+      final controller = await _conflictController(state);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(TestAppWrapper(
+        state: state,
+        cloudSaveController: controller,
+        child: const TestAppShell(),
+      ));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('REVIEW'));
+      await tester.tap(find.text('REVIEW'));
+      await tester.pumpAndSettle();
+      expect(find.text('This Device'), findsOneWidget);
+      expect(find.text('Cloud Progress'), findsOneWidget);
+      expect(find.text('Keep This Device'), findsOneWidget);
+      expect(find.text('Use Cloud Progress'), findsOneWidget);
+      expect(find.text('Review Cloud Save'), findsOneWidget);
+      expect(find.text('Close'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byKey(const ValueKey('visual-root')),
+        matchesGoldenFile('goldens/28_cloud_save_conflict_ordinary_light.png'),
+      );
+    });
+
+    testWidgets('28. cloud save conflict ordinary dark', (tester) async {
+      final state = await _makeState({'mc_dark': true});
+      state
+        ..currentScreen = GameScreen.menu
+        ..playGamesConnectionState = PlayGamesConnectionState.connected
+        ..showModal(GameModal.settings);
+      final controller = await _conflictController(state);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      state.settings.toggleDark();
+      await tester.pumpWidget(TestAppWrapper(
+        state: state,
+        cloudSaveController: controller,
+        child: const TestAppShell(),
+      ));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('REVIEW'));
+      await tester.tap(find.text('REVIEW'));
+      await tester.pumpAndSettle();
+      expect(find.text('Review Cloud Save'), findsOneWidget);
+      expect(find.text('This Device'), findsOneWidget);
+      expect(find.text('Cloud Progress'), findsOneWidget);
+      expect(find.text('Keep This Device'), findsOneWidget);
+      expect(find.text('Use Cloud Progress'), findsOneWidget);
+      expect(find.text('Close'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byKey(const ValueKey('visual-root')),
+        matchesGoldenFile('goldens/28_cloud_save_conflict_ordinary_dark.png'),
+      );
+    });
+
+    testWidgets('28. cloud save conflict native light', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..currentScreen = GameScreen.menu
+        ..playGamesConnectionState = PlayGamesConnectionState.connected
+        ..showModal(GameModal.settings);
+      final controller = await _conflictController(state, native: true);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(TestAppWrapper(
+        state: state,
+        cloudSaveController: controller,
+        child: const TestAppShell(),
+      ));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('REVIEW'));
+      await tester.tap(find.text('REVIEW'));
+      await tester.pumpAndSettle();
+      expect(find.text('Version 1'), findsOneWidget);
+      expect(find.text('Version 2'), findsOneWidget);
+      expect(find.text('Review Cloud Save'), findsOneWidget);
+      expect(find.text('Use Version 1'), findsOneWidget);
+      expect(find.text('Use Version 2'), findsOneWidget);
+      expect(find.text('Close'), findsOneWidget);
+      expect(find.text('This Device'), findsNothing);
+      expect(find.text('Cloud Progress'), findsNothing);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byKey(const ValueKey('visual-root')),
+        matchesGoldenFile('goldens/28_cloud_save_conflict_native_light.png'),
+      );
+    });
+
+    testWidgets('cloud save conflict stays reachable at large text',
+        (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..currentScreen = GameScreen.menu
+        ..playGamesConnectionState = PlayGamesConnectionState.connected
+        ..showModal(GameModal.settings);
+      final controller = await _conflictController(state);
+      await setTestDevice(tester, logicalSize: const Size(360, 640));
+      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+      addTearDown(
+        tester.platformDispatcher.clearTextScaleFactorTestValue,
+      );
+      await tester.pumpWidget(TestAppWrapper(
+        state: state,
+        cloudSaveController: controller,
+        child: const TestAppShell(),
+      ));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('REVIEW'));
+      await tester.tap(find.text('REVIEW'));
+      await tester.pumpAndSettle();
+      final dialog = find.ancestor(
+        of: find.text('Review Cloud Save'),
+        matching: find.byType(Dialog),
+      );
+      final scroll = find.descendant(
+        of: dialog,
+        matching: find.byType(SingleChildScrollView),
+      );
+      final scrollable = find.descendant(
+        of: scroll,
+        matching: find.byType(Scrollable),
+      );
+      expect(scroll, findsOneWidget);
+      expect(scrollable, findsOneWidget);
+      expect(find.text('Review Cloud Save'), findsOneWidget);
+      final position = tester.state<ScrollableState>(scrollable).position;
+      expect(position.maxScrollExtent, greaterThan(0));
+      expectNoVisualException(tester);
+      final beforePixels = position.pixels;
+      await tester.drag(scroll, const Offset(0, -200));
+      await tester.pumpAndSettle();
+      expect(position.pixels, greaterThan(beforePixels));
+      expectNoVisualException(tester);
+
+      for (final label in ['This Device', 'Cloud Progress']) {
+        await _expectVisibleInScrollViewport(tester, scroll, label);
+      }
+      for (final label in [
+        'Keep This Device',
+        'Use Cloud Progress',
+        'Close',
+      ]) {
+        await _expectHitTestableInDeviceViewport(tester, label);
+      }
+    });
   });
+}
+
+Future<void> _expectVisibleInScrollViewport(
+  WidgetTester tester,
+  Finder scroll,
+  String label,
+) async {
+  final target = find.text(label);
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
+  final targetBox = tester.renderObject<RenderBox>(target);
+  final scrollBox = tester.renderObject<RenderBox>(scroll);
+  final targetRect = targetBox.localToGlobal(Offset.zero) & targetBox.size;
+  final viewportRect = scrollBox.localToGlobal(Offset.zero) & scrollBox.size;
+  expect(targetRect.overlaps(viewportRect), isTrue);
+  expectNoVisualException(tester);
+}
+
+Future<void> _expectHitTestableInDeviceViewport(
+  WidgetTester tester,
+  String label,
+) async {
+  final target = find.text(label);
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
+  final box = tester.renderObject<RenderBox>(target);
+  final rect = box.localToGlobal(Offset.zero) & box.size;
+  final logicalSize = tester.view.physicalSize / tester.view.devicePixelRatio;
+  expect((Offset.zero & logicalSize).overlaps(rect), isTrue);
+  expect(
+    tester.hitTestOnBinding(rect.center).path.map((entry) => entry.target),
+    contains(box),
+  );
+  expectNoVisualException(tester);
+}
+
+Future<CloudSaveController> _conflictController(
+  GameState state, {
+  bool native = false,
+}) async {
+  final transport = _ConflictTransport();
+  if (native) {
+    transport.result = SavedGamesConflict(
+      handle: 'review',
+      snapshotBytes: _cloudBytes('one', 2, 1, 1),
+      conflictingSnapshotBytes: _cloudBytes('two', 4, 2, 2),
+    );
+  } else {
+    await state.acceptCloudProgressDocument(
+      CloudProgressDocument(
+        revision: 3,
+        revisionId: 'local',
+        resetGeneration: 0,
+        updatedAtUtcMs: 1,
+        progress: _cloudProgress(10, 1),
+      ),
+      importProgress: true,
+    );
+    transport.result = SavedGamesOpenedData(_cloudBytes('cloud', 5, 20, 2));
+  }
+  final controller = CloudSaveController(
+    state: state,
+    localLoad: Future.value(),
+    service: CloudSaveService(state: state, transport: transport),
+  );
+  await controller.sync();
+  return controller;
+}
+
+CloudProgress _cloudProgress(int coins, int games) {
+  final empty = CloudProgress.empty();
+  return CloudProgress(
+    coins: coins,
+    gamesPlayed: games,
+    achievements: empty.achievements,
+    operationQuestStars: empty.operationQuestStars,
+    highScores: empty.highScores,
+    skillMap: empty.skillMap,
+    profile: empty.profile,
+    economy: empty.economy,
+  );
+}
+
+Uint8List _cloudBytes(String id, int revision, int coins, int games) =>
+    Uint8List.fromList(utf8.encode(CloudProgressDocument(
+      revision: revision,
+      revisionId: id,
+      resetGeneration: 0,
+      updatedAtUtcMs: 1,
+      progress: _cloudProgress(coins, games),
+    ).encode()));
+
+class _ConflictTransport implements SavedGamesTransport {
+  SavedGamesOpenResult result = SavedGamesOpenedEmpty();
+
+  @override
+  Future<SavedGamesCommitResult> commit(Uint8List bytes) async =>
+      SavedGamesCommitted();
+
+  @override
+  Future<SavedGamesOpenResult> open() async => result;
+
+  @override
+  Future<SavedGamesResolveResult> resolve(
+          String handle, Uint8List bytes) async =>
+      SavedGamesResolved();
 }

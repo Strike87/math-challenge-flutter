@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
 import '../features/cloud_save/application/cloud_save_controller.dart';
+import '../features/cloud_save/application/cloud_save_service.dart';
+import '../features/cloud_save/domain/cloud_progress_document.dart';
 import '../features/modals/presentation/widgets/avatar_builder_tab_label.dart';
 import '../features/modals/presentation/widgets/skill_dashboard_header.dart';
 import '../features/operation_quest/domain/operation_quest.dart';
@@ -1477,6 +1479,7 @@ class _CloudSaveSettingsTile extends StatelessWidget {
       _ => false,
     };
     final enabled = connected && !busy && !pending && !unsafe;
+    final canReview = pending && !busy && !unsafe;
     final subtitle = busy
         ? 'Syncing…'
         : pending
@@ -1515,12 +1518,258 @@ class _CloudSaveSettingsTile extends StatelessWidget {
       title: 'Cloud Save',
       subtitle: subtitle,
       color: GameConfig.sky,
-      actionLabel: (!connected || pending)
-          ? null
-          : retry
-              ? 'TRY AGAIN'
-              : 'SYNC NOW',
-      onTap: enabled ? controller.syncFromSettings : null,
+      actionLabel: busy
+          ? 'SYNC NOW'
+          : pending
+              ? 'REVIEW'
+              : !connected
+                  ? null
+                  : retry
+                      ? 'TRY AGAIN'
+                      : 'SYNC NOW',
+      onTap: canReview
+          ? () {
+              final capturedPending = controller.pendingChoice;
+              if (capturedPending == null) return;
+              showDialog<void>(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => _CloudSaveConflictReviewDialog(
+                  controller: controller,
+                  state: state,
+                  pending: capturedPending,
+                ),
+              );
+            }
+          : enabled
+              ? controller.syncFromSettings
+              : null,
+    );
+  }
+}
+
+class _CloudSaveConflictReviewDialog extends StatefulWidget {
+  const _CloudSaveConflictReviewDialog({
+    required this.controller,
+    required this.state,
+    required this.pending,
+  });
+
+  final CloudSaveController controller;
+  final GameState state;
+  final CloudSyncNeedsUserChoice pending;
+
+  @override
+  State<_CloudSaveConflictReviewDialog> createState() =>
+      _CloudSaveConflictReviewDialogState();
+}
+
+class _CloudSaveConflictReviewDialogState
+    extends State<_CloudSaveConflictReviewDialog> {
+  bool _resolving = false;
+  bool _routeClosing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.state.addListener(_closeWhenSettingsCloses);
+  }
+
+  @override
+  void dispose() {
+    widget.state.removeListener(_closeWhenSettingsCloses);
+    super.dispose();
+  }
+
+  void _closeWhenSettingsCloses() {
+    if (widget.state.currentModal != GameModal.settings) _removeDialogRoute();
+  }
+
+  void _closeFromUserAction() {
+    if (!mounted || _routeClosing || _resolving) return;
+    _routeClosing = true;
+    Navigator.of(context).pop();
+  }
+
+  void _removeDialogRoute() {
+    if (!mounted || _routeClosing) return;
+    _routeClosing = true;
+    Navigator.of(context).removeRoute(ModalRoute.of(context)!);
+  }
+
+  bool get _safe =>
+      widget.state.currentScreen == GameScreen.menu &&
+      !widget.state.rt.gameActive;
+
+  Future<void> _resolve(CloudSyncChoice choice) async {
+    if (_resolving ||
+        !mounted ||
+        !_safe ||
+        widget.controller.isBusy ||
+        !identical(widget.controller.pendingChoice, widget.pending)) {
+      if (mounted &&
+          !identical(widget.controller.pendingChoice, widget.pending)) {
+        _removeDialogRoute();
+      }
+      return;
+    }
+    setState(() => _resolving = true);
+    await widget.controller.resolvePendingChoice(choice);
+    if (!mounted) return;
+    if (!identical(widget.controller.pendingChoice, widget.pending)) {
+      _removeDialogRoute();
+    } else {
+      setState(() => _resolving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final pendingIsCurrent =
+        identical(widget.controller.pendingChoice, widget.pending);
+    if (!pendingIsCurrent && !_resolving) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _removeDialogRoute();
+      });
+    }
+    final disabled =
+        _resolving || !pendingIsCurrent || !_safe || widget.controller.isBusy;
+    final (
+      firstLabel,
+      firstProgress,
+      firstChoice,
+      secondLabel,
+      secondProgress,
+      secondChoice
+    ) = switch (widget.pending) {
+      CloudSyncDeviceCloudChoice(
+        :final keepThisDeviceCandidate,
+        :final useCloudCandidate
+      ) =>
+        (
+          'This Device',
+          keepThisDeviceCandidate,
+          CloudSyncChoice.keepThisDevice,
+          'Cloud Progress',
+          useCloudCandidate,
+          CloudSyncChoice.useCloud,
+        ),
+      CloudSyncNativeCloudChoice(
+        :final primaryCloudCandidate,
+        :final conflictingCloudCandidate
+      ) =>
+        (
+          'Version 1',
+          primaryCloudCandidate,
+          CloudSyncChoice.primaryCloud,
+          'Version 2',
+          conflictingCloudCandidate,
+          CloudSyncChoice.conflictingCloud,
+        ),
+    };
+    final ordinary = widget.pending is CloudSyncDeviceCloudChoice;
+    return PopScope(
+      canPop: !_resolving,
+      child: Dialog(
+        insetPadding: const EdgeInsets.all(24),
+        child: ModalShell(
+          icon: '☁️',
+          title: 'Review Cloud Save',
+          subtitle: 'Two progress versions need your choice',
+          maxHeight: 640,
+          actions: [
+            Opacity(
+              opacity: disabled ? 0.5 : 1,
+              child: IgnorePointer(
+                ignoring: disabled,
+                child: NeoButton(
+                  label: ordinary ? 'Keep This Device' : 'Use Version 1',
+                  color: GameConfig.coral,
+                  onPressed: () => _resolve(firstChoice),
+                ),
+              ),
+            ),
+            Opacity(
+              opacity: disabled ? 0.5 : 1,
+              child: IgnorePointer(
+                ignoring: disabled,
+                child: NeoButton(
+                  label: ordinary ? 'Use Cloud Progress' : 'Use Version 2',
+                  color: GameConfig.sky,
+                  onPressed: () => _resolve(secondChoice),
+                ),
+              ),
+            ),
+            Opacity(
+              opacity: _resolving ? 0.5 : 1,
+              child: IgnorePointer(
+                ignoring: _resolving,
+                child: NeoButton(
+                  label: 'Close',
+                  outlined: true,
+                  color: GameConfig.coral,
+                  onPressed: _closeFromUserAction,
+                ),
+              ),
+            ),
+          ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_resolving) ...[
+                const Center(child: CircularProgressIndicator()),
+                const SizedBox(height: 8),
+                Text('Resolving your choice…',
+                    textAlign: TextAlign.center,
+                    style:
+                        TextStyle(color: s.muted, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+              ],
+              _CloudProgressSummary(label: firstLabel, progress: firstProgress),
+              const SizedBox(height: 10),
+              _CloudProgressSummary(
+                  label: secondLabel, progress: secondProgress),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CloudProgressSummary extends StatelessWidget {
+  const _CloudProgressSummary({required this.label, required this.progress});
+
+  final String label;
+  final CloudProgress progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final achievements =
+        progress.achievements.values.where((value) => value).length;
+    final stars = progress.operationQuestStars.values
+        .fold<int>(0, (sum, value) => sum + value);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: s.surface2,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: s.border),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label,
+            style: TextStyle(color: s.text, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 6),
+        Text('${progress.coins} coins • ${progress.gamesPlayed} games played',
+            style: TextStyle(
+                color: s.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+        Text(
+            '$achievements achievements • $stars Quest stars • ${progress.highScores.length} high scores',
+            style: TextStyle(
+                color: s.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+      ]),
     );
   }
 }

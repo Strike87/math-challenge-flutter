@@ -56,8 +56,8 @@ void main() {
       ('Sync again to use the latest progress', 'TRY AGAIN', true),
       ('Sync again to use the latest progress', 'TRY AGAIN', true),
       ('Cloud save needs attention', 'TRY AGAIN', true),
-      ('Cloud save needs review', null, false),
-      ('Cloud save needs review', null, false),
+      ('Cloud save needs review', 'REVIEW', true),
+      ('Cloud save needs review', 'REVIEW', true),
       ('Sync available from Main Menu', 'SYNC NOW', false),
       ('Sync available from Main Menu', 'SYNC NOW', false),
     ];
@@ -91,7 +91,8 @@ void main() {
       final connectionsBefore = pair.playGames.calls;
       await _tapRow(tester, ensureVisible: expected.$3);
       await tester.pump();
-      expect(pair.service.calls, before + (expected.$3 ? 1 : 0));
+      expect(pair.service.calls,
+          before + (expected.$2 == 'REVIEW' ? 0 : (expected.$3 ? 1 : 0)));
       expect(pair.playGames.calls, connectionsBefore);
       if (pair.service.gate != null) {
         pair.service.gate!.complete(const CloudSyncNoChange());
@@ -178,6 +179,49 @@ void main() {
     expect(unsafe.playGames.calls, unsafeConnections);
   });
 
+  testWidgets('pending review stays non-actionable in unsafe contexts',
+      (tester) async {
+    final cases = [
+      (
+        await _ordinaryPendingPair(),
+        CloudSaveStatus.needsOrdinaryChoice,
+        true,
+      ),
+      (
+        await _nativePendingPair(),
+        CloudSaveStatus.needsNativeCloudChoice,
+        false,
+      ),
+    ];
+    for (final testCase in cases) {
+      final pair = testCase.$1;
+      if (testCase.$3) {
+        pair.state.rt.gameActive = true;
+      } else {
+        pair.state.currentScreen = GameScreen.game;
+      }
+      final pending = pair.controller.pendingChoice;
+      final syncCalls = pair.service.calls;
+      final resolutionCalls = pair.service.resolutions.length;
+      final snapshot = _snapshot(pair.state);
+
+      expect(pending, isNotNull);
+      expect(pair.controller.status, testCase.$2);
+      await _pump(tester, pair);
+      await _expectRow(tester, 'Cloud save needs review', 'REVIEW', false);
+      await tester.ensureVisible(find.text('REVIEW'));
+      await tester.tap(find.text('REVIEW'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Review Cloud Save'), findsNothing);
+      expect(pair.service.calls, syncCalls);
+      expect(pair.service.resolutions.length, resolutionCalls);
+      expect(identical(pair.controller.pendingChoice, pending), isTrue);
+      expect(pair.controller.status, testCase.$2);
+      expect(_snapshot(pair.state), snapshot);
+    }
+  });
+
   testWidgets('ordinary and native pending survive Settings close and reopen',
       (tester) async {
     for (final pair in [
@@ -189,12 +233,15 @@ void main() {
       final calls = pair.service.calls;
       final snapshot = _snapshot(pair.state);
       await _pump(tester, pair);
-      await _expectRow(tester, 'Cloud save needs review', null, false);
+      await _expectRow(tester, 'Cloud save needs review', 'REVIEW', true);
       await _tapRow(tester);
-      await tester.pump();
+      await tester.pumpAndSettle();
+      expect(find.text('Review Cloud Save'), findsOneWidget);
       expect(pair.service.calls, calls);
       pair.state.closeModal();
       await tester.pumpAndSettle();
+      expect(find.text('Review Cloud Save'), findsNothing);
+      expect(identical(pair.controller.pendingChoice, pending), isTrue);
       expect(pair.service.calls, calls);
       expect(_snapshot(pair.state), snapshot);
       pair.state.showModal(GameModal.settings);
@@ -203,8 +250,288 @@ void main() {
       expect(pair.controller.status, status);
       expect(pair.service.calls, calls);
       expect(_snapshot(pair.state), snapshot);
-      await _expectRow(tester, 'Cloud save needs review', null, false);
+      await _expectRow(tester, 'Cloud save needs review', 'REVIEW', true);
+      await _tapRow(tester);
+      await tester.pumpAndSettle();
+      expect(find.text('Review Cloud Save'), findsOneWidget);
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
     }
+  });
+
+  testWidgets('explicit Close preserves each typed pending conflict',
+      (tester) async {
+    for (final testCase in [
+      (
+        await _ordinaryPendingPair(),
+        CloudSaveStatus.needsOrdinaryChoice,
+      ),
+      (
+        await _nativePendingPair(),
+        CloudSaveStatus.needsNativeCloudChoice,
+      ),
+    ]) {
+      final pair = testCase.$1;
+      final pending = pair.controller.pendingChoice;
+      final initialStatus = pair.controller.status;
+      final calls = pair.service.calls;
+      final resolutionCalls = pair.service.resolutions.length;
+      expect(initialStatus, testCase.$2);
+      await _pump(tester, pair);
+      await _tapRow(tester);
+      await tester.pumpAndSettle();
+      expect(find.text('Review Cloud Save'), findsOneWidget);
+      expect(
+          find.text(
+              pair.controller.status == CloudSaveStatus.needsOrdinaryChoice
+                  ? 'This Device'
+                  : 'Version 1'),
+          findsOneWidget);
+      expect(
+          find.text(
+              pair.controller.status == CloudSaveStatus.needsOrdinaryChoice
+                  ? 'Cloud Progress'
+                  : 'Version 2'),
+          findsOneWidget);
+      expect(pair.service.calls, calls);
+      expect(identical(pair.controller.pendingChoice, pending), isTrue);
+      final beforeClose = _snapshot(pair.state);
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+      expect(find.text('Review Cloud Save'), findsNothing);
+      expect(pair.service.resolutions.length, resolutionCalls);
+      expect(pair.service.calls, calls);
+      expect(identical(pair.controller.pendingChoice, pending), isTrue);
+      expect(pair.controller.status, initialStatus);
+      expect(pair.controller.status, testCase.$2);
+      expect(_snapshot(pair.state), beforeClose);
+      await _tapRow(tester);
+      await tester.pumpAndSettle();
+      expect(find.text('Review Cloud Save'), findsOneWidget);
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('resolving conflict blocks dismissal and duplicate actions',
+      (tester) async {
+    final pair = await _ordinaryPendingPair();
+    pair.service.resolutionGate = Completer<CloudSyncResult>();
+    await _pump(tester, pair);
+    await _tapRow(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Keep This Device'));
+    await tester.pump();
+
+    expect(find.text('Resolving your choice…'), findsOneWidget);
+    expect(pair.service.resolutions, hasLength(1));
+    for (final label in [
+      'Keep This Device',
+      'Use Cloud Progress',
+      'Close',
+    ]) {
+      await tester.tap(find.text(label), warnIfMissed: false);
+    }
+    await tester.tapAt(const Offset(5, 5));
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(find.text('Review Cloud Save'), findsOneWidget);
+    expect(pair.service.resolutions, hasLength(1));
+
+    pair.service.resolutionGate!.complete(const CloudSyncUserChoiceMerged());
+    await tester.pumpAndSettle();
+    expect(find.text('Review Cloud Save'), findsNothing);
+  });
+
+  testWidgets('closing Settings disposes an in-flight conflict dialog safely',
+      (tester) async {
+    final pair = await _ordinaryPendingPair();
+    pair.service.resolutionGate = Completer<CloudSyncResult>();
+    final syncCalls = pair.service.calls;
+    await _pump(tester, pair);
+    await _tapRow(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Keep This Device'));
+    await tester.pump();
+
+    expect(pair.service.resolutions, hasLength(1));
+    pair.state.closeModal();
+    await tester.pumpAndSettle();
+    expect(find.text('Review Cloud Save'), findsNothing);
+
+    pair.service.resolutionGate!.complete(const CloudSyncUserChoiceMerged());
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(pair.service.resolutions, hasLength(1));
+    expect(pair.service.calls, syncCalls);
+    expect(find.text('Review Cloud Save'), findsNothing);
+  });
+
+  testWidgets('all four conflict actions map once to their captured pending',
+      (tester) async {
+    final cases = [
+      (
+        _ordinaryPendingPair,
+        'Keep This Device',
+        CloudSyncChoice.keepThisDevice
+      ),
+      (_ordinaryPendingPair, 'Use Cloud Progress', CloudSyncChoice.useCloud),
+      (_nativePendingPair, 'Use Version 1', CloudSyncChoice.primaryCloud),
+      (_nativePendingPair, 'Use Version 2', CloudSyncChoice.conflictingCloud),
+    ];
+    for (final testCase in cases) {
+      final pair = await testCase.$1();
+      final pending = pair.controller.pendingChoice;
+      final syncCalls = pair.service.calls;
+      pair.service.resolutionResult = const CloudSyncUserChoiceMerged();
+      await _pump(tester, pair);
+      await _tapRow(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(testCase.$2));
+      await tester.tap(find.text(testCase.$2), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(pair.service.resolutions, [(pending, testCase.$3)]);
+      expect(pair.service.calls, syncCalls);
+    }
+  });
+
+  testWidgets('stale cleared and superseded conflicts never resolve',
+      (tester) async {
+    for (final superseded in [false, true]) {
+      final pair = await _ordinaryPendingPair();
+      final pendingA = pair.controller.pendingChoice;
+      final snapshot = _snapshot(pair.state);
+      await _pump(tester, pair);
+      await _tapRow(tester);
+      await tester.pumpAndSettle();
+
+      CloudSyncNeedsUserChoice? pendingB;
+      if (superseded) {
+        pendingB = (await _nativePendingPair()).controller.pendingChoice;
+        pair.service.nextSyncResult = pendingB;
+      } else {
+        pair.service.nextSyncResult = const CloudSyncNoChange();
+      }
+      await pair.controller.sync();
+      expect(identical(pair.controller.pendingChoice, pendingA), isFalse);
+      await tester.tap(find.text('Keep This Device'));
+      await tester.pumpAndSettle();
+
+      expect(pair.service.resolutions, isEmpty);
+      expect(identical(pair.controller.pendingChoice, pendingB), isTrue);
+      expect(
+        pair.controller.status,
+        superseded
+            ? CloudSaveStatus.needsNativeCloudChoice
+            : CloudSaveStatus.upToDate,
+      );
+      expect(_snapshot(pair.state), snapshot);
+      expect(find.text('Review Cloud Save'), findsNothing);
+    }
+  });
+
+  testWidgets('resolution results use existing Settings presentations',
+      (tester) async {
+    final cases = <(CloudSyncResult, String, String, CloudSaveStatus)>[
+      (
+        const CloudSyncUserChoiceMerged(),
+        'Progress merged',
+        'SYNC NOW',
+        CloudSaveStatus.userChoiceResolved,
+      ),
+      (
+        const CloudSyncChangedLocalState(),
+        'Sync again to use the latest progress',
+        'TRY AGAIN',
+        CloudSaveStatus.changedLocalState,
+      ),
+      (
+        const CloudSyncTransportFailure(SavedGamesTransportError.unavailable),
+        'Couldn’t sync',
+        'TRY AGAIN',
+        CloudSaveStatus.offlineOrTransportFailure,
+      ),
+      (
+        const CloudSyncLocalPersistenceFailure(),
+        'Cloud save needs attention',
+        'TRY AGAIN',
+        CloudSaveStatus.requiresAttention,
+      ),
+    ];
+    for (final testCase in cases) {
+      final pair = await _ordinaryPendingPair();
+      final syncCalls = pair.service.calls;
+      pair.service.resolutionResult = testCase.$1;
+      await _pump(tester, pair);
+      await _tapRow(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Keep This Device'));
+      await tester.pumpAndSettle();
+      expect(find.text('Review Cloud Save'), findsNothing);
+      await _expectRow(tester, testCase.$2, testCase.$3, true);
+      expect(pair.controller.status, testCase.$4);
+      expect(pair.service.calls, syncCalls);
+      expect(pair.service.resolutions, hasLength(1));
+      if (testCase.$1 is! CloudSyncUserChoiceMerged) {
+        _expectNoCloudSuccessCopy();
+      }
+    }
+
+    final native = await _nativePendingPair();
+    final syncCalls = native.service.calls;
+    native.service
+      ..resolutionResult = const CloudSyncNativeConflictResolvedResyncRequired()
+      ..nextSyncResult = const CloudSyncStaleConflict();
+    await _pump(tester, native);
+    await _tapRow(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Use Version 1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Review Cloud Save'), findsNothing);
+    await _expectRow(
+      tester,
+      'Sync again to use the latest progress',
+      'TRY AGAIN',
+      true,
+    );
+    expect(native.controller.status, CloudSaveStatus.resyncRequired);
+    expect(native.service.calls, syncCalls + 1);
+    expect(native.service.resolutions, hasLength(1));
+    _expectNoCloudSuccessCopy();
+  });
+
+  testWidgets('changed local conflict preserves state and offers retry',
+      (tester) async {
+    final pair = await _ordinaryPendingPair();
+    final pending = pair.controller.pendingChoice;
+    final syncCalls = pair.service.calls;
+    await _pump(tester, pair);
+    await _tapRow(tester);
+    await tester.pumpAndSettle();
+
+    pair.state
+      ..coins += 1
+      ..cloudDirty = true;
+    final protectedSnapshot = _snapshot(pair.state);
+    await tester.tap(find.text('Keep This Device'));
+    await tester.pumpAndSettle();
+
+    expect(pending, isNotNull);
+    expect(pair.controller.status, CloudSaveStatus.changedLocalState);
+    expect(pair.controller.pendingChoice, isNull);
+    expect(find.text('Review Cloud Save'), findsNothing);
+    await _expectRow(
+      tester,
+      'Sync again to use the latest progress',
+      'TRY AGAIN',
+      true,
+    );
+    expect(_snapshot(pair.state), protectedSnapshot);
+    expect(pair.state.coins, 11);
+    expect(
+        pair.service.resolutions, [(pending, CloudSyncChoice.keepThisDevice)]);
+    expect(pair.service.calls, syncCalls);
+    _expectNoCloudSuccessCopy();
   });
 
   testWidgets('Cloud Save row priority is busy, pending, auth, unsafe, status',
@@ -232,7 +559,7 @@ void main() {
         ..playGamesConnectionState = PlayGamesConnectionState.disconnected
         ..cloudDirty = true;
       await _pump(tester, pair);
-      await _expectRow(tester, 'Cloud save needs review', null, false);
+      await _expectRow(tester, 'Cloud save needs review', 'REVIEW', true);
     }
 
     final auth =
@@ -263,6 +590,8 @@ Future<void> _expectRow(
       action == 'SYNC NOW' ? findsOneWidget : findsNothing);
   expect(find.text('TRY AGAIN'),
       action == 'TRY AGAIN' ? findsOneWidget : findsNothing);
+  expect(
+      find.text('REVIEW'), action == 'REVIEW' ? findsOneWidget : findsNothing);
   final row = _row();
   expect(tester.widget<InkWell>(row).onTap == null, isNot(enabled));
 }
@@ -271,6 +600,17 @@ Finder _row() => find.ancestor(
       of: find.text('Cloud Save'),
       matching: find.byType(InkWell),
     );
+
+void _expectNoCloudSuccessCopy() {
+  for (final copy in [
+    'Up to date',
+    'Sync accepted',
+    'Progress restored',
+    'Progress merged',
+  ]) {
+    expect(find.text(copy), findsNothing);
+  }
+}
 
 Future<void> _tapRow(WidgetTester tester, {bool ensureVisible = true}) async {
   if (ensureVisible) await tester.ensureVisible(find.text('Cloud Save'));
@@ -499,11 +839,32 @@ class _Service extends CloudSaveService {
   CloudSyncResult result;
   final bool realService;
   Completer<CloudSyncResult>? gate;
+  Completer<CloudSyncResult>? resolutionGate;
+  CloudSyncResult? resolutionResult;
+  CloudSyncResult? nextSyncResult;
+  final resolutions = <(CloudSyncNeedsUserChoice, CloudSyncChoice)>[];
   int calls = 0;
   @override
   Future<CloudSyncResult> sync() {
     calls++;
+    final next = nextSyncResult;
+    if (next != null) {
+      nextSyncResult = null;
+      return Future.value(next);
+    }
     return realService ? super.sync() : gate?.future ?? Future.value(result);
+  }
+
+  @override
+  Future<CloudSyncResult> resolveUserChoice(
+    CloudSyncNeedsUserChoice pending,
+    CloudSyncChoice choice,
+  ) {
+    resolutions.add((pending, choice));
+    return resolutionGate?.future ??
+        (resolutionResult == null
+            ? super.resolveUserChoice(pending, choice)
+            : Future.value(resolutionResult));
   }
 }
 

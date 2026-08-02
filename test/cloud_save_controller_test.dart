@@ -221,6 +221,88 @@ void main() {
     expect(transport.commits, hasLength(1));
   });
 
+  test('ordinary use-cloud resolution coalesces through the controller',
+      () async {
+    final pair = makeController(_Transport());
+    await pair.state.acceptCloudProgressDocument(
+      _document(id: 'local', revision: 3, progress: _progress(10, 1)),
+      importProgress: true,
+    );
+    final transport = _Transport()
+      ..openResult = SavedGamesOpenedData(_bytes(
+        _document(id: 'cloud', revision: 5, progress: _progress(20, 2)),
+      ));
+    final service = _RecordingCloudSaveService(
+      state: pair.state,
+      transport: transport,
+    );
+    final controller = CloudSaveController(
+      state: pair.state,
+      localLoad: Future.value(),
+      service: service,
+    );
+
+    await controller.sync();
+    final pending = controller.pendingChoice!;
+    await Future.wait([
+      controller.resolvePendingChoice(CloudSyncChoice.useCloud),
+      controller.resolvePendingChoice(CloudSyncChoice.useCloud),
+    ]);
+
+    expect(identical(service.resolvedPending, pending), isTrue);
+    expect(service.resolveCalls, 1);
+    expect(service.resolvedChoice, CloudSyncChoice.useCloud);
+    expect(pair.state.coins, 20);
+    expect(pair.state.gamesPlayed, 2);
+    expect(controller.pendingChoice, isNull);
+    expect(controller.status, CloudSaveStatus.userChoiceResolved);
+  });
+
+  test('native Version 1 and Version 2 coalesce with one follow-up sync',
+      () async {
+    for (final choice in [
+      CloudSyncChoice.primaryCloud,
+      CloudSyncChoice.conflictingCloud,
+    ]) {
+      final transport = _Transport()
+        ..openResults.addAll([
+          SavedGamesConflict(
+            handle: 'choice',
+            snapshotBytes: _bytes(
+                _document(id: 'a', revision: 2, progress: _progress(1, 1))),
+            conflictingSnapshotBytes: _bytes(
+                _document(id: 'b', revision: 4, progress: _progress(2, 2))),
+          ),
+          SavedGamesOpenedEmpty(),
+        ]);
+      final pair = makeController(transport);
+      final service = _RecordingCloudSaveService(
+        state: pair.state,
+        transport: transport,
+      );
+      final controller = CloudSaveController(
+        state: pair.state,
+        localLoad: Future.value(),
+        service: service,
+      );
+
+      await controller.sync();
+      final pending = controller.pendingChoice!;
+      await Future.wait([
+        controller.resolvePendingChoice(choice),
+        controller.resolvePendingChoice(choice),
+      ]);
+
+      expect(identical(service.resolvedPending, pending), isTrue);
+      expect(service.resolveCalls, 1);
+      expect(service.resolvedChoice, choice);
+      expect(transport.resolves, hasLength(1));
+      expect(transport.opens, 2);
+      expect(controller.pendingChoice, isNull);
+      expect(controller.status, CloudSaveStatus.uploaded);
+    }
+  });
+
   test('native choice follows up once and stops on a second resync', () async {
     final primary = _bytes(
         _document(id: 'primary', revision: 1, progress: _progress(1, 1)));
@@ -825,6 +907,8 @@ class _RecordingCloudSaveService extends CloudSaveService {
   _RecordingCloudSaveService({required super.state, required super.transport});
 
   CloudSyncNeedsUserChoice? resolvedPending;
+  CloudSyncChoice? resolvedChoice;
+  int resolveCalls = 0;
 
   @override
   Future<CloudSyncResult> resolveUserChoice(
@@ -832,6 +916,8 @@ class _RecordingCloudSaveService extends CloudSaveService {
     CloudSyncChoice choice,
   ) {
     resolvedPending = pending;
+    resolvedChoice = choice;
+    resolveCalls++;
     return super.resolveUserChoice(pending, choice);
   }
 }
