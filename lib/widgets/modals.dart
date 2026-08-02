@@ -3,6 +3,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
+import '../features/cloud_save/application/cloud_save_controller.dart';
+import '../features/cloud_save/application/cloud_save_service.dart';
+import '../features/cloud_save/domain/cloud_progress_document.dart';
 import '../features/modals/presentation/widgets/avatar_builder_tab_label.dart';
 import '../features/modals/presentation/widgets/skill_dashboard_header.dart';
 import '../features/operation_quest/domain/operation_quest.dart';
@@ -1242,185 +1245,654 @@ class SettingsModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<SettingsService>(
-      builder: (context, s, _) => ModalShell(
-        icon: '⚙️',
-        title: 'Settings',
-        subtitle: 'Make Math Challenge yours',
-        actions: [
-          NeoButton(
-            label: 'Done',
-            color: GameConfig.coral,
-            onPressed: gs.closeModal,
-          ),
-        ],
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _SettingsSectionLabel(
-              icon: Icons.person_rounded,
-              label: 'Player Avatar',
-              s: s,
-            ),
-            const SizedBox(height: 8),
-            _AvatarSettingsTile(gs: gs),
-            const SizedBox(height: 18),
-            _SettingsSectionLabel(
-              icon: Icons.tune_rounded,
-              label: 'Display & Audio',
-              s: s,
-            ),
-            const SizedBox(height: 8),
-            _SettingsCard(
-              s: s,
-              child: Column(
-                children: [
-                  _TrioBtn(
-                    icon: '🌓',
-                    label: 'Dark Mode',
-                    state: s.dark ? 'ON' : 'OFF',
-                    active: s.dark,
-                    onTap: s.toggleDark,
-                  ),
-                  _SettingsDivider(s: s),
-                  _TrioBtn(
-                    icon: '🔊',
-                    label: 'Sound',
-                    state: s.sound ? 'ON' : 'OFF',
-                    active: s.sound,
-                    onTap: s.toggleSound,
-                  ),
-                  _SettingsDivider(s: s),
-                  _TrioBtn(
-                    icon: '📳',
-                    label: 'Vibration',
-                    state: s.vibration ? 'ON' : 'OFF',
-                    active: s.vibration,
-                    onTap: s.toggleVibration,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            _SettingsSectionLabel(
-              icon: Icons.accessibility_new_rounded,
-              label: 'Accessibility',
-              s: s,
-            ),
-            const SizedBox(height: 8),
-            _AccessibilityPanel(s: s),
-            const SizedBox(height: 18),
-            _SettingsSectionLabel(
-              icon: Icons.more_horiz_rounded,
-              label: 'More',
-              s: s,
-            ),
-            const SizedBox(height: 8),
-            _SettingsCard(
-              s: s,
-              child: Column(
-                children: [
-                  _SettingsActionTile(
-                    icon: Icons.help_outline_rounded,
-                    title: '❓ How to Play',
-                    subtitle:
-                        'Review rules, modes, hearts, coins, and power-ups',
-                    color: GameConfig.sky,
-                    onTap: () {
-                      gs.closeModal();
-                      gs.showModal(GameModal.tutorial);
-                    },
-                  ),
-                  _SettingsDivider(s: s),
-                  _SettingsActionTile(
-                    icon: Icons.sports_esports_rounded,
-                    title: 'Play Games',
-                    subtitle: switch (gs.playGamesConnectionState) {
-                      PlayGamesConnectionState.checking => 'Checking...',
-                      PlayGamesConnectionState.connected => '',
-                      PlayGamesConnectionState.disconnected ||
-                      PlayGamesConnectionState.unavailable =>
-                        'Not connected',
-                    },
-                    actionLabel: switch (gs.playGamesConnectionState) {
-                      PlayGamesConnectionState.disconnected ||
-                      PlayGamesConnectionState.unavailable =>
-                        'Connect',
-                      PlayGamesConnectionState.connected => 'Connected',
-                      _ => null,
-                    },
-                    color: GameConfig.sky,
-                    onTap: switch (gs.playGamesConnectionState) {
-                      PlayGamesConnectionState.disconnected ||
-                      PlayGamesConnectionState.unavailable =>
-                        gs.connectPlayGames,
-                      _ => null,
-                    },
-                  ),
-                  _SettingsDivider(s: s),
-                  _SettingsActionTile(
-                    icon: Icons.restore_rounded,
-                    title: 'Restore Purchases',
-                    subtitle: 'Check this account for previous purchases',
-                    color: GameConfig.sky,
-                    onTap: gs.restorePurchases,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            _SettingsSectionLabel(
-              icon: Icons.storage_rounded,
-              label: 'Data',
-              s: s,
-              color: GameConfig.punch,
-            ),
-            const SizedBox(height: 8),
-            _SettingsActionTile(
-              icon: Icons.delete_outline_rounded,
-              title: '🗑️ Reset All Data',
-              subtitle: 'Erase progress and restore default settings',
-              color: GameConfig.punch,
-              destructive: true,
-              onTap: () {
-                gs.resetAllData();
-                gs.closeModal();
-              },
-            ),
-            const SizedBox(height: 18),
-            _SettingsSectionLabel(
-              icon: Icons.support_agent_rounded,
-              label: 'Support / About',
-              s: s,
-            ),
-            const SizedBox(height: 8),
-            _SupportLinkTile(
-              icon: '✉️',
-              label: 'Email',
-              value: 'support@mathchallenge.me',
-              onTap: () => _openSupportLink(
-                gs,
-                'mailto:support@mathchallenge.me',
-              ),
-            ),
-            const SizedBox(height: 8),
-            _SupportLinkTile(
-              icon: '🌐',
-              label: 'Website',
-              value: 'mathchallenge.me',
-              onTap: () => _openSupportLink(
-                gs,
-                'https://mathchallenge.me',
-              ),
+      builder: (context, s, _) {
+        final cloud = context.watch<CloudSaveController>();
+        return ModalShell(
+          icon: '⚙️',
+          title: 'Settings',
+          subtitle: 'Make Math Challenge yours',
+          actions: [
+            NeoButton(
+              label: 'Done',
+              color: GameConfig.coral,
+              onPressed: gs.closeModal,
             ),
           ],
-        ),
-      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _SettingsSectionLabel(
+                icon: Icons.person_rounded,
+                label: 'Player Avatar',
+                s: s,
+              ),
+              const SizedBox(height: 8),
+              _AvatarSettingsTile(gs: gs),
+              const SizedBox(height: 18),
+              _SettingsSectionLabel(
+                icon: Icons.tune_rounded,
+                label: 'Display & Audio',
+                s: s,
+              ),
+              const SizedBox(height: 8),
+              _SettingsCard(
+                s: s,
+                child: Column(
+                  children: [
+                    _TrioBtn(
+                      icon: '🌓',
+                      label: 'Dark Mode',
+                      state: s.dark ? 'ON' : 'OFF',
+                      active: s.dark,
+                      onTap: s.toggleDark,
+                    ),
+                    _SettingsDivider(s: s),
+                    _TrioBtn(
+                      icon: '🔊',
+                      label: 'Sound',
+                      state: s.sound ? 'ON' : 'OFF',
+                      active: s.sound,
+                      onTap: s.toggleSound,
+                    ),
+                    _SettingsDivider(s: s),
+                    _TrioBtn(
+                      icon: '📳',
+                      label: 'Vibration',
+                      state: s.vibration ? 'ON' : 'OFF',
+                      active: s.vibration,
+                      onTap: s.toggleVibration,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              _SettingsSectionLabel(
+                icon: Icons.accessibility_new_rounded,
+                label: 'Accessibility',
+                s: s,
+              ),
+              const SizedBox(height: 8),
+              _AccessibilityPanel(s: s),
+              const SizedBox(height: 18),
+              _SettingsSectionLabel(
+                icon: Icons.more_horiz_rounded,
+                label: 'More',
+                s: s,
+              ),
+              const SizedBox(height: 8),
+              _SettingsCard(
+                s: s,
+                child: Column(
+                  children: [
+                    _SettingsActionTile(
+                      icon: Icons.help_outline_rounded,
+                      title: '❓ How to Play',
+                      subtitle:
+                          'Review rules, modes, hearts, coins, and power-ups',
+                      color: GameConfig.sky,
+                      onTap: () {
+                        gs.closeModal();
+                        gs.showModal(GameModal.tutorial);
+                      },
+                    ),
+                    _SettingsDivider(s: s),
+                    _PlayGamesSettingsTile(controller: cloud, state: gs),
+                    _SettingsDivider(s: s),
+                    _CloudSaveSettingsTile(controller: cloud, state: gs),
+                    _SettingsDivider(s: s),
+                    _ResetEverywhereSettingsTile(controller: cloud, state: gs),
+                    _SettingsDivider(s: s),
+                    _SettingsActionTile(
+                      icon: Icons.restore_rounded,
+                      title: 'Restore Purchases',
+                      subtitle: 'Check this account for previous purchases',
+                      color: GameConfig.sky,
+                      onTap: gs.restorePurchases,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              _SettingsSectionLabel(
+                icon: Icons.storage_rounded,
+                label: 'Data',
+                s: s,
+                color: GameConfig.punch,
+              ),
+              const SizedBox(height: 8),
+              _SettingsActionTile(
+                icon: Icons.delete_outline_rounded,
+                title: '🗑️ Reset All Data',
+                subtitle: 'Erase progress and restore default settings',
+                color: GameConfig.punch,
+                destructive: true,
+                onTap: () {
+                  gs.resetAllData();
+                  gs.closeModal();
+                },
+              ),
+              const SizedBox(height: 18),
+              _SettingsSectionLabel(
+                icon: Icons.support_agent_rounded,
+                label: 'Support / About',
+                s: s,
+              ),
+              const SizedBox(height: 8),
+              _SupportLinkTile(
+                icon: '✉️',
+                label: 'Email',
+                value: 'support@mathchallenge.me',
+                onTap: () => _openSupportLink(
+                  gs,
+                  'mailto:support@mathchallenge.me',
+                ),
+              ),
+              const SizedBox(height: 8),
+              _SupportLinkTile(
+                icon: '🌐',
+                label: 'Website',
+                value: 'mathchallenge.me',
+                onTap: () => _openSupportLink(
+                  gs,
+                  'https://mathchallenge.me',
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
   Future<void> _openSupportLink(GameState gs, String url) async {
     if (await LinkLauncher.open(url)) return;
     gs.showToast('Could not open link.');
+  }
+}
+
+class _PlayGamesSettingsTile extends StatefulWidget {
+  const _PlayGamesSettingsTile({required this.controller, required this.state});
+
+  final CloudSaveController controller;
+  final GameState state;
+
+  @override
+  State<_PlayGamesSettingsTile> createState() => _PlayGamesSettingsTileState();
+}
+
+class _PlayGamesSettingsTileState extends State<_PlayGamesSettingsTile> {
+  bool _busy = false;
+
+  Future<void> _connect() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await widget.controller.connectThenSync();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final connection = widget.state.playGamesConnectionState;
+    final canConnect = !_busy &&
+        (connection == PlayGamesConnectionState.disconnected ||
+            connection == PlayGamesConnectionState.unavailable);
+    return _SettingsActionTile(
+      icon: Icons.sports_esports_rounded,
+      title: 'Play Games',
+      subtitle: _busy || connection == PlayGamesConnectionState.checking
+          ? 'Checking...'
+          : connection == PlayGamesConnectionState.connected
+              ? ''
+              : 'Not connected',
+      actionLabel: connection == PlayGamesConnectionState.connected
+          ? 'Connected'
+          : canConnect
+              ? 'Connect'
+              : null,
+      color: GameConfig.sky,
+      onTap: canConnect ? _connect : null,
+    );
+  }
+}
+
+class _CloudSaveSettingsTile extends StatelessWidget {
+  const _CloudSaveSettingsTile({required this.controller, required this.state});
+
+  final CloudSaveController controller;
+  final GameState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final connected =
+        state.playGamesConnectionState == PlayGamesConnectionState.connected;
+    final pending = controller.pendingChoice != null;
+    final blocked = state.cloudResetRecoveryBlocked;
+    final unsafe = !controller.canSyncFromSettings;
+    final busy = controller.isBusy;
+    final status = controller.effectiveStatus;
+    final retry = !blocked &&
+        switch (status) {
+          CloudSaveStatus.offlineOrTransportFailure ||
+          CloudSaveStatus.changedLocalState ||
+          CloudSaveStatus.resyncRequired ||
+          CloudSaveStatus.requiresAttention =>
+            true,
+          _ => false,
+        };
+    final enabled = connected && !busy && !pending && !unsafe;
+    final canReview = pending && !busy && !unsafe;
+    final subtitle = busy
+        ? 'Syncing…'
+        : pending
+            ? 'Cloud save needs review'
+            : !connected
+                ? 'Connect Play Games to sync'
+                : blocked
+                    ? 'Reset recovery required'
+                    : unsafe
+                        ? 'Sync available from Main Menu'
+                        : switch (status) {
+                            CloudSaveStatus.neverAttempted => 'Ready to sync',
+                            CloudSaveStatus.changesPendingLocally =>
+                              'Changes waiting to sync',
+                            CloudSaveStatus.upToDate => 'Up to date',
+                            CloudSaveStatus.uploaded => 'Sync accepted',
+                            CloudSaveStatus.restoredFromCloud =>
+                              'Progress restored',
+                            CloudSaveStatus.automaticallyMerged ||
+                            CloudSaveStatus.userChoiceResolved =>
+                              'Progress merged',
+                            CloudSaveStatus.offlineOrTransportFailure =>
+                              'Couldn’t sync',
+                            CloudSaveStatus.changedLocalState ||
+                            CloudSaveStatus.resyncRequired =>
+                              'Sync again to use the latest progress',
+                            CloudSaveStatus.requiresAttention =>
+                              'Cloud save needs attention',
+                            CloudSaveStatus.notAuthenticated =>
+                              'Connect Play Games to sync',
+                            CloudSaveStatus.syncing => 'Syncing…',
+                            CloudSaveStatus.needsOrdinaryChoice ||
+                            CloudSaveStatus.needsNativeCloudChoice =>
+                              'Cloud save needs review',
+                          };
+    return _SettingsActionTile(
+      icon: Icons.cloud_sync_rounded,
+      title: 'Cloud Save',
+      subtitle: subtitle,
+      color: GameConfig.sky,
+      actionLabel: busy
+          ? 'SYNC NOW'
+          : blocked
+              ? null
+              : pending
+                  ? 'REVIEW'
+                  : !connected
+                      ? null
+                      : retry
+                          ? 'TRY AGAIN'
+                          : 'SYNC NOW',
+      onTap: canReview
+          ? () {
+              final capturedPending = controller.pendingChoice;
+              if (capturedPending == null) return;
+              showDialog<void>(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => _CloudSaveConflictReviewDialog(
+                  controller: controller,
+                  state: state,
+                  pending: capturedPending,
+                ),
+              );
+            }
+          : enabled
+              ? controller.syncFromSettings
+              : null,
+    );
+  }
+}
+
+class _ResetEverywhereSettingsTile extends StatelessWidget {
+  const _ResetEverywhereSettingsTile(
+      {required this.controller, required this.state});
+
+  final CloudSaveController controller;
+  final GameState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = state.currentScreen == GameScreen.menu &&
+        !state.rt.gameActive &&
+        !controller.isResetting;
+    return _SettingsActionTile(
+      icon: Icons.cloud_off_rounded,
+      title: 'RESET EVERYWHERE',
+      subtitle:
+          'Erase saved progress on this device and prevent older cloud progress from returning.',
+      color: GameConfig.punch,
+      destructive: true,
+      onTap: !enabled
+          ? null
+          : () {
+              final submitted = ValueNotifier(false);
+              Navigator.of(context).push(
+                _ResetEverywhereDialogRoute(
+                  context: context,
+                  controller: controller,
+                  submitted: submitted,
+                ),
+              );
+            },
+    );
+  }
+}
+
+class _ResetEverywhereDialogRoute extends DialogRoute<void> {
+  _ResetEverywhereDialogRoute({
+    required super.context,
+    required CloudSaveController controller,
+    required this.submitted,
+  }) : super(
+          barrierDismissible: true,
+          builder: (_) => _ResetEverywhereDialog(
+            controller: controller,
+            submitted: submitted,
+          ),
+        ) {
+    submitted.addListener(changedInternalState);
+  }
+
+  final ValueNotifier<bool> submitted;
+
+  @override
+  bool get barrierDismissible => !submitted.value;
+
+  @override
+  void dispose() {
+    submitted
+      ..removeListener(changedInternalState)
+      ..dispose();
+    super.dispose();
+  }
+}
+
+class _ResetEverywhereDialog extends StatefulWidget {
+  const _ResetEverywhereDialog({
+    required this.controller,
+    required this.submitted,
+  });
+
+  final CloudSaveController controller;
+  final ValueNotifier<bool> submitted;
+
+  @override
+  State<_ResetEverywhereDialog> createState() => _ResetEverywhereDialogState();
+}
+
+class _ResetEverywhereDialogState extends State<_ResetEverywhereDialog> {
+  bool _submitted = false;
+
+  Future<void> _reset() async {
+    if (_submitted) return;
+    setState(() {
+      _submitted = true;
+      widget.submitted.value = true;
+    });
+    await widget.controller.resetEverywhere();
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+        canPop: !_submitted,
+        child: AlertDialog(
+          title: const Text('Reset Everywhere'),
+          content: Text(_submitted
+              ? widget.controller.isBusy
+                  ? 'Resetting progress…'
+                  : 'Reset queued'
+              : 'Erase cloud-saved progress on this device now. If you’re offline, cloud deletion will sync later. Older cloud progress cannot restore this data. This can’t be undone.'),
+          actions: [
+            TextButton(
+              onPressed: _submitted ? null : () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: _submitted ? null : _reset,
+              child: const Text('Reset Everywhere'),
+            ),
+          ],
+        ),
+      );
+}
+
+class _CloudSaveConflictReviewDialog extends StatefulWidget {
+  const _CloudSaveConflictReviewDialog({
+    required this.controller,
+    required this.state,
+    required this.pending,
+  });
+
+  final CloudSaveController controller;
+  final GameState state;
+  final CloudSyncNeedsUserChoice pending;
+
+  @override
+  State<_CloudSaveConflictReviewDialog> createState() =>
+      _CloudSaveConflictReviewDialogState();
+}
+
+class _CloudSaveConflictReviewDialogState
+    extends State<_CloudSaveConflictReviewDialog> {
+  bool _resolving = false;
+  bool _routeClosing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.state.addListener(_closeWhenSettingsCloses);
+  }
+
+  @override
+  void dispose() {
+    widget.state.removeListener(_closeWhenSettingsCloses);
+    super.dispose();
+  }
+
+  void _closeWhenSettingsCloses() {
+    if (widget.state.currentModal != GameModal.settings) _removeDialogRoute();
+  }
+
+  void _closeFromUserAction() {
+    if (!mounted || _routeClosing || _resolving) return;
+    _routeClosing = true;
+    Navigator.of(context).pop();
+  }
+
+  void _removeDialogRoute() {
+    if (!mounted || _routeClosing) return;
+    _routeClosing = true;
+    Navigator.of(context).removeRoute(ModalRoute.of(context)!);
+  }
+
+  bool get _safe =>
+      widget.state.currentScreen == GameScreen.menu &&
+      !widget.state.rt.gameActive;
+
+  Future<void> _resolve(CloudSyncChoice choice) async {
+    if (_resolving ||
+        !mounted ||
+        !_safe ||
+        widget.controller.isBusy ||
+        !identical(widget.controller.pendingChoice, widget.pending)) {
+      if (mounted &&
+          !identical(widget.controller.pendingChoice, widget.pending)) {
+        _removeDialogRoute();
+      }
+      return;
+    }
+    setState(() => _resolving = true);
+    await widget.controller.resolvePendingChoice(choice);
+    if (!mounted) return;
+    if (!identical(widget.controller.pendingChoice, widget.pending)) {
+      _removeDialogRoute();
+    } else {
+      setState(() => _resolving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final pendingIsCurrent =
+        identical(widget.controller.pendingChoice, widget.pending);
+    if (!pendingIsCurrent && !_resolving) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _removeDialogRoute();
+      });
+    }
+    final disabled =
+        _resolving || !pendingIsCurrent || !_safe || widget.controller.isBusy;
+    final (
+      firstLabel,
+      firstProgress,
+      firstChoice,
+      secondLabel,
+      secondProgress,
+      secondChoice
+    ) = switch (widget.pending) {
+      CloudSyncDeviceCloudChoice(
+        :final keepThisDeviceCandidate,
+        :final useCloudCandidate
+      ) =>
+        (
+          'This Device',
+          keepThisDeviceCandidate,
+          CloudSyncChoice.keepThisDevice,
+          'Cloud Progress',
+          useCloudCandidate,
+          CloudSyncChoice.useCloud,
+        ),
+      CloudSyncNativeCloudChoice(
+        :final primaryCloudCandidate,
+        :final conflictingCloudCandidate
+      ) =>
+        (
+          'Version 1',
+          primaryCloudCandidate,
+          CloudSyncChoice.primaryCloud,
+          'Version 2',
+          conflictingCloudCandidate,
+          CloudSyncChoice.conflictingCloud,
+        ),
+    };
+    final ordinary = widget.pending is CloudSyncDeviceCloudChoice;
+    return PopScope(
+      canPop: !_resolving,
+      child: Dialog(
+        insetPadding: const EdgeInsets.all(24),
+        child: ModalShell(
+          icon: '☁️',
+          title: 'Review Cloud Save',
+          subtitle: 'Two progress versions need your choice',
+          maxHeight: 640,
+          actions: [
+            Opacity(
+              opacity: disabled ? 0.5 : 1,
+              child: IgnorePointer(
+                ignoring: disabled,
+                child: NeoButton(
+                  label: ordinary ? 'Keep This Device' : 'Use Version 1',
+                  color: GameConfig.coral,
+                  onPressed: () => _resolve(firstChoice),
+                ),
+              ),
+            ),
+            Opacity(
+              opacity: disabled ? 0.5 : 1,
+              child: IgnorePointer(
+                ignoring: disabled,
+                child: NeoButton(
+                  label: ordinary ? 'Use Cloud Progress' : 'Use Version 2',
+                  color: GameConfig.sky,
+                  onPressed: () => _resolve(secondChoice),
+                ),
+              ),
+            ),
+            Opacity(
+              opacity: _resolving ? 0.5 : 1,
+              child: IgnorePointer(
+                ignoring: _resolving,
+                child: NeoButton(
+                  label: 'Close',
+                  outlined: true,
+                  color: GameConfig.coral,
+                  onPressed: _closeFromUserAction,
+                ),
+              ),
+            ),
+          ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_resolving) ...[
+                const Center(child: CircularProgressIndicator()),
+                const SizedBox(height: 8),
+                Text('Resolving your choice…',
+                    textAlign: TextAlign.center,
+                    style:
+                        TextStyle(color: s.muted, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+              ],
+              _CloudProgressSummary(label: firstLabel, progress: firstProgress),
+              const SizedBox(height: 10),
+              _CloudProgressSummary(
+                  label: secondLabel, progress: secondProgress),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CloudProgressSummary extends StatelessWidget {
+  const _CloudProgressSummary({required this.label, required this.progress});
+
+  final String label;
+  final CloudProgress progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    final achievements =
+        progress.achievements.values.where((value) => value).length;
+    final stars = progress.operationQuestStars.values
+        .fold<int>(0, (sum, value) => sum + value);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: s.surface2,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: s.border),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label,
+            style: TextStyle(color: s.text, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 6),
+        Text('${progress.coins} coins • ${progress.gamesPlayed} games played',
+            style: TextStyle(
+                color: s.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+        Text(
+            '$achievements achievements • $stars Quest stars • ${progress.highScores.length} high scores',
+            style: TextStyle(
+                color: s.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+      ]),
+    );
   }
 }
 

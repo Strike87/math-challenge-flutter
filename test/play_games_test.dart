@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
+import 'package:math_challenge/features/cloud_save/application/cloud_save_controller.dart';
+import 'package:math_challenge/features/cloud_save/application/cloud_save_service.dart';
+import 'package:math_challenge/features/cloud_save/data/play_games_saved_games_transport.dart';
 import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/main.dart';
 import 'package:math_challenge/services/admob.dart';
@@ -144,7 +147,14 @@ void main() {
       ..playGamesConnectionState = PlayGamesConnectionState.disconnected
       ..showModal(GameModal.settings);
 
-    await tester.pumpWidget(_modalHost(state, size: const Size(320, 700)));
+    final cloudService = _NoChangeCloudService(state: state);
+    final controller = CloudSaveController(
+      state: state,
+      service: cloudService,
+      localLoad: Future.value(),
+    );
+    await tester.pumpWidget(
+        _modalHost(state, controller: controller, size: const Size(320, 700)));
     await tester.pump();
 
     expect(find.text('Play Games'), findsOneWidget);
@@ -170,6 +180,9 @@ void main() {
     expect(find.text('Play Games'), findsOneWidget);
     expect(find.text('Connected'), findsOneWidget);
     expect(find.text('Connect'), findsNothing);
+    expect(cloudService.syncCalls, 1);
+    await tester.pump();
+    expect(cloudService.syncCalls, 1);
   });
 
   testWidgets('post-frame authentication never blocks startup', (tester) async {
@@ -190,6 +203,153 @@ void main() {
     expect(find.text('Master Challenge'), findsOneWidget);
     expect(service.authenticationChecks, 1);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Settings Connect uses the controller and safely syncs once',
+      (tester) async {
+    final service = _FakePlayGamesService()..connectResult = true;
+    final state = await _makeState(service);
+    addTearDown(state.dispose);
+    state
+      ..playGamesConnectionState = PlayGamesConnectionState.disconnected
+      ..showModal(GameModal.settings);
+    final cloudService = _NoChangeCloudService(state: state);
+    final controller = CloudSaveController(
+      state: state,
+      service: cloudService,
+      localLoad: Future.value(),
+    );
+    await tester.pumpWidget(
+        _modalHost(state, controller: controller, size: const Size(320, 700)));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Connect'));
+    await tester.tap(find.text('Connect'));
+    await tester.pumpAndSettle();
+    expect(service.connectCalls, 1);
+    expect(cloudService.syncCalls, 1);
+    expect(find.text('Connected'), findsOneWidget);
+  });
+
+  testWidgets('Settings Connect failure and active game never cloud sync',
+      (tester) async {
+    for (final activeGame in [false, true]) {
+      final service = _FakePlayGamesService()..connectResult = activeGame;
+      final state = await _makeState(service);
+      addTearDown(state.dispose);
+      state
+        ..playGamesConnectionState = PlayGamesConnectionState.disconnected
+        ..currentScreen = activeGame ? GameScreen.game : GameScreen.menu
+        ..rt.gameActive = activeGame
+        ..showModal(GameModal.settings);
+      final cloudService = _NoChangeCloudService(state: state);
+      final controller = CloudSaveController(
+        state: state,
+        service: cloudService,
+        localLoad: Future.value(),
+      );
+      await tester.pumpWidget(_modalHost(state,
+          controller: controller, size: const Size(320, 700)));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Connect'));
+      await tester.tap(find.text('Connect'));
+      await tester.pumpAndSettle();
+      expect(service.connectCalls, 1);
+      expect(cloudService.syncCalls, 0);
+    }
+  });
+
+  testWidgets('Settings Connect busy guard survives disposal', (tester) async {
+    final pending = Completer<bool>();
+    final service = _FakePlayGamesService()..connectFuture = pending.future;
+    final state = await _makeState(service);
+    addTearDown(state.dispose);
+    state
+      ..playGamesConnectionState = PlayGamesConnectionState.disconnected
+      ..showModal(GameModal.settings);
+    final controller = CloudSaveController(
+      state: state,
+      service: _NoChangeCloudService(state: state),
+      localLoad: Future.value(),
+    );
+    await tester.pumpWidget(
+        _modalHost(state, controller: controller, size: const Size(320, 700)));
+    await tester.ensureVisible(find.text('Connect'));
+    await tester.tap(find.text('Connect'));
+    await tester.pump();
+    expect(find.text('Checking...'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    pending.complete(true);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(service.connectCalls, 1);
+  });
+
+  testWidgets('mounted Connect busy guard clears for a later operation',
+      (tester) async {
+    final first = Completer<bool>();
+    final service = _FakePlayGamesService()..connectFuture = first.future;
+    final state = await _makeState(service);
+    addTearDown(state.dispose);
+    state
+      ..playGamesConnectionState = PlayGamesConnectionState.disconnected
+      ..showModal(GameModal.settings);
+    final controller = CloudSaveController(
+      state: state,
+      service: _NoChangeCloudService(state: state),
+      localLoad: Future.value(),
+    );
+    await tester.pumpWidget(
+        _modalHost(state, controller: controller, size: const Size(320, 700)));
+    await tester.ensureVisible(find.text('Connect'));
+    await tester.tap(find.text('Connect'));
+    await tester.pump();
+    expect(find.text('Checking...'), findsOneWidget);
+    first.complete(false);
+    await tester.pumpAndSettle();
+    expect(find.text('Connect'), findsOneWidget);
+    await tester.tap(find.text('Connect'));
+    await tester.pump();
+    expect(service.connectCalls, 2);
+  });
+
+  testWidgets('visible Connect and Cloud Save overlap stays one operation',
+      (tester) async {
+    final gate = Completer<bool>();
+    final games = _FakePlayGamesService()..connectFuture = gate.future;
+    final state = await _makeState(games);
+    addTearDown(state.dispose);
+    state
+      ..playGamesConnectionState = PlayGamesConnectionState.disconnected
+      ..showModal(GameModal.settings);
+    final cloud = _NoChangeCloudService(state: state);
+    final controller = CloudSaveController(
+      state: state,
+      service: cloud,
+      localLoad: Future.value(),
+    );
+    await tester.pumpWidget(
+        _modalHost(state, controller: controller, size: const Size(320, 700)));
+    await tester.ensureVisible(find.text('Connect'));
+    await tester.tap(find.text('Connect'));
+    await tester.pump();
+    expect(games.connectCalls, 1);
+    await tester.tap(find.text('Checking...'), warnIfMissed: false);
+    await tester.pump();
+    expect(games.connectCalls, 1);
+    state.playGamesConnectionState = PlayGamesConnectionState.connected;
+    state.notifyListeners();
+    await tester.pump();
+    await tester.ensureVisible(find.text('Cloud Save'));
+    await tester.ensureVisible(find.text('SYNC NOW'));
+    await tester.tap(find.text('SYNC NOW'), warnIfMissed: false);
+    await tester.pump();
+    expect(games.connectCalls, 1);
+    expect(cloud.syncCalls, 0);
+    gate.complete(true);
+    await tester.pumpAndSettle();
+    expect(cloud.syncCalls, 1);
+    await tester.pump();
+    expect(cloud.syncCalls, 1);
   });
 
   testWidgets('unavailable bridge leaves the app usable', (tester) async {
@@ -281,11 +441,17 @@ Future<GameState> _makeState(PlayGamesService playGamesService) async {
   return state;
 }
 
-Widget _modalHost(GameState state, {Size size = const Size(390, 700)}) {
+Widget _modalHost(
+  GameState state, {
+  Size size = const Size(390, 700),
+  CloudSaveController? controller,
+}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<GameState>.value(value: state),
       ChangeNotifierProvider<SettingsService>.value(value: state.settings),
+      if (controller case final value?)
+        ChangeNotifierProvider<CloudSaveController>.value(value: value),
     ],
     child: MaterialApp(
       home: MediaQuery(
@@ -294,4 +460,27 @@ Widget _modalHost(GameState state, {Size size = const Size(390, 700)}) {
       ),
     ),
   );
+}
+
+class _NoChangeCloudService extends CloudSaveService {
+  _NoChangeCloudService({required super.state})
+      : super(transport: _UnusedTransport());
+  int syncCalls = 0;
+  @override
+  Future<CloudSyncResult> sync() async {
+    syncCalls++;
+    return const CloudSyncNoChange();
+  }
+}
+
+class _UnusedTransport implements SavedGamesTransport {
+  @override
+  Future<SavedGamesCommitResult> commit(Uint8List bytes) async =>
+      SavedGamesCommitted();
+  @override
+  Future<SavedGamesOpenResult> open() async => SavedGamesOpenedEmpty();
+  @override
+  Future<SavedGamesResolveResult> resolve(
+          String handle, Uint8List bytes) async =>
+      SavedGamesResolved();
 }

@@ -377,6 +377,7 @@ class GameState extends ChangeNotifier {
       List.unmodifiable(_cloudMergeParentRevisionIds);
   String? cloudLastSyncedRevisionId;
   bool cloudDirty = false;
+  bool cloudResetRecoveryBlocked = false;
   OperationQuestProgress operationQuestProgress = OperationQuestProgress();
   int operationQuestResultStars = 0;
   double adaptLvlRaw = 0;
@@ -546,53 +547,57 @@ class GameState extends ChangeNotifier {
 
   // ─── Load / save ────────────────────────────────────────────
   Future<void> load() async {
-    cloudResetGeneration = Storage.getInt('mc_cloudResetGeneration', 0);
-    final storedCloudRevision = Storage.getInt('mc_cloudRevision', -1);
-    cloudRevision = storedCloudRevision >= 0 ? storedCloudRevision : null;
-    cloudRevisionId = _cloudString('mc_cloudRevisionId');
-    cloudParentRevisionId = _cloudString('mc_cloudParentRevisionId');
-    _cloudMergeParentRevisionIds =
-        cloudParentRevisionId == null ? _loadCloudMergeParentRevisionIds() : [];
-    cloudLastSyncedRevisionId = _cloudString('mc_cloudLastSyncedRevisionId');
-    cloudDirty = Storage.getBool('mc_cloudDirty', false);
-    coins = Storage.getInt('mc_coins', 0);
-    gamesPlayed = Storage.getInt('mc_gamesPlayed', 0);
+    final skipCloudOwnedLoad = await _recoverCloudResetIntent();
+    if (!skipCloudOwnedLoad) {
+      cloudResetGeneration = Storage.getInt('mc_cloudResetGeneration', 0);
+      final storedCloudRevision = Storage.getInt('mc_cloudRevision', -1);
+      cloudRevision = storedCloudRevision >= 0 ? storedCloudRevision : null;
+      cloudRevisionId = _cloudString('mc_cloudRevisionId');
+      cloudParentRevisionId = _cloudString('mc_cloudParentRevisionId');
+      _cloudMergeParentRevisionIds = cloudParentRevisionId == null
+          ? _loadCloudMergeParentRevisionIds()
+          : [];
+      cloudLastSyncedRevisionId = _cloudString('mc_cloudLastSyncedRevisionId');
+      cloudDirty = Storage.getBool('mc_cloudDirty', false);
+      coins = Storage.getInt('mc_coins', 0);
+      gamesPlayed = Storage.getInt('mc_gamesPlayed', 0);
+      operationQuestProgress = OperationQuestProgress.decode(
+        Storage.getString('mc_operationQuestProgress', ''),
+      );
+      adaptLvlRaw = Storage.getDouble('mc_adaptLvl', 0);
+      adaptLvl = adaptLvlRaw.round();
+      achievements = _loadAchs();
+      highScores = List<HighScore>.from(Storage.getObjectList<HighScore>(
+          'mc_scores', (j) => HighScore.fromJson(j)));
+      coins = Storage.getInt('mc_coins', 0);
+      skillMap = _loadSkillMap();
+      _recomputeAdaptiveLevel();
+      numTypeUnlocked = _loadNumTypeUnlocked();
+      avatarCustom['1'] = _loadAvatarCustom(1);
+      avatarCustom['2'] = _loadAvatarCustom(2);
+      shopOwned = _loadOwnedList('mc_shopOwned');
+      unlockedAvatars = _loadStringListCompat('mc_unlockedAvatars');
+      unlockedHats = _loadStringListCompat('mc_unlockedHats');
+      _loadPlayerData(1);
+      _loadPlayerData(2);
+    }
     selectedAnswerStyle = AnswerStyle.fromString(
       Storage.getString('mc_selectedAnswerStyle', ''),
     );
-    operationQuestProgress = OperationQuestProgress.decode(
-      Storage.getString('mc_operationQuestProgress', ''),
-    );
-    adaptLvlRaw = Storage.getDouble('mc_adaptLvl', 0);
-    adaptLvl = adaptLvlRaw.round();
-    achievements = _loadAchs();
-    highScores = List<HighScore>.from(Storage.getObjectList<HighScore>(
-        'mc_scores', (j) => HighScore.fromJson(j)));
-    coins = Storage.getInt('mc_coins', 0);
-    skillMap = _loadSkillMap();
-    _recomputeAdaptiveLevel();
-    numTypeUnlocked = _loadNumTypeUnlocked();
     loginStreak = Storage.getInt('mc_loginStreak', 0);
-    avatarCustom['1'] = _loadAvatarCustom(1);
-    avatarCustom['2'] = _loadAvatarCustom(2);
     dailyProgress = _loadDailyProgress();
     dailyChallengeIds = _loadDailyChallengeIds();
     final today = DateTime.now();
     dailyBossDateKey = _dailyDateKey(today);
     dailyBoss = _generateDailyBoss(today);
-    shopOwned = _loadOwnedList('mc_shopOwned');
-    unlockedAvatars = _loadStringListCompat('mc_unlockedAvatars');
-    unlockedHats = _loadStringListCompat('mc_unlockedHats');
     adsRemoved = Storage.getBool('mc_adsRemoved', false);
     iapDeliveredTxs = Storage.getStringList('mc_iapDeliveredTxs', []);
     adGameCount = Storage.getInt('mc_adGameCount', 0);
     lastRewardedAt = Storage.getInt('mc_lastRewardedAt', 0);
-    await restorePurchases(silent: true);
-    _loadPlayerData(1);
-    _loadPlayerData(2);
-    await _updateLoginStreak();
+    await restorePurchases(silent: true, notify: false);
+    await _updateLoginStreak(notify: false);
     _updateDailyBossClaimStatus();
-    await _persistLoadedMigrationState();
+    if (!skipCloudOwnedLoad) await _persistLoadedMigrationState();
     _hydrateDailyBonusPolicy();
     notifyListeners();
   }
@@ -684,7 +689,7 @@ class GameState extends ChangeNotifier {
             unlockedHats: unlockedHats,
             powerUpBonus: _loadPowerUpBonus()
                 .map((key, value) => MapEntry(key.name, value)),
-            livesBonus: Storage.getInt('mc_livesBonus', 0)),
+            livesBonus: _loadLivesBonus()),
       );
 
   Future<bool> importCloudProgress(CloudProgress progress) async {
@@ -785,6 +790,171 @@ class GameState extends ChangeNotifier {
   Future<void> _markCloudDirty() async {
     cloudDirty = true;
     await Storage.setBool('mc_cloudDirty', true);
+  }
+
+  static const _cloudResetIntentKey = 'mc_cloudResetIntent';
+  static const _cloudProgressStorageKeys = [
+    'mc_coins',
+    'mc_scores',
+    'mc_gamesPlayed',
+    'mc_operationQuestProgress',
+    'mc_adaptLvl',
+    'mc_achs',
+    'mc_achievements',
+    'mc_achievements_raw',
+    'mc_skills',
+    'mc_skillMap',
+    'mc_skillMap_raw',
+    'mc_numTypeUnlocked',
+    'mc_numTypeUnlocked_integers',
+    'mc_numTypeUnlocked_rationals',
+    'mc_unlocked_integers',
+    'mc_unlocked_rationals',
+    'mc_avatarCustom',
+    'mc_avatarCustom1',
+    'mc_avatarCustom2',
+    'mc_p1Data',
+    'mc_p1_name',
+    'mc_p1_avatar',
+    'mc_p2Data',
+    'mc_p2_name',
+    'mc_p2_avatar',
+    'mc_puBonus',
+    'mc_livesBonus',
+    'mc_shopOwned',
+    'mc_unlockedAvatars',
+    'mc_unlockedHats',
+  ];
+
+  Future<bool> resetCloudProgressEverywhere() async {
+    final target = cloudResetGeneration + 1;
+    try {
+      await Storage.setString(
+        _cloudResetIntentKey,
+        jsonEncode({'v': 1, 'targetResetGeneration': target}),
+      );
+    } catch (_) {
+      return false;
+    }
+    _applyCloudReset(target);
+    notifyListeners();
+    try {
+      await _persistCloudReset(target);
+      await Storage.remove(_cloudResetIntentKey);
+      return true;
+    } catch (_) {
+      cloudResetRecoveryBlocked = true;
+      return false;
+    }
+  }
+
+  void _applyCloudReset(int target) {
+    _applyCloudProgress(CloudProgress.empty());
+    cloudResetGeneration = target;
+    cloudRevision = null;
+    cloudRevisionId = null;
+    cloudParentRevisionId = null;
+    _cloudMergeParentRevisionIds = [];
+    cloudLastSyncedRevisionId = null;
+    cloudDirty = true;
+    cloudResetRecoveryBlocked = false;
+  }
+
+  Future<void> _persistCloudReset(int target) async {
+    await Storage.setInt('mc_coins', coins);
+    await Storage.setInt('mc_gamesPlayed', gamesPlayed);
+    await Storage.setString('mc_achievements', _encodeAchs());
+    await Storage.setString(
+        'mc_operationQuestProgress', operationQuestProgress.encode());
+    await Storage.setObjectList('mc_scores', highScores);
+    await Storage.setString('mc_skillMap', _encodeSkillMap());
+    await Storage.setInt(
+        'mc_numTypeUnlocked_integers', numTypeUnlocked['integers'] ?? 0);
+    await Storage.setInt(
+        'mc_numTypeUnlocked_rationals', numTypeUnlocked['rationals'] ?? 0);
+    await Storage.setObject('mc_avatarCustom1', avatarCustom['1']!.toJson());
+    await Storage.setObject('mc_avatarCustom2', avatarCustom['2']!.toJson());
+    await Storage.setString('mc_p1_name', p[1].name);
+    await Storage.setString('mc_p1_avatar', p[1].avatar.storageEmoji);
+    await Storage.setString('mc_p2_name', p[2].name);
+    await Storage.setString('mc_p2_avatar', p[2].avatar.storageEmoji);
+    await Storage.setStringList('mc_shopOwned', shopOwned);
+    await Storage.setStringList('mc_unlockedAvatars', unlockedAvatars);
+    await Storage.setStringList('mc_unlockedHats', unlockedHats);
+    await Storage.setString(
+        'mc_puBonus',
+        jsonEncode({
+          for (final pu in PowerUp.values) _powerUpBonusStorageKeys[pu]!: 0
+        }));
+    await Storage.setInt('mc_livesBonus', 0);
+    await Storage.setInt('mc_cloudResetGeneration', target);
+    await Storage.remove('mc_cloudRevision');
+    await Storage.setString('mc_cloudRevisionId', '');
+    await Storage.setString('mc_cloudParentRevisionId', '');
+    await Storage.setStringList('mc_cloudMergeParentRevisionIds', []);
+    await Storage.setString('mc_cloudLastSyncedRevisionId', '');
+    await Storage.setBool('mc_cloudDirty', true);
+    for (final key in _cloudProgressStorageKeys) {
+      if (!const {
+        'mc_coins',
+        'mc_scores',
+        'mc_gamesPlayed',
+        'mc_operationQuestProgress',
+        'mc_achievements',
+        'mc_skillMap',
+        'mc_numTypeUnlocked_integers',
+        'mc_numTypeUnlocked_rationals',
+        'mc_avatarCustom1',
+        'mc_avatarCustom2',
+        'mc_p1_name',
+        'mc_p1_avatar',
+        'mc_p2_name',
+        'mc_p2_avatar',
+        'mc_puBonus',
+        'mc_livesBonus',
+        'mc_shopOwned',
+        'mc_unlockedAvatars',
+        'mc_unlockedHats',
+      }.contains(key)) await Storage.remove(key);
+    }
+  }
+
+  Future<bool> _recoverCloudResetIntent() async {
+    final raw = Storage.getString(_cloudResetIntentKey, '');
+    if (raw.isEmpty) return false;
+    final durableGeneration = Storage.getInt('mc_cloudResetGeneration', 0);
+    int? target;
+    try {
+      final value = jsonDecode(raw);
+      if (value is Map<String, dynamic> &&
+          value['v'] == 1 &&
+          value['targetResetGeneration'] is int &&
+          (value['targetResetGeneration'] == durableGeneration ||
+              value['targetResetGeneration'] == durableGeneration + 1)) {
+        target = value['targetResetGeneration'] as int;
+      }
+    } catch (_) {}
+    if (target == null) {
+      _applyCloudProgress(CloudProgress.empty());
+      cloudResetGeneration = durableGeneration;
+      cloudRevision = null;
+      cloudRevisionId = null;
+      cloudParentRevisionId = null;
+      _cloudMergeParentRevisionIds = [];
+      cloudLastSyncedRevisionId = null;
+      cloudDirty = true;
+      cloudResetRecoveryBlocked = true;
+      return true;
+    }
+    _applyCloudReset(target);
+    try {
+      await _persistCloudReset(target);
+      await Storage.remove(_cloudResetIntentKey);
+      return false;
+    } catch (_) {
+      cloudResetRecoveryBlocked = true;
+      return true;
+    }
   }
 
   Future<void> checkPlayGamesConnection() async {
@@ -1276,6 +1446,7 @@ class GameState extends ChangeNotifier {
 
   Map<PowerUp, int> _loadPowerUpBonus() {
     final bonus = {for (final pu in PowerUp.values) pu: 0};
+    if (cloudResetRecoveryBlocked) return bonus;
     final raw = Storage.getString('mc_puBonus', '');
     if (raw.isEmpty) return bonus;
 
@@ -1292,6 +1463,9 @@ class GameState extends ChangeNotifier {
 
     return bonus;
   }
+
+  int _loadLivesBonus() =>
+      cloudResetRecoveryBlocked ? 0 : Storage.getInt('mc_livesBonus', 0);
 
   void _savePowerUpBonus(Map<PowerUp, int> bonus) {
     Storage.setString(
@@ -1325,7 +1499,7 @@ class GameState extends ChangeNotifier {
     _clearPowerUpBonus();
   }
 
-  Future<void> _updateLoginStreak() async {
+  Future<void> _updateLoginStreak({bool notify = true}) async {
     final today = _dayNumberFromDateKey(_dailyDateKey());
     final hasCurrentLastDay = Storage.containsKey('mc_lastLoginDay');
     final lastDay = hasCurrentLastDay
@@ -1346,7 +1520,7 @@ class GameState extends ChangeNotifier {
     }
     await Storage.setInt('mc_lastLoginDay', today);
     await Storage.setInt('mc_loginStreak', loginStreak);
-    notifyListeners();
+    if (notify) notifyListeners();
   }
 
   int _dayNumberFromDateKey(String key) {
@@ -1747,7 +1921,7 @@ class GameState extends ChangeNotifier {
     adaptive = false;
     rt.challenge = Operation.master;
     _masterLevel = 0;
-    _masterLives = 3 + Storage.getInt('mc_livesBonus', 0);
+    _masterLives = 3 + _loadLivesBonus();
     Storage.setInt('mc_livesBonus', 0);
     _masterProgress = 0;
     showScreen(GameScreen.player);
@@ -2970,7 +3144,7 @@ class GameState extends ChangeNotifier {
     if (rt.challenge == Operation.master) {
       _masterLevel = 0;
       _masterProgress = 0;
-      _masterLives = 3 + Storage.getInt('mc_livesBonus', 0);
+      _masterLives = 3 + _loadLivesBonus();
       Storage.setInt('mc_livesBonus', 0);
     }
     if (snapshot?.runType == GameRunType.normal) {
@@ -3387,7 +3561,7 @@ class GameState extends ChangeNotifier {
       _savePowerUpBonus(bonus);
       showToast('⚡ Power Pack activated! Bonus power-ups next game');
     } else if (item.id == 'pack_lives') {
-      Storage.setInt('mc_livesBonus', Storage.getInt('mc_livesBonus', 0) + 1);
+      Storage.setInt('mc_livesBonus', _loadLivesBonus() + 1);
       showToast('❤️ Extra life added to next Master run');
     }
     await save();
@@ -3495,10 +3669,11 @@ class GameState extends ChangeNotifier {
     return delivered;
   }
 
-  Future<bool> restorePurchases({bool silent = false}) async {
+  Future<bool> restorePurchases(
+      {bool silent = false, bool notify = true}) async {
     try {
       final purchases = await iapAdapter.restorePurchases();
-      final restored = await _applyRestoredPurchases(purchases);
+      final restored = await _applyRestoredPurchases(purchases, notify: notify);
       if (!silent) {
         showToast(restored
             ? 'Purchases restored. Ads are removed.'
@@ -3514,7 +3689,10 @@ class GameState extends ChangeNotifier {
     }
   }
 
-  Future<bool> _applyRestoredPurchases(List<IapPurchase> purchases) async {
+  Future<bool> _applyRestoredPurchases(
+    List<IapPurchase> purchases, {
+    required bool notify,
+  }) async {
     var restoredAds = false;
     for (final purchase in purchases) {
       if (!purchase.isApproved) continue;
@@ -3527,8 +3705,8 @@ class GameState extends ChangeNotifier {
       adsRemoved = true;
       unawaited(_hideAdsSafely());
       await Storage.setBool('mc_adsRemoved', true);
-      await save();
-      notifyListeners();
+      if (!cloudResetRecoveryBlocked) await save();
+      if (notify) notifyListeners();
     }
     return restoredAds;
   }
