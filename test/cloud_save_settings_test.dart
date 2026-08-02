@@ -581,53 +581,81 @@ void main() {
   });
 
   testWidgets(
-      'Reset Everywhere is available from the menu and confirmation is mutation-free until submitted',
+      'Restart Game Progress is the only reset action and confirmation is mutation-free until submitted',
       (tester) async {
     final pair = await _pair(const CloudSyncNoChange(), connected: false);
     await _pump(tester, pair);
+    expect(find.text('🗑️ Reset All Data'), findsNothing);
+    expect(find.text('Data'), findsNothing);
+    expect(find.text('RESTART GAME PROGRESS'), findsOneWidget);
+    expect(
+      find.text(
+          'Erase game progress on this device and all connected devices. Settings and purchases will be kept.'),
+      findsOneWidget,
+    );
     final resetRow = find.ancestor(
-      of: find.text('RESET EVERYWHERE'),
+      of: find.text('RESTART GAME PROGRESS'),
       matching: find.byType(InkWell),
     );
     expect(resetRow, findsOneWidget);
+    final snapshot = _snapshot(pair.state);
+    final calls = pair.service.calls;
     await tester.ensureVisible(resetRow);
     await tester.tap(resetRow);
     await tester.pumpAndSettle();
-    expect(find.text('Reset Everywhere'), findsNWidgets(2));
+    expect(find.text('Restart Game Progress?'), findsOneWidget);
     expect(
       find.text(
-          'Erase cloud-saved progress on this device now. If you’re offline, cloud deletion will sync later. Older cloud progress cannot restore this data. This can’t be undone.'),
+          'Coins, scores, mastery, achievements, player names, avatars, and Quest progress will be erased. Older cloud saves will not restore them. Settings and purchases will remain. This can’t be undone.'),
       findsOneWidget,
     );
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.text('Restart Progress'), findsOneWidget);
+    expect(pair.service.calls, calls);
     expect(pair.state.cloudResetGeneration, 0);
+    expect(_snapshot(pair.state), snapshot);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(pair.state.cloudResetGeneration, 0);
+    expect(pair.service.calls, calls);
+    expect(_snapshot(pair.state), snapshot);
   });
 
-  testWidgets('Reset Everywhere only dismisses its barrier before submission',
+  testWidgets('Restart Game Progress only dismisses before submission',
       (tester) async {
     final pair = await _pair(const CloudSyncNoChange());
     pair.service.gate = Completer<CloudSyncResult>();
     await _pump(tester, pair);
     final resetRow = find.ancestor(
-      of: find.text('RESET EVERYWHERE'),
+      of: find.text('RESTART GAME PROGRESS'),
       matching: find.byType(InkWell),
     );
+    final snapshot = _snapshot(pair.state);
     await tester.ensureVisible(resetRow);
     await tester.tap(resetRow);
     await tester.pumpAndSettle();
     await tester.tapAt(const Offset(5, 5));
     await tester.pumpAndSettle();
-    expect(find.text('Reset Everywhere'), findsNothing);
+    expect(find.text('Restart Game Progress?'), findsNothing);
+    expect(pair.state.cloudResetGeneration, 0);
+    expect(_snapshot(pair.state), snapshot);
 
     await tester.tap(resetRow);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Reset Everywhere').last);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Restart Game Progress?'), findsNothing);
+    expect(pair.state.cloudResetGeneration, 0);
+    expect(_snapshot(pair.state), snapshot);
+
+    await tester.tap(resetRow);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Restart Progress'));
     await tester.pump();
     await tester.tapAt(const Offset(5, 5));
+    await tester.binding.handlePopRoute();
     await tester.pump();
-    expect(find.text('Reset Everywhere'), findsNWidgets(2));
+    expect(find.text('Restart Game Progress?'), findsOneWidget);
     expect(pair.state.cloudResetGeneration, 1);
 
     pair.service.gate!.complete(const CloudSyncNoChange());
@@ -635,19 +663,19 @@ void main() {
   });
 
   testWidgets(
-      'Reset Everywhere dispatches once and remains unavailable outside the safe menu',
+      'Restart Game Progress dispatches once and remains unavailable outside the safe menu',
       (tester) async {
     final pair = await _pair(const CloudSyncNoChange());
     await _pump(tester, pair);
     final resetRow = find.ancestor(
-      of: find.text('RESET EVERYWHERE'),
+      of: find.text('RESTART GAME PROGRESS'),
       matching: find.byType(InkWell),
     );
     await tester.ensureVisible(resetRow);
     await tester.tap(resetRow);
     await tester.pump();
-    await tester.tap(find.text('Reset Everywhere').last);
-    await tester.tap(find.text('Reset Everywhere').last, warnIfMissed: false);
+    await tester.tap(find.text('Restart Progress'));
+    await tester.tap(find.text('Restart Progress'), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(pair.state.cloudResetGeneration, 1);
     expect(pair.service.calls, 1);
