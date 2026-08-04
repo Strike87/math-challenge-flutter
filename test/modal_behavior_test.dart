@@ -10,6 +10,7 @@ import 'package:math_challenge/models/game_data.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/models/player.dart';
 import 'package:math_challenge/services/audio.dart';
+import 'package:math_challenge/services/iap.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
 import 'package:math_challenge/widgets/modals.dart';
@@ -771,6 +772,49 @@ void main() {
       }
     });
 
+    testWidgets('Adult Gate stays usable above a portrait keyboard',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        const size = Size(320, 568);
+        const keyboardInset = 200.0;
+        await _pumpAdultGateWithKeyboard(tester, state, size, keyboardInset);
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('Adult Gate stays usable above a landscape keyboard',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        const size = Size(844, 390);
+        const keyboardInset = 80.0;
+        await _pumpAdultGateWithKeyboard(tester, state, size, keyboardInset);
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('modal shell stays centered and width-bounded without an inset',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        const size = Size(480, 700);
+        _setTestView(tester, size);
+        state.beginIapPurchase(IapProducts.small);
+        await tester.pumpWidget(_modalHost(state, size: size));
+        await tester.pump();
+
+        final rect = tester.getRect(find.byType(ModalShell));
+        expect(rect.width, lessThanOrEqualTo(480));
+        expect(rect.center.dx, closeTo(size.width / 2, 0.1));
+        expect(tester.takeException(), isNull);
+      } finally {
+        state.dispose();
+      }
+    });
+
     testWidgets('Daily Challenges uses real date badge instead of static emoji',
         (tester) async {
       final state = await _makeState();
@@ -811,7 +855,11 @@ Future<GameState> _makeState([Map<String, Object> prefs = const {}]) async {
   return state;
 }
 
-Widget _modalHost(GameState state, {Size size = const Size(390, 700)}) {
+Widget _modalHost(
+  GameState state, {
+  Size size = const Size(390, 700),
+  EdgeInsets viewInsets = EdgeInsets.zero,
+}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<GameState>.value(value: state),
@@ -826,8 +874,9 @@ Widget _modalHost(GameState state, {Size size = const Size(390, 700)}) {
     ],
     child: MaterialApp(
       home: MediaQuery(
-        data: MediaQueryData(size: size),
+        data: MediaQueryData(size: size, viewInsets: viewInsets),
         child: const Scaffold(
+          resizeToAvoidBottomInset: false,
           body: Stack(
             children: [
               ModalRouter(),
@@ -837,6 +886,51 @@ Widget _modalHost(GameState state, {Size size = const Size(390, 700)}) {
       ),
     ),
   );
+}
+
+void _setTestView(WidgetTester tester, Size size) {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+Future<void> _pumpAdultGateWithKeyboard(
+  WidgetTester tester,
+  GameState state,
+  Size size,
+  double keyboardInset,
+) async {
+  _setTestView(tester, size);
+  state.beginIapPurchase(IapProducts.small);
+  await tester.pumpWidget(
+    _modalHost(
+      state,
+      size: size,
+      viewInsets: EdgeInsets.only(bottom: keyboardInset),
+    ),
+  );
+  await tester.tap(find.text('Continue'));
+  await tester.pump();
+  await _expectAdultGateControlsAboveKeyboard(
+    tester,
+    size.height - keyboardInset,
+  );
+}
+
+Future<void> _expectAdultGateControlsAboveKeyboard(
+  WidgetTester tester,
+  double usableBottom,
+) async {
+  final field = find.byKey(const Key('adultGateAnswerField'));
+  final continueAction = find.text('Continue');
+  expect(tester.getRect(field).bottom, lessThanOrEqualTo(usableBottom));
+  expect(
+      tester.getRect(continueAction).bottom, lessThanOrEqualTo(usableBottom));
+  expect(tester.takeException(), isNull);
+  await tester.tap(continueAction);
+  await tester.pump();
+  expect(find.text('Not quite. Please try again.'), findsOneWidget);
 }
 
 class _NoopTransport implements SavedGamesTransport {

@@ -39,11 +39,16 @@ class ModalRouter extends StatelessWidget {
               : const Color(0xFF1E140A).withValues(alpha: 0.45),
           dismissible: false,
         ),
-        Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 480, maxHeight: 720),
-            margin: const EdgeInsets.all(24),
-            child: _pickModal(gs, context),
+        Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 480, maxHeight: 720),
+              margin: const EdgeInsets.all(24),
+              child: _pickModal(gs, context),
+            ),
           ),
         ),
       ],
