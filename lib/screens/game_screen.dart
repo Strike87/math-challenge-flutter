@@ -83,18 +83,24 @@ class _GameScreenState extends State<GameScreen> {
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        _QuestionCard(gs: gs, s: s),
-                        const SizedBox(height: 16),
-                        if (rt.answerStyle == AnswerStyle.trueFalse)
-                          _TrueFalseAnswers(gs: gs)
-                        else
-                          _AnswersGrid(gs: gs, s: s),
-                        const SizedBox(height: 12),
-                        if (gs.reactionPill.isNotEmpty)
-                          ReactionPill(text: gs.reactionPill, s: s),
-                      ],
+                    child: Center(
+                      child: ConstrainedBox(
+                        key: const Key('gameplay-content'),
+                        constraints: const BoxConstraints(maxWidth: 720),
+                        child: Column(
+                          children: [
+                            _QuestionCard(gs: gs, s: s),
+                            const SizedBox(height: 16),
+                            if (rt.answerStyle == AnswerStyle.trueFalse)
+                              _TrueFalseAnswers(gs: gs)
+                            else
+                              _AnswersGrid(gs: gs, s: s),
+                            const SizedBox(height: 12),
+                            if (gs.reactionPill.isNotEmpty)
+                              ReactionPill(text: gs.reactionPill, s: s),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
