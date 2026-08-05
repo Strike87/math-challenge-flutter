@@ -359,6 +359,205 @@ void main() {
     expect(state.setupPlayers, 1);
     expect(state.players, 2);
   });
+
+  for (final testCase in const [
+    (
+      label: 'small phone portrait',
+      size: Size(320, 568),
+      textScale: 1.0,
+    ),
+    (
+      label: 'phone landscape',
+      size: Size(844, 390),
+      textScale: 1.3,
+    ),
+    (
+      label: 'narrow split-screen',
+      size: Size(500, 900),
+      textScale: 2.0,
+    ),
+  ]) {
+    testWidgets('main menu remains usable on ${testCase.label}',
+        (tester) async {
+      final state = await _makeState();
+      addTearDown(state.dispose);
+
+      await _pumpScreen(
+        tester,
+        state,
+        const Stack(children: [
+          MenuScreen(),
+          ModalRouter(),
+        ]),
+        size: testCase.size,
+        textScale: testCase.textScale,
+      );
+
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      for (final content in [
+        find.text('Master Challenge'),
+        find.text('Weak Skills Practice'),
+        find.text('QUICK PRACTICE'),
+        find.text('Addition'),
+      ]) {
+        await tester.ensureVisible(content);
+      }
+      await tester.tap(find.text('Addition'));
+      await tester.pump();
+
+      expect(state.currentScreen, GameScreen.numType);
+      expect(state.rt.challenge, Operation.addition);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final testCase in const [
+    (
+      label: 'phone landscape',
+      size: Size(844, 390),
+      textScale: 1.3,
+    ),
+    (
+      label: 'wide split-screen',
+      size: Size(900, 700),
+      textScale: 1.0,
+    ),
+  ]) {
+    testWidgets('ordinary configuration remains usable on ${testCase.label}',
+        (tester) async {
+      final state = await _makeState();
+      addTearDown(state.dispose);
+
+      await _pumpScreen(
+        tester,
+        state,
+        const MenuScreen(),
+        size: testCase.size,
+        textScale: testCase.textScale,
+      );
+      await tester.ensureVisible(find.text('Addition'));
+      await tester.tap(find.text('Addition'));
+      await tester.pump();
+      expect(state.currentScreen, GameScreen.numType);
+      await state.selectNumType(NumberType.natural.name);
+
+      await _pumpScreen(
+        tester,
+        state,
+        const ConfigScreen(),
+        size: testCase.size,
+        textScale: testCase.textScale,
+      );
+
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      expect(state.mode, GameMode.standard);
+      expect(state.effectiveAnswerStyle, AnswerStyle.choice4);
+      expect(state.diff, Difficulty.easy);
+      expect(state.questionCount, 10);
+      expect(state.adaptive, isFalse);
+      expect(find.text('Standard'), findsWidgets);
+      expect(find.text('4 Choices'), findsOneWidget);
+      expect(find.text('Easy'), findsOneWidget);
+      expect(find.text('10'), findsOneWidget);
+      expect(find.text('Adaptive Difficulty'), findsOneWidget);
+
+      final twoPlayers = find.text('2 Players');
+      await tester.ensureVisible(twoPlayers);
+      await tester.tap(twoPlayers);
+      await tester.pump();
+      expect(state.setupPlayers, 2);
+      final onePlayer = find.text('1 Player');
+      await tester.tap(onePlayer);
+      await tester.pump();
+      expect(state.setupPlayers, 1);
+
+      final continueButton = find.text('Continue to Player Setup →');
+      await tester.ensureVisible(continueButton);
+      await tester.tap(continueButton);
+      await tester.pump();
+
+      expect(state.currentScreen, GameScreen.player);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final testCase in const [
+    (
+      label: 'narrow split-screen',
+      size: Size(500, 900),
+      textScale: 2.0,
+    ),
+    (
+      label: 'wide split-screen',
+      size: Size(900, 700),
+      textScale: 1.3,
+    ),
+  ]) {
+    testWidgets(
+        'Weak Skills focused configuration remains usable on ${testCase.label}',
+        (tester) async {
+      final state = await _makeState();
+      addTearDown(state.dispose);
+      _setFocusedSkills(state);
+      state.players = 2;
+
+      await _pumpScreen(
+        tester,
+        state,
+        const Stack(children: [
+          MenuScreen(),
+          ModalRouter(),
+        ]),
+        size: testCase.size,
+        textScale: testCase.textScale,
+      );
+      final weakSkills = find.text('Weak Skills Practice');
+      await tester.ensureVisible(weakSkills);
+      await tester.tap(weakSkills);
+      await tester.pumpAndSettle();
+      expect(state.currentModal, GameModal.weakSkillsPractice);
+      final popupContinue = find.text('Continue');
+      await tester.ensureVisible(popupContinue);
+      await tester.tap(popupContinue);
+      await tester.pumpAndSettle();
+      expect(state.currentScreen, GameScreen.numType);
+      await state.selectNumType(NumberType.natural.name);
+
+      await _pumpScreen(
+        tester,
+        state,
+        const ConfigScreen(),
+        size: testCase.size,
+        textScale: testCase.textScale,
+      );
+
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      expect(find.text('Players'), findsOneWidget);
+      final onePlayer = find.text('1 Player');
+      final twoPlayers = find.text('2 Players');
+      await tester.ensureVisible(onePlayer);
+      await tester.ensureVisible(twoPlayers);
+      expect(state.setupPlayers, 1);
+      expect(state.players, 2);
+      final disabledOpacity = tester.widget<Opacity>(
+        find.ancestor(of: twoPlayers, matching: find.byType(Opacity)).first,
+      );
+      expect(disabledOpacity.opacity, 0.4);
+      expect(find.text('Recommended Practice'), findsNothing);
+      expect(find.text('Practice areas'), findsNothing);
+      expect(find.text('Based on your practice history.'), findsNothing);
+
+      final continueButton = find.text('Continue to Player Setup →');
+      await tester.ensureVisible(continueButton);
+      await tester.tap(continueButton);
+      await tester.pump();
+
+      expect(state.currentScreen, GameScreen.player);
+      expect(state.setupPlayers, 1);
+      expect(state.players, 2);
+      expect(tester.takeException(), isNull);
+    });
+  }
 }
 
 Future<void> _pumpScreen(

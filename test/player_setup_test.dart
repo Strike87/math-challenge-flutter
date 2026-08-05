@@ -148,6 +148,137 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
   });
+
+  group('LU-1A.3 responsive Player Setup matrix', () {
+    for (final testCase in const [
+      (
+        label: 'small phone portrait',
+        size: Size(320, 568),
+        textScale: 1.3,
+      ),
+    ]) {
+      testWidgets('1P remains usable on ${testCase.label}', (tester) async {
+        final state = await _makeState();
+        addTearDown(state.dispose);
+        addTearDown(() => state.rt.timer?.cancel());
+        state.setOption('players', 1);
+
+        await _pumpPlayerSetup(
+          tester,
+          state,
+          size: testCase.size,
+          textScale: testCase.textScale,
+        );
+
+        expect(find.byType(SingleChildScrollView), findsOneWidget);
+        expect(find.byKey(const Key('player-setup-name-p1')), findsOneWidget);
+        expect(
+          find.byKey(const Key('player-setup-avatar-tile-p1')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('player-setup-section-p2')), findsNothing);
+        final start = find.byKey(const Key('player-setup-primary'));
+        await tester.ensureVisible(start);
+        expect(tester.takeException(), isNull);
+        await tester.tap(start);
+        await tester.pump();
+
+        expect(state.rt.gameActive, isTrue);
+        state.rt.timer?.cancel();
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    for (final testCase in const [
+      (
+        label: 'phone landscape',
+        size: Size(844, 390),
+        textScale: 1.3,
+      ),
+      (
+        label: 'narrow split-screen',
+        size: Size(500, 900),
+        textScale: 2.0,
+      ),
+      (
+        label: 'wide split-screen',
+        size: Size(900, 700),
+        textScale: 1.0,
+      ),
+    ]) {
+      testWidgets('2P remains usable on ${testCase.label}', (tester) async {
+        final state = await _makeState();
+        addTearDown(state.dispose);
+        addTearDown(() => state.rt.timer?.cancel());
+        state
+          ..setOption('players', 2)
+          ..currentScreen = GameScreen.player;
+
+        await _pumpPlayerSetup(
+          tester,
+          state,
+          size: testCase.size,
+          textScale: testCase.textScale,
+        );
+
+        expect(find.byType(SingleChildScrollView), findsOneWidget);
+        expect(find.text('Player 1 Setup'), findsOneWidget);
+        final player1Name = find.byKey(const Key('player-setup-name-p1'));
+        final player1Avatar =
+            find.byKey(const Key('player-setup-avatar-tile-p1'));
+        final player1Customize =
+            find.byKey(const Key('player-setup-customize-p1'));
+        for (final control in [
+          player1Name,
+          player1Avatar,
+          player1Customize,
+        ]) {
+          await tester.ensureVisible(control);
+        }
+        await tester.enterText(player1Name, 'Ada');
+        final primary = find.byKey(const Key('player-setup-primary'));
+        await tester.ensureVisible(primary);
+        await tester.tap(primary);
+        await tester.pump();
+
+        expect(find.text('Player 2 Setup'), findsOneWidget);
+        final player2Name = find.byKey(const Key('player-setup-name-p2'));
+        final player2Avatar =
+            find.byKey(const Key('player-setup-avatar-tile-p2'));
+        final player2Customize =
+            find.byKey(const Key('player-setup-customize-p2'));
+        for (final control in [
+          player2Name,
+          player2Avatar,
+          player2Customize,
+        ]) {
+          await tester.ensureVisible(control);
+        }
+        await tester.enterText(player2Name, 'Ben');
+        final back = find.byKey(const Key('player-setup-back'));
+        await tester.ensureVisible(back);
+        await tester.tap(back);
+        await tester.pump();
+
+        expect(find.text('Player 1 Setup'), findsOneWidget);
+        expect(state.p[1].name, 'Ada');
+        expect(state.p[2].name, 'Ben');
+        await tester.ensureVisible(primary);
+        await tester.tap(primary);
+        await tester.pump();
+        expect(find.text('Player 2 Setup'), findsOneWidget);
+        await tester.ensureVisible(primary);
+        await tester.tap(primary);
+        await tester.pump();
+
+        expect(state.p[1].name, 'Ada');
+        expect(state.p[2].name, 'Ben');
+        expect(state.rt.gameActive, isTrue);
+        state.rt.timer?.cancel();
+        expect(tester.takeException(), isNull);
+      });
+    }
+  });
 }
 
 Future<GameState> _makeState() async {
@@ -187,4 +318,34 @@ Widget _host(GameState state, {double keyboardInset = 0}) {
       ),
     ),
   );
+}
+
+Future<void> _pumpPlayerSetup(
+  WidgetTester tester,
+  GameState state, {
+  required Size size,
+  required double textScale,
+}) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<GameState>.value(value: state),
+        ChangeNotifierProvider<SettingsService>.value(value: state.settings),
+      ],
+      child: MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+          child: const Scaffold(
+            resizeToAvoidBottomInset: false,
+            body: PlayerSetupScreen(),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }

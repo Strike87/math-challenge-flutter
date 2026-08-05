@@ -99,7 +99,7 @@ class MenuScreen extends StatelessWidget {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final cardWidth = (constraints.maxWidth - 12) / 2;
-                    final cardHeight = (cardWidth / 1.62).clamp(88.0, 132.0);
+                    final cardHeight = (cardWidth / 1.62).clamp(90.0, 132.0);
 
                     return Wrap(
                       alignment: WrapAlignment.center,
@@ -570,17 +570,21 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(left: 4, bottom: 9),
       child: Row(
         children: [
-          Text(
-            text,
-            style: TextStyle(
-              color: s.muted,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.4,
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: s.muted,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.4,
+              ),
             ),
           ),
-          const Spacer(),
-          if (trailing != null) trailing!,
+          if (trailing != null) ...[
+            const SizedBox(width: 8),
+            trailing!,
+          ],
         ],
       ),
     );
