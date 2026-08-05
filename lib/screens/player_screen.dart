@@ -442,8 +442,11 @@ class _PlayerSection extends StatelessWidget {
           ),
           const SizedBox(height: 9),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 7,
             children: [
               _MiniLabel(
                 label: 'QUICK PICKS',
