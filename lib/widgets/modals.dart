@@ -5629,7 +5629,10 @@ class _ShopSectionPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          runSpacing: 4,
           children: [
             TextButton.icon(
               key: const Key('shopBackToHub'),
@@ -5642,7 +5645,6 @@ class _ShopSectionPanel extends StatelessWidget {
                 textStyle: const TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
-            const Spacer(),
             _ShopMiniBalance(coins: gs.coins),
           ],
         ),
@@ -5805,13 +5807,15 @@ class _ShopEyebrow extends StatelessWidget {
       children: [
         Text(icon, style: const TextStyle(fontSize: 13)),
         const SizedBox(width: 6),
-        Text(
-          label,
-          style: TextStyle(
-            color: s.muted,
-            fontSize: 10,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.3,
+        Flexible(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: s.muted,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.3,
+            ),
           ),
         ),
       ],
@@ -5865,8 +5869,10 @@ class _ShopItemGrid extends StatelessWidget {
             for (final item in items)
               SizedBox(
                 width: cardWidth,
-                height: 158,
-                child: _ShopItemCard(item: item, gs: gs),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 158),
+                  child: _ShopItemCard(item: item, gs: gs),
+                ),
               ),
           ],
         );
