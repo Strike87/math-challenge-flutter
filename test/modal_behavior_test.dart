@@ -772,6 +772,156 @@ void main() {
       }
     });
 
+    for (final testCase in [
+      (const Size(320, 568), 1.3),
+      (const Size(844, 390), 1.3),
+      (const Size(500, 900), 2.0),
+    ]) {
+      testWidgets(
+        'Settings is bounded and reachable at ${testCase.$1} @ ${testCase.$2}x',
+        (tester) async {
+          final state = await _makeState();
+          final achievementsBefore = Map<String, bool>.from(state.achievements);
+          try {
+            await _pumpResponsiveModal(
+              tester,
+              state,
+              GameModal.settings,
+              testCase.$1,
+              testCase.$2,
+            );
+
+            expect(find.text('Settings'), findsOneWidget);
+            await _expectReachableInsideModal(
+              tester,
+              find.text('RESTART GAME PROGRESS'),
+            );
+            await _closeResponsiveModal(tester, state, 'Done');
+            expect(state.achievements, achievementsBefore);
+          } finally {
+            state.dispose();
+          }
+        },
+      );
+    }
+
+    for (final testCase in [
+      (const Size(844, 390), 1.3),
+      (const Size(500, 900), 2.0),
+      (const Size(900, 700), 1.3),
+    ]) {
+      testWidgets(
+        'Achievements is bounded and reachable at ${testCase.$1} @ ${testCase.$2}x',
+        (tester) async {
+          final state = await _makeState();
+          final achievementsBefore = Map<String, bool>.from(state.achievements);
+          try {
+            await _pumpResponsiveModal(
+              tester,
+              state,
+              GameModal.achievements,
+              testCase.$1,
+              testCase.$2,
+            );
+
+            expect(find.text('Achievements'), findsOneWidget);
+            await _expectReachableInsideModal(
+              tester,
+              find.text(GameConfig.achievementsDef.first.name),
+            );
+            await _closeResponsiveModal(tester, state, 'Close');
+            expect(state.achievements, achievementsBefore);
+          } finally {
+            state.dispose();
+          }
+        },
+      );
+    }
+
+    for (final testCase in [
+      (const Size(320, 568), 1.3),
+      (const Size(844, 390), 1.3),
+      (const Size(500, 900), 2.0),
+    ]) {
+      testWidgets(
+        'Coin Shop is bounded and reachable at ${testCase.$1} @ ${testCase.$2}x',
+        (tester) async {
+          final state = await _makeState();
+          final coinsBefore = state.coins;
+          final ownedBefore = Set<String>.from(state.shopOwned);
+          try {
+            await _pumpResponsiveModal(
+              tester,
+              state,
+              GameModal.coinShop,
+              testCase.$1,
+              testCase.$2,
+            );
+
+            expect(find.text('Coin Shop'), findsOneWidget);
+            await _expectReachableInsideModal(
+              tester,
+              find.text('YOUR BALANCE'),
+            );
+            final avatars = find.byKey(const Key('shopHub_avatars'));
+            await _expectReachableInsideModal(tester, avatars);
+            await tester.tap(avatars);
+            await tester.pump();
+            expect(state.currentModal, GameModal.coinShop);
+            expect(find.text('AVATARS'), findsOneWidget);
+            await _expectReachableInsideModal(tester, find.text('Dragon'));
+            await _expectReachableInsideModal(
+              tester,
+              find.byKey(const Key('shopBackToHub')),
+            );
+            await tester.tap(find.byKey(const Key('shopBackToHub')));
+            await tester.pump();
+            expect(find.byKey(const Key('shopHub_avatars')), findsOneWidget);
+            await _closeResponsiveModal(tester, state, 'Done');
+            expect(state.coins, coinsBefore);
+            expect(state.shopOwned, ownedBefore);
+          } finally {
+            state.dispose();
+          }
+        },
+      );
+    }
+
+    for (final testCase in [
+      (const Size(320, 568), 1.3),
+      (const Size(500, 900), 2.0),
+      (const Size(900, 700), 1.3),
+    ]) {
+      testWidgets(
+        'Daily Challenges is bounded and reachable at ${testCase.$1} @ ${testCase.$2}x',
+        (tester) async {
+          final state = await _makeState();
+          final progressBefore = Map<String, int>.from(state.dailyProgress);
+          final completedBefore = Map<String, bool>.from(state.dailyCompleted);
+          try {
+            await _pumpResponsiveModal(
+              tester,
+              state,
+              GameModal.dailyChallenges,
+              testCase.$1,
+              testCase.$2,
+            );
+
+            expect(find.text('Daily Challenges'), findsOneWidget);
+            await _expectReachableInsideModal(
+              tester,
+              find.text(state.activeDailyChallenges.first.title),
+            );
+            await _closeResponsiveModal(tester, state, 'Close');
+            expect(state.dailyProgress, progressBefore);
+            expect(state.dailyCompleted, completedBefore);
+          } finally {
+            state.dispose();
+          }
+        },
+      );
+    }
+
     testWidgets('Adult Gate stays usable above a portrait keyboard',
         (tester) async {
       final state = await _makeState();
@@ -859,6 +1009,7 @@ Widget _modalHost(
   GameState state, {
   Size size = const Size(390, 700),
   EdgeInsets viewInsets = EdgeInsets.zero,
+  double textScale = 1,
 }) {
   return MultiProvider(
     providers: [
@@ -874,7 +1025,11 @@ Widget _modalHost(
     ],
     child: MaterialApp(
       home: MediaQuery(
-        data: MediaQueryData(size: size, viewInsets: viewInsets),
+        data: MediaQueryData(
+          size: size,
+          viewInsets: viewInsets,
+          textScaler: TextScaler.linear(textScale),
+        ),
         child: const Scaffold(
           resizeToAvoidBottomInset: false,
           body: Stack(
@@ -886,6 +1041,75 @@ Widget _modalHost(
       ),
     ),
   );
+}
+
+Future<void> _pumpResponsiveModal(
+  WidgetTester tester,
+  GameState state,
+  GameModal modal,
+  Size size,
+  double textScale,
+) async {
+  _setTestView(tester, size);
+  state.showModal(modal);
+  await tester.pumpWidget(_modalHost(state, size: size, textScale: textScale));
+  await tester.pump();
+
+  expect(state.currentModal, modal);
+  expect(find.byType(ModalBarrier), findsWidgets);
+  expect(
+    find.descendant(
+      of: find.byType(ModalShell),
+      matching: find.byType(SingleChildScrollView),
+    ),
+    findsOneWidget,
+  );
+  _expectResponsiveModalBounds(tester, size);
+}
+
+void _expectResponsiveModalBounds(WidgetTester tester, Size size) {
+  final viewport = Offset.zero & size;
+  final modal = tester.getRect(find.byType(ModalShell));
+  final barrier = tester.getRect(find.byType(ModalBarrier).first);
+
+  expect(modal.left, greaterThanOrEqualTo(viewport.left));
+  expect(modal.top, greaterThanOrEqualTo(viewport.top));
+  expect(modal.right, lessThanOrEqualTo(viewport.right));
+  expect(modal.bottom, lessThanOrEqualTo(viewport.bottom));
+  expect(modal.width, lessThanOrEqualTo(viewport.width));
+  expect(modal.height, lessThanOrEqualTo(viewport.height));
+  expect(modal.center.dx, closeTo(viewport.center.dx, 1));
+  expect(barrier.left, lessThanOrEqualTo(viewport.left));
+  expect(barrier.top, lessThanOrEqualTo(viewport.top));
+  expect(barrier.right, greaterThanOrEqualTo(viewport.right));
+  expect(barrier.bottom, greaterThanOrEqualTo(viewport.bottom));
+}
+
+Future<void> _expectReachableInsideModal(
+  WidgetTester tester,
+  Finder target,
+) async {
+  await tester.ensureVisible(target);
+  await tester.pump();
+  final targetRect = tester.getRect(target);
+  final modalRect = tester.getRect(find.byType(ModalShell));
+  expect(targetRect.left, greaterThanOrEqualTo(modalRect.left));
+  expect(targetRect.right, lessThanOrEqualTo(modalRect.right));
+  expect(targetRect.top, greaterThanOrEqualTo(modalRect.top));
+  expect(targetRect.bottom, lessThanOrEqualTo(modalRect.bottom));
+}
+
+Future<void> _closeResponsiveModal(
+  WidgetTester tester,
+  GameState state,
+  String label,
+) async {
+  final close = find.text(label);
+  await tester.ensureVisible(close);
+  await tester.tap(close);
+  await tester.pump();
+  expect(state.currentModal, GameModal.none);
+  expect(tester.takeException(), isNull);
 }
 
 void _setTestView(WidgetTester tester, Size size) {
