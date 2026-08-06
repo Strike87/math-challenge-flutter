@@ -10,6 +10,9 @@ import '../services/settings.dart';
 
 /// Helper widgets shared across screens.
 
+const _outlinedButtonRadius = BorderRadius.all(Radius.circular(18));
+const _filledButtonRadius = BorderRadius.all(Radius.circular(24));
+
 class NeoButton extends StatelessWidget {
   const NeoButton({
     super.key,
@@ -39,6 +42,7 @@ class NeoButton extends StatelessWidget {
     if (outlined) {
       return _PressableScale(
         onPressed: onPressed,
+        borderRadius: _outlinedButtonRadius,
         child: Container(
           padding: padding ??
               const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
@@ -46,7 +50,7 @@ class NeoButton extends StatelessWidget {
             color: settings.dark
                 ? settings.surface2
                 : Colors.white.withValues(alpha: 0.52),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: _outlinedButtonRadius,
             border: Border.all(color: c.withValues(alpha: 0.75), width: 1.5),
           ),
           child: DefaultTextStyle(
@@ -61,6 +65,7 @@ class NeoButton extends StatelessWidget {
     }
     return _PressableScale(
       onPressed: onPressed,
+      borderRadius: _filledButtonRadius,
       child: Container(
         padding:
             padding ?? const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
@@ -70,7 +75,7 @@ class NeoButton extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [c, _gradientEnd(c)],
           ),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: _filledButtonRadius,
           border: Border.all(
             color: Colors.white.withValues(alpha: 0.30),
             width: 1,
@@ -143,10 +148,12 @@ class _PressableScale extends StatefulWidget {
   const _PressableScale({
     required this.child,
     required this.onPressed,
+    required this.borderRadius,
   });
 
   final Widget child;
   final VoidCallback onPressed;
+  final BorderRadius borderRadius;
 
   @override
   State<_PressableScale> createState() => _PressableScaleState();
@@ -155,20 +162,20 @@ class _PressableScale extends StatefulWidget {
 class _PressableScaleState extends State<_PressableScale> {
   bool _pressed = false;
 
+  void _setPressed(bool pressed) {
+    if (_pressed != pressed) setState(() => _pressed = pressed);
+  }
+
   @override
   Widget build(BuildContext context) {
     final duration =
         context.select<SettingsService, Duration>((s) => s.duration(180));
-    return Semantics(
-      button: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapCancel: () => setState(() => _pressed = false),
-        onTapUp: (_) {
-          setState(() => _pressed = false);
-          widget.onPressed();
-        },
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        borderRadius: widget.borderRadius,
+        onHighlightChanged: _setPressed,
+        onTap: widget.onPressed,
         child: AnimatedScale(
           scale: _pressed ? 0.95 : 1,
           duration: duration,

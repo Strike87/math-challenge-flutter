@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/features/gameplay/presentation/widgets/gameplay_controls.dart';
+import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/screens/game_screen.dart' as game_screen;
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
@@ -104,6 +106,33 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(state.rt.totalTurns, 1);
+    state.dispose();
+  });
+
+  testWidgets('True/False keyboard answer respects the gameplay lock',
+      (tester) async {
+    final state = await _gameState();
+    state.rt.answerStyle = AnswerStyle.trueFalse;
+    state.rt.proposedAnswer = state.rt.q!.ans;
+    state.rt.proposedTruth = true;
+    await _pumpGame(tester, state, const Size(390, 844));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    expect(Focus.of(tester.element(find.text('Quit'))).hasFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    expect(Focus.of(tester.element(find.text('Skip ⏩'))).hasFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    expect(Focus.of(tester.element(find.text('True'))).hasFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+
+    expect(state.rt.totalTurns, 1);
+    expect(state.rt.accepting, isFalse);
+    expect(state.rt.lastAnswerCorrect, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    expect(state.rt.totalTurns, 1);
+    await tester.pump(const Duration(milliseconds: 1300));
+    expect(tester.takeException(), isNull);
     state.dispose();
   });
 }
