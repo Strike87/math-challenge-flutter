@@ -92,6 +92,8 @@ void main() {
             .first
             .scale,
         0.95);
+    expect(firstPresses, 1);
+    expect(secondPresses, 0);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
     await tester.pump(const Duration(milliseconds: 100));
     expect(firstPresses, 1);
@@ -104,6 +106,8 @@ void main() {
     expect(
         tester.widgetList<AnimatedScale>(find.byType(AnimatedScale)).last.scale,
         0.95);
+    expect(firstPresses, 1);
+    expect(secondPresses, 1);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
     await tester.pump(const Duration(milliseconds: 100));
     expect(firstPresses, 1);
