@@ -638,40 +638,44 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog>
                     itemBuilder: (_, i) {
                       final emoji = category.emojis[i];
                       final isSelected = emoji == widget.currentAvatar;
-                      return GestureDetector(
-                        onTap: () => Navigator.of(context).pop(emoji),
-                        child: AnimatedContainer(
-                          duration: settings.duration(180),
-                          curve: Curves.easeOutCubic,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? const Color(GameConfig.coral)
-                                    .withValues(alpha: 0.15)
-                                : settings.surface2.withValues(
-                                    alpha: settings.dark ? 0.9 : 0.72),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: () => Navigator.of(context).pop(emoji),
+                          child: AnimatedContainer(
+                            duration: settings.duration(180),
+                            curve: Curves.easeOutCubic,
+                            decoration: BoxDecoration(
                               color: isSelected
                                   ? const Color(GameConfig.coral)
-                                  : Colors.white.withValues(alpha: 0.68),
-                              width: isSelected ? 2 : 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: (isSelected
-                                        ? const Color(GameConfig.coral)
-                                        : Colors.black)
-                                    .withValues(
-                                        alpha: isSelected ? 0.18 : 0.05),
-                                blurRadius: isSelected ? 12 : 8,
-                                offset: const Offset(0, 4),
+                                      .withValues(alpha: 0.15)
+                                  : settings.surface2.withValues(
+                                      alpha: settings.dark ? 0.9 : 0.72),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: isSelected
+                                    ? const Color(GameConfig.coral)
+                                    : Colors.white.withValues(alpha: 0.68),
+                                width: isSelected ? 2 : 1,
                               ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Text(
-                              emoji,
-                              style: const TextStyle(fontSize: 28),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (isSelected
+                                          ? const Color(GameConfig.coral)
+                                          : Colors.black)
+                                      .withValues(
+                                          alpha: isSelected ? 0.18 : 0.05),
+                                  blurRadius: isSelected ? 12 : 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(
+                                emoji,
+                                style: const TextStyle(fontSize: 28),
+                              ),
                             ),
                           ),
                         ),

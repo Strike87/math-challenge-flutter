@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -49,8 +51,7 @@ void main() {
 
       for (final mode in GameMode.values) {
         state.setOption('mode', mode.name);
-        expect(state.mode, mode,
-            reason: '1P should allow ${mode.name}');
+        expect(state.mode, mode, reason: '1P should allow ${mode.name}');
       }
     });
 
@@ -60,8 +61,7 @@ void main() {
       state.setOption('players', 2);
 
       state.setOption('mode', GameMode.standard.name);
-      expect(state.mode, GameMode.standard,
-          reason: '2P should allow Standard');
+      expect(state.mode, GameMode.standard, reason: '2P should allow Standard');
 
       for (final restricted in GameMode.singlePlayerOnly) {
         state.setOption('mode', restricted.name);
@@ -82,7 +82,8 @@ void main() {
 
         state.setOption('players', 2);
         expect(state.mode, GameMode.standard,
-            reason: 'switching to 2P should reset ${restricted.name} to Standard');
+            reason:
+                'switching to 2P should reset ${restricted.name} to Standard');
 
         // Reset for next iteration.
         state.setOption('players', 1);
@@ -163,11 +164,12 @@ void main() {
         (tester) async {
       final state = await _makeState();
       state.setOption('players', 2);
-      
+
       await tester.pumpWidget(
         MultiProvider(
           providers: [
-            ChangeNotifierProvider<SettingsService>.value(value: state.settings),
+            ChangeNotifierProvider<SettingsService>.value(
+                value: state.settings),
             ChangeNotifierProvider<GameState>.value(value: state),
           ],
           child: MaterialApp(
@@ -199,7 +201,104 @@ void main() {
             reason: 'Tapping disabled $label should not change selection');
       }
     });
+
+    testWidgets(
+        'mode tabs support native keyboard traversal and mouse activation',
+        (tester) async {
+      final state = await _makeState();
+      await tester.pumpWidget(_configHost(state));
+      await tester.pump();
+
+      final standard = find.text('Standard', skipOffstage: false).first;
+      final blitz = find.text('Blitz', skipOffstage: false).first;
+      final standardInkWell = find.ancestor(
+        of: standard,
+        matching: find.byType(InkWell),
+      );
+      final blitzInkWell = find.ancestor(
+        of: blitz,
+        matching: find.byType(InkWell),
+      );
+      expect(
+        tester.widget<InkWell>(standardInkWell).borderRadius,
+        BorderRadius.circular(12),
+      );
+      expect(
+        tester.widget<InkWell>(blitzInkWell).borderRadius,
+        BorderRadius.circular(12),
+      );
+
+      Focus.of(tester.element(standard)).requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      expect(Focus.of(tester.element(blitz)).hasFocus, isTrue);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      expect(Focus.of(tester.element(standard)).hasFocus, isTrue);
+
+      var notifications = 0;
+      state.addListener(() => notifications++);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(state.mode, GameMode.standard);
+      expect(notifications, 1);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(notifications, 1);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      expect(Focus.of(tester.element(blitz)).hasFocus, isTrue);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
+      await tester.pump();
+      expect(state.mode, GameMode.blitz);
+      expect(notifications, 2);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
+      await tester.pump();
+      expect(notifications, 2);
+
+      final mouse = TestPointer(1, PointerDeviceKind.mouse);
+      final center = tester.getCenter(standardInkWell);
+      await tester.sendEventToBinding(mouse.hover(center));
+      await tester.sendEventToBinding(mouse.down(center));
+      await tester.sendEventToBinding(mouse.up());
+      await tester.pump();
+      expect(state.mode, GameMode.standard);
+      expect(notifications, 3);
+      await tester.sendEventToBinding(mouse.removePointer());
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('disabled mode tabs cannot receive keyboard activation',
+        (tester) async {
+      final state = await _makeState();
+      state.setOption('players', 2);
+      await tester.pumpWidget(_configHost(state));
+      await tester.pump();
+
+      final blitz = find.text('Blitz', skipOffstage: false).last;
+      final blitzInkWell = find.ancestor(
+        of: blitz,
+        matching: find.byType(InkWell),
+      );
+      expect(tester.widget<InkWell>(blitzInkWell).onTap, isNull);
+      Focus.of(tester.element(blitz)).requestFocus();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
+      expect(state.mode, GameMode.standard);
+      expect(tester.takeException(), isNull);
+    });
   });
+}
+
+Widget _configHost(GameState state) {
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<SettingsService>.value(value: state.settings),
+      ChangeNotifierProvider<GameState>.value(value: state),
+    ],
+    child: const MaterialApp(home: Scaffold(body: ConfigScreen())),
+  );
 }
 
 bool _hasDisabledOpacity(String label) {

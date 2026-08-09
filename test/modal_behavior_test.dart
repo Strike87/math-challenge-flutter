@@ -501,6 +501,100 @@ void main() {
       }
     });
 
+    testWidgets('Avatar Builder native controls stay with the targeted player',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        state.players = 2;
+        state.showAvatarBuilder(2);
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+
+        final base = find.descendant(
+          of: find.byKey(const Key('avatar-base-grid')),
+          matching: find.text('🐶'),
+        );
+        final baseInkWell = find.ancestor(
+          of: base,
+          matching: find.byType(InkWell),
+        );
+        expect(
+          tester.widget<InkWell>(baseInkWell).borderRadius,
+          BorderRadius.circular(16),
+        );
+        Focus.of(tester.element(base)).requestFocus();
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        final cat = find.descendant(
+          of: find.byKey(const Key('avatar-base-grid')),
+          matching: find.text('🐱'),
+        );
+        expect(Focus.of(tester.element(cat)).hasFocus, isTrue);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        expect(Focus.of(tester.element(base)).hasFocus, isTrue);
+
+        var changes = 0;
+        state.addListener(() => changes++);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(state.builderPid, 2);
+        expect(state.builderAvatar.base, '🐱');
+        expect(state.p[1].avatar.storageEmoji, isNot('🐱'));
+        expect(changes, 1);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(changes, 1);
+
+        await tester.tap(find.text('Color'));
+        await tester.pumpAndSettle();
+        final colorChoices = find.descendant(
+          of: find.byKey(const Key('avatar-color-grid')),
+          matching: find.byType(InkWell),
+        );
+        final firstColor = colorChoices.at(1);
+        final secondColor = colorChoices.at(2);
+        expect(
+          tester.widget<InkWell>(firstColor).customBorder,
+          const CircleBorder(),
+        );
+        final firstColorContent = find.descendant(
+          of: firstColor,
+          matching: find.byType(AnimatedContainer),
+        );
+        Focus.of(tester.element(firstColorContent)).requestFocus();
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        expect(
+          Focus.of(
+            tester.element(
+              find.descendant(
+                of: secondColor,
+                matching: find.byType(AnimatedContainer),
+              ),
+            ),
+          ).hasFocus,
+          isTrue,
+        );
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        expect(
+          state.builderAvatar.color,
+          GameConfig.avatarColors.whereType<String>().first,
+        );
+        expect(state.p[1].avatar.isCustom, isFalse);
+        await tester.tap(secondColor);
+        await tester.pump();
+        expect(state.builderAvatar.color, GameConfig.avatarColors[2]);
+        expect(tester.takeException(), isNull);
+      } finally {
+        state.dispose();
+      }
+    });
+
     testWidgets('Coin Shop hub opens focused shop sections', (tester) async {
       final state = await _makeState();
       try {
