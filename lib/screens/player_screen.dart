@@ -363,80 +363,84 @@ class _PlayerSection extends StatelessWidget {
           const SizedBox(height: 8),
 
           // Tappable avatar card — same emoji picker used by Settings.
-          GestureDetector(
+          Material(
             key: Key('player-setup-avatar-tile-p$pid'),
-            onTap: () async {
-              final selected = await showDialog<String>(
-                context: context,
-                builder: (_) => AvatarPickerDialog(
-                  currentAvatar: pl.avatar.storageEmoji,
-                  availableAvatars: gs.availableAvatarBases,
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () async {
+                final selected = await showDialog<String>(
+                  context: context,
+                  builder: (_) => AvatarPickerDialog(
+                    currentAvatar: pl.avatar.storageEmoji,
+                    availableAvatars: gs.availableAvatarBases,
+                  ),
+                );
+                if (selected != null) {
+                  gs.pickAvatar(pid, selected);
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: coral.withValues(alpha: s.dark ? 0.10 : 0.06),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: coral.withValues(alpha: 0.22),
+                  ),
                 ),
-              );
-              if (selected != null) {
-                gs.pickAvatar(pid, selected);
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: coral.withValues(alpha: s.dark ? 0.10 : 0.06),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: coral.withValues(alpha: 0.22),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 54,
-                    height: 54,
-                    decoration: BoxDecoration(
-                      color: coral.withValues(alpha: 0.13),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: coral.withValues(alpha: 0.24),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: coral.withValues(alpha: 0.13),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: coral.withValues(alpha: 0.24),
+                        ),
+                      ),
+                      child: Center(
+                        child: AvatarWidget(
+                          avatar: pl.avatar,
+                          size: 39,
+                        ),
                       ),
                     ),
-                    child: Center(
-                      child: AvatarWidget(
-                        avatar: pl.avatar,
-                        size: 39,
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Tap to change',
+                            style: TextStyle(
+                              color: s.text,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                              fontFamily: AppFonts.headFor(s),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${gs.availableAvatarBases.length} unlocked emojis available',
+                            style: TextStyle(
+                              color: s.muted,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 11),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Tap to change',
-                          style: TextStyle(
-                            color: s.text,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            fontFamily: AppFonts.headFor(s),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${gs.availableAvatarBases.length} unlocked emojis available',
-                          style: TextStyle(
-                            color: s.muted,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: coral,
+                      size: 22,
                     ),
-                  ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: coral,
-                    size: 22,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -624,57 +628,61 @@ class _AvatarOption extends StatelessWidget {
     final s = context.watch<SettingsService>();
     const coral = Color(GameConfig.coral);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 58,
-        margin: const EdgeInsets.only(right: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? coral.withValues(alpha: 0.15)
-              : s.surface2.withValues(alpha: s.dark ? 0.90 : 0.70),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: selected ? coral : s.border,
-            width: selected ? 2 : 1,
-          ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: coral.withValues(alpha: 0.16),
-                    blurRadius: 12,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : null,
-        ),
-        child: Stack(
-          children: [
-            Center(
-              child: AvatarWidget(
-                avatar: AvatarData.emoji(avatar),
-                size: 36,
-              ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          width: 58,
+          margin: const EdgeInsets.only(right: 8),
+          decoration: BoxDecoration(
+            color: selected
+                ? coral.withValues(alpha: 0.15)
+                : s.surface2.withValues(alpha: s.dark ? 0.90 : 0.70),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: selected ? coral : s.border,
+              width: selected ? 2 : 1,
             ),
-            if (selected)
-              Positioned(
-                right: 3,
-                top: 3,
-                child: Container(
-                  width: 16,
-                  height: 16,
-                  decoration: const BoxDecoration(
-                    color: coral,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check_rounded,
-                    color: Colors.white,
-                    size: 11,
-                  ),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: coral.withValues(alpha: 0.16),
+                      blurRadius: 12,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Stack(
+            children: [
+              Center(
+                child: AvatarWidget(
+                  avatar: AvatarData.emoji(avatar),
+                  size: 36,
                 ),
               ),
-          ],
+              if (selected)
+                Positioned(
+                  right: 3,
+                  top: 3,
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: const BoxDecoration(
+                      color: coral,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      color: Colors.white,
+                      size: 11,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

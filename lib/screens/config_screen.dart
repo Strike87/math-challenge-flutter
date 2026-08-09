@@ -768,9 +768,13 @@ class _ModeTabButton extends StatelessWidget {
       );
     }
 
-    return GestureDetector(
-      onTap: disabled ? null : () => onPick(mode),
-      child: buttonContent,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: disabled ? null : () => onPick(mode),
+        child: buttonContent,
+      ),
     );
   }
 }

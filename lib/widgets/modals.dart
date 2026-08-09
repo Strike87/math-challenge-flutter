@@ -4977,73 +4977,76 @@ class _AvatarChoiceButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: s.duration(160),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: selected
-              ? LinearGradient(
-                  colors: [
-                    const Color(GameConfig.coral).withValues(alpha: 0.18),
-                    const Color(GameConfig.mango).withValues(alpha: 0.14),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: selected
-              ? null
-              : s.surface.withValues(alpha: s.dark ? 0.48 : 0.72),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected
-                ? const Color(GameConfig.coral)
-                : Colors.white.withValues(alpha: s.dark ? 0.08 : 0.78),
-            width: selected ? 2 : 1.2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: selected
-                  ? const Color(GameConfig.coral).withValues(alpha: 0.20)
-                  : Colors.black.withValues(alpha: 0.04),
-              blurRadius: selected ? 12 : 7,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Stack(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: s.duration(160),
           alignment: Alignment.center,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: value.isEmpty ? s.muted : null,
-                fontSize: value.isEmpty ? 20 : 27,
-                fontWeight: FontWeight.w900,
-              ),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? LinearGradient(
+                    colors: [
+                      const Color(GameConfig.coral).withValues(alpha: 0.18),
+                      const Color(GameConfig.mango).withValues(alpha: 0.14),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: selected
+                ? null
+                : s.surface.withValues(alpha: s.dark ? 0.48 : 0.72),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected
+                  ? const Color(GameConfig.coral)
+                  : Colors.white.withValues(alpha: s.dark ? 0.08 : 0.78),
+              width: selected ? 2 : 1.2,
             ),
-            if (selected)
-              Positioned(
-                right: 5,
-                top: 5,
-                child: Container(
-                  width: 17,
-                  height: 17,
-                  decoration: const BoxDecoration(
-                    color: Color(GameConfig.coral),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check_rounded,
-                    size: 12,
-                    color: Colors.white,
-                  ),
+            boxShadow: [
+              BoxShadow(
+                color: selected
+                    ? const Color(GameConfig.coral).withValues(alpha: 0.20)
+                    : Colors.black.withValues(alpha: 0.04),
+                blurRadius: selected ? 12 : 7,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: value.isEmpty ? s.muted : null,
+                  fontSize: value.isEmpty ? 20 : 27,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-          ],
+              if (selected)
+                Positioned(
+                  right: 5,
+                  top: 5,
+                  child: Container(
+                    width: 17,
+                    height: 17,
+                    decoration: const BoxDecoration(
+                      color: Color(GameConfig.coral),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -5077,52 +5080,55 @@ class _AvatarColorGrid extends StatelessWidget {
             final color = colors[i];
             final selected = gs.builderAvatar.color == color;
             final parsed = color == null ? null : _avatarBuilderColor(color);
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => gs.setBuilderColor(color),
-              child: AnimatedContainer(
-                duration: s.duration(160),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: parsed ??
-                      s.surface.withValues(alpha: s.dark ? 0.54 : 0.76),
-                  border: Border.all(
-                    color: selected
-                        ? const Color(GameConfig.coral)
-                        : Colors.white.withValues(
-                            alpha: s.dark ? 0.10 : 0.88,
-                          ),
-                    width: selected ? 3 : 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () => gs.setBuilderColor(color),
+                child: AnimatedContainer(
+                  duration: s.duration(160),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: parsed ??
+                        s.surface.withValues(alpha: s.dark ? 0.54 : 0.76),
+                    border: Border.all(
                       color: selected
                           ? const Color(GameConfig.coral)
-                              .withValues(alpha: 0.28)
-                          : Colors.black.withValues(alpha: 0.08),
-                      blurRadius: selected ? 13 : 7,
-                      offset: const Offset(0, 3),
+                          : Colors.white.withValues(
+                              alpha: s.dark ? 0.10 : 0.88,
+                            ),
+                      width: selected ? 3 : 2,
                     ),
-                  ],
+                    boxShadow: [
+                      BoxShadow(
+                        color: selected
+                            ? const Color(GameConfig.coral)
+                                .withValues(alpha: 0.28)
+                            : Colors.black.withValues(alpha: 0.08),
+                        blurRadius: selected ? 13 : 7,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: color == null
+                      ? const Text('🚫', style: TextStyle(fontSize: 21))
+                      : selected
+                          ? Container(
+                              width: 23,
+                              height: 23,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.20),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.check_rounded,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            )
+                          : null,
                 ),
-                child: color == null
-                    ? const Text('🚫', style: TextStyle(fontSize: 21))
-                    : selected
-                        ? Container(
-                            width: 23,
-                            height: 23,
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.20),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.check_rounded,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          )
-                        : null,
               ),
             );
           },
