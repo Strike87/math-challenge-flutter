@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -135,7 +136,155 @@ void main() {
     expect(tester.takeException(), isNull);
     state.dispose();
   });
+
+  testWidgets('power-up controls traverse and Enter activates once',
+      (tester) async {
+    final state = await _gameState();
+    addTearDown(state.dispose);
+    state.p[1].pups.addAll([
+      PowerUp.double,
+      PowerUp.double,
+      PowerUp.shield,
+      PowerUp.shield,
+    ]);
+    await _pumpGame(tester, state, const Size(390, 844));
+
+    final doubleControl = _powerUpControl('×2');
+    expect(
+      tester.widget<InkWell>(doubleControl).borderRadius,
+      BorderRadius.circular(18),
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    expect(Focus.of(tester.element(find.text('Quit'))).hasFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    expect(Focus.of(tester.element(find.text('×2'))).hasFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    expect(Focus.of(tester.element(find.text('🛡'))).hasFocus, isTrue);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    expect(Focus.of(tester.element(find.text('×2'))).hasFocus, isTrue);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(state.p[1].doubleActive, isTrue);
+    expect(_powerUpCount(state, PowerUp.double), 1);
+    expect(state.rt.puUsed, 1);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(_powerUpCount(state, PowerUp.double), 1);
+    expect(state.rt.puUsed, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('power-up control activates once from Space', (tester) async {
+    final state = await _gameState();
+    addTearDown(state.dispose);
+    state.p[1].pups.addAll([PowerUp.shield, PowerUp.shield]);
+    await _pumpGame(tester, state, const Size(390, 844));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    expect(Focus.of(tester.element(find.text('🛡'))).hasFocus, isTrue);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    expect(state.p[1].shieldActive, isTrue);
+    expect(_powerUpCount(state, PowerUp.shield), 1);
+    expect(state.rt.puUsed, 1);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    expect(_powerUpCount(state, PowerUp.shield), 1);
+    expect(state.rt.puUsed, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('True/False keeps 50/50 visible and natively disabled',
+      (tester) async {
+    final state = await _gameState();
+    addTearDown(state.dispose);
+    state.p[1].pups.addAll([PowerUp.fifty, PowerUp.fifty]);
+    state.rt.answerStyle = AnswerStyle.trueFalse;
+    state.rt.proposedAnswer = state.rt.q!.ans;
+    state.rt.proposedTruth = true;
+    await _pumpGame(tester, state, const Size(390, 844));
+
+    final fiftyControl = _powerUpControl('50/50');
+    expect(fiftyControl, findsOneWidget);
+    expect(tester.widget<InkWell>(fiftyControl).onTap, isNull);
+    expect(find.byKey(const Key('powerup-fifty-count')), findsNothing);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
+    expect(_powerUpCount(state, PowerUp.fifty), 2);
+    expect(state.rt.puUsed, 0);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    expect(Focus.of(tester.element(find.text('Quit'))).hasFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    expect(Focus.of(tester.element(find.text('Skip ⏩'))).hasFocus, isTrue);
+    expect(Focus.of(tester.element(find.text('50/50'))).hasFocus, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('power-up pointer activation mutates inventory exactly once',
+      (tester) async {
+    final state = await _gameState();
+    addTearDown(state.dispose);
+    state.p[1].pups.addAll([PowerUp.double, PowerUp.double]);
+    await _pumpGame(tester, state, const Size(390, 844));
+
+    final doubleControl = _powerUpControl('×2');
+    final mouse = TestPointer(1, PointerDeviceKind.mouse);
+    final center = tester.getCenter(doubleControl);
+    await tester.sendEventToBinding(mouse.hover(center));
+    await tester.sendEventToBinding(mouse.down(center));
+    await tester.sendEventToBinding(mouse.up());
+    await tester.pump();
+
+    expect(state.p[1].doubleActive, isTrue);
+    expect(_powerUpCount(state, PowerUp.double), 1);
+    expect(state.rt.puUsed, 1);
+    await tester.sendEventToBinding(mouse.removePointer());
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('answer lock disables a focused power-up before activation',
+      (tester) async {
+    final state = await _gameState();
+    addTearDown(state.dispose);
+    state.p[1].pups.add(PowerUp.shield);
+    await _pumpGame(tester, state, const Size(390, 844));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    expect(Focus.of(tester.element(find.text('🛡'))).hasFocus, isTrue);
+
+    state.rt.accepting = false;
+    state.notifyListeners();
+    await tester.pump();
+    final shieldControl = _powerUpControl('🛡');
+    expect(tester.widget<InkWell>(shieldControl).onTap, isNull);
+    expect(Focus.of(tester.element(find.text('🛡'))).hasFocus, isFalse);
+
+    await tester.tap(shieldControl);
+    await tester.pump();
+    expect(state.p[1].shieldActive, isFalse);
+    expect(_powerUpCount(state, PowerUp.shield), 1);
+    expect(state.rt.puUsed, 0);
+    expect(tester.takeException(), isNull);
+  });
 }
+
+Finder _powerUpControl(String label) => find.ancestor(
+      of: find.text(label),
+      matching: find.byType(InkWell),
+    );
+
+int _powerUpCount(GameState state, PowerUp powerUp) =>
+    state.p[1].pups.where((candidate) => candidate == powerUp).length;
 
 Future<GameState> _gameState() async {
   SharedPreferences.setMockInitialValues({});

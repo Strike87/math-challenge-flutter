@@ -1086,91 +1086,96 @@ class _PowerUpHud extends StatelessWidget {
                     count == 0 ||
                     gs.isPowerUpBlocked(pu);
                 final color = _powerUpColor(pu);
-                final tile = GestureDetector(
-                  key: pu == PowerUp.shield
-                      ? const Key('powerup-shield-button')
-                      : null,
-                  onTap: disabled ? null : () => gs.usePowerUp(pu),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Opacity(
-                        opacity: active ? 1 : (disabled ? 0.42 : 1),
-                        child: Container(
-                          height: 52,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: s.dark
-                                ? s.surface2
-                                : Colors.white.withValues(alpha: 0.64),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
-                              color:
-                                  color.withValues(alpha: active ? 0.95 : 0.36),
-                              width: active ? 2 : 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: color.withValues(
-                                    alpha: active ? 0.32 : 0.15),
-                                blurRadius: active ? 16 : 10,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 6),
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                _powerUpShortLabel(pu),
-                                maxLines: 1,
-                                softWrap: false,
-                                style: TextStyle(
-                                  color: color,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 16,
-                                  fontFamily: AppFonts.headFor(s),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (pu != PowerUp.fifty ||
-                          gs.rt.answerStyle != AnswerStyle.trueFalse)
-                        Positioned(
-                          key: pu == PowerUp.fifty
-                              ? const Key('powerup-fifty-count')
-                              : null,
-                          right: -3,
-                          top: -7,
+                final tile = Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(
+                    key: pu == PowerUp.shield
+                        ? const Key('powerup-shield-button')
+                        : null,
+                    onTap: disabled ? null : () => gs.usePowerUp(pu),
+                    borderRadius: BorderRadius.circular(18),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Opacity(
+                          opacity: active ? 1 : (disabled ? 0.42 : 1),
                           child: Container(
-                            width: 22,
-                            height: 22,
+                            height: 52,
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: const Color(GameConfig.punch),
-                              shape: BoxShape.circle,
+                              color: s.dark
+                                  ? s.surface2
+                                  : Colors.white.withValues(alpha: 0.64),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: color.withValues(
+                                    alpha: active ? 0.95 : 0.36),
+                                width: active ? 2 : 1.5,
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(GameConfig.punch)
-                                      .withValues(alpha: 0.28),
-                                  blurRadius: 8,
+                                  color: color.withValues(
+                                      alpha: active ? 0.32 : 0.15),
+                                  blurRadius: active ? 16 : 10,
+                                  offset: const Offset(0, 5),
                                 ),
                               ],
                             ),
-                            child: Text(
-                              '$count',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w900,
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 6),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  _powerUpShortLabel(pu),
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  style: TextStyle(
+                                    color: color,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 16,
+                                    fontFamily: AppFonts.headFor(s),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                    ],
+                        if (pu != PowerUp.fifty ||
+                            gs.rt.answerStyle != AnswerStyle.trueFalse)
+                          Positioned(
+                            key: pu == PowerUp.fifty
+                                ? const Key('powerup-fifty-count')
+                                : null,
+                            right: -3,
+                            top: -7,
+                            child: Container(
+                              width: 22,
+                              height: 22,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: const Color(GameConfig.punch),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(GameConfig.punch)
+                                        .withValues(alpha: 0.28),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                '$count',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 );
                 if (pu == PowerUp.shield) {
