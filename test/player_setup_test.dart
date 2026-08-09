@@ -240,6 +240,32 @@ void main() {
       state.dispose();
       await tester.pumpWidget(const SizedBox.shrink());
     });
+
+    testWidgets('Avatar Picker Escape keeps the existing avatar unchanged',
+        (tester) async {
+      final state = await _makeState();
+      state.setOption('players', 1);
+      final before = state.p[1].avatar.storageEmoji;
+      await tester.pumpWidget(_host(state));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('player-setup-avatar-tile-p1')));
+      await tester.pumpAndSettle();
+      expect(find.text('Pick your avatar'), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      expect(FocusManager.instance.primaryFocus, isNotNull);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Pick your avatar'), findsNothing);
+      expect(state.p[1].avatar.storageEmoji, before);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      expect(FocusManager.instance.primaryFocus, isNotNull);
+      expect(tester.takeException(), isNull);
+      state.dispose();
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
   });
 
   group('LU-1A.3 responsive Player Setup matrix', () {

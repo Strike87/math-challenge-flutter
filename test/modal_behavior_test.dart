@@ -1292,6 +1292,235 @@ void main() {
         state.dispose();
       }
     });
+
+    testWidgets('custom modal focus stays contained and Escape restores use',
+        (tester) async {
+      final state = await _makeState();
+      var underlyingActivations = 0;
+      try {
+        await tester.pumpWidget(
+          _modalHostWithUnderlying(
+            state,
+            onUnderlying: () => underlyingActivations++,
+          ),
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        expect(
+          Focus.of(tester.element(find.text('Underlying action')))
+              .hasPrimaryFocus,
+          isTrue,
+        );
+
+        state.showModal(GameModal.settings);
+        await tester.pump();
+        expect(Focus.of(tester.element(find.text('Done'))).hasPrimaryFocus,
+            isTrue);
+        expect(
+          Focus.of(tester.element(find.text('Underlying action')))
+              .hasPrimaryFocus,
+          isFalse,
+        );
+
+        final firstModalControl = Focus.of(tester.element(find.text('Done')));
+        FocusNode? finalModalControl;
+        for (var i = 0; i < 40; i++) {
+          final before = FocusManager.instance.primaryFocus;
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.pump();
+          expect(
+            Focus.of(tester.element(find.text('Underlying action')))
+                .hasPrimaryFocus,
+            isFalse,
+          );
+          if (FocusManager.instance.primaryFocus == firstModalControl) {
+            finalModalControl = before;
+            break;
+          }
+        }
+        expect(finalModalControl, isNotNull);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pump();
+        expect(FocusManager.instance.primaryFocus, same(finalModalControl));
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        expect(Focus.of(tester.element(find.text('Done'))).hasPrimaryFocus,
+            isTrue);
+
+        var notifications = 0;
+        state.addListener(() => notifications++);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+        expect(state.currentModal, GameModal.none);
+        expect(notifications, 1);
+        expect(
+          Focus.of(tester.element(find.text('Underlying action')))
+              .hasPrimaryFocus,
+          isTrue,
+        );
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+        expect(underlyingActivations, 1);
+        expect(tester.takeException(), isNull);
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('Escape only uses existing safe custom-modal exits',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        state.startGame();
+        state.rt.timer?.cancel();
+        state.showModal(GameModal.quitConfirm);
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+        expect(state.currentModal, GameModal.none);
+        expect(state.rt.gameActive, isTrue);
+
+        state.showModal(GameModal.masterIntro);
+        await tester.pump();
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+        expect(state.currentModal, GameModal.none);
+        expect(state.currentScreen, GameScreen.menu);
+
+        state.goToConfig('weakSkills');
+        await tester.pump();
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+        expect(state.currentModal, GameModal.none);
+        expect(state.setupWeakSkillsPlan, isNull);
+
+        state.beginIapPurchase(IapProducts.small);
+        await tester.pump();
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+        expect(state.currentModal, GameModal.none);
+        expect(state.pendingIapProduct, isNull);
+        expect(tester.takeException(), isNull);
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets(
+        'Coin Shop contains focus and Escape closes an internal subview safely',
+        (tester) async {
+      final state = await _makeState();
+      var underlyingActivations = 0;
+      try {
+        await tester.pumpWidget(
+          _modalHostWithUnderlying(
+            state,
+            onUnderlying: () => underlyingActivations++,
+          ),
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        expect(
+          Focus.of(tester.element(find.text('Underlying action')))
+              .hasPrimaryFocus,
+          isTrue,
+        );
+
+        state.showModal(GameModal.coinShop);
+        await tester.pump();
+        expect(Focus.of(tester.element(find.text('Avatars'))).hasPrimaryFocus,
+            isTrue);
+        expect(
+          Focus.of(tester.element(find.text('Underlying action')))
+              .hasPrimaryFocus,
+          isFalse,
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        expect(
+          Focus.of(tester.element(find.text('Underlying action')))
+              .hasPrimaryFocus,
+          isFalse,
+        );
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        expect(Focus.of(tester.element(find.text('Avatars'))).hasPrimaryFocus,
+            isTrue);
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(find.text('AVATARS'), findsOneWidget);
+        final coins = state.coins;
+        final owned = Set<String>.from(state.shopOwned);
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+        await tester.pump();
+        expect(state.currentModal, GameModal.none);
+        expect(state.coins, coins);
+        expect(state.shopOwned, owned);
+        expect(state.pendingIapProduct, isNull);
+        expect(underlyingActivations, 0);
+        expect(tester.takeException(), isNull);
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('Escape is inert for progression and result modals',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        for (final modal in [GameModal.stageCleared, GameModal.win]) {
+          await tester.pumpWidget(
+            _modalHostWithUnderlying(
+              state,
+              onUnderlying: () {},
+            ),
+          );
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          expect(
+            Focus.of(tester.element(find.text('Underlying action')))
+                .hasPrimaryFocus,
+            isTrue,
+          );
+
+          state.showModal(modal);
+          final coins = state.coins;
+          await tester.pump();
+          expect(
+            Focus.of(tester.element(find.text('Underlying action')))
+                .hasPrimaryFocus,
+            isFalse,
+          );
+          expect(FocusManager.instance.primaryFocus, isNotNull);
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.pump();
+          expect(
+            Focus.of(tester.element(find.text('Underlying action')))
+                .hasPrimaryFocus,
+            isFalse,
+          );
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+          await tester.pump();
+          expect(state.currentModal, modal);
+          expect(state.coins, coins);
+          state.closeModal();
+        }
+        expect(tester.takeException(), isNull);
+      } finally {
+        state.dispose();
+      }
+    });
   });
 }
 
@@ -1352,6 +1581,40 @@ Widget _modalHost(
     ),
   );
 }
+
+Widget _modalHostWithUnderlying(
+  GameState state, {
+  required VoidCallback onUnderlying,
+}) =>
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<GameState>.value(value: state),
+        ChangeNotifierProvider<SettingsService>.value(value: state.settings),
+        ChangeNotifierProvider<CloudSaveController>(
+          create: (_) => CloudSaveController(
+            state: state,
+            service:
+                CloudSaveService(state: state, transport: _NoopTransport()),
+            localLoad: Future.value(),
+          ),
+        ),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: [
+              Center(
+                child: ElevatedButton(
+                  onPressed: onUnderlying,
+                  child: const Text('Underlying action'),
+                ),
+              ),
+              const ModalRouter(),
+            ],
+          ),
+        ),
+      ),
+    );
 
 Future<void> _pumpResponsiveModal(
   WidgetTester tester,
