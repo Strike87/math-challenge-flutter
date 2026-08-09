@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -691,6 +694,219 @@ void main() {
           find.textContaining('Payments processed securely via Google Play.'),
           findsOneWidget,
         );
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('Coin Shop native controls support keyboard and mouse input',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        state.coins = 300;
+        state.showModal(GameModal.coinShop);
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+
+        final avatars = find.ancestor(
+          of: find.text('Avatars'),
+          matching: find.byType(InkWell),
+        );
+        expect(tester.widget<InkWell>(avatars).borderRadius,
+            BorderRadius.circular(20));
+        for (var i = 0;
+            i < 8 &&
+                !Focus.of(tester.element(find.text('Avatars'))).hasPrimaryFocus;
+            i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        }
+        expect(Focus.of(tester.element(find.text('Avatars'))).hasPrimaryFocus,
+            isTrue);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        expect(Focus.of(tester.element(find.text('Avatars'))).hasPrimaryFocus,
+            isFalse);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        expect(Focus.of(tester.element(find.text('Avatars'))).hasPrimaryFocus,
+            isTrue);
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
+        await tester.pumpAndSettle();
+        expect(find.text('AVATARS'), findsOneWidget);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
+        await tester.pump();
+        expect(find.text('AVATARS'), findsOneWidget);
+
+        final dragon = find.ancestor(
+          of: find.text('Dragon'),
+          matching: find.byType(InkWell),
+        );
+        expect(tester.widget<InkWell>(dragon).borderRadius,
+            BorderRadius.circular(20));
+        final mouse = TestPointer(1, PointerDeviceKind.mouse);
+        final center = tester.getCenter(dragon);
+        await tester.sendEventToBinding(mouse.hover(center));
+        await tester.sendEventToBinding(mouse.down(center));
+        await tester.sendEventToBinding(mouse.up());
+        await tester.pumpAndSettle();
+        expect(state.coins, 0);
+        expect(state.shopOwned, contains('av_dragon'));
+        expect(state.toastMessage, isNot('Already owned'));
+        await tester.sendEventToBinding(mouse.removePointer());
+
+        final robot = find.ancestor(
+          of: find.text('Robot'),
+          matching: find.byType(InkWell),
+        );
+        expect(tester.widget<InkWell>(robot).onTap, isNull);
+        final ownedBefore = Set<String>.from(state.shopOwned);
+        await tester.tap(robot);
+        await tester.pump();
+        expect(state.coins, 0);
+        expect(state.shopOwned, ownedBefore);
+
+        await tester.tap(find.byKey(const Key('shopBackToHub')));
+        await tester.pumpAndSettle();
+        final packs = find.ancestor(
+          of: find.text('Packs'),
+          matching: find.byType(InkWell),
+        );
+        expect(tester.widget<InkWell>(packs).borderRadius,
+            BorderRadius.circular(20));
+        for (var i = 0;
+            i < 8 &&
+                !Focus.of(tester.element(find.text('Packs'))).hasPrimaryFocus;
+            i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        }
+        expect(Focus.of(tester.element(find.text('Packs'))).hasPrimaryFocus,
+            isTrue);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(find.text('PACKS'), findsOneWidget);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(find.text('PACKS'), findsOneWidget);
+        expect(
+          tester
+              .widget<InkWell>(
+                find.byKey(const Key('shopPack_pack_daily_bonus')),
+              )
+              .borderRadius,
+          BorderRadius.circular(20),
+        );
+        final dailyBonus = find.byKey(const Key('shopPack_pack_daily_bonus'));
+        expect(tester.widget<InkWell>(dailyBonus).onTap, isNotNull);
+        for (var i = 0;
+            i < 8 &&
+                !Focus.of(tester.element(find.text('+20 Coins')))
+                    .hasPrimaryFocus;
+            i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        }
+        expect(Focus.of(tester.element(find.text('+20 Coins'))).hasPrimaryFocus,
+            isTrue);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
+        await tester.pumpAndSettle();
+        expect(state.coins, GameState.dailyBonusCoins);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
+        await tester.pump();
+        expect(state.coins, GameState.dailyBonusCoins);
+        final claimedDailyBonus =
+            find.byKey(const Key('shopPack_pack_daily_bonus'));
+        expect(tester.widget<InkWell>(claimedDailyBonus).onTap, isNull);
+        await tester.tap(claimedDailyBonus);
+        await tester.pump();
+        expect(state.coins, GameState.dailyBonusCoins);
+
+        state.coins += 500;
+        state.notifyListeners();
+        await tester.pump();
+        final powerPack = find.byKey(const Key('shopPack_pack_powerups'));
+        expect(tester.widget<InkWell>(powerPack).onTap, isNotNull);
+        for (var i = 0;
+            i < 8 &&
+                !Focus.of(tester.element(find.text('Power Pack')))
+                    .hasPrimaryFocus;
+            i++) {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        }
+        expect(
+            Focus.of(tester.element(find.text('Power Pack'))).hasPrimaryFocus,
+            isTrue);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(state.coins, GameState.dailyBonusCoins);
+        final powerUpBonus =
+            jsonDecode(Storage.getString('mc_puBonus', '{}')) as Map;
+        for (final powerUp in [
+          'time',
+          'fifty',
+          'double',
+          'shield',
+          'freeze',
+          'switch'
+        ]) {
+          expect(powerUpBonus[powerUp], 5);
+        }
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(state.coins, GameState.dailyBonusCoins);
+        final powerUpBonusAfterKeyUp =
+            jsonDecode(Storage.getString('mc_puBonus', '{}')) as Map;
+        for (final powerUp in [
+          'time',
+          'fifty',
+          'double',
+          'shield',
+          'freeze',
+          'switch'
+        ]) {
+          expect(powerUpBonusAfterKeyUp[powerUp], 5);
+        }
+
+        await tester.ensureVisible(find.byKey(const Key('shopBackToHub')));
+        await tester.tap(find.byKey(const Key('shopBackToHub')));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(const Key('shopHub_buy')));
+        await tester.tap(find.byKey(const Key('shopHub_buy')));
+        await tester.pumpAndSettle();
+        final rewardedAd = find.ancestor(
+          of: find.text('Watch Ad'),
+          matching: find.byType(InkWell),
+        );
+        final coinOption = find.descendant(
+          of: find.byKey(const Key('iapProduct_100_coins')),
+          matching: find.byType(InkWell),
+        );
+        expect(tester.widget<InkWell>(rewardedAd).borderRadius,
+            BorderRadius.circular(20));
+        expect(tester.widget<InkWell>(coinOption).borderRadius,
+            BorderRadius.circular(20));
+        await tester.tap(rewardedAd);
+        await tester.pumpAndSettle();
+        expect(state.currentModal, GameModal.coinShop);
+        expect(state.coins, GameState.dailyBonusCoins);
+
+        state.adsRemoved = true;
+        state.notifyListeners();
+        await tester.pump();
+        final disabledRewardedAd = find.ancestor(
+          of: find.text('Watch Ad'),
+          matching: find.byType(InkWell),
+        );
+        expect(tester.widget<InkWell>(disabledRewardedAd).onTap, isNull);
+        await tester.tap(disabledRewardedAd);
+        await tester.pump();
+        expect(state.currentModal, GameModal.coinShop);
+        expect(state.coins, GameState.dailyBonusCoins);
+
+        await tester.tap(coinOption);
+        await tester.pumpAndSettle();
+        expect(state.currentModal, GameModal.adultGate);
+        expect(state.pendingIapProduct, IapProducts.small);
+        expect(tester.takeException(), isNull);
       } finally {
         state.dispose();
       }
