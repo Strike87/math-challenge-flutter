@@ -266,6 +266,45 @@ void main() {
       state.dispose();
       await tester.pumpWidget(const SizedBox.shrink());
     });
+
+    testWidgets('avatar quick picks and Start Game are directionally reachable',
+        (tester) async {
+      final state = await _makeState();
+      state.setOption('players', 1);
+      await tester.pumpWidget(_host(state));
+      await tester.pump();
+      final quickPicks = find.descendant(
+        of: find.byType(ListView),
+        matching: find.byType(InkWell),
+      );
+      final firstQuickPick = find.descendant(
+        of: quickPicks.at(0),
+        matching: find.text(state.availableAvatarBases[0]),
+      );
+      final secondQuickPick = find.descendant(
+        of: quickPicks.at(1),
+        matching: find.text(state.availableAvatarBases[1]),
+      );
+
+      Focus.of(tester.element(firstQuickPick)).requestFocus();
+      await tester.pump();
+      final initialAvatar = state.p[1].avatar.storageEmoji;
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      expect(Focus.of(tester.element(secondQuickPick)).hasPrimaryFocus, isTrue);
+      expect(state.p[1].avatar.storageEmoji, initialAvatar);
+
+      final startGame = find.text('Start Game');
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      expect(Focus.of(tester.element(startGame)).hasPrimaryFocus, isTrue);
+      expect(state.rt.gameActive, isFalse);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
+      expect(state.rt.gameActive, isTrue);
+      state.rt.timer?.cancel();
+      expect(tester.takeException(), isNull);
+      state.dispose();
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
   });
 
   group('LU-1A.3 responsive Player Setup matrix', () {

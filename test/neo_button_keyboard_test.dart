@@ -120,6 +120,41 @@ void main() {
     expect(firstPresses, 1);
     expect(secondPresses, 1);
   });
+
+  testWidgets('NeoButton directional movement does not activate controls',
+      (tester) async {
+    var firstPresses = 0;
+    var secondPresses = 0;
+    await _pump(
+      tester,
+      Row(
+        children: [
+          NeoButton(label: 'First', onPressed: () => firstPresses++),
+          NeoButton(label: 'Second', onPressed: () => secondPresses++),
+        ],
+      ),
+    );
+
+    Focus.of(tester.element(find.text('First'))).requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    expect(
+        Focus.of(tester.element(find.text('Second'))).hasPrimaryFocus, isTrue);
+    expect((firstPresses, secondPresses), (0, 0));
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
+    expect((firstPresses, secondPresses), (0, 1));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    expect(
+        Focus.of(tester.element(find.text('First'))).hasPrimaryFocus, isTrue);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+    expect((firstPresses, secondPresses), (1, 1));
+  });
 }
 
 Future<void> _pump(WidgetTester tester, Widget child) async {

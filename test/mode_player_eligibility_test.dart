@@ -288,6 +288,59 @@ void main() {
       expect(state.mode, GameMode.standard);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('mode tabs move directionally before activating once',
+        (tester) async {
+      final state = await _makeState();
+      await tester.pumpWidget(_configHost(state));
+      await tester.pump();
+      final standard = find.text('Standard', skipOffstage: false).first;
+      final blitz = find.text('Blitz', skipOffstage: false).first;
+
+      Focus.of(tester.element(standard)).requestFocus();
+      await tester.pump();
+      var notifications = 0;
+      state.addListener(() => notifications++);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+
+      expect(Focus.of(tester.element(blitz)).hasPrimaryFocus, isTrue);
+      expect(state.mode, GameMode.standard);
+      expect(notifications, 0);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+      expect(state.mode, GameMode.blitz);
+      expect(notifications, 1);
+    });
+
+    testWidgets('directional traversal skips restricted mode tabs',
+        (tester) async {
+      final state = await _makeState();
+      state.setOption('players', 2);
+      await tester.pumpWidget(_configHost(state));
+      await tester.pump();
+      final standard = find.text('Standard', skipOffstage: false).first;
+      final blitz = find.text('Blitz', skipOffstage: false).first;
+      final blitzInkWell = find.ancestor(
+        of: blitz,
+        matching: find.byType(InkWell),
+      );
+
+      Focus.of(tester.element(standard)).requestFocus();
+      await tester.pump();
+      var notifications = 0;
+      state.addListener(() => notifications++);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+
+      expect(
+        Focus.of(tester.element(find.text('1 Player'))).hasPrimaryFocus,
+        isTrue,
+      );
+      expect(tester.widget<InkWell>(blitzInkWell).onTap, isNull);
+      expect(state.mode, GameMode.standard);
+      expect(notifications, 0);
+      expect(tester.takeException(), isNull);
+    });
   });
 }
 

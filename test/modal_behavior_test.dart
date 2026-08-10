@@ -1401,8 +1401,30 @@ void main() {
         expect(
           Focus.of(tester.element(find.text('Underlying action')))
               .hasPrimaryFocus,
+          isFalse,
+        );
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        expect(Focus.of(tester.element(find.text('Replay'))).hasPrimaryFocus,
+            isTrue);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        expect(
+          Focus.of(tester.element(find.text('Main Menu'))).hasPrimaryFocus,
           isTrue,
         );
+        for (final key in [
+          LogicalKeyboardKey.arrowUp,
+          LogicalKeyboardKey.arrowDown,
+          LogicalKeyboardKey.arrowLeft,
+          LogicalKeyboardKey.arrowRight,
+        ]) {
+          await tester.sendKeyEvent(key);
+          expect(
+            Focus.of(tester.element(find.text('Underlying action')))
+                .hasPrimaryFocus,
+            isFalse,
+          );
+        }
 
         state.closeModal();
         await tester.pump();
@@ -1564,6 +1586,60 @@ void main() {
           state.closeModal();
         }
         expect(tester.takeException(), isNull);
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('Coin Shop moves directionally and skips unavailable items',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        state.coins = 150;
+        state.showModal(GameModal.coinShop);
+        await tester.pumpWidget(_modalHost(state));
+        await tester.pump();
+
+        expect(Focus.of(tester.element(find.text('Avatars'))).hasPrimaryFocus,
+            isTrue);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        expect(Focus.of(tester.element(find.text('Hats'))).hasPrimaryFocus,
+            isTrue);
+        expect(find.text('EXPLORE THE SHOP'), findsOneWidget);
+
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(find.text('HATS'), findsOneWidget);
+        expect(state.coins, 150);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        expect(Focus.of(tester.element(find.text('Crown'))).hasPrimaryFocus,
+            isTrue);
+
+        final wizard = find.ancestor(
+          of: find.text('Wizard').last,
+          matching: find.byType(InkWell),
+        );
+        expect(tester.widget<InkWell>(wizard).onTap, isNull);
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        expect(
+          Focus.of(tester.element(find.text('Top Hat'))).hasPrimaryFocus,
+          isTrue,
+        );
+        expect(state.coins, 150);
+        expect(state.shopOwned, isNot(contains('hat_wizard')));
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+        expect(Focus.of(tester.element(find.text('Crown'))).hasPrimaryFocus,
+            isTrue);
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        expect(state.coins, 0);
+        expect(state.shopOwned, contains('hat_crown'));
+        expect(state.shopOwned, isNot(contains('hat_wizard')));
+        expect(state.coins, 0);
       } finally {
         state.dispose();
       }
