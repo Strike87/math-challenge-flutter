@@ -724,6 +724,107 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('ordinary cloud conflict actions remain reachable responsively',
+      (tester) async {
+    for (final viewport in _responsiveViewports) {
+      await _setViewport(tester, viewport);
+      final pair = await _ordinaryPendingPair();
+      await _pump(tester, pair);
+      await _tapRow(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Review Cloud Save'), findsOneWidget);
+      await _expectWithinViewport(tester, find.byType(Dialog));
+      await _expectWithinViewport(tester, _conflictShell(),
+          maxWidth: viewport.width == 1280 ? 480 : null,
+          centered: viewport.width == 1280);
+      await _expectReachable(tester, find.text('This Device'));
+      for (final label in ['Keep This Device', 'Use Cloud Progress', 'Close']) {
+        await _expectReachable(tester, find.text(label));
+      }
+      expect(tester.takeException(), isNull);
+
+      pair.service.resolutionGate = Completer<CloudSyncResult>();
+      await tester.tap(find.text('Keep This Device'));
+      await tester.pump();
+      expect(pair.controller.isBusy, isTrue);
+      expect(find.text('Resolving your choice…'), findsOneWidget);
+      for (final label in ['Keep This Device', 'Use Cloud Progress', 'Close']) {
+        await _expectReachable(tester, find.text(label));
+      }
+      expect(tester.takeException(), isNull);
+
+      pair.service.resolutionGate!.complete(const CloudSyncUserChoiceMerged());
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('native cloud conflict actions remain reachable responsively',
+      (tester) async {
+    for (final viewport in _responsiveViewports) {
+      await _setViewport(tester, viewport);
+      final pair = await _nativePendingPair();
+      await _pump(tester, pair);
+      await _tapRow(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Review Cloud Save'), findsOneWidget);
+      await _expectWithinViewport(tester, find.byType(Dialog));
+      await _expectWithinViewport(tester, _conflictShell(),
+          maxWidth: viewport.width == 1280 ? 480 : null,
+          centered: viewport.width == 1280);
+      await _expectReachable(tester, find.text('Version 1'));
+      await _expectReachable(tester, find.text('Version 2'));
+      for (final label in ['Use Version 1', 'Use Version 2', 'Close']) {
+        await _expectReachable(tester, find.text(label));
+      }
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('reset confirmation actions remain reachable responsively',
+      (tester) async {
+    for (final viewport in _responsiveViewports) {
+      await _setViewport(tester, viewport);
+      final pair = await _pair(const CloudSyncNoChange());
+      await _pump(tester, pair);
+      final resetRow = find.ancestor(
+        of: find.text('RESTART GAME PROGRESS'),
+        matching: find.byType(InkWell),
+      );
+      final snapshot = _snapshot(pair.state);
+      final calls = pair.service.calls;
+      await _expectReachable(tester, resetRow);
+      await _expectWithinViewport(tester, find.byType(ModalShell),
+          maxWidth: viewport.width == 1280 ? 480 : null,
+          centered: viewport.width == 1280);
+
+      await tester.tap(resetRow);
+      await tester.pumpAndSettle();
+      expect(find.text('Restart Game Progress?'), findsOneWidget);
+      expect(
+        find.text(
+            'Coins, scores, mastery, achievements, player names, avatars, and Quest progress will be erased. Older cloud saves will not restore them. Settings and purchases will remain. This can’t be undone.'),
+        findsOneWidget,
+      );
+      await _expectWithinViewport(tester, find.byType(AlertDialog));
+      for (final label in ['Cancel', 'Restart Progress']) {
+        await _expectReachable(tester, find.text(label));
+      }
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.text('Restart Game Progress?'), findsNothing);
+      expect(pair.state.cloudResetGeneration, 0);
+      expect(pair.service.calls, calls);
+      expect(_snapshot(pair.state), snapshot);
+    }
+  });
+
   testWidgets(
       'Restart Game Progress dispatches once and remains unavailable outside the safe menu',
       (tester) async {
@@ -746,6 +847,54 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<InkWell>(resetRow).onTap, isNull);
   });
+}
+
+const _responsiveViewports = [Size(844, 390), Size(1280, 800)];
+
+Finder _conflictShell() => find.ancestor(
+      of: find.text('Review Cloud Save'),
+      matching: find.byType(ModalShell),
+    );
+
+Future<void> _setViewport(WidgetTester tester, Size size) async {
+  tester.view
+    ..physicalSize = size
+    ..devicePixelRatio = 1;
+  addTearDown(() {
+    tester.view
+      ..resetPhysicalSize()
+      ..resetDevicePixelRatio();
+  });
+}
+
+Future<void> _expectReachable(WidgetTester tester, Finder finder) async {
+  await tester.ensureVisible(finder);
+  await tester.pump();
+  final rect = tester.getRect(finder);
+  expect(rect.width, greaterThan(0));
+  expect(rect.height, greaterThan(0));
+  expect(rect.overlaps(Offset.zero & tester.view.physicalSize), isTrue);
+  expect(tester.hitTestOnBinding(rect.center).path, isNotEmpty);
+}
+
+Future<void> _expectWithinViewport(
+  WidgetTester tester,
+  Finder finder, {
+  double? maxWidth,
+  bool centered = false,
+}) async {
+  final rect = tester.getRect(finder);
+  final viewport = Offset.zero & tester.view.physicalSize;
+  expect(rect.left, greaterThanOrEqualTo(viewport.left),
+      reason: '$finder begins at $rect outside $viewport');
+  expect(rect.top, greaterThanOrEqualTo(viewport.top),
+      reason: '$finder begins at $rect outside $viewport');
+  expect(rect.right, lessThanOrEqualTo(viewport.right),
+      reason: '$finder ends at $rect outside $viewport');
+  expect(rect.bottom, lessThanOrEqualTo(viewport.bottom),
+      reason: '$finder ends at $rect outside $viewport');
+  if (maxWidth != null) expect(rect.width, lessThanOrEqualTo(maxWidth));
+  if (centered) expect(rect.center.dx, closeTo(viewport.center.dx, 1));
 }
 
 Future<void> _expectRow(
