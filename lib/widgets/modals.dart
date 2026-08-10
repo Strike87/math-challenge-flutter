@@ -5276,11 +5276,6 @@ class SkillDashboardModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
-
-    final overallMasteryPercent = (gs.adaptLvlRaw * 10).clamp(0.0, 100.0);
-
-    final recommendation = selectWeakSkillsPlan(gs.skillMap);
-
     final skills = [
       (
         operation: Operation.addition,
@@ -5307,6 +5302,15 @@ class SkillDashboardModal extends StatelessWidget {
         color: const Color(GameConfig.sky),
       ),
     ];
+    final canonicalQuestionCount = skills.fold<int>(
+      0,
+      (total, skill) => total + (gs.skillMap[skill.operation.name]?.count ?? 0),
+    );
+    final overallMasteryPercent = canonicalQuestionCount == 0
+        ? 0.0
+        : (gs.adaptLvlRaw * 10).clamp(0.0, 100.0);
+
+    final recommendation = selectWeakSkillsPlan(gs.skillMap);
     final skillCards = <Widget>[];
     for (var i = 0; i < skills.length; i++) {
       final skill = gs.skillMap[skills[i].operation.name];
