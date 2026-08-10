@@ -1859,66 +1859,69 @@ class _CloudSaveConflictReviewDialogState
         canPop: !_resolving,
         child: Dialog(
           insetPadding: const EdgeInsets.all(24),
-          child: ModalShell(
-            icon: '☁️',
-            title: 'Review Cloud Save',
-            subtitle: 'Two progress versions need your choice',
-            maxHeight: 640,
-            actions: [
-              Opacity(
-                opacity: disabled ? 0.5 : 1,
-                child: IgnorePointer(
-                  ignoring: disabled,
-                  child: NeoButton(
-                    label: ordinary ? 'Keep This Device' : 'Use Version 1',
-                    color: GameConfig.coral,
-                    onPressed: () => _resolve(firstChoice),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: ModalShell(
+              icon: '☁️',
+              title: 'Review Cloud Save',
+              subtitle: 'Two progress versions need your choice',
+              maxHeight: 640,
+              actions: [
+                Opacity(
+                  opacity: disabled ? 0.5 : 1,
+                  child: IgnorePointer(
+                    ignoring: disabled,
+                    child: NeoButton(
+                      label: ordinary ? 'Keep This Device' : 'Use Version 1',
+                      color: GameConfig.coral,
+                      onPressed: () => _resolve(firstChoice),
+                    ),
                   ),
                 ),
-              ),
-              Opacity(
-                opacity: disabled ? 0.5 : 1,
-                child: IgnorePointer(
-                  ignoring: disabled,
-                  child: NeoButton(
-                    label: ordinary ? 'Use Cloud Progress' : 'Use Version 2',
-                    color: GameConfig.sky,
-                    onPressed: () => _resolve(secondChoice),
+                Opacity(
+                  opacity: disabled ? 0.5 : 1,
+                  child: IgnorePointer(
+                    ignoring: disabled,
+                    child: NeoButton(
+                      label: ordinary ? 'Use Cloud Progress' : 'Use Version 2',
+                      color: GameConfig.sky,
+                      onPressed: () => _resolve(secondChoice),
+                    ),
                   ),
                 ),
-              ),
-              Opacity(
-                opacity: _resolving ? 0.5 : 1,
-                child: IgnorePointer(
-                  ignoring: _resolving,
-                  child: NeoButton(
-                    label: 'Close',
-                    autofocus: true,
-                    outlined: true,
-                    color: GameConfig.coral,
-                    onPressed: _closeFromUserAction,
+                Opacity(
+                  opacity: _resolving ? 0.5 : 1,
+                  child: IgnorePointer(
+                    ignoring: _resolving,
+                    child: NeoButton(
+                      label: 'Close',
+                      autofocus: true,
+                      outlined: true,
+                      color: GameConfig.coral,
+                      onPressed: _closeFromUserAction,
+                    ),
                   ),
                 ),
-              ),
-            ],
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_resolving) ...[
-                  const Center(child: CircularProgressIndicator()),
-                  const SizedBox(height: 8),
-                  Text('Resolving your choice…',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: s.muted, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 12),
-                ],
-                _CloudProgressSummary(
-                    label: firstLabel, progress: firstProgress),
-                const SizedBox(height: 10),
-                _CloudProgressSummary(
-                    label: secondLabel, progress: secondProgress),
               ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_resolving) ...[
+                    const Center(child: CircularProgressIndicator()),
+                    const SizedBox(height: 8),
+                    Text('Resolving your choice…',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: s.muted, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 12),
+                  ],
+                  _CloudProgressSummary(
+                      label: firstLabel, progress: firstProgress),
+                  const SizedBox(height: 10),
+                  _CloudProgressSummary(
+                      label: secondLabel, progress: secondProgress),
+                ],
+              ),
             ),
           ),
         ),
