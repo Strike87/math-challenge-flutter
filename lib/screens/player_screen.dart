@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
 import '../game_config.dart';
@@ -14,7 +15,16 @@ class PlayerSetupScreen extends StatefulWidget {
 }
 
 class _PlayerSetupScreenState extends State<PlayerSetupScreen> {
+  final FocusNode _primaryFocusNode = FocusNode(
+    debugLabel: 'Player Setup primary action',
+  );
   int _setupStep = 0;
+
+  @override
+  void dispose() {
+    _primaryFocusNode.dispose();
+    super.dispose();
+  }
 
   void _goBack(GameState gs) {
     if (gs.setupPlayers == 2 && _setupStep == 1) {
@@ -91,12 +101,14 @@ class _PlayerSetupScreenState extends State<PlayerSetupScreen> {
                         gs: gs,
                         s: s,
                         singlePlayer: !twoPlayer,
+                        primaryFocusNode: _primaryFocusNode,
                       ),
                       const SizedBox(height: 14),
                       NeoButton(
                         key: const Key('player-setup-primary'),
                         label: primaryLabel,
                         color: GameConfig.coral,
+                        focusNode: _primaryFocusNode,
                         onPressed: () => _submit(gs),
                       ),
                     ],
@@ -323,12 +335,14 @@ class _PlayerSection extends StatelessWidget {
     required this.gs,
     required this.s,
     required this.singlePlayer,
+    required this.primaryFocusNode,
   });
 
   final int pid;
   final GameState gs;
   final SettingsService s;
   final bool singlePlayer;
+  final FocusNode primaryFocusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -472,17 +486,29 @@ class _PlayerSection extends StatelessWidget {
           // Quick-pick strip — unlocked emoji avatars only.
           SizedBox(
             height: 58,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: gs.availableAvatarBases.length,
-              itemBuilder: (_, i) {
-                final a = gs.availableAvatarBases[i];
-                return _AvatarOption(
-                  avatar: a,
-                  selected: pl.avatar.storageEmoji == a,
-                  onTap: () => gs.pickAvatar(pid, a),
-                );
+            child: Focus(
+              canRequestFocus: false,
+              skipTraversal: true,
+              onKeyEvent: (_, event) {
+                if (event is KeyDownEvent &&
+                    event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                  primaryFocusNode.requestFocus();
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
               },
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: gs.availableAvatarBases.length,
+                itemBuilder: (_, i) {
+                  final a = gs.availableAvatarBases[i];
+                  return _AvatarOption(
+                    avatar: a,
+                    selected: pl.avatar.storageEmoji == a,
+                    onTap: () => gs.pickAvatar(pid, a),
+                  );
+                },
+              ),
             ),
           ),
           const SizedBox(height: 10),

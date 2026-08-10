@@ -276,6 +276,67 @@ void main() {
     expect(state.rt.puUsed, 0);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('answers move directionally and activate only the focused choice',
+      (tester) async {
+    final state = await _gameState();
+    await _pumpGame(tester, state, const Size(390, 844));
+    final answers = find.descendant(
+      of: find.byType(GridView).first,
+      matching: find.byType(InkWell),
+    );
+    final firstAnswer = find.descendant(
+      of: answers.at(0),
+      matching: find.byType(Text),
+    );
+    final secondAnswer = find.descendant(
+      of: answers.at(1),
+      matching: find.byType(Text),
+    );
+
+    Focus.of(tester.element(firstAnswer)).requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    expect(Focus.of(tester.element(secondAnswer)).hasPrimaryFocus, isTrue);
+    expect(state.rt.totalTurns, 0);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+    expect(state.rt.totalTurns, 1);
+    expect(state.rt.accepting, isFalse);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+    expect(state.rt.totalTurns, 1);
+    await tester.pump(const Duration(milliseconds: 1300));
+    state.dispose();
+  });
+
+  testWidgets('power-ups move directionally without bypassing their lock',
+      (tester) async {
+    final state = await _gameState();
+    addTearDown(state.dispose);
+    state.p[1].pups.addAll([
+      PowerUp.double,
+      PowerUp.double,
+      PowerUp.shield,
+      PowerUp.shield,
+    ]);
+    await _pumpGame(tester, state, const Size(390, 844));
+
+    Focus.of(tester.element(find.text('×2'))).requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    expect(Focus.of(tester.element(find.text('🛡'))).hasPrimaryFocus, isTrue);
+    expect(state.rt.puUsed, 0);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
+    expect(state.p[1].shieldActive, isTrue);
+    expect(_powerUpCount(state, PowerUp.shield), 1);
+    expect(state.rt.puUsed, 1);
+  });
 }
 
 Finder _powerUpControl(String label) => find.ancestor(

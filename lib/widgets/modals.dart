@@ -52,15 +52,15 @@ class _ModalRouterState extends State<ModalRouter> {
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
     final s = context.watch<SettingsService>();
-    final opening =
-        _lastModal == GameModal.none && gs.currentModal != GameModal.none;
-    final openingModal = gs.currentModal;
+    final enteringModal =
+        _lastModal != gs.currentModal && gs.currentModal != GameModal.none;
+    final enteredModal = gs.currentModal;
     _lastModal = gs.currentModal;
-    if (opening) {
+    if (enteringModal) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted &&
-            gs.currentModal == openingModal &&
-            _lastModal == openingModal) {
+            gs.currentModal == enteredModal &&
+            _lastModal == enteredModal) {
           _focusScopeNode.requestFocus();
         }
       });
