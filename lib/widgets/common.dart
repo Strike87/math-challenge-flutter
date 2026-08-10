@@ -22,6 +22,7 @@ class NeoButton extends StatelessWidget {
     this.textColor = Colors.white,
     this.icon,
     this.outlined = false,
+    this.autofocus = false,
     this.padding,
     this.fontSize = 16,
   });
@@ -32,6 +33,7 @@ class NeoButton extends StatelessWidget {
   final Color textColor;
   final IconData? icon;
   final bool outlined;
+  final bool autofocus;
   final EdgeInsets? padding;
   final double fontSize;
 
@@ -42,6 +44,7 @@ class NeoButton extends StatelessWidget {
     if (outlined) {
       return _PressableScale(
         onPressed: onPressed,
+        autofocus: autofocus,
         borderRadius: _outlinedButtonRadius,
         child: Container(
           padding: padding ??
@@ -65,6 +68,7 @@ class NeoButton extends StatelessWidget {
     }
     return _PressableScale(
       onPressed: onPressed,
+      autofocus: autofocus,
       borderRadius: _filledButtonRadius,
       child: Container(
         padding:
@@ -148,11 +152,13 @@ class _PressableScale extends StatefulWidget {
   const _PressableScale({
     required this.child,
     required this.onPressed,
+    required this.autofocus,
     required this.borderRadius,
   });
 
   final Widget child;
   final VoidCallback onPressed;
+  final bool autofocus;
   final BorderRadius borderRadius;
 
   @override
@@ -174,6 +180,7 @@ class _PressableScaleState extends State<_PressableScale> {
       type: MaterialType.transparency,
       child: InkWell(
         borderRadius: widget.borderRadius,
+        autofocus: widget.autofocus,
         onHighlightChanged: _setPressed,
         onTap: widget.onPressed,
         child: AnimatedScale(

@@ -23,35 +23,85 @@ import '../services/settings.dart';
 import '../widgets/common.dart';
 
 /// Container for all modal dialogs. Routed by [GameState.currentModal].
-class ModalRouter extends StatelessWidget {
+class ModalRouter extends StatefulWidget {
   const ModalRouter({super.key});
+
+  @override
+  State<ModalRouter> createState() => _ModalRouterState();
+}
+
+class _ModalRouterState extends State<ModalRouter> {
+  late final FocusScopeNode _focusScopeNode;
+  GameModal _lastModal = GameModal.none;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusScopeNode = FocusScopeNode(
+      traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop,
+    );
+  }
+
+  @override
+  void dispose() {
+    _focusScopeNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final gs = context.watch<GameState>();
     final s = context.watch<SettingsService>();
+    final opening =
+        _lastModal == GameModal.none && gs.currentModal != GameModal.none;
+    final openingModal = gs.currentModal;
+    _lastModal = gs.currentModal;
+    if (opening) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            gs.currentModal == openingModal &&
+            _lastModal == openingModal) {
+          _focusScopeNode.requestFocus();
+        }
+      });
+    }
     if (gs.currentModal == GameModal.none) return const SizedBox.shrink();
-    return Stack(
-      children: [
-        ModalBarrier(
-          color: s.dark
-              ? Colors.black.withValues(alpha: 0.65)
-              : const Color(0xFF1E140A).withValues(alpha: 0.45),
-          dismissible: false,
-        ),
-        Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(context).bottom,
+    return FocusScope(
+      node: _focusScopeNode,
+      autofocus: true,
+      child: Actions(
+        actions: {
+          DismissIntent: CallbackAction<DismissIntent>(
+            onInvoke: (_) {
+              _dismissModalForEscape(gs);
+              return null;
+            },
           ),
-          child: Center(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 480, maxHeight: 720),
-              margin: const EdgeInsets.all(24),
-              child: _pickModal(gs, context),
+        },
+        child: Stack(
+          children: [
+            ModalBarrier(
+              color: s.dark
+                  ? Colors.black.withValues(alpha: 0.65)
+                  : const Color(0xFF1E140A).withValues(alpha: 0.45),
+              dismissible: false,
             ),
-          ),
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(context).bottom,
+              ),
+              child: Center(
+                child: Container(
+                  constraints:
+                      const BoxConstraints(maxWidth: 480, maxHeight: 720),
+                  margin: const EdgeInsets.all(24),
+                  child: _pickModal(gs, context),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -95,6 +145,22 @@ class ModalRouter extends StatelessWidget {
   }
 }
 
+void _dismissModalForEscape(GameState gs) {
+  switch (gs.currentModal) {
+    case GameModal.stageCleared || GameModal.win:
+      return;
+    case GameModal.masterIntro:
+      _cancelMasterIntro(gs);
+    default:
+      gs.closeModal();
+  }
+}
+
+void _cancelMasterIntro(GameState gs) {
+  gs.closeModal();
+  gs.showScreen(GameScreen.menu);
+}
+
 class WeakSkillsPracticeModal extends StatelessWidget {
   const WeakSkillsPracticeModal({super.key, required this.gs});
 
@@ -117,6 +183,7 @@ class WeakSkillsPracticeModal extends StatelessWidget {
       actions: [
         NeoButton(
           label: 'Cancel',
+          autofocus: true,
           outlined: true,
           color: GameConfig.coral,
           onPressed: gs.cancelWeakSkillsSetup,
@@ -500,6 +567,7 @@ class OperationQuestModal extends StatelessWidget {
       actions: [
         NeoButton(
           label: 'Close',
+          autofocus: true,
           outlined: true,
           color: GameConfig.coral,
           onPressed: gs.closeModal,
@@ -1259,6 +1327,7 @@ class SettingsModal extends StatelessWidget {
           actions: [
             NeoButton(
               label: 'Done',
+              autofocus: true,
               color: GameConfig.coral,
               onPressed: gs.closeModal,
             ),
@@ -1777,68 +1846,80 @@ class _CloudSaveConflictReviewDialogState
         ),
     };
     final ordinary = widget.pending is CloudSyncDeviceCloudChoice;
-    return PopScope(
-      canPop: !_resolving,
-      child: Dialog(
-        insetPadding: const EdgeInsets.all(24),
-        child: ModalShell(
-          icon: '☁️',
-          title: 'Review Cloud Save',
-          subtitle: 'Two progress versions need your choice',
-          maxHeight: 640,
-          actions: [
-            Opacity(
-              opacity: disabled ? 0.5 : 1,
-              child: IgnorePointer(
-                ignoring: disabled,
-                child: NeoButton(
-                  label: ordinary ? 'Keep This Device' : 'Use Version 1',
-                  color: GameConfig.coral,
-                  onPressed: () => _resolve(firstChoice),
+    return Actions(
+      actions: {
+        DismissIntent: CallbackAction<DismissIntent>(
+          onInvoke: (_) {
+            if (!_resolving) _closeFromUserAction();
+            return null;
+          },
+        ),
+      },
+      child: PopScope(
+        canPop: !_resolving,
+        child: Dialog(
+          insetPadding: const EdgeInsets.all(24),
+          child: ModalShell(
+            icon: '☁️',
+            title: 'Review Cloud Save',
+            subtitle: 'Two progress versions need your choice',
+            maxHeight: 640,
+            actions: [
+              Opacity(
+                opacity: disabled ? 0.5 : 1,
+                child: IgnorePointer(
+                  ignoring: disabled,
+                  child: NeoButton(
+                    label: ordinary ? 'Keep This Device' : 'Use Version 1',
+                    color: GameConfig.coral,
+                    onPressed: () => _resolve(firstChoice),
+                  ),
                 ),
               ),
-            ),
-            Opacity(
-              opacity: disabled ? 0.5 : 1,
-              child: IgnorePointer(
-                ignoring: disabled,
-                child: NeoButton(
-                  label: ordinary ? 'Use Cloud Progress' : 'Use Version 2',
-                  color: GameConfig.sky,
-                  onPressed: () => _resolve(secondChoice),
+              Opacity(
+                opacity: disabled ? 0.5 : 1,
+                child: IgnorePointer(
+                  ignoring: disabled,
+                  child: NeoButton(
+                    label: ordinary ? 'Use Cloud Progress' : 'Use Version 2',
+                    color: GameConfig.sky,
+                    onPressed: () => _resolve(secondChoice),
+                  ),
                 ),
               ),
-            ),
-            Opacity(
-              opacity: _resolving ? 0.5 : 1,
-              child: IgnorePointer(
-                ignoring: _resolving,
-                child: NeoButton(
-                  label: 'Close',
-                  outlined: true,
-                  color: GameConfig.coral,
-                  onPressed: _closeFromUserAction,
+              Opacity(
+                opacity: _resolving ? 0.5 : 1,
+                child: IgnorePointer(
+                  ignoring: _resolving,
+                  child: NeoButton(
+                    label: 'Close',
+                    autofocus: true,
+                    outlined: true,
+                    color: GameConfig.coral,
+                    onPressed: _closeFromUserAction,
+                  ),
                 ),
               ),
-            ),
-          ],
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_resolving) ...[
-                const Center(child: CircularProgressIndicator()),
-                const SizedBox(height: 8),
-                Text('Resolving your choice…',
-                    textAlign: TextAlign.center,
-                    style:
-                        TextStyle(color: s.muted, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 12),
-              ],
-              _CloudProgressSummary(label: firstLabel, progress: firstProgress),
-              const SizedBox(height: 10),
-              _CloudProgressSummary(
-                  label: secondLabel, progress: secondProgress),
             ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_resolving) ...[
+                  const Center(child: CircularProgressIndicator()),
+                  const SizedBox(height: 8),
+                  Text('Resolving your choice…',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: s.muted, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 12),
+                ],
+                _CloudProgressSummary(
+                    label: firstLabel, progress: firstProgress),
+                const SizedBox(height: 10),
+                _CloudProgressSummary(
+                    label: secondLabel, progress: secondProgress),
+              ],
+            ),
           ),
         ),
       ),
@@ -2566,11 +2647,11 @@ class MasterIntroModal extends StatelessWidget {
         ),
         NeoButton(
           label: 'Cancel',
+          autofocus: true,
           outlined: true,
           color: s.muted.toARGB32(),
           onPressed: () {
-            gs.closeModal();
-            gs.showScreen(GameScreen.menu);
+            _cancelMasterIntro(gs);
           },
         ),
       ],
@@ -2881,6 +2962,7 @@ class DailyBossModal extends StatelessWidget {
         ),
         NeoButton(
           label: 'Cancel',
+          autofocus: true,
           outlined: true,
           color: s.muted.toARGB32(),
           onPressed: gs.closeModal,
@@ -3950,6 +4032,7 @@ class QuitConfirmModal extends StatelessWidget {
         ),
         NeoButton(
           label: 'Cancel',
+          autofocus: true,
           outlined: true,
           color: s.muted.toARGB32(),
           onPressed: gs.closeModal,
@@ -4015,6 +4098,7 @@ class HighScoreModal extends StatelessWidget {
       actions: [
         NeoButton(
           label: 'Close',
+          autofocus: true,
           color: GameConfig.coral,
           onPressed: gs.closeModal,
         ),
@@ -4089,6 +4173,7 @@ class AchievementsModal extends StatelessWidget {
       actions: [
         NeoButton(
           label: 'Close',
+          autofocus: true,
           color: GameConfig.coral,
           onPressed: gs.closeModal,
         ),
@@ -4298,6 +4383,7 @@ class TutorialModal extends StatelessWidget {
       actions: [
         NeoButton(
           label: 'Got it!',
+          autofocus: true,
           color: GameConfig.coral,
           onPressed: gs.closeModal,
         ),
@@ -4514,6 +4600,7 @@ class AvatarBuilderModal extends StatelessWidget {
         ),
         NeoButton(
           label: 'Cancel',
+          autofocus: true,
           outlined: true,
           color: s.muted.toARGB32(),
           onPressed: gs.closeModal,
@@ -5210,6 +5297,7 @@ class SkillDashboardModal extends StatelessWidget {
       actions: [
         NeoButton(
           label: 'Close',
+          autofocus: true,
           color: GameConfig.coral,
           onPressed: gs.closeModal,
         ),
@@ -5342,6 +5430,7 @@ class _ShopHubPanel extends StatelessWidget {
                   width: cardWidth,
                   child: _ShopHubCard(
                     key: const Key('shopHub_avatars'),
+                    autofocus: true,
                     icon: '🐾',
                     title: 'Avatars',
                     caption: 'Characters',
@@ -5505,6 +5594,7 @@ class _ShopHubCard extends StatelessWidget {
     required this.caption,
     required this.accent,
     required this.onTap,
+    this.autofocus = false,
   });
 
   final String icon;
@@ -5512,6 +5602,7 @@ class _ShopHubCard extends StatelessWidget {
   final String caption;
   final int accent;
   final VoidCallback onTap;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -5520,6 +5611,7 @@ class _ShopHubCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
+        autofocus: autofocus,
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Container(
@@ -5645,6 +5737,7 @@ class _ShopSectionPanel extends StatelessWidget {
           children: [
             TextButton.icon(
               key: const Key('shopBackToHub'),
+              autofocus: true,
               onPressed: onBack,
               icon: const Icon(Icons.arrow_back_rounded, size: 18),
               label: const Text('Back to Shop'),
@@ -6645,6 +6738,7 @@ class _AdultGateModalState extends State<AdultGateModal> {
         ),
         NeoButton(
           label: 'Cancel',
+          autofocus: true,
           outlined: true,
           color: s.text.toARGB32(),
           textColor: s.text,
@@ -6947,6 +7041,7 @@ class DailyChallengesModal extends StatelessWidget {
       actions: [
         NeoButton(
           label: 'Close',
+          autofocus: true,
           color: GameConfig.coral,
           onPressed: gs.closeModal,
         ),

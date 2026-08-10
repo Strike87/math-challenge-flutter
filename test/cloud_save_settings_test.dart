@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/features/cloud_save/application/cloud_save_controller.dart';
@@ -660,6 +660,68 @@ void main() {
 
     pair.service.gate!.complete(const CloudSyncNoChange());
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('native reset Escape cancels only before submission',
+      (tester) async {
+    final pair = await _pair(const CloudSyncNoChange());
+    pair.service.gate = Completer<CloudSyncResult>();
+    await _pump(tester, pair);
+    final resetRow = find.ancestor(
+      of: find.text('RESTART GAME PROGRESS'),
+      matching: find.byType(InkWell),
+    );
+    final snapshot = _snapshot(pair.state);
+
+    await tester.ensureVisible(resetRow);
+    await tester.tap(resetRow);
+    await tester.pumpAndSettle();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.text('Restart Game Progress?'), findsNothing);
+    expect(pair.state.cloudResetGeneration, 0);
+    expect(_snapshot(pair.state), snapshot);
+
+    await tester.tap(resetRow);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Restart Progress'));
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(find.text('Restart Game Progress?'), findsOneWidget);
+    expect(pair.state.cloudResetGeneration, 1);
+    pair.service.gate!.complete(const CloudSyncNoChange());
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('native cloud conflict Escape closes idle and not resolving',
+      (tester) async {
+    final pair = await _ordinaryPendingPair();
+    await _pump(tester, pair);
+    await _tapRow(tester);
+    await tester.pumpAndSettle();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.text('Review Cloud Save'), findsNothing);
+    expect(pair.service.resolutions, isEmpty);
+
+    pair.service.resolutionGate = Completer<CloudSyncResult>();
+    await _tapRow(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Keep This Device'));
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.escape);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(find.text('Review Cloud Save'), findsOneWidget);
+    expect(pair.service.resolutions, hasLength(1));
+    pair.service.resolutionGate!.complete(const CloudSyncUserChoiceMerged());
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(
