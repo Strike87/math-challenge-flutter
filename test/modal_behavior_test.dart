@@ -1370,6 +1370,53 @@ void main() {
       }
     });
 
+    testWidgets('deferred focus only applies to the modal that scheduled it',
+        (tester) async {
+      final state = await _makeState();
+      try {
+        await tester.pumpWidget(
+          _modalHostWithUnderlying(
+            state,
+            onUnderlying: () {},
+          ),
+        );
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        expect(
+          Focus.of(tester.element(find.text('Underlying action')))
+              .hasPrimaryFocus,
+          isTrue,
+        );
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          state.showModal(GameModal.win);
+          Focus.of(tester.element(find.text('Underlying action')))
+              .requestFocus();
+        });
+        state.showModal(GameModal.stageCleared);
+        await tester.pump();
+        await tester.pump();
+
+        expect(state.currentModal, GameModal.win);
+        expect(find.byType(WinModal), findsOneWidget);
+        expect(
+          Focus.of(tester.element(find.text('Underlying action')))
+              .hasPrimaryFocus,
+          isTrue,
+        );
+
+        state.closeModal();
+        await tester.pump();
+        state.showModal(GameModal.settings);
+        await tester.pump();
+
+        expect(Focus.of(tester.element(find.text('Done'))).hasPrimaryFocus,
+            isTrue);
+        expect(tester.takeException(), isNull);
+      } finally {
+        state.dispose();
+      }
+    });
+
     testWidgets('Escape only uses existing safe custom-modal exits',
         (tester) async {
       final state = await _makeState();
