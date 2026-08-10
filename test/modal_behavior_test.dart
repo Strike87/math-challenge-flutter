@@ -504,6 +504,110 @@ void main() {
       }
     });
 
+    testWidgets('Avatar Builder keeps picker choices reachable in landscape',
+        (tester) async {
+      final state = await _makeState();
+      const size = Size(844, 390);
+      try {
+        _setTestView(tester, size);
+        state.showAvatarBuilder(1);
+        await tester.pumpWidget(_modalHost(state, size: size));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('avatar-builder-preview')), findsOneWidget);
+        expect(find.byKey(const Key('avatar-builder-tabs')), findsOneWidget);
+        expect(
+          find.byKey(const Key('avatar-builder-compact-scroll')),
+          findsOneWidget,
+        );
+        for (final action in [find.text('Save Avatar'), find.text('Cancel')]) {
+          final rect = tester.getRect(action);
+          expect(rect.intersect(Offset.zero & size).height, greaterThan(0));
+        }
+
+        await _expectAvatarChoiceReachable(
+          tester,
+          size: size,
+          tab: 'Base',
+          grid: const Key('avatar-base-grid'),
+          choice: find.text('🐱'),
+        );
+        await tester.tap(find.text('🐱'));
+        await tester.pump();
+        expect(state.builderAvatar.base, '🐱');
+
+        await _expectAvatarChoiceReachable(
+          tester,
+          size: size,
+          tab: 'Hat',
+          grid: const Key('avatar-hat-grid'),
+          choice: find.text('🎓'),
+        );
+        await tester.tap(find.text('🎓'));
+        await tester.pump();
+        expect(state.builderAvatar.hat, '🎓');
+
+        await _expectAvatarChoiceReachable(
+          tester,
+          size: size,
+          tab: 'Accessory',
+          grid: const Key('avatar-accessory-grid'),
+          choice: find.text('👓'),
+        );
+        await tester.tap(find.text('👓'));
+        await tester.pump();
+        expect(state.builderAvatar.accessory, '👓');
+
+        await tester.ensureVisible(find.text('Color'));
+        await tester.tap(find.text('Color'));
+        await tester.pumpAndSettle();
+        final colorGrid = find.byKey(const Key('avatar-color-grid'));
+        await tester.ensureVisible(colorGrid);
+        final colorChoice = find
+            .descendant(
+              of: colorGrid,
+              matching: find.byType(InkWell),
+            )
+            .at(1);
+        await tester.ensureVisible(colorChoice);
+        _expectVisibleInViewport(tester, colorGrid, size);
+        _expectVisibleInViewport(tester, colorChoice, size);
+        await tester.tap(colorChoice);
+        await tester.pump();
+        expect(state.builderAvatar.color, '#FF6B6B');
+        expect(tester.takeException(), isNull);
+      } finally {
+        state.dispose();
+      }
+    });
+
+    testWidgets('Avatar Builder keeps the tall portrait picker layout',
+        (tester) async {
+      final state = await _makeState();
+      const size = Size(390, 844);
+      try {
+        _setTestView(tester, size);
+        state.showAvatarBuilder(1);
+        await tester.pumpWidget(_modalHost(state, size: size));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('avatar-builder-compact-scroll')),
+          findsNothing,
+        );
+        final grid = find.byKey(const Key('avatar-base-grid'));
+        _expectVisibleInViewport(tester, grid, size);
+        await tester.tap(
+          find.descendant(of: grid, matching: find.text('🐱')),
+        );
+        await tester.pump();
+        expect(state.builderAvatar.base, '🐱');
+        expect(tester.takeException(), isNull);
+      } finally {
+        state.dispose();
+      }
+    });
+
     testWidgets('Avatar Builder native controls stay with the targeted player',
         (tester) async {
       final state = await _makeState();
@@ -1665,6 +1769,31 @@ Future<GameState> _makeState([Map<String, Object> prefs = const {}]) async {
   await state.load();
   state.dailyChallengeIds = ['blitz_15', 'streak_7', 'division_10'];
   return state;
+}
+
+Future<void> _expectAvatarChoiceReachable(
+  WidgetTester tester, {
+  required Size size,
+  required String tab,
+  required Key grid,
+  required Finder choice,
+}) async {
+  await tester.ensureVisible(find.text(tab));
+  await tester.tap(find.text(tab));
+  await tester.pumpAndSettle();
+
+  final picker = find.byKey(grid);
+  await tester.ensureVisible(picker);
+  await tester.ensureVisible(choice);
+  _expectVisibleInViewport(tester, picker, size);
+  _expectVisibleInViewport(tester, choice, size);
+}
+
+void _expectVisibleInViewport(WidgetTester tester, Finder finder, Size size) {
+  final rect = tester.getRect(finder);
+  expect(rect.width, greaterThan(0));
+  expect(rect.height, greaterThan(0));
+  expect(rect.intersect(Offset.zero & size).height, greaterThan(0));
 }
 
 Widget _modalHost(

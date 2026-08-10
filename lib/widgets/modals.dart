@@ -4606,129 +4606,164 @@ class AvatarBuilderModal extends StatelessWidget {
           onPressed: gs.closeModal,
         ),
       ],
-      child: DefaultTabController(
-        length: 4,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _AvatarBuilderPreview(gs: gs, settings: s),
-            const SizedBox(height: 12),
-            Container(
-              key: const Key('avatar-builder-tabs'),
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: s.surface2.withValues(alpha: s.dark ? 0.90 : 0.64),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: s.dark
-                      ? Colors.white.withValues(alpha: 0.09)
-                      : Colors.white.withValues(alpha: 0.86),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxHeight < 300;
+          final editor =
+              _AvatarBuilderEditor(gs: gs, settings: s, compact: compact);
+
+          return compact
+              ? SingleChildScrollView(
+                  key: const Key('avatar-builder-compact-scroll'),
+                  child: editor,
+                )
+              : editor;
+        },
+      ),
+    );
+  }
+}
+
+class _AvatarBuilderEditor extends StatelessWidget {
+  const _AvatarBuilderEditor({
+    required this.gs,
+    required this.settings,
+    required this.compact,
+  });
+
+  final GameState gs;
+  final SettingsService settings;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final picker = TabBarView(
+      key: const Key('avatar-builder-picker'),
+      children: [
+        _AvatarPickerPanel(
+          icon: '🐾',
+          title: 'Choose your base',
+          hint: 'Start with your favorite character.',
+          child: _AvatarButtonGrid(
+            key: const Key('avatar-base-grid'),
+            items: gs.availableAvatarBases,
+            selected: gs.builderAvatar.base,
+            onTap: gs.setBuilderBase,
+          ),
+        ),
+        _AvatarPickerPanel(
+          icon: '🎩',
+          title: 'Pick a hat',
+          hint: 'Add a little personality on top.',
+          child: _AvatarButtonGrid(
+            key: const Key('avatar-hat-grid'),
+            items: [
+              '',
+              ...gs.availableAvatarHats.where((hat) => hat.isNotEmpty)
+            ],
+            selected: gs.builderAvatar.hat,
+            emptyLabel: '🚫',
+            onTap: gs.setBuilderHat,
+          ),
+        ),
+        _AvatarPickerPanel(
+          icon: '🎒',
+          title: 'Choose an accessory',
+          hint: 'Finish the look with an extra detail.',
+          child: _AvatarButtonGrid(
+            key: const Key('avatar-accessory-grid'),
+            items: [
+              '',
+              ...GameConfig.avatarAccessories
+                  .where((accessory) => accessory.isNotEmpty),
+            ],
+            selected: gs.builderAvatar.accessory,
+            emptyLabel: '🚫',
+            onTap: gs.setBuilderAccessory,
+          ),
+        ),
+        _AvatarPickerPanel(
+          icon: '🎨',
+          title: 'Choose a color',
+          hint: 'Give your avatar a signature backdrop.',
+          child: _AvatarColorGrid(
+            key: const Key('avatar-color-grid'),
+            gs: gs,
+          ),
+        ),
+      ],
+    );
+
+    return DefaultTabController(
+      length: 4,
+      child: Column(
+        mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _AvatarBuilderPreview(gs: gs, settings: settings),
+          const SizedBox(height: 12),
+          Container(
+            key: const Key('avatar-builder-tabs'),
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: settings.surface2.withValues(
+                alpha: settings.dark ? 0.90 : 0.64,
               ),
-              child: const TabBar(
-                labelPadding: EdgeInsets.zero,
-                tabs: [
-                  Tab(child: AvatarBuilderTabLabel(icon: '🐾', label: 'Base')),
-                  Tab(child: AvatarBuilderTabLabel(icon: '🎩', label: 'Hat')),
-                  Tab(
-                    child: AvatarBuilderTabLabel(
-                      icon: '🎒',
-                      label: 'Accessory',
-                    ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: settings.dark
+                    ? Colors.white.withValues(alpha: 0.09)
+                    : Colors.white.withValues(alpha: 0.86),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const TabBar(
+              labelPadding: EdgeInsets.zero,
+              tabs: [
+                Tab(child: AvatarBuilderTabLabel(icon: '🐾', label: 'Base')),
+                Tab(child: AvatarBuilderTabLabel(icon: '🎩', label: 'Hat')),
+                Tab(
+                  child: AvatarBuilderTabLabel(
+                    icon: '🎒',
+                    label: 'Accessory',
                   ),
-                  Tab(child: AvatarBuilderTabLabel(icon: '🎨', label: 'Color')),
-                ],
-                labelColor: Colors.white,
-                unselectedLabelColor: Color(GameConfig.mutedLight),
-                indicator: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Color(GameConfig.coral),
-                      Color(0xFFD4681A),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.all(Radius.circular(15)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x33F05B42),
-                      blurRadius: 8,
-                      offset: Offset(0, 3),
-                    ),
+                ),
+                Tab(child: AvatarBuilderTabLabel(icon: '🎨', label: 'Color')),
+              ],
+              labelColor: Colors.white,
+              unselectedLabelColor: Color(GameConfig.mutedLight),
+              indicator: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(GameConfig.coral),
+                    Color(0xFFD4681A),
                   ],
                 ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: TabBarView(
-                key: const Key('avatar-builder-picker'),
-                children: [
-                  _AvatarPickerPanel(
-                    icon: '🐾',
-                    title: 'Choose your base',
-                    hint: 'Start with your favorite character.',
-                    child: _AvatarButtonGrid(
-                      key: const Key('avatar-base-grid'),
-                      items: gs.availableAvatarBases,
-                      selected: gs.builderAvatar.base,
-                      onTap: gs.setBuilderBase,
-                    ),
-                  ),
-                  _AvatarPickerPanel(
-                    icon: '🎩',
-                    title: 'Pick a hat',
-                    hint: 'Add a little personality on top.',
-                    child: _AvatarButtonGrid(
-                      key: const Key('avatar-hat-grid'),
-                      items: [
-                        '',
-                        ...gs.availableAvatarHats
-                            .where((hat) => hat.isNotEmpty),
-                      ],
-                      selected: gs.builderAvatar.hat,
-                      emptyLabel: '🚫',
-                      onTap: gs.setBuilderHat,
-                    ),
-                  ),
-                  _AvatarPickerPanel(
-                    icon: '🎒',
-                    title: 'Choose an accessory',
-                    hint: 'Finish the look with an extra detail.',
-                    child: _AvatarButtonGrid(
-                      key: const Key('avatar-accessory-grid'),
-                      items: [
-                        '',
-                        ...GameConfig.avatarAccessories
-                            .where((accessory) => accessory.isNotEmpty),
-                      ],
-                      selected: gs.builderAvatar.accessory,
-                      emptyLabel: '🚫',
-                      onTap: gs.setBuilderAccessory,
-                    ),
-                  ),
-                  _AvatarPickerPanel(
-                    icon: '🎨',
-                    title: 'Choose a color',
-                    hint: 'Give your avatar a signature backdrop.',
-                    child: _AvatarColorGrid(
-                      key: const Key('avatar-color-grid'),
-                      gs: gs,
-                    ),
+                borderRadius: BorderRadius.all(Radius.circular(15)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x33F05B42),
+                    blurRadius: 8,
+                    offset: Offset(0, 3),
                   ),
                 ],
               ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+          if (compact)
+            SizedBox(height: 300, child: picker)
+          else
+            Expanded(child: picker),
+        ],
       ),
     );
   }
