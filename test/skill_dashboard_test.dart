@@ -15,6 +15,86 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
+    'dashboard shows zero overall mastery for a fresh profile',
+    (tester) async {
+      final state = await _makeState();
+      addTearDown(state.dispose);
+
+      state.showModal(GameModal.skillDashboard);
+      await _pumpDashboard(tester, state);
+
+      final overallCard = find.byType(OverallMasteryCard);
+      expect(find.descendant(of: overallCard, matching: find.text('0%')),
+          findsOneWidget);
+      expect(
+        tester
+            .widget<LinearProgressIndicator>(
+              find.descendant(
+                of: overallCard,
+                matching: find.byType(LinearProgressIndicator),
+              ),
+            )
+            .value,
+        0,
+      );
+
+      for (final label in [
+        'Addition',
+        'Subtraction',
+        'Multiplication',
+        'Division',
+      ]) {
+        final skillCard = find.byWidgetPredicate(
+          (widget) => widget is SkillMasteryCard && widget.label == label,
+        );
+        expect(
+          find.descendant(of: skillCard, matching: find.text('0%')),
+          findsOneWidget,
+        );
+      }
+
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'dashboard keeps the aggregate after partial canonical evidence',
+    (tester) async {
+      final state = await _makeState();
+      addTearDown(state.dispose);
+
+      state.skillMap = {
+        Operation.addition.name: SkillData(mastery: 43, count: 1),
+        Operation.subtraction.name: SkillData(mastery: 20, count: 0),
+        Operation.multiplication.name: SkillData(mastery: 20, count: 0),
+        Operation.division.name: SkillData(mastery: 20, count: 0),
+      };
+      state.adaptLvlRaw = 6.4;
+
+      state.showModal(GameModal.skillDashboard);
+      await _pumpDashboard(tester, state);
+
+      final overallCard = find.byType(OverallMasteryCard);
+      expect(
+        find.descendant(of: overallCard, matching: find.text('64%')),
+        findsOneWidget,
+      );
+
+      for (final label in ['Subtraction', 'Multiplication', 'Division']) {
+        final skillCard = find.byWidgetPredicate(
+          (widget) => widget is SkillMasteryCard && widget.label == label,
+        );
+        expect(
+          find.descendant(of: skillCard, matching: find.text('0%')),
+          findsOneWidget,
+        );
+      }
+
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'dashboard shows zero only for untouched skill mastery',
     (tester) async {
       final state = await _makeState();
