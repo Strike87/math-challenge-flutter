@@ -7,6 +7,7 @@ import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/features/cloud_save/application/cloud_save_controller.dart';
 import 'package:math_challenge/features/cloud_save/application/cloud_save_service.dart';
 import 'package:math_challenge/features/cloud_save/data/play_games_saved_games_transport.dart';
+import 'package:math_challenge/features/family/domain/family_eligibility.dart';
 import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/main.dart';
 import 'package:math_challenge/services/admob.dart';
@@ -186,7 +187,7 @@ void main() {
   });
 
   testWidgets('post-frame authentication never blocks startup', (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(_eligibleStorage());
     await Storage.init();
     final pendingAuthentication = Completer<bool>();
     final service = _FakePlayGamesService()
@@ -353,7 +354,7 @@ void main() {
   });
 
   testWidgets('unavailable bridge leaves the app usable', (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(_eligibleStorage());
     await Storage.init();
     final service = _FakePlayGamesService()
       ..authenticationError = StateError(
@@ -391,6 +392,9 @@ class _FakePlayGamesService extends PlayGamesService {
   int connectCalls = 0;
   final unlockAttempts = <String>[];
   final failingAchievementIds = <String>{};
+
+  @override
+  Future<void> initializePgs() async {}
 
   @override
   Future<bool> isAuthenticated() async {
@@ -434,12 +438,17 @@ Future<GameState> _makeState(PlayGamesService playGamesService) async {
     settings: settings,
     audio: AudioService(settings),
     playGamesService: playGamesService,
-  );
+  )..familyEligibility = FamilyEligibility.eligible;
   state.achievements = {
     for (final achievement in GameConfig.achievementsDef) achievement.id: false,
   };
   return state;
 }
+
+Map<String, Object> _eligibleStorage() => {
+      GameState.familyGateVersionStorageKey: GameState.familyGateSchemaVersion,
+      GameState.familyEligibilityDateStorageKey: '2000-01-01',
+    };
 
 Widget _modalHost(
   GameState state, {

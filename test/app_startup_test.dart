@@ -21,7 +21,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('app startup paints menu after splash', (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(_eligibleStorage());
     await Storage.init();
 
     await tester.pumpWidget(const MathChallengeApp(
@@ -43,7 +43,7 @@ void main() {
 
   testWidgets('startup checks authentication only after the first frame',
       (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(_eligibleStorage());
     await Storage.init();
     final playGames = _UnauthenticatedPlayGames();
 
@@ -94,7 +94,7 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(savedGames, null);
     });
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(_eligibleStorage());
     await Storage.init();
 
     await tester.pumpWidget(MathChallengeApp(
@@ -135,7 +135,7 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(savedGames, null);
     });
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(_eligibleStorage());
     await Storage.init();
 
     await tester.pumpWidget(const MathChallengeApp(
@@ -172,7 +172,7 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(savedGames, null);
     });
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(_eligibleStorage());
     await Storage.init();
     await tester.pumpWidget(const MathChallengeApp(
       adService: UnavailableAdMobService(),
@@ -212,7 +212,7 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(savedGames, null);
     });
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(_eligibleStorage());
     await Storage.init();
     await tester.pumpWidget(const MathChallengeApp(
       adService: UnavailableAdMobService(),
@@ -253,7 +253,7 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(savedGames, null);
     });
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(_eligibleStorage());
     await Storage.init();
     await tester.pumpWidget(const MathChallengeApp(
       adService: UnavailableAdMobService(),
@@ -292,7 +292,7 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(savedGames, null);
     });
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(_eligibleStorage());
     await Storage.init();
     await tester.pumpWidget(const MathChallengeApp(
       adService: UnavailableAdMobService(),
@@ -334,7 +334,7 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(savedGames, null);
     });
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(_eligibleStorage());
     await Storage.init();
     await tester.pumpWidget(const MathChallengeApp(
       adService: UnavailableAdMobService(),
@@ -350,7 +350,7 @@ void main() {
 
   testWidgets('modal keeps settings visible without blanking app',
       (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(_eligibleStorage());
     await Storage.init();
 
     await tester.pumpWidget(const MathChallengeApp(
@@ -368,7 +368,9 @@ void main() {
   });
 
   testWidgets('reduce motion renders modal immediately', (tester) async {
-    SharedPreferences.setMockInitialValues({'mc_reduceMotion': true});
+    SharedPreferences.setMockInitialValues(
+      _eligibleStorage({'mc_reduceMotion': true}),
+    );
     await Storage.init();
 
     await tester.pumpWidget(const MathChallengeApp(
@@ -387,7 +389,7 @@ void main() {
 
   testWidgets('daily bonus keeps Packs open until Shop is closed',
       (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues(_eligibleStorage());
     await Storage.init();
 
     await tester.pumpWidget(const MathChallengeApp(
@@ -427,8 +429,18 @@ void main() {
   });
 }
 
+Map<String, Object> _eligibleStorage([Map<String, Object> values = const {}]) =>
+    {
+      GameState.familyGateVersionStorageKey: GameState.familyGateSchemaVersion,
+      GameState.familyEligibilityDateStorageKey: '2000-01-01',
+      ...values,
+    };
+
 class _UnauthenticatedPlayGames extends PlayGamesService {
   int authenticationChecks = 0;
+
+  @override
+  Future<void> initializePgs() async {}
 
   @override
   Future<bool> isAuthenticated() async {

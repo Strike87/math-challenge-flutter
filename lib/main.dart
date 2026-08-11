@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'engine/game_state.dart' as gs;
-import 'game_config.dart';
-import 'features/modals/presentation/toast_banner.dart';
 import 'features/cloud_save/application/cloud_save_controller.dart';
 import 'features/cloud_save/application/cloud_save_service.dart';
 import 'features/cloud_save/data/play_games_saved_games_transport.dart';
+import 'features/family/domain/family_eligibility.dart';
+import 'features/family/presentation/family_age_gate_screen.dart';
+import 'features/modals/presentation/toast_banner.dart';
+import 'game_config.dart';
 import 'services/storage.dart';
 import 'services/settings.dart';
 import 'services/audio.dart';
@@ -54,11 +56,13 @@ class MathChallengeApp extends StatelessWidget {
     required this.adService,
     required this.iapAdapter,
     this.playGamesService,
+    this.localDateProvider,
   });
 
   final AdMobService adService;
   final IapPurchaseAdapter iapAdapter;
   final PlayGamesService? playGamesService;
+  final DateTime Function()? localDateProvider;
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +92,7 @@ class MathChallengeApp extends StatelessWidget {
             audio: a,
             adService: adService,
             playGamesService: playGamesService,
+            localDateProvider: localDateProvider,
             iapAdapter: iapAdapter,
             iapPurchaseStream: iapAdapter is NativeIapPurchaseAdapter
                 ? (iapAdapter as NativeIapPurchaseAdapter).purchaseStream
@@ -192,6 +197,9 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final state = context.watch<gs.GameState>();
     final s = context.watch<SettingsService>();
+    if (state.familyEligibility == FamilyEligibility.unresolved) {
+      return FamilyAgeGateScreen(state: state, settings: s);
+    }
     final banner = state.bannerWidget();
     return Scaffold(
       resizeToAvoidBottomInset: false,
