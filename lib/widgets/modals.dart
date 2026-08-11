@@ -1452,6 +1452,16 @@ class SettingsModal extends StatelessWidget {
                   'https://mathchallenge.me',
                 ),
               ),
+              const SizedBox(height: 8),
+              _SupportLinkTile(
+                icon: '🔒',
+                label: 'Privacy Policy',
+                value: 'mathchallenge.me/privacy/',
+                onTap: () => _openSupportLink(
+                  gs,
+                  'https://mathchallenge.me/privacy/',
+                ),
+              ),
             ],
           ),
         );

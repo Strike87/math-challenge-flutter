@@ -147,7 +147,7 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(linkChannel, (call) async {
         opened.add((call.arguments as Map)['url'] as String);
-        return opened.length == 1;
+        return opened.length <= 2;
       });
       try {
         state.showModal(GameModal.settings);
@@ -157,12 +157,19 @@ void main() {
         expect(find.text('Support / About'), findsOneWidget);
         expect(find.text('support@mathchallenge.me'), findsOneWidget);
         expect(find.text('mathchallenge.me'), findsOneWidget);
+        expect(find.text('Privacy Policy'), findsOneWidget);
 
         await tester.ensureVisible(find.text('mathchallenge.me'));
         await tester.pump();
         await tester.tap(find.text('mathchallenge.me'));
         await tester.pump();
         expect(opened.single, 'https://mathchallenge.me');
+
+        await tester.ensureVisible(find.text('Privacy Policy'));
+        await tester.pump();
+        await tester.tap(find.text('Privacy Policy'));
+        await tester.pump();
+        expect(opened.last, 'https://mathchallenge.me/privacy/');
 
         await tester.ensureVisible(find.text('support@mathchallenge.me'));
         await tester.pump();
