@@ -478,6 +478,7 @@ class GameState extends ChangeNotifier {
   IapProduct? pendingIapProduct;
   String adultGateError = '';
   bool adultGateBusy = false;
+  bool _directIapStartBusy = false;
   GameModal _adultGateReturnModal = GameModal.none;
   int _turnSeq = 0;
   bool _disposed = false;
@@ -3678,6 +3679,16 @@ class GameState extends ChangeNotifier {
       showToast('Ads already removed');
       return;
     }
+    _refreshFamilyEligibility();
+    if (familyEligibility == FamilyEligibility.unresolved) {
+      showToast('Complete the age check before making a purchase.');
+      return;
+    }
+    if (familyEligibility == FamilyEligibility.eligible) {
+      if (_directIapStartBusy) return;
+      unawaited(_beginDirectIapPurchase(product));
+      return;
+    }
     pendingIapProduct = product;
     adultGateChallenge = _adultGateFactory();
     adultGateError = '';
@@ -3686,6 +3697,20 @@ class GameState extends ChangeNotifier {
         currentModal == GameModal.adultGate ? GameModal.none : currentModal;
     currentModal = GameModal.adultGate;
     notifyListeners();
+  }
+
+  Future<void> _beginDirectIapPurchase(IapProduct product) async {
+    _directIapStartBusy = true;
+    try {
+      await iapAdapter.buyProduct(product);
+      showToast('Opening Google Play...');
+    } on IapException catch (e) {
+      await _handleIapError(e, product: product);
+    } catch (_) {
+      showToast('Purchase could not start');
+    } finally {
+      _directIapStartBusy = false;
+    }
   }
 
   Future<void> submitAdultGateAnswer(String answer) async {

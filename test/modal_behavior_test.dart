@@ -812,7 +812,14 @@ void main() {
 
     testWidgets('Coin Shop native controls support keyboard and mouse input',
         (tester) async {
-      final state = await _makeState();
+      final state = await _makeState(
+        {
+          GameState.familyGateVersionStorageKey:
+              GameState.familyGateSchemaVersion,
+          GameState.familyEligibilityDateStorageKey: '2026-08-13',
+        },
+        () => DateTime(2026, 8, 12),
+      );
       try {
         state.coins = 300;
         state.showModal(GameModal.coinShop);
@@ -1345,7 +1352,14 @@ void main() {
 
     testWidgets('Adult Gate stays usable above a portrait keyboard',
         (tester) async {
-      final state = await _makeState();
+      final state = await _makeState(
+        {
+          GameState.familyGateVersionStorageKey:
+              GameState.familyGateSchemaVersion,
+          GameState.familyEligibilityDateStorageKey: '2026-08-13',
+        },
+        () => DateTime(2026, 8, 12),
+      );
       try {
         const size = Size(320, 568);
         const keyboardInset = 200.0;
@@ -1357,7 +1371,14 @@ void main() {
 
     testWidgets('Adult Gate stays usable above a landscape keyboard',
         (tester) async {
-      final state = await _makeState();
+      final state = await _makeState(
+        {
+          GameState.familyGateVersionStorageKey:
+              GameState.familyGateSchemaVersion,
+          GameState.familyEligibilityDateStorageKey: '2026-08-13',
+        },
+        () => DateTime(2026, 8, 12),
+      );
       try {
         const size = Size(844, 390);
         const keyboardInset = 80.0;
@@ -1369,7 +1390,14 @@ void main() {
 
     testWidgets('modal shell stays centered and width-bounded without an inset',
         (tester) async {
-      final state = await _makeState();
+      final state = await _makeState(
+        {
+          GameState.familyGateVersionStorageKey:
+              GameState.familyGateSchemaVersion,
+          GameState.familyEligibilityDateStorageKey: '2026-08-13',
+        },
+        () => DateTime(2026, 8, 12),
+      );
       try {
         const size = Size(480, 700);
         _setTestView(tester, size);
@@ -1758,7 +1786,10 @@ void main() {
   });
 }
 
-Future<GameState> _makeState([Map<String, Object> prefs = const {}]) async {
+Future<GameState> _makeState([
+  Map<String, Object> prefs = const {},
+  DateTime Function()? localDateProvider,
+]) async {
   SharedPreferences.setMockInitialValues(prefs);
   await Storage.init();
   final settings = SettingsService()
@@ -1772,7 +1803,11 @@ Future<GameState> _makeState([Map<String, Object> prefs = const {}]) async {
       reduceMotion: true,
       animSpeed: 1,
     );
-  final state = GameState(settings: settings, audio: AudioService(settings));
+  final state = GameState(
+    settings: settings,
+    audio: AudioService(settings),
+    localDateProvider: localDateProvider,
+  );
   await state.load();
   state.dailyChallengeIds = ['blitz_15', 'streak_7', 'division_10'];
   return state;
