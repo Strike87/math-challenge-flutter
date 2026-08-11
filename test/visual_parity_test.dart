@@ -220,6 +220,7 @@ class MockAudioService implements AudioService {
 Future<GameState> _makeState(
   Map<String, Object> prefs, {
   bool familyEligible = false,
+  DateTime Function()? localDateProvider,
 }) async {
   SharedPreferences.setMockInitialValues({
     ...prefs,
@@ -239,7 +240,11 @@ Future<GameState> _makeState(
       reduceMotion: true,
       animSpeed: 1,
     );
-  final state = GameState(settings: settings, audio: MockAudioService());
+  final state = GameState(
+    settings: settings,
+    audio: MockAudioService(),
+    localDateProvider: localDateProvider,
+  );
   await state.load();
   state.dailyBoss = GameConfig.dailyBosses.first;
   state.dailyBossDateKey = '2026-06-28';
@@ -1311,7 +1316,15 @@ void main() {
     });
 
     testWidgets('26. Adult Gate initial warning dark', (tester) async {
-      final state = await _makeState({'mc_dark': false});
+      final state = await _makeState(
+        {
+          'mc_dark': false,
+          GameState.familyGateVersionStorageKey:
+              GameState.familyGateSchemaVersion,
+          GameState.familyEligibilityDateStorageKey: '2026-08-13',
+        },
+        localDateProvider: () => DateTime(2026, 8, 12),
+      );
       state.currentScreen = GameScreen.menu;
       state.beginIapPurchase(IapProducts.small);
       await setTestDevice(tester, logicalSize: phoneSize);

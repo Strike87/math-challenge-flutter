@@ -233,7 +233,12 @@ Future<GameState> _makeState({
   required IapPurchaseAdapter adapter,
   Map<String, Object> prefs = const {},
 }) async {
-  SharedPreferences.setMockInitialValues(prefs);
+  final initialPrefs = <String, Object>{
+    ...prefs,
+    GameState.familyGateVersionStorageKey: GameState.familyGateSchemaVersion,
+    GameState.familyEligibilityDateStorageKey: '2026-08-13',
+  };
+  SharedPreferences.setMockInitialValues(initialPrefs);
   await Storage.init();
 
   final settings = SettingsService()
@@ -253,6 +258,7 @@ Future<GameState> _makeState({
     audio: AudioService(settings),
     iapAdapter: adapter,
     adultGateFactory: () => const AdultGateChallenge(40, 2),
+    localDateProvider: () => DateTime(2026, 8, 12),
   );
   await state.load();
   state.toastMessage = '';

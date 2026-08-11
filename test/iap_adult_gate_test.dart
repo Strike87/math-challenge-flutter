@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
+import 'package:math_challenge/features/family/domain/family_eligibility.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/iap.dart';
 import 'package:math_challenge/services/settings.dart';
@@ -49,6 +52,7 @@ void main() {
 
         expect(state.currentModal, GameModal.adultGate);
         expect(state.pendingIapProduct?.productId, product.productId);
+        expect(state.adultGateChallenge, isNotNull);
         expect(adapter.buyCalls, isEmpty);
         expect(find.byKey(const Key('adultGateAnswerField')), findsNothing);
       });
@@ -234,15 +238,137 @@ void main() {
       expect(adapter.buyCalls, isEmpty);
       expect(state.shopOwned, contains('av_dragon'));
     });
+
+    for (final product in IapProducts.all) {
+      testWidgets('${product.productId} starts directly for eligible players',
+          (tester) async {
+        final adapter = _FakeIapPurchaseAdapter();
+        final state = await _makeState(
+          adapter: adapter,
+          eligibility: FamilyEligibility.eligible,
+        );
+        addTearDown(state.dispose);
+
+        state.beginIapPurchase(product);
+        await tester.pump();
+
+        expect(adapter.buyCalls, [product]);
+        expect(state.currentModal, GameModal.none);
+        expect(state.pendingIapProduct, isNull);
+        expect(state.adultGateChallenge, isNull);
+        await tester.pump(const Duration(seconds: 3));
+      });
+    }
+
+    testWidgets('direct coin purchase grants no coins', (tester) async {
+      final adapter = _FakeIapPurchaseAdapter();
+      final state = await _makeState(
+        prefs: {'mc_coins': 7},
+        adapter: adapter,
+        eligibility: FamilyEligibility.eligible,
+      );
+      addTearDown(state.dispose);
+
+      state.beginIapPurchase(IapProducts.small);
+      await tester.pump();
+
+      expect(adapter.buyCalls, [IapProducts.small]);
+      expect(state.coins, 7);
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('direct remove-ads purchase grants no entitlement',
+        (tester) async {
+      final adapter = _FakeIapPurchaseAdapter();
+      final state = await _makeState(
+        adapter: adapter,
+        eligibility: FamilyEligibility.eligible,
+      );
+      addTearDown(state.dispose);
+
+      state.beginIapPurchase(IapProducts.removeAds);
+      await tester.pump();
+
+      expect(adapter.buyCalls, [IapProducts.removeAds]);
+      expect(state.adsRemoved, isFalse);
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    for (final product in IapProducts.all) {
+      test('${product.productId} is blocked while eligibility is unresolved',
+          () async {
+        final adapter = _FakeIapPurchaseAdapter();
+        final state = await _makeState(
+          adapter: adapter,
+          eligibility: FamilyEligibility.unresolved,
+        );
+        addTearDown(state.dispose);
+
+        state.beginIapPurchase(product);
+
+        expect(adapter.buyCalls, isEmpty);
+        expect(state.currentModal, GameModal.none);
+        expect(state.pendingIapProduct, isNull);
+        expect(state.adultGateChallenge, isNull);
+        expect(
+          state.toastMessage,
+          'Complete the age check before making a purchase.',
+        );
+      });
+    }
+
+    testWidgets('direct purchase ignores another tap until the first completes',
+        (tester) async {
+      final firstBuy = Completer<void>();
+      final adapter = _FakeIapPurchaseAdapter(nextBuyGate: firstBuy);
+      final state = await _makeState(
+        adapter: adapter,
+        eligibility: FamilyEligibility.eligible,
+      );
+      addTearDown(state.dispose);
+
+      state.beginIapPurchase(IapProducts.small);
+      state.beginIapPurchase(IapProducts.small);
+      await tester.pump();
+
+      expect(adapter.buyCalls, [IapProducts.small]);
+
+      firstBuy.complete();
+      await tester.pump();
+      await tester.pump();
+      state.beginIapPurchase(IapProducts.small);
+      await tester.pump();
+
+      expect(adapter.buyCalls, [IapProducts.small, IapProducts.small]);
+      await tester.pump(const Duration(seconds: 3));
+    });
   });
 }
+
+final _testDate = DateTime(2026, 8, 12);
 
 Future<GameState> _makeState({
   Map<String, Object> prefs = const {},
   required _FakeIapPurchaseAdapter adapter,
   AdultGateChallenge Function()? challengeFactory,
+  FamilyEligibility eligibility = FamilyEligibility.child,
 }) async {
-  SharedPreferences.setMockInitialValues(prefs);
+  final initialPrefs = <String, Object>{...prefs};
+  switch (eligibility) {
+    case FamilyEligibility.unresolved:
+      break;
+    case FamilyEligibility.child:
+      initialPrefs[GameState.familyGateVersionStorageKey] =
+          GameState.familyGateSchemaVersion;
+      initialPrefs[GameState.familyEligibilityDateStorageKey] = '2026-08-13';
+      break;
+    case FamilyEligibility.eligible:
+      initialPrefs[GameState.familyGateVersionStorageKey] =
+          GameState.familyGateSchemaVersion;
+      initialPrefs[GameState.familyEligibilityDateStorageKey] = '2026-08-12';
+      break;
+  }
+  SharedPreferences.setMockInitialValues(initialPrefs);
   await Storage.init();
   final settings = SettingsService()
     ..load(
@@ -261,6 +387,7 @@ Future<GameState> _makeState({
     iapAdapter: adapter,
     adultGateFactory:
         challengeFactory ?? () => const AdultGateChallenge(47, 18),
+    localDateProvider: () => _testDate,
   );
   await state.load();
   return state;
@@ -284,8 +411,11 @@ Widget _modalHost(GameState state, {Size size = const Size(390, 700)}) {
 }
 
 class _FakeIapPurchaseAdapter implements IapPurchaseAdapter {
+  _FakeIapPurchaseAdapter({this.nextBuyGate});
+
   final List<IapProduct> buyCalls = [];
   final List<IapPurchase> completeCalls = [];
+  Completer<void>? nextBuyGate;
   int restoreCalls = 0;
 
   @override
@@ -294,6 +424,11 @@ class _FakeIapPurchaseAdapter implements IapPurchaseAdapter {
   @override
   Future<void> buyProduct(IapProduct product) async {
     buyCalls.add(product);
+    final gate = nextBuyGate;
+    if (gate != null) {
+      nextBuyGate = null;
+      await gate.future;
+    }
   }
 
   @override
