@@ -403,8 +403,9 @@ void main() {
       hasLength(3),
     );
     expect(activity, isNot(contains('PGS_NOT_INITIALIZED')));
+    final normalizedActivity = activity.replaceAll('\r\n', '\n');
     expect(
-      activity,
+      normalizedActivity,
       contains(
         'if (!PlayGamesInitialization.isInitialized) {\n'
         '                            result.success(null)',
