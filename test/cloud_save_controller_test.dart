@@ -37,7 +37,7 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({
       GameState.familyGateVersionStorageKey: GameState.familyGateSchemaVersion,
-      GameState.familyEligibilityDateStorageKey: '2000-01-01',
+      GameState.familyAgeRangeStorageKey: FamilyAgeRange.adult18plus.name,
     });
     await Storage.init();
   });

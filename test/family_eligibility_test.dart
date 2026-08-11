@@ -38,106 +38,115 @@ void main() {
         .setMockMethodCallHandler(audioPlayerChannel, null);
   });
 
-  test('age 13 uses local date boundaries and conservative leap-day policy',
+  test('stored ranges parse safely and retain the existing eligibility policy',
       () {
-    final eligibility = FamilyEligibilityPolicy.eligibilityDateFor(
-      DateTime(2013, 8, 11),
-    );
-    expect(eligibility, DateTime(2026, 8, 11));
-    for (final boundary in [
-      (DateTime(2026, 8, 10), false),
-      (DateTime(2026, 8, 11), true),
-      (DateTime(2026, 8, 12), true),
-    ]) {
-      expect(
-        FamilyEligibilityPolicy.isEligible(eligibility, boundary.$1),
-        boundary.$2,
-      );
-    }
-
-    final leapEligibility = FamilyEligibilityPolicy.eligibilityDateFor(
-      DateTime(2016, 2, 29),
-    );
-    expect(leapEligibility, DateTime(2029, 3, 1));
     expect(
-      FamilyEligibilityPolicy.isEligible(
-        leapEligibility,
-        DateTime(2029, 2, 28),
-      ),
-      isFalse,
+      parseFamilyAgeRange(FamilyAgeRange.under13.name)?.eligibility,
+      FamilyEligibility.child,
     );
     expect(
-      FamilyEligibilityPolicy.isEligible(
-        leapEligibility,
-        DateTime(2029, 3, 1),
-      ),
-      isTrue,
+      parseFamilyAgeRange(FamilyAgeRange.teen13to17.name)?.eligibility,
+      FamilyEligibility.eligible,
     );
+    expect(
+      parseFamilyAgeRange(FamilyAgeRange.adult18plus.name)?.eligibility,
+      FamilyEligibility.eligible,
+    );
+    expect(parseFamilyAgeRange('adult'), isNull);
+    expect(parseFamilyAgeRange(' adult18plus '), isNull);
   });
 
-  test('stored eligibility is re-evaluated before PGS and cloud startup',
-      () async {
-    for (final boundary in [
-      (DateTime(2026, 8, 10), false),
-      (DateTime(2026, 8, 11), true),
-      (DateTime(2026, 8, 12), true),
+  test('only a valid v2 range resolves the family gate', () async {
+    for (final values in [
+      <String, Object>{},
+      <String, Object>{
+        GameState.familyGateVersionStorageKey: 1,
+        'mc_familyEligibilityDate': '2000-01-01',
+      },
+      <String, Object>{
+        GameState.familyGateVersionStorageKey:
+            GameState.familyGateSchemaVersion,
+      },
+      <String, Object>{
+        GameState.familyGateVersionStorageKey:
+            GameState.familyGateSchemaVersion,
+        GameState.familyAgeRangeStorageKey: 'invalid',
+      },
+    ]) {
+      SharedPreferences.setMockInitialValues(values);
+      await Storage.init();
+      final games = _RecordingPlayGames(authenticated: true);
+      final state = _state(games);
+      await state.load();
+
+      expect(state.familyEligibility, FamilyEligibility.unresolved);
+      expect(state.familyAgeRange, isNull);
+      expect(state.isPlayGamesEligible, isFalse);
+      await state.checkPlayGamesConnection();
+      expect(games.initializeCalls, 0);
+      state.dispose();
+    }
+  });
+
+  test('stored range eligibility controls PGS and cloud startup', () async {
+    for (final entry in [
+      (FamilyAgeRange.under13, FamilyEligibility.child, 0),
+      (FamilyAgeRange.teen13to17, FamilyEligibility.eligible, 1),
+      (FamilyAgeRange.adult18plus, FamilyEligibility.eligible, 1),
     ]) {
       SharedPreferences.setMockInitialValues({
         GameState.familyGateVersionStorageKey:
             GameState.familyGateSchemaVersion,
-        GameState.familyEligibilityDateStorageKey: '2026-08-11',
+        GameState.familyAgeRangeStorageKey: entry.$1.name,
       });
       await Storage.init();
       final games = _RecordingPlayGames(authenticated: true);
-      final state = _state(games, today: boundary.$1);
-      final localLoad = state.load();
+      final state = _state(games);
       final service = _RecordingCloudService(state);
       final controller = CloudSaveController(
         state: state,
         service: service,
-        localLoad: localLoad,
+        localLoad: state.load(),
       );
 
       await controller.startAfterFirstFrame();
-      await controller.resumeAfterFamilyGate();
 
-      expect(state.isPlayGamesEligible, boundary.$2);
-      expect(games.initializeCalls, boundary.$2 ? 1 : 0);
-      expect(games.authenticationChecks, boundary.$2 ? 1 : 0);
-      expect(service.syncCalls, boundary.$2 ? 1 : 0);
+      expect(state.familyEligibility, entry.$2);
+      expect(games.initializeCalls, entry.$3);
+      expect(games.authenticationChecks, entry.$3);
+      expect(service.syncCalls, entry.$3);
       state.dispose();
       controller.dispose();
     }
   });
 
-  test('eligibility freshness is checked again before PGS check and connect',
-      () async {
+  test('submission succeeds when best-effort v1 cleanup fails', () async {
     SharedPreferences.setMockInitialValues({
-      GameState.familyGateVersionStorageKey: GameState.familyGateSchemaVersion,
-      GameState.familyEligibilityDateStorageKey: '2026-08-11',
+      GameState.familyGateVersionStorageKey: 1,
+      'mc_familyEligibilityDate': '2000-01-01',
     });
     await Storage.init();
-    var today = DateTime(2026, 8, 10);
-    final games = _RecordingPlayGames(authenticated: false);
-    final settings = SettingsService();
-    final state = GameState(
-      settings: settings,
-      audio: AudioService(settings),
-      playGamesService: games,
-      localDateProvider: () => today,
+    Storage.writeFailureHook = (key, operation) {
+      if (key == 'mc_familyEligibilityDate' && operation == 'remove') {
+        throw StateError('legacy cleanup failed');
+      }
+    };
+    addTearDown(() => Storage.writeFailureHook = null);
+    final state = _state(_RecordingPlayGames(authenticated: true));
+
+    expect(await state.submitFamilyAgeRange(FamilyAgeRange.teen13to17), isTrue);
+    expect(state.familyAgeRange, FamilyAgeRange.teen13to17);
+    expect(state.familyEligibility, FamilyEligibility.eligible);
+    expect(
+      Storage.getString(GameState.familyAgeRangeStorageKey, ''),
+      FamilyAgeRange.teen13to17.name,
     );
-    addTearDown(state.dispose);
-    await state.load();
-    expect(state.isPlayGamesEligible, isFalse);
-
-    today = DateTime(2026, 8, 11);
-    await state.checkPlayGamesConnection();
-    await state.connectPlayGames();
-
-    expect(state.isPlayGamesEligible, isTrue);
-    expect(games.initializeCalls, 1);
-    expect(games.authenticationChecks, 1);
-    expect(games.connectCalls, 1);
+    expect(
+      Storage.getInt(GameState.familyGateVersionStorageKey, 0),
+      GameState.familyGateSchemaVersion,
+    );
+    expect(Storage.getString('mc_familyEligibilityDate', ''), '2000-01-01');
+    state.dispose();
   });
 
   test('family-gate resume joins startup in flight and syncs exactly once',
@@ -145,7 +154,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     await Storage.init();
     final games = _RecordingPlayGames(authenticated: true);
-    final state = _state(games, today: DateTime(2026, 8, 11));
+    final state = _state(games);
     final localLoad = Completer<void>();
     final service = _RecordingCloudService(state);
     final controller = CloudSaveController(
@@ -157,7 +166,8 @@ void main() {
     addTearDown(controller.dispose);
 
     final startup = controller.startAfterFirstFrame();
-    expect(await state.submitFamilyDateOfBirth('2000-01-01'), isTrue);
+    expect(
+        await state.submitFamilyAgeRange(FamilyAgeRange.adult18plus), isTrue);
     final resumed = controller.resumeAfterFamilyGate();
     localLoad.complete();
     await Future.wait([startup, resumed]);
@@ -167,8 +177,7 @@ void main() {
     expect(service.syncCalls, 1);
   });
 
-  testWidgets(
-      'blank neutral gate validates input, stores no DOB, and keeps child local',
+  testWidgets('age-range gate requires a selection and keeps under-13 local',
       (tester) async {
     const savedGames = MethodChannel('math_challenge/play_games_saved_games');
     var nativeCloudCalls = 0;
@@ -189,52 +198,42 @@ void main() {
       adService: const UnavailableAdMobService(),
       iapAdapter: const DevIapPurchaseAdapter(isNativeRelease: false),
       playGamesService: games,
-      localDateProvider: () => DateTime(2026, 8, 11),
     ));
     await tester.pumpAndSettle();
 
-    final day = find.byKey(const ValueKey('familyDobDay'));
-    final month = find.byKey(const ValueKey('familyDobMonth'));
-    final year = find.byKey(const ValueKey('familyDobYear'));
-    expect(find.text('Before you continue'), findsOneWidget);
+    expect(find.text('Choose your age group'), findsOneWidget);
     expect(find.byType(FamilyAgeGateScreen), findsOneWidget);
     expect(
-      find.text('We use your age to provide an age-appropriate experience.'),
+      find.text('This helps us provide the right game features.'),
       findsOneWidget,
     );
-    for (final field in [day, month, year]) {
-      final textField = find.descendant(
-        of: field,
-        matching: find.byType(TextField),
-      );
-      expect(tester.widget<TextField>(textField).controller!.text, isEmpty);
-    }
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('12 or younger'), findsOneWidget);
+    expect(find.text('13–17'), findsOneWidget);
+    expect(find.text('18 or older'), findsOneWidget);
     expect(find.text('MATH'), findsNothing);
-
-    await tester.tap(find.byKey(const ValueKey('familyDobContinue')));
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('familyAgeRangeContinue')),
+          )
+          .onPressed,
+      isNull,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('familyAgeRange_under13')),
+    );
     await tester.pump();
-    expect(find.textContaining('valid date'), findsOneWidget);
-
-    await tester.enterText(day, '12');
-    await tester.enterText(month, '8');
-    await tester.enterText(year, '2026');
-    await tester.tap(find.byKey(const ValueKey('familyDobContinue')));
-    await tester.pump();
-    expect(find.textContaining('future'), findsOneWidget);
-
-    await tester.enterText(day, '2');
-    await tester.enterText(month, '1');
-    await tester.enterText(year, '2020');
-    await tester.tap(find.byKey(const ValueKey('familyDobContinue')));
+    await tester.tap(find.byKey(const ValueKey('familyAgeRangeContinue')));
     await tester.pumpAndSettle();
 
-    expect(find.text('MATH'), findsOneWidget);
+    expect(find.byType(FamilyAgeGateScreen), findsNothing);
     expect(games.initializeCalls, 0);
     expect(games.authenticationChecks, 0);
     expect(nativeCloudCalls, 0);
     expect(
-      Storage.getString(GameState.familyEligibilityDateStorageKey, ''),
-      '2033-01-02',
+      Storage.getString(GameState.familyAgeRangeStorageKey, ''),
+      FamilyAgeRange.under13.name,
     );
     expect(
       Storage.getInt(GameState.familyGateVersionStorageKey, 0),
@@ -244,7 +243,9 @@ void main() {
     expect(
       preferences.getKeys().where((key) {
         final lower = key.toLowerCase();
-        return lower.contains('birth') || lower.contains('dob');
+        return lower.contains('birth') ||
+            lower.contains('dob') ||
+            lower.contains('eligibilitydate');
       }),
       isEmpty,
     );
@@ -284,11 +285,11 @@ void main() {
       () async {
     SharedPreferences.setMockInitialValues({
       GameState.familyGateVersionStorageKey: GameState.familyGateSchemaVersion,
-      GameState.familyEligibilityDateStorageKey: '2033-01-02',
+      GameState.familyAgeRangeStorageKey: FamilyAgeRange.under13.name,
     });
     await Storage.init();
     final games = _RecordingPlayGames(authenticated: true);
-    final state = _state(games, today: DateTime(2026, 8, 11));
+    final state = _state(games);
     await state.load();
     final service = _RecordingCloudService(state);
     final controller = CloudSaveController(
@@ -308,8 +309,8 @@ void main() {
     expect(games.connectCalls, 0);
     expect(service.syncCalls, 0);
     expect(
-      Storage.getString(GameState.familyEligibilityDateStorageKey, ''),
-      '2033-01-02',
+      Storage.getString(GameState.familyAgeRangeStorageKey, ''),
+      FamilyAgeRange.under13.name,
     );
     expect(
       Storage.getInt(GameState.familyGateVersionStorageKey, 0),
@@ -329,13 +330,13 @@ void main() {
           ? <String, Object>{
               GameState.familyGateVersionStorageKey:
                   GameState.familyGateSchemaVersion,
-              GameState.familyEligibilityDateStorageKey: '2033-01-02',
+              GameState.familyAgeRangeStorageKey: FamilyAgeRange.under13.name,
             }
           : <String, Object>{};
       SharedPreferences.setMockInitialValues(storedFamilyValues);
       await Storage.init();
       final games = _RecordingPlayGames(authenticated: true);
-      final state = _state(games, today: DateTime(2026, 8, 11));
+      final state = _state(games);
       await state.load();
       state.coins = 42;
       final service = _RecordingCloudService(state);
@@ -357,8 +358,10 @@ void main() {
       expect(games.connectCalls, 0);
       expect(service.syncCalls, 0);
       expect(
-        Storage.getString(GameState.familyEligibilityDateStorageKey, ''),
-        eligibility == FamilyEligibility.child ? '2033-01-02' : '',
+        Storage.getString(GameState.familyAgeRangeStorageKey, ''),
+        eligibility == FamilyEligibility.child
+            ? FamilyAgeRange.under13.name
+            : '',
       );
       expect(
         Storage.getInt(GameState.familyGateVersionStorageKey, 0),
@@ -416,13 +419,12 @@ void main() {
   });
 }
 
-GameState _state(_RecordingPlayGames games, {required DateTime today}) {
+GameState _state(_RecordingPlayGames games) {
   final settings = SettingsService();
   return GameState(
     settings: settings,
     audio: AudioService(settings),
     playGamesService: games,
-    localDateProvider: () => today,
   );
 }
 

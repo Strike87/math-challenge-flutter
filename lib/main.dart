@@ -56,13 +56,11 @@ class MathChallengeApp extends StatelessWidget {
     required this.adService,
     required this.iapAdapter,
     this.playGamesService,
-    this.localDateProvider,
   });
 
   final AdMobService adService;
   final IapPurchaseAdapter iapAdapter;
   final PlayGamesService? playGamesService;
-  final DateTime Function()? localDateProvider;
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +90,6 @@ class MathChallengeApp extends StatelessWidget {
             audio: a,
             adService: adService,
             playGamesService: playGamesService,
-            localDateProvider: localDateProvider,
             iapAdapter: iapAdapter,
             iapPurchaseStream: iapAdapter is NativeIapPurchaseAdapter
                 ? (iapAdapter as NativeIapPurchaseAdapter).purchaseStream

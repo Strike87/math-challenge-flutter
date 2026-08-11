@@ -8,6 +8,7 @@ import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/features/cloud_save/application/cloud_save_controller.dart';
 import 'package:math_challenge/features/cloud_save/application/cloud_save_service.dart';
 import 'package:math_challenge/features/cloud_save/data/play_games_saved_games_transport.dart';
+import 'package:math_challenge/features/family/domain/family_eligibility.dart';
 import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/models/game_data.dart';
 import 'package:math_challenge/models/enums.dart';
@@ -816,9 +817,8 @@ void main() {
         {
           GameState.familyGateVersionStorageKey:
               GameState.familyGateSchemaVersion,
-          GameState.familyEligibilityDateStorageKey: '2026-08-13',
+          GameState.familyAgeRangeStorageKey: FamilyAgeRange.under13.name,
         },
-        () => DateTime(2026, 8, 12),
       );
       try {
         state.coins = 300;
@@ -1356,9 +1356,8 @@ void main() {
         {
           GameState.familyGateVersionStorageKey:
               GameState.familyGateSchemaVersion,
-          GameState.familyEligibilityDateStorageKey: '2026-08-13',
+          GameState.familyAgeRangeStorageKey: FamilyAgeRange.under13.name,
         },
-        () => DateTime(2026, 8, 12),
       );
       try {
         const size = Size(320, 568);
@@ -1375,9 +1374,8 @@ void main() {
         {
           GameState.familyGateVersionStorageKey:
               GameState.familyGateSchemaVersion,
-          GameState.familyEligibilityDateStorageKey: '2026-08-13',
+          GameState.familyAgeRangeStorageKey: FamilyAgeRange.under13.name,
         },
-        () => DateTime(2026, 8, 12),
       );
       try {
         const size = Size(844, 390);
@@ -1394,9 +1392,8 @@ void main() {
         {
           GameState.familyGateVersionStorageKey:
               GameState.familyGateSchemaVersion,
-          GameState.familyEligibilityDateStorageKey: '2026-08-13',
+          GameState.familyAgeRangeStorageKey: FamilyAgeRange.under13.name,
         },
-        () => DateTime(2026, 8, 12),
       );
       try {
         const size = Size(480, 700);
@@ -1788,7 +1785,6 @@ void main() {
 
 Future<GameState> _makeState([
   Map<String, Object> prefs = const {},
-  DateTime Function()? localDateProvider,
 ]) async {
   SharedPreferences.setMockInitialValues(prefs);
   await Storage.init();
@@ -1806,7 +1802,6 @@ Future<GameState> _makeState([
   final state = GameState(
     settings: settings,
     audio: AudioService(settings),
-    localDateProvider: localDateProvider,
   );
   await state.load();
   state.dailyChallengeIds = ['blitz_15', 'streak_7', 'division_10'];

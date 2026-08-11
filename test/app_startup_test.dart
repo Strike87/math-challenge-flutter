@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
+import 'package:math_challenge/features/family/domain/family_eligibility.dart';
 import 'package:math_challenge/features/cloud_save/application/cloud_save_controller.dart';
 import 'package:math_challenge/features/cloud_save/application/cloud_save_service.dart';
 import 'package:math_challenge/features/cloud_save/domain/cloud_progress_document.dart';
@@ -432,7 +433,7 @@ void main() {
 Map<String, Object> _eligibleStorage([Map<String, Object> values = const {}]) =>
     {
       GameState.familyGateVersionStorageKey: GameState.familyGateSchemaVersion,
-      GameState.familyEligibilityDateStorageKey: '2000-01-01',
+      GameState.familyAgeRangeStorageKey: FamilyAgeRange.adult18plus.name,
       ...values,
     };
 
