@@ -345,8 +345,6 @@ void main() {
   });
 }
 
-final _testDate = DateTime(2026, 8, 12);
-
 Future<GameState> _makeState({
   Map<String, Object> prefs = const {},
   required _FakeIapPurchaseAdapter adapter,
@@ -360,12 +358,14 @@ Future<GameState> _makeState({
     case FamilyEligibility.child:
       initialPrefs[GameState.familyGateVersionStorageKey] =
           GameState.familyGateSchemaVersion;
-      initialPrefs[GameState.familyEligibilityDateStorageKey] = '2026-08-13';
+      initialPrefs[GameState.familyAgeRangeStorageKey] =
+          FamilyAgeRange.under13.name;
       break;
     case FamilyEligibility.eligible:
       initialPrefs[GameState.familyGateVersionStorageKey] =
           GameState.familyGateSchemaVersion;
-      initialPrefs[GameState.familyEligibilityDateStorageKey] = '2026-08-12';
+      initialPrefs[GameState.familyAgeRangeStorageKey] =
+          FamilyAgeRange.adult18plus.name;
       break;
   }
   SharedPreferences.setMockInitialValues(initialPrefs);
@@ -387,7 +387,6 @@ Future<GameState> _makeState({
     iapAdapter: adapter,
     adultGateFactory:
         challengeFactory ?? () => const AdultGateChallenge(47, 18),
-    localDateProvider: () => _testDate,
   );
   await state.load();
   return state;

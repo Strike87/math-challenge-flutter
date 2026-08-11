@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
+import 'package:math_challenge/features/family/domain/family_eligibility.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/iap.dart';
 import 'package:math_challenge/services/settings.dart';
@@ -236,7 +237,7 @@ Future<GameState> _makeState({
   final initialPrefs = <String, Object>{
     ...prefs,
     GameState.familyGateVersionStorageKey: GameState.familyGateSchemaVersion,
-    GameState.familyEligibilityDateStorageKey: '2026-08-13',
+    GameState.familyAgeRangeStorageKey: FamilyAgeRange.under13.name,
   };
   SharedPreferences.setMockInitialValues(initialPrefs);
   await Storage.init();
@@ -258,7 +259,6 @@ Future<GameState> _makeState({
     audio: AudioService(settings),
     iapAdapter: adapter,
     adultGateFactory: () => const AdultGateChallenge(40, 2),
-    localDateProvider: () => DateTime(2026, 8, 12),
   );
   await state.load();
   state.toastMessage = '';

@@ -231,13 +231,11 @@ class GameState extends ChangeNotifier {
     PlayGamesService? playGamesService,
     AdultGateChallenge Function()? adultGateFactory,
     int Function()? nowMillisProvider,
-    DateTime Function()? localDateProvider,
   })  : iapAdapter = iapAdapter ?? const UnavailableIapPurchaseAdapter(),
         adService = adService ?? const UnavailableAdMobService(),
         playGamesService = playGamesService ?? NativePlayGamesService(),
         _nowMillis =
             nowMillisProvider ?? (() => DateTime.now().millisecondsSinceEpoch),
-        _localDateNow = localDateProvider ?? DateTime.now,
         _adultGateFactory =
             adultGateFactory ?? (() => AdultGateChallenge.random()) {
     _toastController = ToastController(onChanged: notifyListeners);
@@ -254,10 +252,9 @@ class GameState extends ChangeNotifier {
   static const int rewardedAdCoins = 10;
   static const int rewardedCooldownMs = 300000;
   static const int interstitialCadenceGames = 3;
-  static const int familyGateSchemaVersion = 1;
+  static const int familyGateSchemaVersion = 2;
   static const String familyGateVersionStorageKey = 'mc_familyGateVersion';
-  static const String familyEligibilityDateStorageKey =
-      'mc_familyEligibilityDate';
+  static const String familyAgeRangeStorageKey = 'mc_familyAgeRange';
   static const _adaptiveDifficultyEngine = AdaptiveDifficultyEngine();
   static const _survivalProgressionPolicy = SurvivalProgressionPolicy();
 
@@ -336,7 +333,6 @@ class GameState extends ChangeNotifier {
   final PlayGamesService playGamesService;
   final AdultGateChallenge Function() _adultGateFactory;
   final int Function() _nowMillis;
-  final DateTime Function() _localDateNow;
   final QuestionGenerator _qgen = QuestionGenerator();
   final Random _rng = Random();
   StreamSubscription<List<IapPurchase>>? _iapPurchaseSub;
@@ -417,7 +413,7 @@ class GameState extends ChangeNotifier {
   PlayGamesConnectionState playGamesConnectionState =
       PlayGamesConnectionState.checking;
   FamilyEligibility familyEligibility = FamilyEligibility.unresolved;
-  DateTime? familyEligibilityDate;
+  FamilyAgeRange? familyAgeRange;
   String familyGateError = '';
   final Stopwatch _diagnosticClock = Stopwatch()..start();
 
@@ -618,23 +614,11 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> submitFamilyDateOfBirth(String input) async {
-    final birthDate = FamilyEligibilityPolicy.parseLocalDate(input);
-    if (birthDate == null) {
-      _setFamilyGateError('Enter a valid date.');
-      return false;
-    }
-    final today = FamilyEligibilityPolicy.localDate(_localDateNow());
-    if (birthDate.isAfter(today)) {
-      _setFamilyGateError('Date of birth cannot be in the future.');
-      return false;
-    }
-    final eligibilityDate =
-        FamilyEligibilityPolicy.eligibilityDateFor(birthDate);
+  Future<bool> submitFamilyAgeRange(FamilyAgeRange range) async {
     try {
       await Storage.setString(
-        familyEligibilityDateStorageKey,
-        FamilyEligibilityPolicy.formatLocalDate(eligibilityDate),
+        familyAgeRangeStorageKey,
+        range.name,
       );
       await Storage.setInt(
         familyGateVersionStorageKey,
@@ -644,8 +628,13 @@ class GameState extends ChangeNotifier {
       _setFamilyGateError('Could not save this setting. Please try again.');
       return false;
     }
-    familyEligibilityDate = eligibilityDate;
-    _refreshFamilyEligibility(today);
+    try {
+      await Storage.remove('mc_familyEligibilityDate');
+    } catch (_) {
+      // A completed v2 decision remains valid if stale v1 cleanup fails.
+    }
+    familyAgeRange = range;
+    familyEligibility = range.eligibility;
     familyGateError = '';
     playGamesConnectionState = isPlayGamesEligible
         ? PlayGamesConnectionState.checking
@@ -656,17 +645,17 @@ class GameState extends ChangeNotifier {
 
   void _loadFamilyEligibility() {
     final version = Storage.getInt(familyGateVersionStorageKey, 0);
-    final eligibilityDate = FamilyEligibilityPolicy.parseLocalDate(
-      Storage.getString(familyEligibilityDateStorageKey, ''),
+    final ageRange = parseFamilyAgeRange(
+      Storage.getString(familyAgeRangeStorageKey, ''),
     );
-    if (version != familyGateSchemaVersion || eligibilityDate == null) {
+    if (version != familyGateSchemaVersion || ageRange == null) {
       familyEligibility = FamilyEligibility.unresolved;
-      familyEligibilityDate = null;
+      familyAgeRange = null;
       playGamesConnectionState = PlayGamesConnectionState.disconnected;
       return;
     }
-    familyEligibilityDate = eligibilityDate;
-    _refreshFamilyEligibility();
+    familyAgeRange = ageRange;
+    familyEligibility = ageRange.eligibility;
     playGamesConnectionState = isPlayGamesEligible
         ? PlayGamesConnectionState.checking
         : PlayGamesConnectionState.disconnected;
@@ -675,17 +664,6 @@ class GameState extends ChangeNotifier {
   void _setFamilyGateError(String message) {
     familyGateError = message;
     notifyListeners();
-  }
-
-  void _refreshFamilyEligibility([DateTime? today]) {
-    final eligibilityDate = familyEligibilityDate;
-    if (eligibilityDate == null) return;
-    familyEligibility = FamilyEligibilityPolicy.isEligible(
-      eligibilityDate,
-      today ?? _localDateNow(),
-    )
-        ? FamilyEligibility.eligible
-        : FamilyEligibility.child;
   }
 
   Future<void> save() async {
@@ -1044,7 +1022,6 @@ class GameState extends ChangeNotifier {
   }
 
   Future<void> checkPlayGamesConnection() async {
-    _refreshFamilyEligibility();
     if (!isPlayGamesEligible) {
       _setPlayGamesConnectionState(PlayGamesConnectionState.disconnected);
       return;
@@ -1072,7 +1049,6 @@ class GameState extends ChangeNotifier {
   }
 
   Future<void> connectPlayGames() async {
-    _refreshFamilyEligibility();
     if (!isPlayGamesEligible) {
       _setPlayGamesConnectionState(PlayGamesConnectionState.disconnected);
       return;
@@ -3679,7 +3655,6 @@ class GameState extends ChangeNotifier {
       showToast('Ads already removed');
       return;
     }
-    _refreshFamilyEligibility();
     if (familyEligibility == FamilyEligibility.unresolved) {
       showToast('Complete the age check before making a purchase.');
       return;

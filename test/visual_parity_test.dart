@@ -14,6 +14,7 @@ import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/features/cloud_save/application/cloud_save_controller.dart';
 import 'package:math_challenge/features/cloud_save/application/cloud_save_service.dart';
 import 'package:math_challenge/features/cloud_save/data/play_games_saved_games_transport.dart';
+import 'package:math_challenge/features/family/domain/family_eligibility.dart';
 import 'package:math_challenge/features/cloud_save/domain/cloud_progress_document.dart';
 import 'package:math_challenge/features/operation_quest/domain/operation_quest.dart';
 import 'package:math_challenge/features/modals/presentation/toast_banner.dart';
@@ -220,13 +221,13 @@ class MockAudioService implements AudioService {
 Future<GameState> _makeState(
   Map<String, Object> prefs, {
   bool familyEligible = false,
-  DateTime Function()? localDateProvider,
 }) async {
   SharedPreferences.setMockInitialValues({
     ...prefs,
     if (familyEligible)
       GameState.familyGateVersionStorageKey: GameState.familyGateSchemaVersion,
-    if (familyEligible) GameState.familyEligibilityDateStorageKey: '2000-01-01',
+    if (familyEligible)
+      GameState.familyAgeRangeStorageKey: FamilyAgeRange.adult18plus.name,
   });
   await Storage.init();
   final settings = SettingsService()
@@ -243,7 +244,6 @@ Future<GameState> _makeState(
   final state = GameState(
     settings: settings,
     audio: MockAudioService(),
-    localDateProvider: localDateProvider,
   );
   await state.load();
   state.dailyBoss = GameConfig.dailyBosses.first;
@@ -1321,9 +1321,8 @@ void main() {
           'mc_dark': false,
           GameState.familyGateVersionStorageKey:
               GameState.familyGateSchemaVersion,
-          GameState.familyEligibilityDateStorageKey: '2026-08-13',
+          GameState.familyAgeRangeStorageKey: FamilyAgeRange.under13.name,
         },
-        localDateProvider: () => DateTime(2026, 8, 12),
       );
       state.currentScreen = GameScreen.menu;
       state.beginIapPurchase(IapProducts.small);
