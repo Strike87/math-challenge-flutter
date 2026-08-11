@@ -8,6 +8,7 @@ import 'package:math_challenge/features/cloud_save/application/cloud_save_contro
 import 'package:math_challenge/features/cloud_save/application/cloud_save_service.dart';
 import 'package:math_challenge/features/cloud_save/data/play_games_saved_games_transport.dart';
 import 'package:math_challenge/features/cloud_save/domain/cloud_progress_document.dart';
+import 'package:math_challenge/features/family/domain/family_eligibility.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/play_games.dart';
@@ -34,7 +35,10 @@ void main() {
   });
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({
+      GameState.familyGateVersionStorageKey: GameState.familyGateSchemaVersion,
+      GameState.familyEligibilityDateStorageKey: '2000-01-01',
+    });
     await Storage.init();
   });
 
@@ -48,7 +52,7 @@ void main() {
       settings: settings,
       audio: AudioService(settings),
       playGamesService: playGames,
-    );
+    )..familyEligibility = FamilyEligibility.eligible;
     return (
       controller: CloudSaveController(
         state: state,
@@ -203,7 +207,8 @@ void main() {
 
   test('real empty transport uploads an uninitialized GameState', () async {
     final settings = SettingsService();
-    final state = GameState(settings: settings, audio: AudioService(settings));
+    final state = GameState(settings: settings, audio: AudioService(settings))
+      ..familyEligibility = FamilyEligibility.eligible;
     final result = CloudSaveController(
         state: state,
         localLoad: Future.value(),
@@ -524,6 +529,7 @@ void main() {
     final settings = SettingsService();
     final state =
         _RejectingGameState(settings: settings, audio: AudioService(settings))
+          ..familyEligibility = FamilyEligibility.eligible
           ..coins = 1
           ..cloudDirty = true;
     final controller = CloudSaveController(
@@ -612,6 +618,7 @@ void main() {
     final pair = makeController(transport, playGames: playGames);
     pair.state.achievements['first_win'] = true;
     final operation = pair.controller.connectThenSync();
+    await Future<void>.delayed(Duration.zero);
     expect(playGames.connects, 1);
     expect(transport.opens, 0);
     gate.complete(true);
@@ -813,6 +820,7 @@ void main() {
     final pair = makeController(transport, playGames: games);
     pair.state.achievements['first_win'] = true;
     final operation = pair.controller.connectThenSync();
+    await Future<void>.delayed(Duration.zero);
     expect(events, ['connect-start']);
     connectGate.complete(true);
     await Future<void>.delayed(Duration.zero);
@@ -841,6 +849,7 @@ void main() {
     final first = pair.controller.connectThenSync();
     final second = pair.controller.connectThenSync();
     final manual = pair.controller.syncFromSettings();
+    await Future<void>.delayed(Duration.zero);
     expect(games.connects, 1);
     expect(transport.opens, 0);
     gate.complete(true);
@@ -1040,6 +1049,9 @@ class _PlayGames extends PlayGamesService {
   Completer<void>? unlockGate;
   List<String>? events;
   final unlocked = <String>[];
+
+  @override
+  Future<void> initializePgs() async {}
 
   @override
   Future<bool> isAuthenticated() async {

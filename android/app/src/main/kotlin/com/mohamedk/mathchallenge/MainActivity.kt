@@ -40,7 +40,15 @@ class MainActivity: FlutterActivity() {
         ).setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
+                    "initializePgs" -> {
+                        PlayGamesInitialization.initialize(this)
+                        result.success(null)
+                    }
                     "isAuthenticated" -> {
+                        if (!PlayGamesInitialization.isInitialized) {
+                            result.success(false)
+                            return@setMethodCallHandler
+                        }
                         PlayGames.getGamesSignInClient(this).isAuthenticated
                             .addOnCompleteListener { task ->
                                 if (task.isSuccessful) {
@@ -51,6 +59,10 @@ class MainActivity: FlutterActivity() {
                             }
                     }
                     "connect" -> {
+                        if (!PlayGamesInitialization.isInitialized) {
+                            result.success(false)
+                            return@setMethodCallHandler
+                        }
                         PlayGames.getGamesSignInClient(this).signIn()
                             .addOnCompleteListener { task ->
                                 if (task.isSuccessful) {
@@ -61,6 +73,10 @@ class MainActivity: FlutterActivity() {
                             }
                     }
                     "unlockAchievement" -> {
+                        if (!PlayGamesInitialization.isInitialized) {
+                            result.success(null)
+                            return@setMethodCallHandler
+                        }
                         val achievementId = call.argument<String>("achievementId")
                         if (achievementId.isNullOrBlank()) {
                             result.error("PGS_ARGUMENT", "Missing achievementId", null)

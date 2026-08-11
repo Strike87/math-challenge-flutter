@@ -217,8 +217,16 @@ class MockAudioService implements AudioService {
   void vibratePowerUp() {}
 }
 
-Future<GameState> _makeState([Map<String, Object> prefs = const {}]) async {
-  SharedPreferences.setMockInitialValues(prefs);
+Future<GameState> _makeState(
+  Map<String, Object> prefs, {
+  bool familyEligible = false,
+}) async {
+  SharedPreferences.setMockInitialValues({
+    ...prefs,
+    if (familyEligible)
+      GameState.familyGateVersionStorageKey: GameState.familyGateSchemaVersion,
+    if (familyEligible) GameState.familyEligibilityDateStorageKey: '2000-01-01',
+  });
   await Storage.init();
   final settings = SettingsService()
     ..load(
@@ -1325,7 +1333,10 @@ void main() {
     });
 
     testWidgets('cloud save settings light', (tester) async {
-      final state = await _makeState({'mc_dark': false});
+      final state = await _makeState(
+        {'mc_dark': false},
+        familyEligible: true,
+      );
       state
         ..currentScreen = GameScreen.menu
         ..playGamesConnectionState = PlayGamesConnectionState.connected
@@ -1357,7 +1368,10 @@ void main() {
     });
 
     testWidgets('cloud save settings dark', (tester) async {
-      final state = await _makeState({'mc_dark': true});
+      final state = await _makeState(
+        {'mc_dark': true},
+        familyEligible: true,
+      );
       state
         ..currentScreen = GameScreen.menu
         ..playGamesConnectionState = PlayGamesConnectionState.connected
@@ -1391,7 +1405,10 @@ void main() {
 
     testWidgets('29. Restart Game Progress confirmation light and dark',
         (tester) async {
-      final state = await _makeState({'mc_dark': false});
+      final state = await _makeState(
+        {'mc_dark': false},
+        familyEligible: true,
+      );
       state
         ..currentScreen = GameScreen.menu
         ..showModal(GameModal.settings);
@@ -1456,7 +1473,10 @@ void main() {
     });
 
     testWidgets('28. cloud save conflict ordinary light', (tester) async {
-      final state = await _makeState({'mc_dark': false});
+      final state = await _makeState(
+        {'mc_dark': false},
+        familyEligible: true,
+      );
       state
         ..currentScreen = GameScreen.menu
         ..playGamesConnectionState = PlayGamesConnectionState.connected
@@ -1486,7 +1506,10 @@ void main() {
     });
 
     testWidgets('28. cloud save conflict ordinary dark', (tester) async {
-      final state = await _makeState({'mc_dark': true});
+      final state = await _makeState(
+        {'mc_dark': true},
+        familyEligible: true,
+      );
       state
         ..currentScreen = GameScreen.menu
         ..playGamesConnectionState = PlayGamesConnectionState.connected
@@ -1517,7 +1540,10 @@ void main() {
     });
 
     testWidgets('28. cloud save conflict native light', (tester) async {
-      final state = await _makeState({'mc_dark': false});
+      final state = await _makeState(
+        {'mc_dark': false},
+        familyEligible: true,
+      );
       state
         ..currentScreen = GameScreen.menu
         ..playGamesConnectionState = PlayGamesConnectionState.connected
@@ -1550,7 +1576,10 @@ void main() {
 
     testWidgets('cloud save conflict stays reachable at large text',
         (tester) async {
-      final state = await _makeState({'mc_dark': false});
+      final state = await _makeState(
+        {'mc_dark': false},
+        familyEligible: true,
+      );
       state
         ..currentScreen = GameScreen.menu
         ..playGamesConnectionState = PlayGamesConnectionState.connected

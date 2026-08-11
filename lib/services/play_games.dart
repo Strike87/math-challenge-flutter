@@ -25,6 +25,8 @@ const playGamesAchievementIds = <String, String>{
 };
 
 abstract class PlayGamesService {
+  Future<void> initializePgs();
+
   Future<bool> isAuthenticated();
 
   Future<bool> connect();
@@ -49,6 +51,9 @@ class NativePlayGamesService extends PlayGamesService {
   NativePlayGamesService();
 
   static const _channel = MethodChannel('math_challenge/play_games');
+
+  @override
+  Future<void> initializePgs() => _channel.invokeMethod<void>('initializePgs');
 
   @override
   Future<bool> isAuthenticated() async =>

@@ -323,6 +323,10 @@ class PlayGamesSavedGamesTransport(
         staleCode: String,
         action: () -> Unit,
     ) {
+        if (!PlayGamesInitialization.isInitialized) {
+            result.success(failure("notAuthenticated"))
+            return
+        }
         try {
             PlayGames.getGamesSignInClient(activity).isAuthenticated
                 .addOnCompleteListener { task ->

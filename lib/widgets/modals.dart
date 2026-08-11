@@ -1410,11 +1410,16 @@ class SettingsModal extends StatelessWidget {
                       },
                     ),
                     _SettingsDivider(s: s),
-                    _PlayGamesSettingsTile(controller: cloud, state: gs),
-                    _SettingsDivider(s: s),
-                    _CloudSaveSettingsTile(controller: cloud, state: gs),
-                    _SettingsDivider(s: s),
-                    _ResetEverywhereSettingsTile(controller: cloud, state: gs),
+                    if (gs.isPlayGamesEligible) ...[
+                      _PlayGamesSettingsTile(controller: cloud, state: gs),
+                      _SettingsDivider(s: s),
+                      _CloudSaveSettingsTile(controller: cloud, state: gs),
+                      _SettingsDivider(s: s),
+                    ],
+                    _ResetEverywhereSettingsTile(
+                      controller: cloud,
+                      state: gs,
+                    ),
                     _SettingsDivider(s: s),
                     _SettingsActionTile(
                       icon: Icons.restore_rounded,
@@ -1630,14 +1635,16 @@ class _ResetEverywhereSettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final syncResetToCloud = state.isPlayGamesEligible;
     final enabled = state.currentScreen == GameScreen.menu &&
         !state.rt.gameActive &&
         !controller.isResetting;
     return _SettingsActionTile(
       icon: Icons.cloud_off_rounded,
       title: 'RESTART GAME PROGRESS',
-      subtitle:
-          'Erase game progress on this device and all connected devices. Settings and purchases will be kept.',
+      subtitle: syncResetToCloud
+          ? 'Erase game progress on this device and all connected devices. Settings and purchases will be kept.'
+          : 'Erase game progress on this device. Settings, purchases, and age eligibility will be kept.',
       color: GameConfig.punch,
       destructive: true,
       onTap: !enabled
@@ -1648,6 +1655,9 @@ class _ResetEverywhereSettingsTile extends StatelessWidget {
                 _ResetEverywhereDialogRoute(
                   context: context,
                   controller: controller,
+                  confirmationMessage: syncResetToCloud
+                      ? 'Coins, scores, mastery, achievements, player names, avatars, and Quest progress will be erased. Older cloud saves will not restore them. Settings and purchases will remain. This can’t be undone.'
+                      : 'Coins, scores, mastery, achievements, player names, avatars, and Quest progress will be erased from this device. Settings, purchases, and age eligibility will remain. This can’t be undone.',
                   submitted: submitted,
                 ),
               );
@@ -1660,11 +1670,13 @@ class _ResetEverywhereDialogRoute extends DialogRoute<void> {
   _ResetEverywhereDialogRoute({
     required super.context,
     required CloudSaveController controller,
+    required String confirmationMessage,
     required this.submitted,
   }) : super(
           barrierDismissible: true,
           builder: (_) => _ResetEverywhereDialog(
             controller: controller,
+            confirmationMessage: confirmationMessage,
             submitted: submitted,
           ),
         ) {
@@ -1688,10 +1700,12 @@ class _ResetEverywhereDialogRoute extends DialogRoute<void> {
 class _ResetEverywhereDialog extends StatefulWidget {
   const _ResetEverywhereDialog({
     required this.controller,
+    required this.confirmationMessage,
     required this.submitted,
   });
 
   final CloudSaveController controller;
+  final String confirmationMessage;
   final ValueNotifier<bool> submitted;
 
   @override
@@ -1720,7 +1734,7 @@ class _ResetEverywhereDialogState extends State<_ResetEverywhereDialog> {
               ? widget.controller.isBusy
                   ? 'Resetting progress…'
                   : 'Reset queued'
-              : 'Coins, scores, mastery, achievements, player names, avatars, and Quest progress will be erased. Older cloud saves will not restore them. Settings and purchases will remain. This can’t be undone.'),
+              : widget.confirmationMessage),
           actions: [
             TextButton(
               onPressed: _submitted ? null : () => Navigator.of(context).pop(),

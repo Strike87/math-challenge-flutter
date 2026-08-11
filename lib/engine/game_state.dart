@@ -9,6 +9,7 @@ import '../features/cloud_save/domain/cloud_progress_document.dart';
 import '../features/economy/domain/coin_ledger.dart';
 import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/economy/domain/number_type_unlock_policy.dart';
+import '../features/family/domain/family_eligibility.dart';
 import '../features/gameplay/domain/survival_progression_policy.dart';
 import '../features/gameplay/domain/question_mechanic.dart';
 import '../features/modals/presentation/toast_controller.dart';
@@ -230,11 +231,13 @@ class GameState extends ChangeNotifier {
     PlayGamesService? playGamesService,
     AdultGateChallenge Function()? adultGateFactory,
     int Function()? nowMillisProvider,
+    DateTime Function()? localDateProvider,
   })  : iapAdapter = iapAdapter ?? const UnavailableIapPurchaseAdapter(),
         adService = adService ?? const UnavailableAdMobService(),
         playGamesService = playGamesService ?? NativePlayGamesService(),
         _nowMillis =
             nowMillisProvider ?? (() => DateTime.now().millisecondsSinceEpoch),
+        _localDateNow = localDateProvider ?? DateTime.now,
         _adultGateFactory =
             adultGateFactory ?? (() => AdultGateChallenge.random()) {
     _toastController = ToastController(onChanged: notifyListeners);
@@ -251,6 +254,10 @@ class GameState extends ChangeNotifier {
   static const int rewardedAdCoins = 10;
   static const int rewardedCooldownMs = 300000;
   static const int interstitialCadenceGames = 3;
+  static const int familyGateSchemaVersion = 1;
+  static const String familyGateVersionStorageKey = 'mc_familyGateVersion';
+  static const String familyEligibilityDateStorageKey =
+      'mc_familyEligibilityDate';
   static const _adaptiveDifficultyEngine = AdaptiveDifficultyEngine();
   static const _survivalProgressionPolicy = SurvivalProgressionPolicy();
 
@@ -329,6 +336,7 @@ class GameState extends ChangeNotifier {
   final PlayGamesService playGamesService;
   final AdultGateChallenge Function() _adultGateFactory;
   final int Function() _nowMillis;
+  final DateTime Function() _localDateNow;
   final QuestionGenerator _qgen = QuestionGenerator();
   final Random _rng = Random();
   StreamSubscription<List<IapPurchase>>? _iapPurchaseSub;
@@ -405,11 +413,17 @@ class GameState extends ChangeNotifier {
   int lastRewardedAt = 0;
   bool _pendingInterstitialAd = false;
   bool _playGamesBusy = false;
+  bool _playGamesInitialized = false;
   PlayGamesConnectionState playGamesConnectionState =
       PlayGamesConnectionState.checking;
+  FamilyEligibility familyEligibility = FamilyEligibility.unresolved;
+  DateTime? familyEligibilityDate;
+  String familyGateError = '';
   final Stopwatch _diagnosticClock = Stopwatch()..start();
 
   GameRunSnapshot? get activeRunSnapshot => _runSnapshot;
+  bool get isPlayGamesEligible =>
+      familyEligibility == FamilyEligibility.eligible;
   bool get isOperationQuest =>
       _runSnapshot?.runType == GameRunType.operationQuest;
   bool get isMissingOperation =>
@@ -547,6 +561,7 @@ class GameState extends ChangeNotifier {
 
   // ─── Load / save ────────────────────────────────────────────
   Future<void> load() async {
+    _loadFamilyEligibility();
     final skipCloudOwnedLoad = await _recoverCloudResetIntent();
     if (!skipCloudOwnedLoad) {
       cloudResetGeneration = Storage.getInt('mc_cloudResetGeneration', 0);
@@ -600,6 +615,76 @@ class GameState extends ChangeNotifier {
     if (!skipCloudOwnedLoad) await _persistLoadedMigrationState();
     _hydrateDailyBonusPolicy();
     notifyListeners();
+  }
+
+  Future<bool> submitFamilyDateOfBirth(String input) async {
+    final birthDate = FamilyEligibilityPolicy.parseLocalDate(input);
+    if (birthDate == null) {
+      _setFamilyGateError('Enter a valid date.');
+      return false;
+    }
+    final today = FamilyEligibilityPolicy.localDate(_localDateNow());
+    if (birthDate.isAfter(today)) {
+      _setFamilyGateError('Date of birth cannot be in the future.');
+      return false;
+    }
+    final eligibilityDate =
+        FamilyEligibilityPolicy.eligibilityDateFor(birthDate);
+    try {
+      await Storage.setString(
+        familyEligibilityDateStorageKey,
+        FamilyEligibilityPolicy.formatLocalDate(eligibilityDate),
+      );
+      await Storage.setInt(
+        familyGateVersionStorageKey,
+        familyGateSchemaVersion,
+      );
+    } on Exception {
+      _setFamilyGateError('Could not save this setting. Please try again.');
+      return false;
+    }
+    familyEligibilityDate = eligibilityDate;
+    _refreshFamilyEligibility(today);
+    familyGateError = '';
+    playGamesConnectionState = isPlayGamesEligible
+        ? PlayGamesConnectionState.checking
+        : PlayGamesConnectionState.disconnected;
+    notifyListeners();
+    return true;
+  }
+
+  void _loadFamilyEligibility() {
+    final version = Storage.getInt(familyGateVersionStorageKey, 0);
+    final eligibilityDate = FamilyEligibilityPolicy.parseLocalDate(
+      Storage.getString(familyEligibilityDateStorageKey, ''),
+    );
+    if (version != familyGateSchemaVersion || eligibilityDate == null) {
+      familyEligibility = FamilyEligibility.unresolved;
+      familyEligibilityDate = null;
+      playGamesConnectionState = PlayGamesConnectionState.disconnected;
+      return;
+    }
+    familyEligibilityDate = eligibilityDate;
+    _refreshFamilyEligibility();
+    playGamesConnectionState = isPlayGamesEligible
+        ? PlayGamesConnectionState.checking
+        : PlayGamesConnectionState.disconnected;
+  }
+
+  void _setFamilyGateError(String message) {
+    familyGateError = message;
+    notifyListeners();
+  }
+
+  void _refreshFamilyEligibility([DateTime? today]) {
+    final eligibilityDate = familyEligibilityDate;
+    if (eligibilityDate == null) return;
+    familyEligibility = FamilyEligibilityPolicy.isEligible(
+      eligibilityDate,
+      today ?? _localDateNow(),
+    )
+        ? FamilyEligibility.eligible
+        : FamilyEligibility.child;
   }
 
   Future<void> save() async {
@@ -958,10 +1043,16 @@ class GameState extends ChangeNotifier {
   }
 
   Future<void> checkPlayGamesConnection() async {
+    _refreshFamilyEligibility();
+    if (!isPlayGamesEligible) {
+      _setPlayGamesConnectionState(PlayGamesConnectionState.disconnected);
+      return;
+    }
     if (_playGamesBusy) return;
     _playGamesBusy = true;
     _setPlayGamesConnectionState(PlayGamesConnectionState.checking);
     try {
+      await _initializePlayGames();
       final connected = await playGamesService.isAuthenticated();
       if (_disposed) return;
       _setPlayGamesConnectionState(
@@ -980,6 +1071,11 @@ class GameState extends ChangeNotifier {
   }
 
   Future<void> connectPlayGames() async {
+    _refreshFamilyEligibility();
+    if (!isPlayGamesEligible) {
+      _setPlayGamesConnectionState(PlayGamesConnectionState.disconnected);
+      return;
+    }
     if (_playGamesBusy ||
         playGamesConnectionState == PlayGamesConnectionState.connected) {
       return;
@@ -987,6 +1083,7 @@ class GameState extends ChangeNotifier {
     _playGamesBusy = true;
     _setPlayGamesConnectionState(PlayGamesConnectionState.checking);
     try {
+      await _initializePlayGames();
       final connected = await playGamesService.connect();
       if (_disposed) return;
       _setPlayGamesConnectionState(
@@ -1007,6 +1104,12 @@ class GameState extends ChangeNotifier {
   void _setPlayGamesConnectionState(PlayGamesConnectionState value) {
     playGamesConnectionState = value;
     if (!_disposed) notifyListeners();
+  }
+
+  Future<void> _initializePlayGames() async {
+    if (_playGamesInitialized) return;
+    await playGamesService.initializePgs();
+    _playGamesInitialized = true;
   }
 
   Future<void> _reconcilePlayGamesAchievements() async {
@@ -3321,7 +3424,9 @@ class GameState extends ChangeNotifier {
       message: '${a.name} unlocked!',
     );
     showToast('${a.icon} ${a.name} unlocked!');
-    if (playGamesConnectionState == PlayGamesConnectionState.connected) {
+    if (isPlayGamesEligible &&
+        _playGamesInitialized &&
+        playGamesConnectionState == PlayGamesConnectionState.connected) {
       unawaited(_mirrorPlayGamesAchievement(id));
     }
   }

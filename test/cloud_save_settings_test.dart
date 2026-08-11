@@ -9,6 +9,7 @@ import 'package:math_challenge/features/cloud_save/application/cloud_save_contro
 import 'package:math_challenge/features/cloud_save/application/cloud_save_service.dart';
 import 'package:math_challenge/features/cloud_save/data/play_games_saved_games_transport.dart';
 import 'package:math_challenge/features/cloud_save/domain/cloud_progress_document.dart';
+import 'package:math_challenge/features/family/domain/family_eligibility.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/play_games.dart';
 import 'package:math_challenge/services/settings.dart';
@@ -960,6 +961,7 @@ Future<_Pair> _pair(
     audio: AudioService(settings),
     playGamesService: playGames,
   )
+    ..familyEligibility = FamilyEligibility.eligible
     ..currentScreen = GameScreen.menu
     ..playGamesConnectionState = connected
         ? PlayGamesConnectionState.connected
@@ -1054,6 +1056,7 @@ Future<_Pair> _realPair() async {
     audio: AudioService(settings),
     playGamesService: playGames,
   )
+    ..familyEligibility = FamilyEligibility.eligible
     ..currentScreen = GameScreen.menu
     ..playGamesConnectionState = PlayGamesConnectionState.connected;
   final transport = _Transport();
@@ -1142,6 +1145,10 @@ class _Pair {
 
 class _PlayGames extends PlayGamesService {
   int calls = 0;
+
+  @override
+  Future<void> initializePgs() async {}
+
   @override
   Future<bool> isAuthenticated() async => false;
   @override

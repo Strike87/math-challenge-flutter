@@ -48,6 +48,7 @@ class CloudSaveController extends ChangeNotifier {
   Future<void>? _resetOperation;
   int _epoch = 0;
   bool _startupAttempted = false;
+  bool _eligibleStartupAttempted = false;
   CloudSaveStatus _status = CloudSaveStatus.neverAttempted;
   CloudSyncNeedsUserChoice? _pendingChoice;
 
@@ -61,6 +62,7 @@ class CloudSaveController extends ChangeNotifier {
           ? CloudSaveStatus.changesPendingLocally
           : _status;
   bool get canSyncFromSettings =>
+      _state.isPlayGamesEligible &&
       !_state.cloudResetRecoveryBlocked &&
       _state.currentScreen == GameScreen.menu &&
       !_state.rt.gameActive;
@@ -71,6 +73,7 @@ class CloudSaveController extends ChangeNotifier {
     if (_state.currentScreen != GameScreen.menu || _state.rt.gameActive) {
       return Future.value();
     }
+    final syncResetToCloud = _state.isPlayGamesEligible;
     final epoch = ++_epoch;
     _set(CloudSaveStatus.syncing, pending: null);
     final before = _operation;
@@ -91,6 +94,10 @@ class CloudSaveController extends ChangeNotifier {
         if (epoch != _epoch) return;
         if (!localReset || _state.cloudResetRecoveryBlocked) {
           _set(CloudSaveStatus.requiresAttention, pending: null);
+          return;
+        }
+        if (!syncResetToCloud) {
+          _set(CloudSaveStatus.changesPendingLocally, pending: null);
           return;
         }
         if (_state.playGamesConnectionState !=
@@ -116,29 +123,48 @@ class CloudSaveController extends ChangeNotifier {
     if (_startupAttempted) return _operation ?? Future.value();
     _startupAttempted = true;
     notifyListeners();
-    return _run(() async {
-      final epoch = _epoch;
-      await _localLoad;
-      if (epoch != _epoch) return;
-      if (_blockSyncForResetRecovery()) return;
-      await _state.checkPlayGamesConnection();
-      if (epoch != _epoch) return;
-      if (_state.playGamesConnectionState !=
-          PlayGamesConnectionState.connected) {
-        _set(CloudSaveStatus.notAuthenticated, pending: null);
-        return;
-      }
-      await _sync(CloudSaveSyncSource.startup, epoch);
-    });
+    return _run(_startEligibleStartup);
   }
 
-  Future<void> sync(
-          {CloudSaveSyncSource source = CloudSaveSyncSource.manual}) =>
-      _resetOperation ?? _run(() => _sync(source, _epoch));
+  Future<void> resumeAfterFamilyGate() async {
+    if (!_startupAttempted) {
+      await startAfterFirstFrame();
+      return;
+    }
+    final active = _operation;
+    if (active != null) await active;
+    if (_eligibleStartupAttempted) return;
+    await _run(_startEligibleStartup);
+  }
+
+  Future<void> _startEligibleStartup() async {
+    final epoch = _epoch;
+    await _localLoad;
+    if (epoch != _epoch ||
+        !_state.isPlayGamesEligible ||
+        _eligibleStartupAttempted) {
+      return;
+    }
+    _eligibleStartupAttempted = true;
+    if (_blockSyncForResetRecovery()) return;
+    await _state.checkPlayGamesConnection();
+    if (epoch != _epoch) return;
+    if (_state.playGamesConnectionState != PlayGamesConnectionState.connected) {
+      _set(CloudSaveStatus.notAuthenticated, pending: null);
+      return;
+    }
+    await _sync(CloudSaveSyncSource.startup, epoch);
+  }
+
+  Future<void> sync({CloudSaveSyncSource source = CloudSaveSyncSource.manual}) {
+    if (!_state.isPlayGamesEligible) return Future.value();
+    return _resetOperation ?? _run(() => _sync(source, _epoch));
+  }
 
   Future<void> syncFromSettings() =>
       _resetOperation ??
       _run(() async {
+        if (!_state.isPlayGamesEligible) return;
         if (_resetOperation != null) return;
         if (_blockSyncForResetRecovery()) return;
         if (!canSyncFromSettings || _pendingChoice != null) return;
@@ -153,6 +179,7 @@ class CloudSaveController extends ChangeNotifier {
   Future<void> connectThenSync() =>
       _resetOperation ??
       _run(() async {
+        if (!_state.isPlayGamesEligible) return;
         if (_resetOperation != null) return;
         if (_blockSyncForResetRecovery()) return;
         final epoch = _epoch;
@@ -168,6 +195,7 @@ class CloudSaveController extends ChangeNotifier {
       });
 
   Future<void> resolvePendingChoice(CloudSyncChoice choice) {
+    if (!_state.isPlayGamesEligible) return Future.value();
     final pending = _pendingChoice;
     if (pending == null) return Future.value();
     return _run(() async {
@@ -184,7 +212,7 @@ class CloudSaveController extends ChangeNotifier {
   }
 
   Future<void> _sync(CloudSaveSyncSource source, int epoch) async {
-    if (epoch != _epoch) return;
+    if (epoch != _epoch || !_state.isPlayGamesEligible) return;
     if (_blockSyncForResetRecovery()) return;
     _set(CloudSaveStatus.syncing);
     debugPrint('[cloud-save] sync ${source.name}');
