@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show SemanticsFlag;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -178,8 +179,10 @@ void main() {
     expect(service.syncCalls, 1);
   });
 
-  testWidgets('age-range gate requires a selection and keeps under-13 local',
+  testWidgets('age-range gate selects one range before continuing locally',
       (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 480));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     const savedGames = MethodChannel('math_challenge/play_games_saved_games');
     var nativeCloudCalls = 0;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -202,12 +205,13 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Choose your age group'), findsOneWidget);
+    expect(find.text('Choose your age range'), findsOneWidget);
     expect(find.byType(FamilyAgeGateScreen), findsOneWidget);
     expect(
-      find.text('This helps us provide the right game features.'),
+      find.text('Select the option that applies to you.'),
       findsOneWidget,
     );
+    expect(find.text('No date of birth required'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
     expect(find.text('12 or younger'), findsOneWidget);
     expect(find.text('13–17'), findsOneWidget);
@@ -225,6 +229,47 @@ void main() {
       find.byKey(const ValueKey('familyAgeRange_under13')),
     );
     await tester.pump();
+    expect(find.byType(FamilyAgeGateScreen), findsOneWidget);
+    expect(
+      tester
+          .getSemantics(find.byKey(const ValueKey('familyAgeRange_under13')))
+          // ignore: deprecated_member_use
+          .hasFlag(SemanticsFlag.isSelected),
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('familyAgeRangeContinue')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('familyAgeRange_teen13to17')),
+    );
+    await tester.pump();
+    expect(
+      tester
+          .getSemantics(find.byKey(const ValueKey('familyAgeRange_under13')))
+          // ignore: deprecated_member_use
+          .hasFlag(SemanticsFlag.isSelected),
+      isFalse,
+    );
+    expect(
+      tester
+          .getSemantics(find.byKey(const ValueKey('familyAgeRange_teen13to17')))
+          // ignore: deprecated_member_use
+          .hasFlag(SemanticsFlag.isSelected),
+      isTrue,
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('familyAgeRange_under13')),
+    );
+    await tester.pump();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('familyAgeRangeContinue')),
+    );
     await tester.tap(find.byKey(const ValueKey('familyAgeRangeContinue')));
     await tester.pumpAndSettle();
 
