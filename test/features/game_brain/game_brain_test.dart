@@ -41,6 +41,7 @@ void main() {
     expect(decision.confidence, expected.confidence);
     expect(decision.misconceptionEvidence, expected.misconceptionEvidence);
     expect(decision.sessionEvidence, isNotNull);
+    expect(decision.recommendation, isNotNull);
     expect(decision.isShadow, isTrue);
     expect(memory.observations, [same(observation)]);
     expect(memory.entries.single.observation, same(observation));
