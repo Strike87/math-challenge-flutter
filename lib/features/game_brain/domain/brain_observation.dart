@@ -14,6 +14,8 @@ final class BrainObservation {
     required this.responseTimeMs,
     required this.masteryBefore,
     required this.masteryAfter,
+    this.leftOperand,
+    this.rightOperand,
     this.misconceptionEvidence,
   }) {
     if (correctAnswer.trim().isEmpty) {
@@ -42,6 +44,17 @@ final class BrainObservation {
     }
     _validateMastery(masteryBefore, 'masteryBefore');
     _validateMastery(masteryAfter, 'masteryAfter');
+    if ((leftOperand == null) != (rightOperand == null)) {
+      throw ArgumentError(
+        'leftOperand and rightOperand must either both be supplied or both be null.',
+      );
+    }
+    if (leftOperand?.isFinite == false) {
+      throw ArgumentError.value(leftOperand, 'leftOperand', 'must be finite');
+    }
+    if (rightOperand?.isFinite == false) {
+      throw ArgumentError.value(rightOperand, 'rightOperand', 'must be finite');
+    }
   }
 
   final Operation operation;
@@ -54,6 +67,8 @@ final class BrainObservation {
   final int responseTimeMs;
   final double masteryBefore;
   final double masteryAfter;
+  final num? leftOperand;
+  final num? rightOperand;
   final MisconceptionEvidence? misconceptionEvidence;
 
   static void _validateMastery(double value, String name) {

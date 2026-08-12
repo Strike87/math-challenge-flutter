@@ -1,8 +1,11 @@
+import 'misconception_evidence.dart';
+
 /// A shadow-only GameBrain result that makes no gameplay recommendation.
 final class BrainDecision {
   BrainDecision({
     required this.isNeutral,
     required this.confidence,
+    this.misconceptionEvidence,
   }) {
     if (!confidence.isFinite || confidence < 0 || confidence > 1) {
       throw ArgumentError.value(
@@ -18,6 +21,7 @@ final class BrainDecision {
 
   final bool isNeutral;
   final double confidence;
+  final MisconceptionEvidence? misconceptionEvidence;
 
   bool get isShadow => true;
 }
