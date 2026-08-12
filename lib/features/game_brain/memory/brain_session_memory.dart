@@ -1,5 +1,7 @@
 import '../../../models/enums.dart';
 import '../domain/brain_observation.dart';
+import '../domain/brain_memory_entry.dart';
+import '../domain/misconception_evidence.dart';
 import '../domain/tentative_misconception_hypothesis.dart';
 
 /// Bounded, mutable, in-memory observations for one GameBrain session.
@@ -12,22 +14,34 @@ final class BrainSessionMemory {
   }
 
   final int capacity;
-  final List<BrainObservation> _observations = [];
+  final List<BrainMemoryEntry> _entries = [];
 
-  List<BrainObservation> get observations => List.unmodifiable(_observations);
+  /// BRAIN-01 compatibility view: same observation identities and FIFO order.
+  List<BrainObservation> get observations =>
+      List.unmodifiable(_entries.map((entry) => entry.observation));
 
-  void record(BrainObservation observation) {
-    if (_observations.length == capacity) {
-      _observations.removeAt(0);
+  /// BRAIN-03 paired policy output, in the same bounded FIFO order.
+  List<BrainMemoryEntry> get entries => List.unmodifiable(_entries);
+
+  void record(
+    BrainObservation observation, {
+    MisconceptionEvidence? misconceptionEvidence,
+  }) {
+    if (_entries.length == capacity) {
+      _entries.removeAt(0);
     }
-    _observations.add(observation);
+    _entries.add(BrainMemoryEntry(
+      observation: observation,
+      misconceptionEvidence: misconceptionEvidence,
+    ));
   }
 
   /// Tags remain opaque so BRAIN-01 cannot infer a taxonomy or detection rule.
   TentativeMisconceptionHypothesis? tentativeMisconceptionHypothesis() {
     final evidenceCounts = <_EvidenceKey, int>{};
 
-    for (final observation in _observations) {
+    for (final entry in _entries) {
+      final observation = entry.observation;
       final evidence = observation.misconceptionEvidence;
       if (evidence != null) {
         final key = _EvidenceKey(observation.operation, evidence.tag);
@@ -61,7 +75,7 @@ final class BrainSessionMemory {
     );
   }
 
-  void clear() => _observations.clear();
+  void clear() => _entries.clear();
 }
 
 final class _EvidenceKey {
