@@ -47,14 +47,23 @@ class _FamilyAgeGateScreenState extends State<FamilyAgeGateScreen> {
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
+                constraints: const BoxConstraints(maxWidth: 520),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: settings.surface,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: settings.border, width: 2),
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: settings.border),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(
+                          alpha: settings.dark ? 0.22 : 0.08,
+                        ),
+                        blurRadius: 28,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(24),
@@ -63,7 +72,7 @@ class _FamilyAgeGateScreenState extends State<FamilyAgeGateScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Choose your age group',
+                          'Choose your age range',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: settings.text,
@@ -74,7 +83,7 @@ class _FamilyAgeGateScreenState extends State<FamilyAgeGateScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'This helps us provide the right game features.',
+                          'Select the option that applies to you.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: settings.muted,
@@ -82,7 +91,7 @@ class _FamilyAgeGateScreenState extends State<FamilyAgeGateScreen> {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 28),
                         for (final option in const [
                           (FamilyAgeRange.under13, '12 or younger'),
                           (FamilyAgeRange.teen13to17, '13–17'),
@@ -98,7 +107,7 @@ class _FamilyAgeGateScreenState extends State<FamilyAgeGateScreen> {
                             ),
                             settings: settings,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
                         ],
                         if (widget.state.familyGateError.isNotEmpty) ...[
                           Text(
@@ -110,12 +119,50 @@ class _FamilyAgeGateScreenState extends State<FamilyAgeGateScreen> {
                           ),
                           const SizedBox(height: 8),
                         ],
-                        FilledButton(
-                          key: const ValueKey('familyAgeRangeContinue'),
-                          onPressed: _busy || _selectedRange == null
-                              ? null
-                              : _continue,
-                          child: Text(_busy ? 'Saving...' : 'Continue'),
+                        const SizedBox(height: 10),
+                        AnimatedScale(
+                          scale: _selectedRange == null ? 0.98 : 1,
+                          duration: settings.duration(200),
+                          curve: Curves.easeOutCubic,
+                          child: FilledButton(
+                            key: const ValueKey('familyAgeRangeContinue'),
+                            onPressed: _busy || _selectedRange == null
+                                ? null
+                                : _continue,
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size.fromHeight(56),
+                              textStyle: TextStyle(
+                                fontFamily: AppFonts.headFor(settings),
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                            ),
+                            child: Text(_busy ? 'Saving...' : 'Continue →'),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.lock_outline_rounded,
+                              size: 16,
+                              color: settings.muted,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'No date of birth required',
+                              style: TextStyle(
+                                color: settings.muted,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -148,33 +195,117 @@ class _AgeRangeCard extends StatelessWidget {
   final SettingsService settings;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-        selected: selected,
-        button: true,
-        child: SizedBox(
-          height: 64,
-          child: OutlinedButton(
-            key: ValueKey('familyAgeRange_${range.name}'),
-            onPressed: enabled ? onSelected : null,
-            style: OutlinedButton.styleFrom(
-              alignment: Alignment.centerLeft,
-              foregroundColor: settings.text,
-              backgroundColor: selected
-                  ? const Color(GameConfig.sky).withValues(alpha: 0.16)
-                  : settings.surface,
-              side: BorderSide(
-                color: selected ? const Color(GameConfig.sky) : settings.border,
-                width: selected ? 3 : 2,
+  Widget build(BuildContext context) {
+    final accent = const Color(GameConfig.sky);
+    final duration = settings.duration(200);
+    return Semantics(
+      container: true,
+      label: label,
+      selected: selected,
+      button: true,
+      enabled: enabled,
+      onTap: enabled ? onSelected : null,
+      excludeSemantics: true,
+      child: AnimatedScale(
+        scale: selected ? 1.01 : 1,
+        duration: duration,
+        curve: Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: duration,
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: (selected ? accent : Colors.black).withValues(
+                  alpha: selected ? 0.18 : 0.06,
+                ),
+                blurRadius: selected ? 16 : 8,
+                offset: Offset(0, selected ? 6 : 3),
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+            ],
+          ),
+          child: SizedBox(
+            height: 88,
+            child: OutlinedButton(
+              key: ValueKey('familyAgeRange_${range.name}'),
+              onPressed: enabled ? onSelected : null,
+              style: OutlinedButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                foregroundColor: settings.text,
+                backgroundColor: selected
+                    ? accent.withValues(alpha: 0.15)
+                    : settings.surface2.withValues(alpha: 0.38),
+                side: BorderSide(
+                  color: selected ? accent : settings.border,
+                  width: selected ? 3 : 2,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
               ),
-            ),
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              child: Row(
+                children: [
+                  AnimatedContainer(
+                    duration: duration,
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: selected ? 0.20 : 0.11),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _iconFor(range),
+                      color: selected ? accent : settings.muted,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: settings.text,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        fontFamily: AppFonts.headFor(settings),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  AnimatedContainer(
+                    duration: duration,
+                    curve: Curves.easeOutCubic,
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: selected ? accent : Colors.transparent,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: selected ? accent : settings.muted,
+                        width: 2,
+                      ),
+                    ),
+                    child: AnimatedScale(
+                      scale: selected ? 1 : 0,
+                      duration: duration,
+                      curve: Curves.easeOutBack,
+                      child: const Icon(Icons.check_rounded,
+                          color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      );
+      ),
+    );
+  }
+
+  IconData _iconFor(FamilyAgeRange range) => switch (range) {
+        FamilyAgeRange.under13 => Icons.sentiment_satisfied_alt_rounded,
+        FamilyAgeRange.teen13to17 => Icons.auto_awesome_rounded,
+        FamilyAgeRange.adult18plus => Icons.workspace_premium_rounded,
+      };
 }
