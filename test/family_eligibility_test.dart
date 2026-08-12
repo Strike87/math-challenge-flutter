@@ -17,6 +17,7 @@ import 'package:math_challenge/services/iap.dart';
 import 'package:math_challenge/services/play_games.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -279,6 +280,44 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('Older cloud saves'), findsNothing);
+  });
+
+  testWidgets(
+      'system Back keeps the unresolved age gate visible without persisting a selection',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await Storage.init();
+
+    await tester.pumpWidget(MathChallengeApp(
+      adService: const UnavailableAdMobService(),
+      iapAdapter: const DevIapPurchaseAdapter(isNativeRelease: false),
+      playGamesService: _RecordingPlayGames(authenticated: true),
+    ));
+    await tester.pumpAndSettle();
+
+    final state = Provider.of<GameState>(
+      tester.element(find.byType(FamilyAgeGateScreen)),
+      listen: false,
+    );
+    expect(state.familyEligibility, FamilyEligibility.unresolved);
+    expect(state.familyAgeRange, isNull);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FamilyAgeGateScreen), findsOneWidget);
+    expect(find.text('MATH'), findsNothing);
+    expect(state.familyEligibility, FamilyEligibility.unresolved);
+    expect(state.familyAgeRange, isNull);
+    final preferences = await SharedPreferences.getInstance();
+    expect(
+      preferences.containsKey(GameState.familyAgeRangeStorageKey),
+      isFalse,
+    );
+    expect(
+      preferences.containsKey(GameState.familyGateVersionStorageKey),
+      isFalse,
+    );
   });
 
   test('child guards manual PGS/cloud calls and normal reset retains the gate',
