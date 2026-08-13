@@ -1,5 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:math_challenge/features/game_brain/domain/brain_recommendation.dart';
+import 'package:math_challenge/features/game_brain/domain/learner_hypothesis.dart';
 import 'package:math_challenge/features/weak_skills/domain/weak_skills_policy.dart';
+import 'package:math_challenge/features/weak_skills/domain/weak_skills_advisory_signal.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/models/game_data.dart';
 
@@ -142,6 +145,105 @@ void main() {
         Operation.subtraction,
       ]);
     });
+
+    test('advisory reinforces one exact eligible two-way weakest tie', () {
+      final advisory = _advisory(
+        targetOperation: Operation.subtraction,
+      );
+      final plan = selectWeakSkillsPlan(
+        _skills([5, 5, 30, 40], [3, 3, 3, 3]),
+        advisory: advisory,
+      );
+
+      expect(plan.advisory, same(advisory));
+      expect(plan.advisory?.recommendationType,
+          BrainRecommendationType.reinforceOperation);
+      expect(plan.advisory?.recommendationReason,
+          BrainRecommendationReason.repeatedMisconception);
+      expect(plan.advisory?.learnerHypothesis,
+          LearnerHypothesis.repeatedMisconception);
+      expect(plan.advisory?.supportingObservationCount, 2);
+      expect(plan.operationCycle.where((op) => op == Operation.subtraction),
+          hasLength(13));
+      expect(plan.operationCycle.where((op) => op == Operation.addition),
+          hasLength(7));
+    });
+
+    test(
+        'invalid advisory leaves existing ties, unique focus, and fallback unchanged',
+        () {
+      final advisory = _advisory(
+        targetOperation: Operation.multiplication,
+      );
+      final tied = selectWeakSkillsPlan(
+        _skills([5, 5, 30, 40], [3, 3, 3, 3]),
+        advisory: advisory,
+      );
+      expect(tied.advisory, isNull);
+      expect(tied.operationCycle.where((op) => op == Operation.addition),
+          hasLength(10));
+      expect(tied.operationCycle.where((op) => op == Operation.subtraction),
+          hasLength(10));
+
+      final unique = selectWeakSkillsPlan(
+        _skills([5, 20, 30, 40], [3, 3, 3, 3]),
+        advisory: advisory,
+      );
+      expect(unique.advisory, isNull);
+      expect(unique.operationCycle.where((op) => op == Operation.addition),
+          hasLength(13));
+
+      final fallback = selectWeakSkillsPlan(
+        _skills([20, 20, 20, 20], [0, 0, 0, 0]),
+        advisory: advisory,
+      );
+      expect(fallback.advisory, isNull);
+      expect(fallback.isFallback, isTrue);
+    });
+
+    test('mismatched advisory metadata leaves a two-way tie balanced', () {
+      final plan = selectWeakSkillsPlan(
+        _skills([5, 5, 30, 40], [3, 3, 3, 3]),
+        advisory: _advisory(
+          targetOperation: Operation.addition,
+          recommendationType: BrainRecommendationType.maintain,
+        ),
+      );
+
+      expect(plan.advisory, isNull);
+      expect(plan.operationCycle.where((op) => op == Operation.addition),
+          hasLength(10));
+      expect(plan.operationCycle.where((op) => op == Operation.subtraction),
+          hasLength(10));
+    });
+
+    test('targeting an ineligible two-way tie leaves canonical focus unchanged',
+        () {
+      final plan = selectWeakSkillsPlan(
+        _skills([5, 5, 30, 40], [2, 3, 3, 3]),
+        advisory: _advisory(targetOperation: Operation.addition),
+      );
+
+      expect(plan.isFallback, isFalse);
+      expect(plan.advisory, isNull);
+      expect(plan.operationCycle.where((op) => op == Operation.subtraction),
+          hasLength(13));
+      expect(plan.operationCycle.where((op) => op == Operation.multiplication),
+          hasLength(7));
+    });
+
+    test(
+        'an ineligible two-way tie falls back when only one operation qualifies',
+        () {
+      final plan = selectWeakSkillsPlan(
+        _skills([5, 5, 30, 40], [2, 8, 0, 0]),
+        advisory: _advisory(targetOperation: Operation.addition),
+      );
+
+      expect(plan.isFallback, isTrue);
+      expect(plan.advisory, isNull);
+      expect(plan.operationCycle, _operations);
+    });
   });
 }
 
@@ -159,3 +261,16 @@ const _operations = [
   Operation.multiplication,
   Operation.division,
 ];
+
+WeakSkillsAdvisorySignal _advisory({
+  required Operation targetOperation,
+  BrainRecommendationType recommendationType =
+      BrainRecommendationType.reinforceOperation,
+}) =>
+    WeakSkillsAdvisorySignal(
+      targetOperation: targetOperation,
+      recommendationType: recommendationType,
+      recommendationReason: BrainRecommendationReason.repeatedMisconception,
+      learnerHypothesis: LearnerHypothesis.repeatedMisconception,
+      supportingObservationCount: 2,
+    );

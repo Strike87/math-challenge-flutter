@@ -1,5 +1,8 @@
 import '../../../models/enums.dart';
 import '../../../models/game_data.dart';
+import '../../game_brain/domain/brain_recommendation.dart';
+import '../../game_brain/domain/learner_hypothesis.dart';
+import 'weak_skills_advisory_signal.dart';
 
 const _canonicalOperations = [
   Operation.addition,
@@ -12,10 +15,12 @@ final class WeakSkillsPlan {
   WeakSkillsPlan({
     required this.isFallback,
     required Iterable<Operation> operationCycle,
+    this.advisory,
   }) : operationCycle = List.unmodifiable(operationCycle);
 
   final bool isFallback;
   final List<Operation> operationCycle;
+  final WeakSkillsAdvisorySignal? advisory;
 
   Operation operationAt(int index) =>
       operationCycle[index % operationCycle.length];
@@ -24,7 +29,10 @@ final class WeakSkillsPlan {
       List.unmodifiable(operationCycle.toSet());
 }
 
-WeakSkillsPlan selectWeakSkillsPlan(Map<String, SkillData> skillMap) {
+WeakSkillsPlan selectWeakSkillsPlan(
+  Map<String, SkillData> skillMap, {
+  WeakSkillsAdvisorySignal? advisory,
+}) {
   final totalAttempts = _canonicalOperations.fold(
     0,
     (total, operation) => total + (skillMap[operation.name]?.count ?? 0),
@@ -47,6 +55,19 @@ WeakSkillsPlan selectWeakSkillsPlan(Map<String, SkillData> skillMap) {
   if (highest - lowest < 10 || weakest.length >= 3) return _fallbackPlan();
 
   if (weakest.length == 2) {
+    final applicableAdvisory =
+        _isApplicableAdvisory(advisory, weakest) ? advisory : null;
+    if (applicableAdvisory != null) {
+      final secondary = weakest.firstWhere(
+        (operation) => operation != applicableAdvisory.targetOperation,
+      );
+      return WeakSkillsPlan(
+        isFallback: false,
+        advisory: applicableAdvisory,
+        operationCycle:
+            _weightedCycle(applicableAdvisory.targetOperation, secondary),
+      );
+    }
     return WeakSkillsPlan(
       isFallback: false,
       operationCycle: [
@@ -65,12 +86,25 @@ WeakSkillsPlan selectWeakSkillsPlan(Map<String, SkillData> skillMap) {
   );
   return WeakSkillsPlan(
     isFallback: false,
-    operationCycle: [
-      for (var i = 0; i < 20; i++)
-        if (((i + 1) * 7 ~/ 20) > (i * 7 ~/ 20)) secondary else primary,
-    ],
+    operationCycle: _weightedCycle(primary, secondary),
   );
 }
+
+bool _isApplicableAdvisory(
+  WeakSkillsAdvisorySignal? advisory,
+  List<Operation> weakest,
+) =>
+    advisory != null &&
+    advisory.recommendationType == BrainRecommendationType.reinforceOperation &&
+    advisory.recommendationReason ==
+        BrainRecommendationReason.repeatedMisconception &&
+    advisory.learnerHypothesis == LearnerHypothesis.repeatedMisconception &&
+    weakest.contains(advisory.targetOperation);
+
+List<Operation> _weightedCycle(Operation primary, Operation secondary) => [
+      for (var i = 0; i < 20; i++)
+        if (((i + 1) * 7 ~/ 20) > (i * 7 ~/ 20)) secondary else primary,
+    ];
 
 WeakSkillsPlan _fallbackPlan() => WeakSkillsPlan(
       isFallback: true,

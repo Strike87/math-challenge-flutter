@@ -10,6 +10,8 @@ import '../features/economy/domain/coin_ledger.dart';
 import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/economy/domain/number_type_unlock_policy.dart';
 import '../features/family/domain/family_eligibility.dart';
+import '../features/game_brain/game_brain.dart';
+import '../features/game_brain/integration/adaptive_shadow_integration.dart';
 import '../features/gameplay/domain/survival_progression_policy.dart';
 import '../features/gameplay/domain/question_mechanic.dart';
 import '../features/modals/presentation/toast_controller.dart';
@@ -231,11 +233,14 @@ class GameState extends ChangeNotifier {
     PlayGamesService? playGamesService,
     AdultGateChallenge Function()? adultGateFactory,
     int Function()? nowMillisProvider,
+    AdaptiveShadowEvaluator? adaptiveShadowEvaluator,
   })  : iapAdapter = iapAdapter ?? const UnavailableIapPurchaseAdapter(),
         adService = adService ?? const UnavailableAdMobService(),
         playGamesService = playGamesService ?? NativePlayGamesService(),
         _nowMillis =
             nowMillisProvider ?? (() => DateTime.now().millisecondsSinceEpoch),
+        _adaptiveShadowEvaluator =
+            adaptiveShadowEvaluator ?? evaluateAdaptiveShadow,
         _adultGateFactory =
             adultGateFactory ?? (() => AdultGateChallenge.random()) {
     _toastController = ToastController(onChanged: notifyListeners);
@@ -333,6 +338,7 @@ class GameState extends ChangeNotifier {
   final PlayGamesService playGamesService;
   final AdultGateChallenge Function() _adultGateFactory;
   final int Function() _nowMillis;
+  final AdaptiveShadowEvaluator _adaptiveShadowEvaluator;
   final QuestionGenerator _qgen = QuestionGenerator();
   final Random _rng = Random();
   StreamSubscription<List<IapPurchase>>? _iapPurchaseSub;
@@ -343,6 +349,8 @@ class GameState extends ChangeNotifier {
   int _masterLives = 3;
   int _masterProgress = 0;
   GameRunSnapshot? _runSnapshot;
+  GameBrain? _gameBrain;
+  ContextEvidenceResult? _lastContextEvidenceResult;
   OperationQuestStageId? _pendingOperationQuestStageId;
   QuestionMechanic _pendingQuestionMechanic = QuestionMechanic.standard;
   WeakSkillsPlan? _pendingWeakSkillsPlan;
@@ -418,6 +426,14 @@ class GameState extends ChangeNotifier {
   final Stopwatch _diagnosticClock = Stopwatch()..start();
 
   GameRunSnapshot? get activeRunSnapshot => _runSnapshot;
+  @visibleForTesting
+  ContextEvidenceResult? get debugLastContextEvidenceResult =>
+      _lastContextEvidenceResult;
+  @visibleForTesting
+  int get debugContextEvidenceObservationCount =>
+      _gameBrain?.contextEvidenceMemory.observations.length ?? 0;
+  @visibleForTesting
+  bool get debugHasContextEvidenceObserver => _gameBrain != null;
   bool get isPlayGamesEligible =>
       familyEligibility == FamilyEligibility.eligible;
   bool get isOperationQuest =>
@@ -2071,6 +2087,8 @@ class GameState extends ChangeNotifier {
     _pendingQuestionMechanic = QuestionMechanic.standard;
     _pendingWeakSkillsPlan = null;
     _runSnapshot = snapshot;
+    _gameBrain = GameBrain();
+    _lastContextEvidenceResult = null;
     final isMaster = snapshot.operation == Operation.master;
     final isBoss = snapshot.operation == Operation.dailyBoss;
     for (var i = 1; i <= 2; i++) {
@@ -2480,8 +2498,62 @@ class GameState extends ChangeNotifier {
 
     rt.totalTurns++;
     _checkStandardTurnLimit();
+    _observeContextEvidence(
+      q,
+      (
+        submittedAnswer: val,
+        correct: isCorrect,
+        timedOut: isTimeout,
+        responseTimeMs: timeTaken,
+      ),
+    );
     if (_delayedLossTimer == null) _scheduleNextTurn();
   }
+
+  void _observeContextEvidence(
+    Question question,
+    ({
+      num? submittedAnswer,
+      bool correct,
+      bool timedOut,
+      int responseTimeMs,
+    }) outcome,
+  ) {
+    final snapshot = _runSnapshot!;
+    final advisory = _gameBrain!.observeContextEvidence(
+      ContextEvidenceObservation(
+        context: _contextEvidenceKey(snapshot, question),
+        difficulty: question.diff ?? snapshot.difficulty,
+        correctAnswer: question.ans,
+        submittedAnswer: outcome.submittedAnswer,
+        correct: outcome.correct,
+        timedOut: outcome.timedOut,
+        responseTimeMs: outcome.responseTimeMs,
+      ),
+    );
+    _lastContextEvidenceResult = advisory;
+    _adaptiveShadowEvaluator(advisory, const AdaptiveAuthority.shadow());
+  }
+
+  ContextEvidenceKey? _contextEvidenceKey(
+    GameRunSnapshot snapshot,
+    Question question,
+  ) {
+    final supported = snapshot.runType == GameRunType.normal &&
+        snapshot.questionMechanic == QuestionMechanic.standard &&
+        snapshot.answerStyle == AnswerStyle.choice4 &&
+        _supportsContextRunOperation(snapshot.operation) &&
+        ContextEvidenceKey.supportsOperation(question.type);
+    if (!supported) return null;
+    return ContextEvidenceKey(
+      operation: question.type,
+      numberType: snapshot.numberType,
+    );
+  }
+
+  bool _supportsContextRunOperation(Operation operation) =>
+      ContextEvidenceKey.supportsOperation(operation) ||
+      operation == Operation.mixed;
 
   void _freezeQuestionTimer() {
     if (rt.timerDurationMs <= 0 || rt.timerStart <= 0) return;
@@ -3249,6 +3321,8 @@ class GameState extends ChangeNotifier {
     _masterLives = 3;
     _masterProgress = 0;
     _runSnapshot = null;
+    _gameBrain = null;
+    _lastContextEvidenceResult = null;
     _pendingOperationQuestStageId = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     _pendingWeakSkillsPlan = null;
@@ -3267,6 +3341,8 @@ class GameState extends ChangeNotifier {
     rt.state = 'idle';
     rt.timer?.cancel();
     _runSnapshot = null;
+    _gameBrain = null;
+    _lastContextEvidenceResult = null;
     _pendingOperationQuestStageId = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     _pendingWeakSkillsPlan = null;
@@ -3934,6 +4010,8 @@ class GameState extends ChangeNotifier {
     _masterLives = 3;
     _masterProgress = 0;
     _runSnapshot = null;
+    _gameBrain = null;
+    _lastContextEvidenceResult = null;
     _pendingOperationQuestStageId = null;
     _pendingWeakSkillsPlan = null;
     currentScreen = GameScreen.menu;

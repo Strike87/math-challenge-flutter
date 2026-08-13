@@ -4,6 +4,158 @@ Only the first unchecked item under **Active** may be started.
 
 ## Active
 
+- [x] BRAIN-06 — Offline synthetic-learning research tooling (CLOSED)
+  - Terminal result: **MET — IRREDUCIBLE OBSERVABLE OVERLAP**. No additional
+    BRAIN-06 synthetic decoder research is authorized.
+  - The BRAIN-06 termination result establishes irreducible observable
+    overlap only under the frozen E3-P synthetic response process and the
+    observable channels modeled in that program, principally correctness,
+    submitted response, and mathematical context. It does not establish the
+    magnitude or inevitability of such overlap in real learners or under
+    additional empirically validated observable channels.
+  - Historical synthetic measurements from the separately preserved research
+    lineage remain archival findings. Closure does not turn them into human
+    calibration, production efficacy, diagnostic truth, or an authorization
+    for E3 decoder use.
+  - No production inference, app integration, real-user collection, export,
+    persistence, upload, telemetry, or behavioral change was authorized.
+
+- [x] BRAIN-07A — Context Evidence Advisory Production Contract
+  - Documentation/contract work complete:
+    `docs/brain_07_context_evidence_advisory_contract.md`.
+  - It authorizes no production implementation, real-player observation
+    collection, telemetry, or advisory release.
+
+- [x] BRAIN-07B — Local shadow-only context-evidence observer
+  - Implementation complete.
+  - Verification record:
+    - Added immutable direct-numeric context observations and explainable
+      `insufficientEvidence` results behind the existing `GameBrain` facade.
+    - Context evidence uses a separate bounded in-memory FIFO with capacity
+      `10`; unsupported contexts are reported and not recorded.
+    - `GameState` observes each completed supported question once after
+      authoritative answer, mastery, adaptive, effect, and turn bookkeeping.
+    - New runs and Replay start fresh observer windows; quit, Quest-map return,
+      and reset discard the run-local observer.
+    - Legacy GameBrain policies remain isolated, related-context evidence does
+      not propagate, and no gameplay, persistence, Weak Skills, routing, UI,
+      analytics, or diagnostic authority was added.
+    - Focused context-evidence tests: 17/17 passed.
+    - Full non-golden suite: 640/640 passed.
+    - Visual parity suite: 38/38 passed.
+    - `flutter analyze --no-pub`: clean.
+    - `git diff --check`: clean.
+    - Independent regression review passed.
+
+- [x] BRAIN-07C — GameBrain v1 core validation and closure
+  - Independently validated the BRAIN-07B shadow observer against the
+    BRAIN-07A production contract.
+  - Closure findings:
+    - The only production call is post-authoritative answer processing; its
+      immutable advisory result is retained only for diagnostics and discarded.
+    - Supported evidence is restricted to normal, standard, basic-operation,
+      Choice4 direct-numeric runs. Master, Daily Boss, Operation Quest,
+      missing-operation, missing-number, True/False, and other unsupported
+      contexts yield explicit `unsupportedContext` and are not recorded.
+    - Context evidence remains local, immutable at its public boundary,
+      FIFO-bounded to 10, non-persistent, non-propagating, and reset for new
+      runs and replay.
+    - No gameplay authority, synthetic threshold transfer, learner-truth
+      vocabulary, analytics, telemetry, or privacy expansion was found.
+  - A validation defect was fixed: normal True/False answers were previously
+    able to enter the direct-numeric observer after conversion to a numeric
+    choice. The support discriminator now requires `Choice4`; regression
+    coverage confirms True/False is unsupported and unrecorded.
+  - Verification record:
+    - Focused context-evidence GameState test: 10/10 passed.
+    - Full non-golden suite: 641/641 passed.
+    - Visual parity suite: 38/38 passed.
+    - `flutter analyze --no-pub`: clean.
+    - `git diff --check`: clean.
+    - Independent regression review passed.
+
+- [x] GAMEBRAIN v1 CORE — COMPLETE
+  - This closes the bounded core evidence/advisory architecture only. It does
+    not authorize GameBrain to affect gameplay or mean that all gameplay
+    systems are integrated.
+  - Frozen integration principle: GameBrain may influence gameplay only through
+    an explicit subsystem/mode adapter that enforces the authoritative domain
+    contract; never through direct `GameState` mutation.
+
+- [ ] GBI — GameBrain integration (INCREMENTAL AUTHORIZATION ONLY)
+  - Each concrete integration requires separate approval. GBI-01 remains
+    shadow-only and grants GameBrain no gameplay authority.
+  - [x] GBI-00 — GameBrain integration architecture contract
+    - Documentation-only contract complete:
+      `docs/game_brain_integration_architecture.md`.
+    - It freezes Core evidence/advisory ownership, GBI-owned gameplay
+      interpretation, capability/constraint boundaries, fail-closed decisions,
+      and candidate mode envelopes. It authorizes no production
+      implementation, gameplay integration, telemetry, persistence, UI, or
+      behavior change.
+  - [x] GBI-01 — SHADOW ADAPTIVE INTEGRATION FOUNDATION
+    - Added a pure GBI-owned interpretation boundary from the frozen public
+      context-evidence advisory to an immutable adaptive integration decision.
+    - `insufficientEvidence`, unsupported contexts, missing capability, illegal
+      constraints, and unsupported proposals fail closed to `noAdaptation`.
+    - Execution authority is permanently denied. `GameState` evaluates once
+      after GameBrain observation and discards the decision without changing
+      Adaptive Difficulty, mastery, confidence, next difficulty, or gameplay.
+    - GameBrain Core and the Adaptive Difficulty engine remain unchanged.
+    - No modes, UI, persistence, telemetry, synthetic research logic, or second
+      integration were added or authorized.
+    - Verification record:
+      - Focused GBI-01 and GameState shadow-firewall tests: 18/18 passed.
+      - GameBrain, Adaptive Difficulty, and relevant GameState tests: 109/109
+        passed.
+      - Full non-golden suite: 649/649 passed.
+      - Visual parity suite: 38/38 passed.
+      - `flutter analyze --no-pub`: clean.
+      - `git diff --check`: clean.
+      - `graphify update .`: passed; generated churn remains uncommitted.
+  - [x] GAMEBRAIN REAL GAMEPLAY AUTHORITY GATE — documentation/governance
+    - Frozen the prerequisites for any future conceptual
+      `mayAffectGameplay = true` request; research findings, architecture
+      prerequisites, and implementation work remain distinct.
+    - Every authority request requires explicit review against all applicable
+      requirements and fails closed to `noAdaptation` while any requirement is
+      unresolved.
+    - Completing this documentation task passes no subsystem gate, grants no
+      gameplay authority, collects no data, and changes no production code.
+      GBI-01 remains complete and valid only as shadow-only discarded
+      interpretation.
+  - Remaining candidate adapters (all separately unauthorized): GBI-02
+    Adaptive Difficulty; GBI-03 Question Generator Intent; GBI-04 Distractor
+    Generator; GBI-05 Weak Skills; GBI-06 Skill Dashboard Evidence; GBI-07
+    constrained mode integrations (Standard, Blitz, Combo, Death, Survival,
+    Master, Daily Boss, Operation Quest, and separately constrained
+    two-player).
+
+- [x] BRAIN-01 — Pure GameBrain foundation
+  - Add immutable, canonical-value snapshots and a deterministic, shadow-only
+    domain decision policy behind the canonical newer modular `GameBrain`
+    facade.
+  - Keep bounded, read-only in-memory observations with a default capacity of
+    `10`.
+  - Expose only a generic, tentative opaque hypothesis after two matching,
+    caller-supplied nonblank evidence tags for the same operation; evidence is
+    retained verbatim and equal-count ties use deterministic insertion order.
+  - No BRAIN-02 work, production integration, persistence, generator calls, or
+    behavior changes are authorized in this foundation step.
+  - Verification record:
+    - Dart formatting changed GameBrain files cleanly.
+    - Focused canonical GameBrain tests: 13 passed.
+    - Adaptive engine and adaptive integration tests: passed.
+    - Weak Skills policy and practice tests: passed.
+    - Question generator tests: passed.
+    - Full non-golden suite: 578 passed.
+    - Visual parity suite: 38 passed.
+    - `flutter analyze --no-pub`: clean.
+    - `git diff --check`: clean.
+    - `graphify update .`: passed; generated churn excluded.
+    - Independent fallback regression reviewer passed because the configured
+      reviewer was unavailable.
+
 - [x] V2-03A — Operation Quest Missing Number Trail
   - Corrected baseline: V2-02F Missing Operation is complete at
     `6 TRAILS • 18 STAGES`.
