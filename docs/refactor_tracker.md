@@ -85,6 +85,14 @@ Only the first unchecked item under **Active** may be started.
 - [ ] GBI — GameBrain integration (NOT AUTHORIZED)
   - Future engineering track only. Its first approved task must define the
     mode-capability and authority contract before GameBrain can affect gameplay.
+  - [x] GBI-00 — GameBrain integration architecture contract
+    - Documentation-only contract complete:
+      `docs/game_brain_integration_architecture.md`.
+    - It freezes Core evidence/advisory ownership, GBI-owned gameplay
+      interpretation, capability/constraint boundaries, fail-closed decisions,
+      and candidate mode envelopes. It authorizes no production
+      implementation, gameplay integration, telemetry, persistence, UI, or
+      behavior change.
   - Candidate adapters (all separately unauthorized): GBI-01 Mode Adaptation
     Contract; GBI-02 Adaptive Difficulty; GBI-03 Question Generator Intent;
     GBI-04 Distractor Generator; GBI-05 Weak Skills; GBI-06 Skill Dashboard
