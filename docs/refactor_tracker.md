@@ -126,10 +126,17 @@ Only the first unchecked item under **Active** may be started.
       interpretation.
   - Remaining candidate adapters (all separately unauthorized): GBI-02
     Adaptive Difficulty; GBI-03 Question Generator Intent; GBI-04 Distractor
-    Generator; GBI-05 Weak Skills; GBI-06 Skill Dashboard Evidence; GBI-07
-    constrained mode integrations (Standard, Blitz, Combo, Death, Survival,
-    Master, Daily Boss, Operation Quest, and separately constrained
-    two-player).
+    Generator; GBI-05 Weak Skills; GBI-07 constrained mode integrations
+    (Standard, Blitz, Combo, Death, Survival, Master, Daily Boss, Operation
+    Quest, and separately constrained two-player).
+  - [x] GBI-06 — SKILL DASHBOARD SHADOW READ INTEGRATION
+    - Shadow-only, test-observed read composition; no actual Skill Dashboard
+      UI integration and no gameplay authority.
+    - Canonical mastery remains authoritative. Public immutable GameBrain
+      context evidence is optional enrichment and cannot overwrite or infer
+      canonical mastery.
+    - No GameBrain Core, Weak Skills policy/scheduling, GameState, persistence,
+      telemetry, or P0 changes. `mayAffectGameplay = false`.
 
 - [x] BRAIN-01 — Pure GameBrain foundation
   - Add immutable, canonical-value snapshots and a deterministic, shadow-only
