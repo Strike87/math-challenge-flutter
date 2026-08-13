@@ -26,13 +26,71 @@ Only the first unchecked item under **Active** may be started.
   - It authorizes no production implementation, real-player observation
     collection, telemetry, or advisory release.
 
-- [ ] BRAIN-07B — Local shadow-only context-evidence observer (BLOCKED)
-  - Do not start until this BRAIN-06/BRAIN-07A tracker reconciliation is
-    committed as its own governance commit.
-  - Once released, the implementation remains limited to the exact BRAIN-07A
-    local, in-memory, non-authoritative shadow scope. It does not authorize
-    real-player research/data collection, telemetry, calibration, gameplay
-    changes, question routing, or user-facing advisory presentation.
+- [x] BRAIN-07B — Local shadow-only context-evidence observer
+  - Implementation complete.
+  - Verification record:
+    - Added immutable direct-numeric context observations and explainable
+      `insufficientEvidence` results behind the existing `GameBrain` facade.
+    - Context evidence uses a separate bounded in-memory FIFO with capacity
+      `10`; unsupported contexts are reported and not recorded.
+    - `GameState` observes each completed supported question once after
+      authoritative answer, mastery, adaptive, effect, and turn bookkeeping.
+    - New runs and Replay start fresh observer windows; quit, Quest-map return,
+      and reset discard the run-local observer.
+    - Legacy GameBrain policies remain isolated, related-context evidence does
+      not propagate, and no gameplay, persistence, Weak Skills, routing, UI,
+      analytics, or diagnostic authority was added.
+    - Focused context-evidence tests: 17/17 passed.
+    - Full non-golden suite: 640/640 passed.
+    - Visual parity suite: 38/38 passed.
+    - `flutter analyze --no-pub`: clean.
+    - `git diff --check`: clean.
+    - Independent regression review passed.
+
+- [x] BRAIN-07C — GameBrain v1 core validation and closure
+  - Independently validated the BRAIN-07B shadow observer against the
+    BRAIN-07A production contract.
+  - Closure findings:
+    - The only production call is post-authoritative answer processing; its
+      immutable advisory result is retained only for diagnostics and discarded.
+    - Supported evidence is restricted to normal, standard, basic-operation,
+      Choice4 direct-numeric runs. Master, Daily Boss, Operation Quest,
+      missing-operation, missing-number, True/False, and other unsupported
+      contexts yield explicit `unsupportedContext` and are not recorded.
+    - Context evidence remains local, immutable at its public boundary,
+      FIFO-bounded to 10, non-persistent, non-propagating, and reset for new
+      runs and replay.
+    - No gameplay authority, synthetic threshold transfer, learner-truth
+      vocabulary, analytics, telemetry, or privacy expansion was found.
+  - A validation defect was fixed: normal True/False answers were previously
+    able to enter the direct-numeric observer after conversion to a numeric
+    choice. The support discriminator now requires `Choice4`; regression
+    coverage confirms True/False is unsupported and unrecorded.
+  - Verification record:
+    - Focused context-evidence GameState test: 10/10 passed.
+    - Full non-golden suite: 641/641 passed.
+    - Visual parity suite: 38/38 passed.
+    - `flutter analyze --no-pub`: clean.
+    - `git diff --check`: clean.
+    - Independent regression review passed.
+
+- [x] GAMEBRAIN v1 CORE — COMPLETE
+  - This closes the bounded core evidence/advisory architecture only. It does
+    not authorize GameBrain to affect gameplay or mean that all gameplay
+    systems are integrated.
+  - Frozen integration principle: GameBrain may influence gameplay only through
+    an explicit subsystem/mode adapter that enforces the authoritative domain
+    contract; never through direct `GameState` mutation.
+
+- [ ] GBI — GameBrain integration (NOT AUTHORIZED)
+  - Future engineering track only. Its first approved task must define the
+    mode-capability and authority contract before GameBrain can affect gameplay.
+  - Candidate adapters (all separately unauthorized): GBI-01 Mode Adaptation
+    Contract; GBI-02 Adaptive Difficulty; GBI-03 Question Generator Intent;
+    GBI-04 Distractor Generator; GBI-05 Weak Skills; GBI-06 Skill Dashboard
+    Evidence; GBI-07 constrained mode integrations (Standard, Blitz, Combo,
+    Death, Survival, Master, Daily Boss, Operation Quest, and separately
+    constrained two-player).
 
 - [x] BRAIN-01 — Pure GameBrain foundation
   - Add immutable, canonical-value snapshots and a deterministic, shadow-only
