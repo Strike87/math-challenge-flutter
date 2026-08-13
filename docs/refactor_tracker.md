@@ -113,6 +113,17 @@ Only the first unchecked item under **Active** may be started.
       - `flutter analyze --no-pub`: clean.
       - `git diff --check`: clean.
       - `graphify update .`: passed; generated churn remains uncommitted.
+  - [x] GAMEBRAIN REAL GAMEPLAY AUTHORITY GATE — documentation/governance
+    - Frozen the prerequisites for any future conceptual
+      `mayAffectGameplay = true` request; research findings, architecture
+      prerequisites, and implementation work remain distinct.
+    - Every authority request requires explicit review against all applicable
+      requirements and fails closed to `noAdaptation` while any requirement is
+      unresolved.
+    - Completing this documentation task passes no subsystem gate, grants no
+      gameplay authority, collects no data, and changes no production code.
+      GBI-01 remains complete and valid only as shadow-only discarded
+      interpretation.
   - Remaining candidate adapters (all separately unauthorized): GBI-02
     Adaptive Difficulty; GBI-03 Question Generator Intent; GBI-04 Distractor
     Generator; GBI-05 Weak Skills; GBI-06 Skill Dashboard Evidence; GBI-07

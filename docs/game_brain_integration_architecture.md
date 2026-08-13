@@ -4,9 +4,13 @@
 
 GBI-00 is documentation and architecture only. It is based on the closed,
 frozen GameBrain v1 Core baseline (`04a90b3`, `feat: complete GameBrain v1
-shadow core`). It authorizes no gameplay integration, production Flutter
-change, GameBrain Core change, telemetry, persistence, UI, research, commit,
-or push.
+shadow core`). It did not authorize gameplay integration, production Flutter
+change, GameBrain Core change, telemetry, persistence, UI, or research.
+
+GBI-01 is now complete as a shadow-only Adaptive interpretation foundation.
+It adds a discarded post-observation interpretation, but it grants no gameplay
+authority and does not change the authority or evidence semantics of the Core
+observation.
 
 The existing `GameBrain` facade and BRAIN-06/BRAIN-07 uncertainty semantics
 remain stable. GBI-00 adds no Dart types, files, directories, adapters,
@@ -90,10 +94,11 @@ composition, if ever needed, belongs in an explicit higher policy layer.
 
 `GameState` remains authoritative for mutation, timing, persistence,
 navigation, and side effects, but must not interpret GameBrain evidence or
-become a GBI switchboard. A future call site is one thin boundary returning an
-authorized request or no-op. Core never mutates `GameState` or canonical
-subsystem state directly. The current shadow-only post-authoritative
-observation remains unchanged.
+become a GBI switchboard. An authority-capable call site must remain one thin
+boundary returning an authorized request or no-op. Core never mutates
+`GameState` or canonical subsystem state directly. The Core observation
+remains shadow-only and post-authoritative; GBI-01 now performs one
+post-observation Adaptive interpretation whose decision is discarded.
 
 Every future integration component must be unit-testable with fake public
 advisory, capabilities, constraints, and owning subsystem contracts—without
@@ -158,25 +163,215 @@ HintIntegrationIntent -> Hint capability/policy -> HintAdapter -> Hint Engine`.
 Core changes: zero unless an independently justified new educational evidence
 concept is missing. The Hint Engine reads no Core internals.
 
-## Future structure and GBI-01 philosophy
+## Current structure and incremental philosophy
 
-No structure is created now. A concrete approved need may add the smallest
-necessary code beneath `lib/features/game_brain/integration/`, using only the
-existing public Core contract plus the owning subsystem's public contract. This
-is a placement convention, not an adapter framework.
+GBI-01 added the smallest concrete boundary beneath
+`lib/features/game_brain/integration/`, using only the existing public Core
+contract. Its authority is permanently disabled and its decision is discarded.
+This placement remains a convention, not an adapter framework.
 
-Do not pre-commit to a long GBI-02…GBI-08 roadmap. GBI-01 may be created only
-around one concrete use case selected for product value, coupling risk, safety,
-and architectural learning value. It implements only the minimum foundation
-that use case proves necessary, followed by architecture review before any
-incremental expansion.
+Do not pre-commit to a long GBI-02…GBI-08 roadmap. No additional integration
+follows automatically. Each concrete use case must be separately selected for
+product value, coupling risk, safety, and architectural learning value, then
+implement only the minimum its approved scope proves necessary.
 
 ## Synthetic research firewall
 
-Integration does not increase evidence validity. It must not transfer Y2, AA1,
-AA2, E3-P probabilities, synthetic truth labels, simulator regimes, synthetic
-decoder thresholds, or other synthetic research assumptions into production
-authority. Core evidence remains bounded by the BRAIN-07 production contract.
+Integration does not increase evidence validity. It must not transfer Y2, Y3,
+AA1, AA2, E3-P probabilities, synthetic false-claim rates, synthetic regimes,
+simulator truth labels, synthetic decoder thresholds, or other synthetic
+research assumptions into production authority. Core evidence remains bounded
+by the BRAIN-07 production contract.
+
+## GAMEBRAIN REAL GAMEPLAY AUTHORITY GATE
+
+This is the authoritative conceptual gate before any future GBI integration
+may move from conceptual `shadowOnly = true` to
+`mayAffectGameplay = true`. Those expressions name target authority states,
+not existing Dart fields or capabilities. All applicable requirements below
+must be satisfied through an explicit review before real gameplay authority
+can be enabled.
+
+The governing separation is:
+
+```text
+research finding != architecture prerequisite != implementation work
+```
+
+A research result may identify a prerequisite. It neither proves that the
+prerequisite is met nor authorizes implementation. This gate does not reopen
+BRAIN-06, change GameBrain Core, add evidence channels or provenance
+infrastructure, enable Adaptive execution, change question distribution, add
+machine learning, or start empirical research.
+
+### A. Measurement conditions
+
+Relevant conditions under which evidence was produced must be represented,
+explicitly controlled, or demonstrated irrelevant for the proposed use.
+Potential conditions include mode, timed or untimed play, answer format,
+session phase, assistance state, and other justified measurement conditions.
+No field is required or authorized by this document. Important conditions
+under which evidence was produced must not be erased.
+
+Evidence must not be assumed invariant across modes or conditions. The gate
+also forbids unsupported heuristic weights such as treating a Blitz wrong
+answer as weaker evidence. Any such weighting requires empirical
+justification.
+
+Measurement conditions and provenance are separate:
+
+- Measurement conditions answer, "Under what conditions was the response
+  produced?" For example: Standard, untimed, Choice4.
+- Observation provenance answers, "Why was this measurement opportunity
+  presented?" For example: conceptual `normalGameplay` or
+  `gameBrainVerification` provenance.
+
+The same conditions may occur under different provenance. A future
+implementation may store both in one metadata object, but it must not merge
+their semantics.
+
+### B. Item and context validity
+
+An item/context relationship used by an authority-capable intervention must
+have a defensible measurement basis:
+
+```text
+mathematical membership != empirical measurement validity
+```
+
+An item can mathematically belong to a context without performance on that
+item being a reliable measurement of difficulty in that context. This
+requirement neither reopens the context ontology nor requires an empirical
+study in this documentation task.
+
+### C. Observation and intervention provenance
+
+Before GameBrain-created or adaptive opportunities may affect later evidence
+interpretation, the system must be able to preserve why each measurement
+opportunity occurred. Conceptual future labels might include
+`normalGameplay`, `authoredMode`, `adaptiveEngine`, `weakSkillsPractice`,
+`gameBrainIntervention`, or another explicitly defined source.
+
+This is future-only semantics, not a Dart type or current implementation
+requirement. Evidence influenced by GameBrain or another adaptive subsystem
+must not later be silently treated as naturally occurring evidence. If an
+intervention is authorized in the future, its provenance must remain available
+to later interpretation.
+
+### D. Evidence availability
+
+An authority-capable integration must preserve the semantic distinction among
+insufficient exposure, conflicting or mixed evidence, stable-performance
+evidence, and difficulty evidence. A gameplay action being available does not
+manufacture certainty:
+
+```text
+absence of evidence != evidence of absence
+```
+
+These are authority-gate semantics, not a claim that the current
+`ContextEvidenceStatus` enum represents every state.
+
+### E. Synthetic authority firewall
+
+No BRAIN-06 or E3 synthetic artifact gains gameplay authority automatically.
+Y2, Y3, AA1, AA2, E3-P probabilities, synthetic false-claim rates, synthetic
+regimes, simulator truth labels, and synthetic decoder thresholds are all
+prohibited from direct production authority. GBI architecture does not upgrade
+research validity. Future production authority requires separately justified
+production or empirical evidence appropriate to the intended use.
+
+### F. Canonical domain authority
+
+Existing game systems remain authoritative. A GameBrain or GBI proposal may
+be constrained, rejected, or ignored, and mode/subsystem rules override it.
+Adaptive Difficulty owns legal difficulty behavior; Question Generator owns
+mathematical construction; Master owns stage rules; Operation Quest owns
+authored progression; Survival owns phase and boss progression; Weak Skills
+owns its canonical scheduling contract; and `GameState` remains mutation
+authority. No recommendation bypasses its owning subsystem.
+
+### G. Fail closed
+
+If any applicable evidence, measurement-condition, provenance, validity,
+capability, constraint, or authority requirement is unresolved, the result is
+`noAdaptation`. This is the default safety behavior. Completing this
+documentation gate does not pass the gate for any subsystem.
+
+### Current shadow-only work
+
+This gate does not block shadow-only architecture work whose gameplay remains
+unchanged, decisions are discarded, and GameBrain creates neither an evidence
+opportunity nor user-facing diagnostic authority. GBI-01 remains valid exactly
+as implemented: its Adaptive decision is discarded, it creates no user
+diagnostic or measurement opportunity, and it has no execution authority.
+
+### Target semantic architecture
+
+```text
+Item / Context
+        +
+Measurement Conditions
+        +
+Observable Response / Process
+        +
+Evidence Availability
+        +
+Observation Provenance
+        ↓
+bounded evidence
+        ↓
+uncertainty-aware reasoning
+        ↓
+advisory
+        ↓
+GBI authority guard
+        ↓
+possible intervention
+        ↓
+intervention provenance preserved
+```
+
+This is a target semantic architecture, not a current class list or authority
+grant. It does not authorize `MeasurementConditions.dart`,
+`ObservationProvenance.dart`, `InterventionPurpose.dart`, new Core state,
+persistence, telemetry, or adapters. Contract growth must come from concrete
+implementation pressure, not speculation.
+
+A future authority-capable decision might need the following semantics:
+
+```text
+IntegrationDecision
+  evidenceStatus
+  interpretationReason
+  authorityResult
+  result
+  interventionPurpose
+```
+
+This is a target-only pseudo-schema. It is not the existing
+`AdaptiveIntegrationDecision`, does not describe any other current type, and
+GBI-01 is not required to implement it.
+
+### Future evidence, exposure, and privacy
+
+Latency, timeout behavior, self-correction or answer revision, attempts, and
+legitimate hint use remain candidate channels for future authority use only.
+Existing shadow observation does not grant them authority. A candidate channel
+is not evidence authority; each would need incremental, stable, and relevant
+value beyond the existing baseline before use. Nothing here authorizes new
+collection or implementation of those channels.
+
+Insufficient context exposure may eventually be a product or measurement issue
+rather than a reasoning failure. Any future audit must measure how much
+exposure ordinary gameplay naturally provides per context before deciding
+whether question distribution should change. No distribution change is
+authorized here.
+
+Nothing in this gate authorizes telemetry, cloud learner profiles, research
+datasets, persistent raw learner histories, or collection of new process data.
+Future real-player empirical work requires separately approved privacy and
+validation scope.
 
 ## Frozen rules
 
@@ -197,11 +392,17 @@ authority. Core evidence remains bounded by the BRAIN-07 production contract.
 15. No singleton, service locator, parallel canonical state, or speculative infrastructure.
 16. GBI cannot promote synthetic research into production authority.
 
-## GBI-00 gate result
+## GBI-00 result and current authority status
 
-**MET for architecture-contract work.** Core remains unchanged and limited to
-evidence/advisory semantics; GBI owns gameplay interpretation; capabilities
-and constraints are external; subsystem authority is intact; illegal influence
-fails closed; and the design remains testable without speculative machinery.
+**GBI-00 MET for architecture-contract work.** Core remains unchanged and
+limited to evidence/advisory semantics; GBI owns gameplay interpretation;
+capabilities and constraints are external; subsystem authority is intact;
+illegal influence fails closed; and the design remains testable without
+speculative machinery.
 
-Gameplay integration, including GBI-01, remains unauthorized.
+GBI-01 is complete and valid only as a shadow integration: the Core observation
+retains no gameplay authority, the added post-observation interpretation is
+discarded, and no evidence opportunity or user-facing diagnostic is created.
+Real gameplay authority remains unauthorized for every subsystem. Any future
+request for `mayAffectGameplay = true` requires explicit review against the
+GAMEBRAIN REAL GAMEPLAY AUTHORITY GATE.
