@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/features/game_brain/game_brain.dart';
+import 'package:math_challenge/features/game_brain/integration/adaptive_shadow_integration.dart';
 import 'package:math_challenge/features/operation_quest/domain/operation_quest.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/services/audio.dart';
@@ -11,7 +12,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Future<GameState> makeState() async {
+  Future<GameState> makeState({
+    AdaptiveShadowEvaluator? adaptiveShadowEvaluator,
+  }) async {
     SharedPreferences.setMockInitialValues({});
     await Storage.init();
     final settings = SettingsService()
@@ -25,20 +28,24 @@ void main() {
         reduceMotion: true,
         animSpeed: 1,
       );
-    final state = GameState(settings: settings, audio: _NoOpAudioService());
+    final state = GameState(
+      settings: settings,
+      audio: _NoOpAudioService(),
+      adaptiveShadowEvaluator: adaptiveShadowEvaluator,
+    );
     await state.load();
     addTearDown(state.dispose);
     return state;
   }
 
-  void startBasicRun(GameState state) {
+  void startBasicRun(GameState state, {bool adaptive = false}) {
     state
       ..rt.challenge = Operation.addition
       ..mode = GameMode.standard
       ..diff = Difficulty.easy
       ..numType = NumberType.natural
       ..questionCount = 10
-      ..adaptive = false
+      ..adaptive = adaptive
       ..startGame();
     state.rt.timer?.cancel();
   }
@@ -240,6 +247,51 @@ void main() {
     expect(state.skillMap[question.type.name]!.count, 1);
     expect(state.adaptLvlRaw, greaterThan(0));
     expect(state.debugContextEvidenceObservationCount, 1);
+  });
+
+  test('aggressive shadow proposal cannot change adaptive or next behavior',
+      () async {
+    var evaluationCount = 0;
+    late GameState state;
+    late double masteryAtIntegration;
+    late double confidenceAtIntegration;
+    late double adaptiveLevelAtIntegration;
+    state = await makeState(
+      adaptiveShadowEvaluator: (advisory, authority) {
+        evaluationCount++;
+        expect(advisory.status, ContextEvidenceStatus.insufficientEvidence);
+        expect(authority.canExecute, isFalse);
+        final canonicalSkill = state.skillMap[state.rt.q!.type.name]!;
+        masteryAtIntegration = canonicalSkill.mastery;
+        confidenceAtIntegration = canonicalSkill.confidence;
+        adaptiveLevelAtIntegration = state.adaptLvlRaw;
+        return const AdaptiveIntegrationDecision.shadowProposal(
+          AdaptiveDirection.increase,
+        );
+      },
+    );
+    startBasicRun(state, adaptive: true);
+    final question = state.rt.q!;
+
+    state.onAnswer(question.ans);
+
+    expect(evaluationCount, 1);
+    expect(state.rt.q, same(question));
+    expect(state.skillMap[question.type.name]!.count, 1);
+    expect(
+      state.skillMap[question.type.name]!.mastery,
+      masteryAtIntegration,
+    );
+    expect(
+      state.skillMap[question.type.name]!.confidence,
+      confidenceAtIntegration,
+    );
+    expect(state.adaptLvlRaw, adaptiveLevelAtIntegration);
+
+    await Future<void>.delayed(const Duration(milliseconds: 1350));
+    state.rt.timer?.cancel();
+    expect(state.rt.q, isNot(same(question)));
+    expect(state.rt.q!.diff, Difficulty.easy);
   });
 }
 

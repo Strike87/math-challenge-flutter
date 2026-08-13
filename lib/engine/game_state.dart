@@ -11,6 +11,7 @@ import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/economy/domain/number_type_unlock_policy.dart';
 import '../features/family/domain/family_eligibility.dart';
 import '../features/game_brain/game_brain.dart';
+import '../features/game_brain/integration/adaptive_shadow_integration.dart';
 import '../features/gameplay/domain/survival_progression_policy.dart';
 import '../features/gameplay/domain/question_mechanic.dart';
 import '../features/modals/presentation/toast_controller.dart';
@@ -232,11 +233,14 @@ class GameState extends ChangeNotifier {
     PlayGamesService? playGamesService,
     AdultGateChallenge Function()? adultGateFactory,
     int Function()? nowMillisProvider,
+    AdaptiveShadowEvaluator? adaptiveShadowEvaluator,
   })  : iapAdapter = iapAdapter ?? const UnavailableIapPurchaseAdapter(),
         adService = adService ?? const UnavailableAdMobService(),
         playGamesService = playGamesService ?? NativePlayGamesService(),
         _nowMillis =
             nowMillisProvider ?? (() => DateTime.now().millisecondsSinceEpoch),
+        _adaptiveShadowEvaluator =
+            adaptiveShadowEvaluator ?? evaluateAdaptiveShadow,
         _adultGateFactory =
             adultGateFactory ?? (() => AdultGateChallenge.random()) {
     _toastController = ToastController(onChanged: notifyListeners);
@@ -334,6 +338,7 @@ class GameState extends ChangeNotifier {
   final PlayGamesService playGamesService;
   final AdultGateChallenge Function() _adultGateFactory;
   final int Function() _nowMillis;
+  final AdaptiveShadowEvaluator _adaptiveShadowEvaluator;
   final QuestionGenerator _qgen = QuestionGenerator();
   final Random _rng = Random();
   StreamSubscription<List<IapPurchase>>? _iapPurchaseSub;
@@ -2515,7 +2520,7 @@ class GameState extends ChangeNotifier {
     }) outcome,
   ) {
     final snapshot = _runSnapshot!;
-    _lastContextEvidenceResult = _gameBrain!.observeContextEvidence(
+    final advisory = _gameBrain!.observeContextEvidence(
       ContextEvidenceObservation(
         context: _contextEvidenceKey(snapshot, question),
         difficulty: question.diff ?? snapshot.difficulty,
@@ -2526,6 +2531,8 @@ class GameState extends ChangeNotifier {
         responseTimeMs: outcome.responseTimeMs,
       ),
     );
+    _lastContextEvidenceResult = advisory;
+    _adaptiveShadowEvaluator(advisory, const AdaptiveAuthority.shadow());
   }
 
   ContextEvidenceKey? _contextEvidenceKey(
