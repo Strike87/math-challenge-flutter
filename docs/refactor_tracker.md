@@ -4,6 +4,31 @@ Only the first unchecked item under **Active** may be started.
 
 ## Active
 
+- [x] BRAIN-01 — Pure GameBrain foundation
+  - Add immutable, canonical-value snapshots and a deterministic, shadow-only
+    domain decision policy behind the canonical newer modular `GameBrain`
+    facade.
+  - Keep bounded, read-only in-memory observations with a default capacity of
+    `10`.
+  - Expose only a generic, tentative opaque hypothesis after two matching,
+    caller-supplied nonblank evidence tags for the same operation; evidence is
+    retained verbatim and equal-count ties use deterministic insertion order.
+  - No BRAIN-02 work, production integration, persistence, generator calls, or
+    behavior changes are authorized in this foundation step.
+  - Verification record:
+    - Dart formatting changed GameBrain files cleanly.
+    - Focused canonical GameBrain tests: 13 passed.
+    - Adaptive engine and adaptive integration tests: passed.
+    - Weak Skills policy and practice tests: passed.
+    - Question generator tests: passed.
+    - Full non-golden suite: 578 passed.
+    - Visual parity suite: 38 passed.
+    - `flutter analyze --no-pub`: clean.
+    - `git diff --check`: clean.
+    - `graphify update .`: passed; generated churn excluded.
+    - Independent fallback regression reviewer passed because the configured
+      reviewer was unavailable.
+
 - [x] V2-03A — Operation Quest Missing Number Trail
   - Corrected baseline: V2-02F Missing Operation is complete at
     `6 TRAILS • 18 STAGES`.
