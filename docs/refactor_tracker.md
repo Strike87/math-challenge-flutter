@@ -4,6 +4,36 @@ Only the first unchecked item under **Active** may be started.
 
 ## Active
 
+- [x] BRAIN-06 — Offline synthetic-learning research tooling (CLOSED)
+  - Terminal result: **MET — IRREDUCIBLE OBSERVABLE OVERLAP**. No additional
+    BRAIN-06 synthetic decoder research is authorized.
+  - The BRAIN-06 termination result establishes irreducible observable
+    overlap only under the frozen E3-P synthetic response process and the
+    observable channels modeled in that program, principally correctness,
+    submitted response, and mathematical context. It does not establish the
+    magnitude or inevitability of such overlap in real learners or under
+    additional empirically validated observable channels.
+  - Historical synthetic measurements from the separately preserved research
+    lineage remain archival findings. Closure does not turn them into human
+    calibration, production efficacy, diagnostic truth, or an authorization
+    for E3 decoder use.
+  - No production inference, app integration, real-user collection, export,
+    persistence, upload, telemetry, or behavioral change was authorized.
+
+- [x] BRAIN-07A — Context Evidence Advisory Production Contract
+  - Documentation/contract work complete:
+    `docs/brain_07_context_evidence_advisory_contract.md`.
+  - It authorizes no production implementation, real-player observation
+    collection, telemetry, or advisory release.
+
+- [ ] BRAIN-07B — Local shadow-only context-evidence observer (BLOCKED)
+  - Do not start until this BRAIN-06/BRAIN-07A tracker reconciliation is
+    committed as its own governance commit.
+  - Once released, the implementation remains limited to the exact BRAIN-07A
+    local, in-memory, non-authoritative shadow scope. It does not authorize
+    real-player research/data collection, telemetry, calibration, gameplay
+    changes, question routing, or user-facing advisory presentation.
+
 - [x] BRAIN-01 — Pure GameBrain foundation
   - Add immutable, canonical-value snapshots and a deterministic, shadow-only
     domain decision policy behind the canonical newer modular `GameBrain`
