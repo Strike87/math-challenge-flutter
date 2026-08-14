@@ -138,6 +138,20 @@ Only the first unchecked item under **Active** may be started.
     - No GameBrain Core, Weak Skills policy/scheduling, GameState, persistence,
       telemetry, or P0 changes. `mayAffectGameplay = false`.
 
+- [x] EV-01 — Skill Dashboard difficulty-evidence feasibility audit
+  - Complete. Outcome: `CLAIM_NOT_SUPPORTED_NOW_BUT_VALIDATABLE`.
+  - The target claim remains unimplemented and requires separately approved,
+    bounded empirical validation before any production discussion.
+
+- [x] EV-02 — Run-bounded difficulty-evidence validation protocol
+  - **DESIGN FROZEN.** Execution is **NOT AUTHORIZED**.
+  - `docs/game_brain_ev02_validation_protocol.md` freezes one bounded pilot,
+    a small pre-registered candidate-rule family, independent held-out
+    reference performance, and three terminal outcomes.
+  - Execution parameters remain intentionally unset until pre-study
+    authorization. No EV-03 is authorized.
+  - P0 remains dormant and `mayAffectGameplay = false`.
+
 - [x] BRAIN-01 — Pure GameBrain foundation
   - Add immutable, canonical-value snapshots and a deterministic, shadow-only
     domain decision policy behind the canonical newer modular `GameBrain`
