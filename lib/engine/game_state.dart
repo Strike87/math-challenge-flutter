@@ -54,6 +54,14 @@ enum GameModal {
   weakSkillsPractice,
 }
 
+enum _QuestionTerminalClaim {
+  answer,
+  skip,
+  timeout,
+  switchReplacement,
+  neutral,
+}
+
 /// Runtime game state (the `rt` object in the original JS).
 class RuntimeState {
   Operation challenge;
@@ -493,6 +501,11 @@ class GameState extends ChangeNotifier {
   bool _directIapStartBusy = false;
   GameModal _adultGateReturnModal = GameModal.none;
   int _turnSeq = 0;
+  int _lastRunId = 0;
+  int _activeRunId = 0;
+  int _lastQuestionId = 0;
+  int _activeQuestionId = 0;
+  _QuestionTerminalClaim? _questionTerminalClaim;
   bool _disposed = false;
 
   MasterLevel? get clearedMasterLevel {
@@ -561,6 +574,8 @@ class GameState extends ChangeNotifier {
     if (_disposed) return;
     _disposed = true;
     _turnSeq++;
+    _closeActiveQuestionNeutrally();
+    _invalidateActiveRun();
     rt.gameActive = false;
     _iapPurchaseSub?.cancel();
     _toastController.dispose();
@@ -2063,6 +2078,10 @@ class GameState extends ChangeNotifier {
       return;
     }
 
+    _closeActiveQuestionNeutrally();
+    rt.timer?.cancel();
+    _invalidateActiveRun();
+    _activeRunId = ++_lastRunId;
     _cancelDelayedLossEnd();
     _turnSeq++;
     closeModal();
@@ -2356,6 +2375,8 @@ class GameState extends ChangeNotifier {
     rt.lastAnswerCorrect = false;
     rt.bossMood = 'normal';
     rt.qStartTs = DateTime.now().millisecondsSinceEpoch;
+    _activeQuestionId = ++_lastQuestionId;
+    _questionTerminalClaim = null;
     rt.accepting = true;
 
     // Start per-question timer
@@ -2394,6 +2415,7 @@ class GameState extends ChangeNotifier {
   }
 
   void _startQuestionTimer({int resumeElapsedMs = 0}) {
+    final questionToken = _currentQuestionToken;
     final limitMs =
         rt.qTimerLimit > 0 ? rt.qTimerLimit * 1000 : _getTimerLimitMs();
     final duration = max(0, limitMs - resumeElapsedMs);
@@ -2402,10 +2424,14 @@ class GameState extends ChangeNotifier {
     rt.timerStart = DateTime.now().millisecondsSinceEpoch;
     rt.timer?.cancel();
     rt.timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
+      if (!_isQuestionOpen(questionToken)) {
+        t.cancel();
+        return;
+      }
       final elapsed = DateTime.now().millisecondsSinceEpoch - rt.timerStart;
       if (elapsed >= duration) {
         t.cancel();
-        _onTimeout();
+        _onTimeout(questionToken);
       } else {
         notifyListeners();
       }
@@ -2413,15 +2439,21 @@ class GameState extends ChangeNotifier {
   }
 
   void _startGlobalTimer(int totalMs) {
+    final runId = _activeRunId;
     rt.timerStart = DateTime.now().millisecondsSinceEpoch;
     rt.timerDurationMs = totalMs;
     rt.qTimerLimit = totalMs ~/ 1000;
     rt.timer?.cancel();
     rt.timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
+      if (runId != _activeRunId || !rt.gameActive) {
+        t.cancel();
+        return;
+      }
       final elapsed = DateTime.now().millisecondsSinceEpoch - rt.timerStart;
       rt.blitzElapsedMs = elapsed;
       if (elapsed >= totalMs) {
         t.cancel();
+        _closeActiveQuestionNeutrally();
         _endGame(false, false);
       } else {
         notifyListeners();
@@ -2429,17 +2461,16 @@ class GameState extends ChangeNotifier {
     });
   }
 
-  void _onTimeout() {
-    if (!rt.accepting) return;
-    _onAnswer(null, false, true);
+  void _onTimeout(({int runId, int questionId}) questionToken) {
+    _onAnswer(null, false, true, questionToken);
   }
 
   @visibleForTesting
-  void debugTimeoutForTest() => _onTimeout();
+  void debugTimeoutForTest() => _onTimeout(_currentQuestionToken);
 
   // ─── Answer handler ─────────────────────────────────────────
   void onAnswer(num val) {
-    _onAnswer(val, false, false);
+    _onAnswer(val, false, false, _currentQuestionToken);
   }
 
   void onTrueFalseAnswer(bool response) {
@@ -2457,12 +2488,22 @@ class GameState extends ChangeNotifier {
 
   void skip() {
     if (!rt.accepting) return;
-    _onAnswer(null, true, false);
+    _onAnswer(null, true, false, _currentQuestionToken);
   }
 
-  void _onAnswer(num? val, bool isSkip, bool isTimeout) {
-    if (!rt.accepting || rt.state == 'paused') return;
-    rt.accepting = false;
+  void _onAnswer(
+    num? val,
+    bool isSkip,
+    bool isTimeout,
+    ({int runId, int questionId}) questionToken,
+  ) {
+    if (rt.state == 'paused') return;
+    final terminalClaim = isTimeout
+        ? _QuestionTerminalClaim.timeout
+        : isSkip
+            ? _QuestionTerminalClaim.skip
+            : _QuestionTerminalClaim.answer;
+    if (!_claimQuestionTerminal(questionToken, terminalClaim)) return;
     if (activeMode != GameMode.blitz && activeMode != GameMode.combo) {
       _freezeQuestionTimer();
       rt.timer?.cancel();
@@ -2561,6 +2602,45 @@ class GameState extends ChangeNotifier {
     rt.timerDurationMs =
         (rt.timerDurationMs - elapsed).clamp(0, rt.timerDurationMs).toInt();
     rt.timerStart = 0;
+  }
+
+  ({int runId, int questionId}) get _currentQuestionToken => (
+        runId: _activeRunId,
+        questionId: _activeQuestionId,
+      );
+
+  bool _isCurrentQuestion(({int runId, int questionId}) questionToken) =>
+      questionToken.runId > 0 &&
+      questionToken.runId == _activeRunId &&
+      questionToken.questionId > 0 &&
+      questionToken.questionId == _activeQuestionId;
+
+  bool _isQuestionOpen(({int runId, int questionId}) questionToken) =>
+      _isCurrentQuestion(questionToken) &&
+      _questionTerminalClaim == null &&
+      rt.accepting;
+
+  bool _claimQuestionTerminal(
+    ({int runId, int questionId}) questionToken,
+    _QuestionTerminalClaim terminalClaim,
+  ) {
+    if (!_isQuestionOpen(questionToken)) return false;
+    _questionTerminalClaim = terminalClaim;
+    rt.accepting = false;
+    return true;
+  }
+
+  void _closeActiveQuestionNeutrally() {
+    _claimQuestionTerminal(
+      _currentQuestionToken,
+      _QuestionTerminalClaim.neutral,
+    );
+  }
+
+  void _invalidateActiveRun() {
+    _activeRunId = 0;
+    _activeQuestionId = 0;
+    rt.accepting = false;
   }
 
   void _onCorrect(PlayerState pl, int pid, int timeTaken) {
@@ -3015,6 +3095,8 @@ class GameState extends ChangeNotifier {
     _logPerformance('end game entered');
     _cancelDelayedLossEnd();
     if (!rt.gameActive || rt.state == 'ended') return;
+    _closeActiveQuestionNeutrally();
+    _invalidateActiveRun();
     unawaited(_markCloudDirty());
     rt.gameActive = false;
     rt.state = 'ended';
@@ -3291,6 +3373,9 @@ class GameState extends ChangeNotifier {
     _logPerformance('replay navigation entered');
     final snapshot = _runSnapshot;
     final dismissedResult = currentModal == GameModal.win;
+    _closeActiveQuestionNeutrally();
+    rt.timer?.cancel();
+    _invalidateActiveRun();
     closeModal();
     if (dismissedResult) await _showPendingInterstitialAd();
     if (rt.challenge == Operation.master) {
@@ -3309,6 +3394,8 @@ class GameState extends ChangeNotifier {
 
   Future<void> quitToMenu() async {
     _logPerformance('main menu navigation entered');
+    _closeActiveQuestionNeutrally();
+    _invalidateActiveRun();
     _cancelDelayedLossEnd();
     _turnSeq++;
     final dismissedResult = currentModal == GameModal.win;
@@ -3332,6 +3419,8 @@ class GameState extends ChangeNotifier {
 
   Future<void> returnToOperationQuestMap() async {
     _logPerformance('operation quest map navigation entered');
+    _closeActiveQuestionNeutrally();
+    _invalidateActiveRun();
     _cancelDelayedLossEnd();
     _turnSeq++;
     final dismissedResult = currentModal == GameModal.win;
@@ -3556,14 +3645,19 @@ class GameState extends ChangeNotifier {
 
     switch (pu) {
       case PowerUp.time:
+        final questionToken = _currentQuestionToken;
         rt.timer?.cancel();
         rt.timerDurationMs += 5000;
         if (rt.qTimerLimit > 0) rt.qTimerLimit += 5;
         rt.timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
+          if (!_isQuestionOpen(questionToken)) {
+            t.cancel();
+            return;
+          }
           final elapsed = DateTime.now().millisecondsSinceEpoch - rt.timerStart;
           if (elapsed >= rt.timerDurationMs) {
             t.cancel();
-            _onTimeout();
+            _onTimeout(questionToken);
           } else {
             notifyListeners();
           }
@@ -3592,8 +3686,25 @@ class GameState extends ChangeNotifier {
         rt.frozen = true;
         break;
       case PowerUp.switchOp:
+        final questionToken = _currentQuestionToken;
+        if (!_claimQuestionTerminal(
+          questionToken,
+          _QuestionTerminalClaim.switchReplacement,
+        )) {
+          break;
+        }
+        if (activeMode != GameMode.blitz && activeMode != GameMode.combo) {
+          rt.timer?.cancel();
+        }
         Timer(const Duration(milliseconds: 500), () {
-          if (!rt.gameActive || rt.state != 'playing') return;
+          if (!_isCurrentQuestion(questionToken) ||
+              _questionTerminalClaim !=
+                  _QuestionTerminalClaim.switchReplacement ||
+              !rt.gameActive ||
+              rt.state != 'playing' ||
+              rt.accepting) {
+            return;
+          }
           _generateQ();
           notifyListeners();
         });
@@ -3933,6 +4044,8 @@ class GameState extends ChangeNotifier {
 
   Future<void> resetAllData() async {
     final nextCloudResetGeneration = cloudResetGeneration + 1;
+    _closeActiveQuestionNeutrally();
+    _invalidateActiveRun();
     rt.timer?.cancel();
     _cancelDelayedLossEnd();
     _turnSeq++;
