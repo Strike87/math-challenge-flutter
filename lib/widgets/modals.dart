@@ -1416,6 +1416,14 @@ class SettingsModal extends StatelessWidget {
                       _CloudSaveSettingsTile(controller: cloud, state: gs),
                       _SettingsDivider(s: s),
                     ],
+                    _SettingsActionTile(
+                      icon: Icons.psychology_outlined,
+                      title: 'Clear GameBrain Data',
+                      subtitle: 'Turn off and remove the GameBrain preference',
+                      color: GameConfig.grape,
+                      onTap: () => _showClearGameBrainDataDialog(context, gs),
+                    ),
+                    _SettingsDivider(s: s),
                     _ResetEverywhereSettingsTile(
                       controller: cloud,
                       state: gs,
@@ -1478,6 +1486,33 @@ class SettingsModal extends StatelessWidget {
     if (await LinkLauncher.open(url)) return;
     gs.showToast('Could not open link.');
   }
+}
+
+Future<void> _showClearGameBrainDataDialog(
+    BuildContext context, GameState gs) async {
+  final cleared = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Clear GameBrain Data?'),
+      content: const Text('This turns GameBrain off and removes its saved '
+          'preference. Your game progress and settings will stay.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () async {
+            if (await gs.clearGameBrainData() && context.mounted) {
+              Navigator.of(context).pop(true);
+            }
+          },
+          child: const Text('Clear GameBrain Data'),
+        ),
+      ],
+    ),
+  );
+  if (cleared == true) gs.showToast('GameBrain data cleared');
 }
 
 class _PlayGamesSettingsTile extends StatefulWidget {

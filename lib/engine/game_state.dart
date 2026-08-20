@@ -242,6 +242,7 @@ class GameState extends ChangeNotifier {
     AdultGateChallenge Function()? adultGateFactory,
     int Function()? nowMillisProvider,
     AdaptiveShadowEvaluator? adaptiveShadowEvaluator,
+    QuestionGenerator? questionGenerator,
   })  : iapAdapter = iapAdapter ?? const UnavailableIapPurchaseAdapter(),
         adService = adService ?? const UnavailableAdMobService(),
         playGamesService = playGamesService ?? NativePlayGamesService(),
@@ -249,6 +250,7 @@ class GameState extends ChangeNotifier {
             nowMillisProvider ?? (() => DateTime.now().millisecondsSinceEpoch),
         _adaptiveShadowEvaluator =
             adaptiveShadowEvaluator ?? evaluateAdaptiveShadow,
+        _qgen = questionGenerator ?? QuestionGenerator(),
         _adultGateFactory =
             adultGateFactory ?? (() => AdultGateChallenge.random()) {
     _toastController = ToastController(onChanged: notifyListeners);
@@ -268,6 +270,7 @@ class GameState extends ChangeNotifier {
   static const int familyGateSchemaVersion = 2;
   static const String familyGateVersionStorageKey = 'mc_familyGateVersion';
   static const String familyAgeRangeStorageKey = 'mc_familyAgeRange';
+  static const String gameBrainPreferenceStorageKey = 'mc_gameBrainEnabled';
   static const _adaptiveDifficultyEngine = AdaptiveDifficultyEngine();
   static const _survivalProgressionPolicy = SurvivalProgressionPolicy();
 
@@ -333,6 +336,7 @@ class GameState extends ChangeNotifier {
     'mc_animSpeed',
     'mc_reduceMotion',
     'mc_lowPerf',
+    gameBrainPreferenceStorageKey,
   ];
 
   @visibleForTesting
@@ -347,7 +351,7 @@ class GameState extends ChangeNotifier {
   final AdultGateChallenge Function() _adultGateFactory;
   final int Function() _nowMillis;
   final AdaptiveShadowEvaluator _adaptiveShadowEvaluator;
-  final QuestionGenerator _qgen = QuestionGenerator();
+  final QuestionGenerator _qgen;
   final Random _rng = Random();
   StreamSubscription<List<IapPurchase>>? _iapPurchaseSub;
 
@@ -369,6 +373,8 @@ class GameState extends ChangeNotifier {
   Difficulty diff = Difficulty.easy;
   int questionCount = 10;
   bool adaptive = false;
+  bool gameBrainPreference = false;
+  bool _approvedGameBrainEligibilityForTesting = false;
   NumberType numType = NumberType.natural;
   AnswerStyle selectedAnswerStyle = AnswerStyle.choice4;
 
@@ -466,6 +472,14 @@ class GameState extends ChangeNotifier {
   NumberType get activeNumberType => _runSnapshot?.numberType ?? numType;
   int get activeQuestionTarget => _runSnapshot?.questionTarget ?? questionCount;
   bool get activeAdaptive => isOperationQuest ? false : adaptive;
+  bool get effectiveGameBrainEnabled =>
+      gameBrainPreference && _approvedGameBrainEligibilityForTesting;
+
+  @visibleForTesting
+  void setApprovedGameBrainEligibilityForTesting(bool value) {
+    _approvedGameBrainEligibilityForTesting = value;
+    notifyListeners();
+  }
 
   // ─── UI routing ─────────────────────────────────────────────
   GameScreen currentScreen = GameScreen.menu;
@@ -590,6 +604,7 @@ class GameState extends ChangeNotifier {
   // ─── Load / save ────────────────────────────────────────────
   Future<void> load() async {
     _loadFamilyEligibility();
+    gameBrainPreference = Storage.getBool(gameBrainPreferenceStorageKey, false);
     final skipCloudOwnedLoad = await _recoverCloudResetIntent();
     if (!skipCloudOwnedLoad) {
       cloudResetGeneration = Storage.getInt('mc_cloudResetGeneration', 0);
@@ -643,6 +658,30 @@ class GameState extends ChangeNotifier {
     if (!skipCloudOwnedLoad) await _persistLoadedMigrationState();
     _hydrateDailyBonusPolicy();
     notifyListeners();
+  }
+
+  Future<bool> setGameBrainPreference(bool value) async {
+    try {
+      await Storage.setBool(gameBrainPreferenceStorageKey, value);
+    } on Exception {
+      showToast('Could not save GameBrain preference. Please try again.');
+      return false;
+    }
+    gameBrainPreference = value;
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> clearGameBrainData() async {
+    try {
+      await Storage.remove(gameBrainPreferenceStorageKey);
+    } on Exception {
+      showToast('Could not clear GameBrain data. Please try again.');
+      return false;
+    }
+    gameBrainPreference = false;
+    notifyListeners();
+    return true;
   }
 
   Future<bool> submitFamilyAgeRange(FamilyAgeRange range) async {
@@ -4073,6 +4112,8 @@ class GameState extends ChangeNotifier {
   void _resetInMemoryData() {
     _coinLedger.reset();
     _dailyBonusPolicy.reset();
+    gameBrainPreference = false;
+    _approvedGameBrainEligibilityForTesting = false;
     gamesPlayed = 0;
     selectedAnswerStyle = AnswerStyle.choice4;
     operationQuestProgress = OperationQuestProgress();
