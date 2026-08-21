@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
+import '../features/gameplay/domain/question_difficulty_legality.dart';
 import '../game_config.dart';
 import '../models/enums.dart';
 import '../services/settings.dart';
@@ -115,23 +116,10 @@ class ConfigScreen extends StatelessWidget {
                           ],
                           _SectionTitle('Difficulty', s),
                           _ToggleRow(
-                            options: [
-                              _ToggleOpt(
-                                '🌱 Easy',
-                                'easy',
-                                s.accent(GameConfig.mint),
-                              ),
-                              _ToggleOpt(
-                                '🔥 Medium',
-                                'medium',
-                                s.accent(GameConfig.mango),
-                              ),
-                              _ToggleOpt(
-                                '💥 Hard',
-                                'hard',
-                                s.accent(GameConfig.punch),
-                              ),
-                            ],
+                            options: playerConfigurableDifficulties
+                                .map((difficulty) =>
+                                    _difficultyOption(difficulty, s))
+                                .toList(growable: false),
                             active: gs.diff.name,
                             onPick: (v) => gs.setOption('diff', v),
                           ),
@@ -273,6 +261,31 @@ class ConfigScreen extends StatelessWidget {
       case Difficulty.insane:
         return '💀 Numbers 100–499, lightning round';
     }
+  }
+
+  _ToggleOpt<String> _difficultyOption(
+    Difficulty difficulty,
+    SettingsService s,
+  ) {
+    return switch (difficulty) {
+      Difficulty.easy => _ToggleOpt(
+          '🌱 Easy',
+          difficulty.name,
+          s.accent(GameConfig.mint),
+        ),
+      Difficulty.medium => _ToggleOpt(
+          '🔥 Medium',
+          difficulty.name,
+          s.accent(GameConfig.mango),
+        ),
+      Difficulty.hard => _ToggleOpt(
+          '💥 Hard',
+          difficulty.name,
+          s.accent(GameConfig.punch),
+        ),
+      Difficulty.expert || Difficulty.insane => throw StateError(
+          'Config screen supports only player-configured difficulties.'),
+    };
   }
 }
 

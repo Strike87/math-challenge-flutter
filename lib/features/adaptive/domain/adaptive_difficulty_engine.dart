@@ -7,6 +7,14 @@ enum MasteryOutcome { correct, wrong, timeout }
 class AdaptiveDifficultyEngine {
   const AdaptiveDifficultyEngine();
 
+  static const List<Difficulty> legalOutputDifficulties = <Difficulty>[
+    Difficulty.easy,
+    Difficulty.medium,
+    Difficulty.hard,
+    Difficulty.expert,
+    Difficulty.insane,
+  ];
+
   static const double defaultMastery = 20;
   static const double maxMastery = 100;
   static const int _fastResponseMilliseconds = 1500;

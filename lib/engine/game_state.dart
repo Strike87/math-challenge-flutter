@@ -15,6 +15,7 @@ import '../features/game_brain/experience/question_experience_observation.dart';
 import '../features/game_brain/experience/run_local_question_experience_collector.dart';
 import '../features/game_brain/game_brain.dart';
 import '../features/game_brain/integration/adaptive_shadow_integration.dart';
+import '../features/gameplay/domain/question_difficulty_legality.dart';
 import '../features/gameplay/domain/survival_progression_policy.dart';
 import '../features/gameplay/domain/question_mechanic.dart';
 import '../features/modals/presentation/toast_controller.dart';
@@ -455,6 +456,11 @@ class GameState extends ChangeNotifier {
   @visibleForTesting
   List<QuestionExperienceObservation> get debugQuestionExperienceObservations =>
       _questionExperience.snapshot;
+  QuestionDifficultyLegality? get currentQuestionDifficultyLegality =>
+      _questionDifficultyLegality;
+  @visibleForTesting
+  QuestionDifficultyLegality? get debugQuestionDifficultyLegality =>
+      currentQuestionDifficultyLegality;
   bool get isPlayGamesEligible =>
       familyEligibility == FamilyEligibility.eligible;
   bool get isOperationQuest =>
@@ -525,6 +531,7 @@ class GameState extends ChangeNotifier {
   int _activeQuestionId = 0;
   _QuestionTerminalClaim? _questionTerminalClaim;
   final _questionExperience = RunLocalQuestionExperienceCollector();
+  QuestionDifficultyLegality? _questionDifficultyLegality;
   bool _disposed = false;
 
   MasterLevel? get clearedMasterLevel {
@@ -2262,11 +2269,22 @@ class GameState extends ChangeNotifier {
     var type = rt.challenge;
     var d = activeDifficulty;
     var generatedNumType = activeNumberType;
+    var difficultyRoute = _runSnapshot?.runType == GameRunType.operationQuest
+        ? QuestionDifficultyRoute.operationQuestStage
+        : QuestionDifficultyRoute.playerConfigured;
+    Set<Difficulty>? legalDifficulties =
+        _runSnapshot?.runType == GameRunType.operationQuest
+            ? {activeDifficulty}
+            : playerConfigurableDifficultySet.contains(activeDifficulty)
+                ? playerConfigurableDifficultySet
+                : null;
 
     // Follow-up reinforcement
     if (rt.isFollowUp && rt.followUpData != null) {
       type = rt.followUpData!.type;
       d = rt.followUpData!.diff;
+      difficultyRoute = QuestionDifficultyRoute.followUp;
+      legalDifficulties = {d};
       rt.isFollowUp = false;
       rt.followUpData = null;
     }
@@ -2277,6 +2295,8 @@ class GameState extends ChangeNotifier {
       final stageIdx = _masterLevel;
       final lvl = GameConfig.masterLevels[stageIdx];
       d = Difficulty.fromString(lvl.diff);
+      difficultyRoute = QuestionDifficultyRoute.masterStage;
+      legalDifficulties = {d};
       type = Operation.fromString(lvl.type);
       boss = lvl.boss;
       final masterNt = lvl.numType;
@@ -2291,6 +2311,8 @@ class GameState extends ChangeNotifier {
     } else if (rt.challenge == Operation.dailyBoss) {
       final lvl = rt.dailyBoss ?? dailyBoss!;
       d = Difficulty.fromString(lvl.diff);
+      difficultyRoute = QuestionDifficultyRoute.dailyBoss;
+      legalDifficulties = {d};
       type = Operation.fromString(lvl.type);
       boss = lvl.icon;
       numType = lvl.numType == 'mixed'
@@ -2306,6 +2328,8 @@ class GameState extends ChangeNotifier {
     if (activeMode == GameMode.survival) {
       d = Difficulty.fromString(
           GameConfig.phaseKeys[rt.survivalPhase.clamp(0, 4)]);
+      difficultyRoute = QuestionDifficultyRoute.survivalPhase;
+      legalDifficulties = {d};
     }
 
     final operationPool = _runSnapshot?.operationPool;
@@ -2331,6 +2355,8 @@ class GameState extends ChangeNotifier {
         rt.challenge != Operation.dailyBoss &&
         activeMode != GameMode.survival) {
       d = _getAdaptDiff(type);
+      difficultyRoute = QuestionDifficultyRoute.adaptive;
+      legalDifficulties = adaptiveDifficultySet;
     }
 
     // Build question with uniqueness guarantee
@@ -2410,6 +2436,13 @@ class GameState extends ChangeNotifier {
     );
 
     rt.q = runtimeQuestion;
+    _questionDifficultyLegality = legalDifficulties == null
+        ? null
+        : QuestionDifficultyLegality(
+            route: difficultyRoute,
+            resolvedDifficulty: runtimeQuestion.diff ?? d,
+            legalDifficulties: legalDifficulties,
+          );
     if (rt.answerStyle == AnswerStyle.trueFalse) {
       final proposal = trueFalseProposal(runtimeQuestion);
       rt.proposedAnswer = proposal.answer;
@@ -2585,11 +2618,13 @@ class GameState extends ChangeNotifier {
     _checkStandardTurnLimit();
     _captureQuestionExperienceIfSupported(
       q,
-      isCorrect ? const AnsweredCorrect() : isTimeout
-          ? const QuestionTimedOut()
-          : isSkip
-              ? const QuestionSkipped()
-              : const AnsweredIncorrect(),
+      isCorrect
+          ? const AnsweredCorrect()
+          : isTimeout
+              ? const QuestionTimedOut()
+              : isSkip
+                  ? const QuestionSkipped()
+                  : const AnsweredIncorrect(),
     );
     _observeContextEvidence(
       q,
@@ -2730,6 +2765,7 @@ class GameState extends ChangeNotifier {
     _activeQuestionId = 0;
     rt.accepting = false;
     _questionExperience.clear();
+    _questionDifficultyLegality = null;
   }
 
   void _onCorrect(PlayerState pl, int pid, int timeTaken) {
