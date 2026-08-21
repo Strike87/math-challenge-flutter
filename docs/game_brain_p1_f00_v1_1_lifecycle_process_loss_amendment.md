@@ -5,12 +5,24 @@
 | Field | Value |
 | --- | --- |
 | `protocol_version` | `P1-F00 v1.1` |
-| `status` | `REVISED / AWAITING_INDEPENDENT_RE-REVIEW` |
+| `status` | `LOCKED / CURRENT PROSPECTIVE PROTOCOL` |
 | Parent | `P1-F00 v1` in `docs/game_brain_p1_f00_difficulty_evidence_feasibility_protocol.md` |
 | Parent status | `LOCKED / HISTORICAL` |
 | Amendment policy | Prospective only |
 | Confirmatory window | `CLOSED` / not opened |
 | Outcome-blind status | No real P1-F01 outcome data informed this amendment |
+
+### Lock provenance
+
+- First independent review: `62732fe37b7b2ab9a2ac16c4db11a73a69646dbc`
+  → `REQUIRED_CHANGES`.
+- Required-changes revision: `c4339b1d5ada59397854bb65f0c2ce0d3205c788`.
+- Independent re-review record: `1abe8c934b1b4d13e3162a435b5ff21e86bb0f86`
+  → `APPROVED_FOR_LOCK`.
+
+The confirmatory window remains unopened. Future amendments are prospective,
+versioned, outcome-blind where required, and independently reviewed; locked
+semantics are not edited in place.
 
 P1-F00 v1 remains historically immutable. This prospective successor neither
 rewrites nor unlocks v1. It addresses the readiness finding that lifecycle
@@ -304,12 +316,11 @@ telemetry, long-term memory, or Player Experience Model. `mayAffectGameplay`
 remains `false`. It changes none of v1 thresholds, `Y_correct`, common support,
 legal-option ownership, natural play, or terminal precedence.
 
-## 21. Independent review requirements
+## 21. Post-lock amendment rule
 
-This is a draft only. An independent outcome-blind reviewer must assess
-denominator integrity, global/candidate missingness, lifecycle classifications,
-process-loss bootstrapping, false-pass/false-fail risk, coherence of retained
-thresholds, any accidental scientific-claim change, and any implied capture
-authority. No confirmatory data may be inspected before review and lock.
+This is the locked current prospective protocol. Any future scientific change
+must be a prospective, versioned amendment and receive outcome-blind
+independent review where required. No confirmatory data may be inspected before
+the applicable amendment is reviewed and locked.
 
-P1_F00_V1_1_REQUIRED_CHANGES = APPLIED_AWAITING_INDEPENDENT_REREVIEW
+P1_F00_V1_1_LOCK = LOCKED
