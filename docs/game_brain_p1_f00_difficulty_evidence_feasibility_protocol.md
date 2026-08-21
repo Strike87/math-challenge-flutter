@@ -5,16 +5,24 @@
 | Field | Value |
 | --- | --- |
 | `protocol_version` | `P1-F00 v1` |
-| `status` | `DRAFT_REVISED_FOR_INDEPENDENT_REVIEW` |
+| `status` | `LOCKED` |
 | Decision context | `chooseDifficulty` |
 | Scope | Phase-1 observational feasibility only |
 | Baseline contract | `docs/game_brain_integration_architecture.md`, "Phase-1 `chooseDifficulty` contract freeze" |
 | Repository date | 2026-08-21 |
-| Independent approval | `PENDING_RE_REVIEW` |
+| Independent approval | `APPROVE_FOR_PROTOCOL_LOCK` |
+| `locked_protocol_content_basis` | `ed0bcca2e400b72f34cce3c77f1688d52bf8264c` |
+| `first_review_commit` | `693bebf85ed44a17763461c0d6c0d8492f594c62` |
+| `independent_rereview_commit` | `cac8e7558c0b93829341d3c5d9d00cf174be82b4` |
+| `independent_rereview_result` | `APPROVE_FOR_PROTOCOL_LOCK` |
+| `independence_classification` | `PROCEDURAL_INDEPENDENCE_ONLY` |
+| `P1-F01_run_before_lock` | `NO` |
+| `P1-F01_outcome_data_seen_before_lock` | `NO` |
+| `amendment_policy` | `PROSPECTIVE_ONLY` |
 
-This is a preregistration candidate, not a protocol lock and not a P1-F01
-result. It designs how P1-F01 will answer this question without changing
-gameplay distribution first:
+This is a locked preregistration protocol and not a P1-F01 result. It designs
+how P1-F01 will answer this question without changing gameplay distribution
+first:
 
 > Does normal Math Challenge gameplay generate enough truthful, comparable
 > `chooseDifficulty` evidence across the Phase-1 difficulty envelope for
@@ -22,6 +30,11 @@ gameplay distribution first:
 
 `FEASIBLE`, `INCONCLUSIVE`, and `NOT_FEASIBLE` below are prospective terminal
 labels only. P1-F00 does not apply any of them.
+
+Product/Protocol Owner acceptance: accepts these prospective methodological
+thresholds, the first-review and independent re-review findings, and the
+prospective-only amendment and data-lineage constraints; does not accept any
+future `FEASIBLE` outcome in advance.
 
 ## Frozen contract and authority boundary
 
@@ -139,10 +152,9 @@ unless a later locked protocol explicitly adds it prospectively.
 
 ## Proposed P1-F00 v1 thresholds
 
-Every number in this table is a **PROPOSED P1-F00 v1 THRESHOLD - subject to
-independent protocol re-review**. These are conservative methodological and
-product judgments for a small observational first slice, not learner-derived
-facts or empirically validated cutoffs.
+Every number in this table is a locked P1-F00 v1 threshold. These are
+conservative methodological and product judgments for a small observational
+first slice, not learner-derived facts or empirically validated cutoffs.
 
 | Metric | Final proposed threshold | Why / failure protected against |
 | --- | --- | --- |
@@ -325,13 +337,13 @@ Future role separation is required:
 
 | Role | Responsibility |
 | --- | --- |
-| Protocol Owner | Maintains this draft and prospective amendments. |
-| Independent Protocol Approver | Reviews and approves/locks the protocol; the draft implementer may not self-approve. |
+| Protocol Owner | Maintains this locked protocol and prospective amendments. |
+| Independent Protocol Approver | Reviews and approves/locks the protocol; the implementing author may not self-approve. |
 | P1-F01 Analyst / Executor | Runs the locked protocol without changing thresholds. |
 | Independent Outcome Reviewer | Verifies measurements, calculations, and rule application. |
 | Gate Adjudicator | Records the terminal outcome and root-cause labels from the locked rules. |
 
-`independent_approval = PENDING_RE_REVIEW`.
+`independent_approval = APPROVE_FOR_PROTOCOL_LOCK`.
 
 An amendment must be prospective. If P1-F00 v1 is changed after data has been
 examined, the seen data becomes protocol-derivation evidence and cannot
@@ -351,13 +363,14 @@ must never be moved retroactively.
 | m2 test visibility not authorized analysis path | Distinguished runtime/test-visible QEO availability from a governed P1-F01 path. | Measurement availability audit |
 | m3 enablement implied, not independently evidenced | Classified enablement as derivable from capture invariant, with independent auditability requiring a future seam. | Measurement availability audit |
 
-All required changes from the independent review are resolved in this draft.
+All required changes from the independent review are resolved in this locked
+protocol.
 No review finding is intentionally retained as unresolved.
 
-## Pre-review checklist
+## Locked protocol checklist
 
 - P1-F01 has not been run and no P1-F01 result has been inspected.
-- This protocol is not locked.
+- This protocol is locked.
 - Scenario Library, CandidateEvaluation, DecisionEpisode, policy, Experience
   Memory, and Player Model are not implemented by this document.
 - No runtime capture, persistence, transmission, telemetry, analytics, or
