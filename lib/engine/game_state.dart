@@ -463,6 +463,10 @@ class GameState extends ChangeNotifier {
   @visibleForTesting
   List<QuestionDifficultyLegality?> get debugQuestionDifficultyMeasurements =>
       _questionDifficultyMeasurements.snapshot;
+  @visibleForTesting
+  List<QuestionDifficultyMeasurementOpportunity>
+      get debugQuestionDifficultyMeasurementOpportunities =>
+          _questionDifficultyMeasurements.opportunities;
   QuestionDifficultyLegality? get currentQuestionDifficultyLegality =>
       _questionDifficultyLegality;
   @visibleForTesting
@@ -2452,7 +2456,11 @@ class GameState extends ChangeNotifier {
             resolvedDifficulty: runtimeQuestion.diff ?? d,
             legalDifficulties: legalDifficulties,
           );
-    _questionDifficultyMeasurements.add(_questionDifficultyLegality);
+    _activeQuestionId = ++_lastQuestionId;
+    _questionDifficultyMeasurements.add(
+      _questionDifficultyLegality,
+      _currentQuestionToken,
+    );
     if (rt.answerStyle == AnswerStyle.trueFalse) {
       final proposal = trueFalseProposal(runtimeQuestion);
       rt.proposedAnswer = proposal.answer;
@@ -2462,7 +2470,6 @@ class GameState extends ChangeNotifier {
     rt.lastAnswerCorrect = false;
     rt.bossMood = 'normal';
     rt.qStartTs = DateTime.now().millisecondsSinceEpoch;
-    _activeQuestionId = ++_lastQuestionId;
     _questionTerminalClaim = null;
     rt.accepting = true;
 
@@ -2626,7 +2633,7 @@ class GameState extends ChangeNotifier {
 
     rt.totalTurns++;
     _checkStandardTurnLimit();
-    _captureQuestionExperienceIfSupported(
+    final observation = _captureQuestionExperienceIfSupported(
       q,
       isCorrect
           ? const AnsweredCorrect()
@@ -2636,6 +2643,9 @@ class GameState extends ChangeNotifier {
                   ? const QuestionSkipped()
                   : const AnsweredIncorrect(),
     );
+    if (observation != null) {
+      _questionDifficultyMeasurements.link(questionToken, observation);
+    }
     _observeContextEvidence(
       q,
       (
@@ -2673,7 +2683,7 @@ class GameState extends ChangeNotifier {
     _adaptiveShadowEvaluator(advisory, const AdaptiveAuthority.shadow());
   }
 
-  void _captureQuestionExperienceIfSupported(
+  QuestionExperienceObservation? _captureQuestionExperienceIfSupported(
     Question question,
     QuestionTerminalObservation terminal,
   ) {
@@ -2692,10 +2702,10 @@ class GameState extends ChangeNotifier {
         ContextEvidenceKey.supportsOperation(question.type) &&
         numberType != null &&
         difficulty != null;
-    if (!supported) return;
+    if (!supported) return null;
 
     try {
-      _questionExperience.add(QuestionExperienceObservation(
+      final observation = QuestionExperienceObservation(
         presented: QuestionPresentedSnapshot(
           operation: question.type,
           numberType: numberType,
@@ -2703,9 +2713,12 @@ class GameState extends ChangeNotifier {
           answerStyle: snapshot.answerStyle,
         ),
         terminal: terminal,
-      ));
+      );
+      _questionExperience.add(observation);
+      return observation;
     } catch (_) {
       // Observation failures must not affect canonical gameplay.
+      return null;
     }
   }
 
@@ -3831,10 +3844,13 @@ class GameState extends ChangeNotifier {
         }
         final question = rt.q;
         if (question != null) {
-          _captureQuestionExperienceIfSupported(
+          final observation = _captureQuestionExperienceIfSupported(
             question,
             const QuestionReplaced(),
           );
+          if (observation != null) {
+            _questionDifficultyMeasurements.link(questionToken, observation);
+          }
         }
         if (activeMode != GameMode.blitz && activeMode != GameMode.combo) {
           rt.timer?.cancel();
