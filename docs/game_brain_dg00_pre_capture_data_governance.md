@@ -4,18 +4,20 @@
 
 `DG00_OUTCOME = PRE_CAPTURE_GOVERNANCE_READY`.
 
-This is a governance contract, not collection authority. `mayAffectGameplay`
-remains `false`, P0 remains dormant, and GEI-04B remains unauthorized. The
-canonical game and Adaptive Difficulty remain independent of GameBrain.
+This is a governance contract. `mayAffectGameplay` remains `false`, P0 remains
+dormant, and the canonical game and Adaptive Difficulty remain independent of
+GameBrain. The sole collection authorization is the bounded GEI-04B first
+slice in section 13; it is not authorization for any other GEI collection,
+retention, processing, or use.
 
 ## 2. Purpose and scope
 
 This contract defines the conditions under which a later approved feature may
 capture, retain, process, or use GameBrain / Game Experience Intelligence
-(GEI) data. It applies to future Question Experience, Run Experience, memory,
-scenario, model, evaluation, and decision records. It does not change runtime
-behavior, storage, UI, age-gate behavior, cloud save, analytics, or parental
-approval.
+(GEI) data. It applies to Question Experience, Run Experience, memory,
+scenario, model, evaluation, and decision records. It authorizes only the
+bounded run-local Question Experience slice in section 13 and does not change
+storage, UI, age-gate behavior, cloud save, analytics, or parental approval.
 
 Technical capability is not collection authority. Every retained field needs a
 named purpose, consumer, retention justification, deletion behavior, and an
@@ -53,7 +55,7 @@ harmless: an aggregate can become a more sensitive educational profile.
 
 | Family | DG-00 classification | Future gate |
 | --- | --- | --- |
-| Question Experience facts | structurally planned, not authorized to capture | GEI-04B after all preconditions |
+| Question Experience facts | authorized only for the section 13 bounded run-local first slice | `effectiveGameBrainEnabled` and section 13 contract |
 | Run Experience summaries | structurally planned, not authorized | separate run-summary contract |
 | Long-Term Experience Memory | prohibited until separate gate | memory/retention/storage gate |
 | Scenario state and Player Experience Model | prohibited until separate gate | scenario/model gate |
@@ -66,10 +68,11 @@ harmless: an aggregate can become a more sensitive educational profile.
 
 ## 6. Purpose limitation and minimization
 
-The only candidate purpose category for a future GEI-04B local observation is
-bounded local educational personalization, after enablement and eligibility
-are valid. Player explanation, fit evaluation, reliability, policy audit,
-research, product analytics, advertising, and cross-product profiling are
+The sole authorized GEI-04B first-slice purpose is: "Create a temporary
+structured record of an enabled player's executed question context and
+terminal outcome during the current run, with no gameplay effect." Player
+explanation, fit evaluation, reliability, policy audit, research, product
+analytics, advertising, cross-product profiling, and personalization are
 separate purposes and require separate approval. Education data must never be
 silently repurposed for advertising, unrelated analytics, or research.
 
@@ -104,10 +107,10 @@ approved and necessary.
 ## 8. GameBrain ON/OFF, delete, and reset
 
 OFF prohibits GameBrain gameplay influence, policy execution, scenario
-personalization, influence-capable candidate evaluation, new personalized
-Question/Run Experience capture, new GEI long-term updates, and use of a
-last-known personalized recommendation. Canonical gameplay continues; Adaptive
-Difficulty remains unchanged.
+personalization, influence-capable candidate evaluation, new Question
+Experience capture, new GEI long-term updates, and use of a last-known
+personalized recommendation. Canonical gameplay continues; Adaptive Difficulty
+remains unchanged.
 
 Disable is not delete. While OFF, retained GEI data is dormant and unavailable
 for personalization. Re-enable may not reuse old data until an approved
@@ -131,12 +134,13 @@ order: run-local anonymous scope, local profile scope, account scope, then
 cloud identity. Each requires purpose, lifetime, storage, deletion, and
 linkability analysis.
 
-No unbounded raw history is permitted. Working evidence is run-local and
-discarded at its boundary; summaries/memory/audit windows require bounded,
-versioned retention classes, supersession, maximum need, and clear/delete
-behavior before implementation. Memory is evidence, not identity: older
-evidence can retain historical meaning while losing current authority. Do not
-freeze a universal decay coefficient.
+No unbounded raw history is permitted. The authorized GEI-04B first-slice
+buffer is run-local, in-memory only, and discarded at run end; replay starts a
+fresh buffer and application restart never restores it. Summaries, memory, and
+audit windows require bounded, versioned retention classes, supersession,
+maximum need, and clear/delete behavior before implementation. Memory is
+evidence, not identity: older evidence can retain historical meaning while
+losing current authority. Do not freeze a universal decay coefficient.
 
 Least privilege applies: local computation accesses only data needed for its
 approved purpose; player/parent UI exposes comprehensible summaries only;
@@ -196,18 +200,53 @@ and epistemic distinctions; incompatible meaning, policy, approval, or schema
 versions require explicit migration, deletion, or quarantine behavior rather
 than silent reinterpretation.
 
-## 13. Preconditions and gate answers
+## 13. GEI-04B bounded first-slice authorization
 
-**GEI-04B may not capture now.** It may begin only after: (1) this DG-00
-contract remains approved; (2) GB-UX-00 implements and verifies the main-screen
-control, canonical-only OFF behavior, badge semantics, clear/delete path, and
-fail-closed persistence state; (3) GB-PARENT-00 implements and verifies the
-protected/unknown eligibility and approval path where applicable; (4) legal/
-policy mapping and store disclosures are completed for the shipped audience;
-(5) the capture scope, local storage, retention, reset, access, and tests have
-a separate approved implementation gate. Cloud, telemetry, long-term memory,
-DecisionEpisode, scenario/model, and gameplay influence each require their own
-later gate.
+**Only this GEI-04B QuestionExperienceObservation first slice is authorized.**
+Capture is permitted only when `effectiveGameBrainEnabled` is `true`. It is an
+immutable, in-memory, run-local record containing exactly: `operation`,
+`numberType`, `difficulty`, `answerStyle`, and one terminal outcome:
+`AnsweredCorrect`, `AnsweredIncorrect`, `QuestionTimedOut`, `QuestionSkipped`,
+or `QuestionReplaced`. `QuestionAbandoned` and neutral quit, replay, or
+global-end closures must drop the record; they are never fabricated or
+captured. It contains no identifier, including no age or eligibility field. It
+is discarded at run end; replay starts a fresh run-local lifecycle, and
+application restart never restores it.
+
+It may not be persisted, cloud-synced, transmitted, logged, sent to telemetry,
+analytics, advertising systems, or shared externally. It has no gameplay
+effect. BRAIN-07 remains independent and follows its existing behavior;
+`effectiveGameBrainEnabled` does not make `mayAffectGameplay` true.
+
+This authorization does not extend to persistent experience history, long-term
+memory, learner/player modeling, DecisionEpisode runtime, CandidateEvaluation
+runtime, cloud/server processing, analytics, profiling, or gameplay
+personalization. Each requires a separate governance gate.
+
+For this exact slice, data remains on-device: no QEO leaves the device, no QEO
+is logged to remote/crash/analytics systems, no QEO is persisted, and no QEO
+is shared. Under the reviewed Google Play definitions, no new Data Safety
+"collected" declaration is required. The product owner must verify before
+release:
+
+The public privacy policy is external to this repository and has not yet been
+updated. Before release of GEI-04B runtime capture, it must be externally
+published with this truthful disclosure: "When GameBrain is enabled, Math
+Challenge may temporarily process a small structured record of the current
+question experience during the active game run. This record contains only the
+operation type, number type, difficulty, answer style, and terminal outcome.
+It is processed locally on your device, is not sent to a server or stored long
+term, and is discarded when the run ends." This is an external
+publication/release action, not a claim that the public policy has already
+been updated.
+
+- [ ] No QEO leaves device.
+- [ ] No QEO is logged to remote/crash/analytics systems.
+- [ ] No QEO is persisted.
+- [ ] No QEO is shared.
+- [ ] Current Data Safety form contains no contradictory statement.
+
+If any item becomes false, reopen governance review before release.
 
 GB-UX-00 must not add capture or influence. It must expose the master control,
 persist only the minimum enablement state after its storage review, apply OFF
@@ -217,11 +256,12 @@ mapping, protected/unknown fail-closed behavior, non-bypassable approval,
 revocation handling, and minimum approval state before protected users can
 enable collection.
 
-`NEXT_AUTHORIZED_GEI_TASK = GB-UX-00`. GEI-04B remains unauthorized.
+All other GEI work remains subject to its separate gate.
 
 ## 14. Explicit prohibitions
 
-DG-00 does not authorize runtime capture, persistence, telemetry, cloud sync,
-research collection, DecisionEpisode capture, policy execution, personalization,
-GameBrain gameplay influence, UI implementation, Age Gate changes, parental
-approval implementation, or changes to GameState/GameBrain Core.
+Except for the section 13 bounded first slice, DG-00 does not authorize runtime
+capture, persistence, telemetry, cloud sync, research collection,
+DecisionEpisode capture, policy execution, personalization, GameBrain gameplay
+influence, UI implementation, Age Gate changes, parental approval
+implementation, or changes to GameState/GameBrain Core.
