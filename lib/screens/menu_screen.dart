@@ -256,11 +256,14 @@ class _GameBrainControl extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('GameBrain preference',
-                    style: TextStyle(color: s.text, fontWeight: FontWeight.w800)),
+                    style:
+                        TextStyle(color: s.text, fontWeight: FontWeight.w800)),
                 Text(
-                  gs.gameBrainPreference
-                      ? 'Saved ON — not active yet'
-                      : 'Saved OFF',
+                  !gs.gameBrainPreference
+                      ? 'Saved OFF'
+                      : gs.effectiveGameBrainEnabled
+                          ? 'Active'
+                          : 'Saved ON — not active',
                   style: TextStyle(color: s.muted, fontSize: 12),
                 ),
               ],

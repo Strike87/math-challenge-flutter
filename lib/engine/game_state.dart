@@ -10,6 +10,7 @@ import '../features/economy/domain/coin_ledger.dart';
 import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/economy/domain/number_type_unlock_policy.dart';
 import '../features/family/domain/family_eligibility.dart';
+import '../features/game_brain/domain/game_brain_eligibility.dart';
 import '../features/game_brain/game_brain.dart';
 import '../features/game_brain/integration/adaptive_shadow_integration.dart';
 import '../features/gameplay/domain/survival_progression_policy.dart';
@@ -374,7 +375,6 @@ class GameState extends ChangeNotifier {
   int questionCount = 10;
   bool adaptive = false;
   bool gameBrainPreference = false;
-  bool _approvedGameBrainEligibilityForTesting = false;
   NumberType numType = NumberType.natural;
   AnswerStyle selectedAnswerStyle = AnswerStyle.choice4;
 
@@ -473,13 +473,10 @@ class GameState extends ChangeNotifier {
   int get activeQuestionTarget => _runSnapshot?.questionTarget ?? questionCount;
   bool get activeAdaptive => isOperationQuest ? false : adaptive;
   bool get effectiveGameBrainEnabled =>
-      gameBrainPreference && _approvedGameBrainEligibilityForTesting;
-
-  @visibleForTesting
-  void setApprovedGameBrainEligibilityForTesting(bool value) {
-    _approvedGameBrainEligibilityForTesting = value;
-    notifyListeners();
-  }
+      gameBrainPreference &&
+      gameBrainEligibility == GameBrainEligibility.eligible;
+  GameBrainEligibility get gameBrainEligibility =>
+      gameBrainEligibilityFor(familyAgeRange);
 
   // ─── UI routing ─────────────────────────────────────────────
   GameScreen currentScreen = GameScreen.menu;
@@ -4113,7 +4110,6 @@ class GameState extends ChangeNotifier {
     _coinLedger.reset();
     _dailyBonusPolicy.reset();
     gameBrainPreference = false;
-    _approvedGameBrainEligibilityForTesting = false;
     gamesPlayed = 0;
     selectedAnswerStyle = AnswerStyle.choice4;
     operationQuestProgress = OperationQuestProgress();

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/features/family/domain/family_eligibility.dart';
+import 'package:math_challenge/features/game_brain/domain/game_brain_eligibility.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/models/game_data.dart';
 import 'package:math_challenge/models/player.dart';
@@ -51,21 +52,75 @@ void main() {
         isFalse);
   });
 
-  test('preference remains fail-closed despite family eligibility', () async {
+  test('GameBrain eligibility derives separately from the family age range',
+      () async {
     final state = await _makeState();
-    await state.setGameBrainPreference(true);
-    for (final range in [
+    expect(state.gameBrainEligibility, GameBrainEligibility.unresolved);
+    for (final expectation in [
+      (FamilyAgeRange.under13, GameBrainEligibility.ineligible),
+      (FamilyAgeRange.teen13to17, GameBrainEligibility.eligible),
+      (FamilyAgeRange.adult18plus, GameBrainEligibility.eligible),
+    ]) {
+      final (range, eligibility) = expectation;
+      await state.submitFamilyAgeRange(range);
+      expect(state.gameBrainEligibility, eligibility);
+    }
+    expect(GameBrainEligibility.eligible, isNot(FamilyEligibility.eligible));
+  });
+
+  test('effective enablement follows the age and preference truth table',
+      () async {
+    for (final ageRange in <FamilyAgeRange?>[
+      null,
+      FamilyAgeRange.under13,
       FamilyAgeRange.teen13to17,
       FamilyAgeRange.adult18plus,
     ]) {
-      await state.submitFamilyAgeRange(range);
-      expect(state.familyEligibility, FamilyEligibility.eligible);
+      final state = await _makeState();
+      if (ageRange != null) await state.submitFamilyAgeRange(ageRange);
+      expect(state.effectiveGameBrainEnabled, isFalse);
+      await state.setGameBrainPreference(true);
+      expect(
+        state.effectiveGameBrainEnabled,
+        ageRange == FamilyAgeRange.teen13to17 ||
+            ageRange == FamilyAgeRange.adult18plus,
+      );
+    }
+  });
+
+  test('invalid and stale family gate state fails closed', () async {
+    for (final values in [
+      {
+        GameState.familyGateVersionStorageKey:
+            GameState.familyGateSchemaVersion,
+        GameState.familyAgeRangeStorageKey: 'invalid',
+        GameState.gameBrainPreferenceStorageKey: true,
+      },
+      {
+        GameState.familyGateVersionStorageKey: 1,
+        GameState.familyAgeRangeStorageKey: FamilyAgeRange.adult18plus.name,
+        GameState.gameBrainPreferenceStorageKey: true,
+      },
+    ]) {
+      final state = await _makeState(values: values);
+      expect(state.familyAgeRange, isNull);
+      expect(state.gameBrainEligibility, GameBrainEligibility.unresolved);
       expect(state.effectiveGameBrainEnabled, isFalse);
     }
-    state.setApprovedGameBrainEligibilityForTesting(true);
+  });
+
+  test(
+      'age transitions immediately update effective enablement but retain preference',
+      () async {
+    final state = await _makeState();
+    await state.submitFamilyAgeRange(FamilyAgeRange.adult18plus);
+    await state.setGameBrainPreference(true);
     expect(state.effectiveGameBrainEnabled, isTrue);
-    state.setApprovedGameBrainEligibilityForTesting(false);
+    await state.submitFamilyAgeRange(FamilyAgeRange.under13);
+    expect(state.gameBrainPreference, isTrue);
     expect(state.effectiveGameBrainEnabled, isFalse);
+    await state.submitFamilyAgeRange(FamilyAgeRange.teen13to17);
+    expect(state.effectiveGameBrainEnabled, isTrue);
   });
 
   test('GameBrain preference stays outside cloud progress', () async {
@@ -77,7 +132,8 @@ void main() {
     expect(payload.toString(), isNot(contains('gameBrain')));
   });
 
-  test('clear isolates preference and reset clears its key', () async {
+  test('clear isolates preference and preserves the family age state',
+      () async {
     final state = await _makeState();
     state
       ..coins = 42
@@ -86,6 +142,7 @@ void main() {
       ..skillMap['addition'] = SkillData(mastery: 77, count: 3)
       ..achievements['first_win'] = true;
     state.settings.toggleDark();
+    await state.submitFamilyAgeRange(FamilyAgeRange.adult18plus);
     await state.setGameBrainPreference(true);
     expect(await state.clearGameBrainData(), isTrue);
     expect(state.gameBrainPreference, isFalse);
@@ -97,8 +154,7 @@ void main() {
     expect(state.skillMap['addition']!.mastery, 77);
     expect(state.achievements['first_win'], isTrue);
     expect(state.settings.dark, isTrue);
-    await state.setGameBrainPreference(true);
-    state.setApprovedGameBrainEligibilityForTesting(true);
+    expect(state.familyAgeRange, FamilyAgeRange.adult18plus);
     await state.resetAllData();
     expect(state.gameBrainPreference, isFalse);
     expect(state.effectiveGameBrainEnabled, isFalse);
@@ -107,7 +163,7 @@ void main() {
   });
 
   test(
-      'preference lifecycle preserves adaptive, question, and BRAIN-07 observer',
+      'eligibility and preference preserve adaptive, question, and BRAIN-07 observer',
       () async {
     final state = await _makeState();
     state
@@ -122,11 +178,12 @@ void main() {
     final question = state.rt.q;
     expect(state.debugHasContextEvidenceObserver, isTrue);
     expect(state.debugContextEvidenceObservationCount, 0);
+    await state.submitFamilyAgeRange(FamilyAgeRange.under13);
     await state.setGameBrainPreference(true);
     expect(state.effectiveGameBrainEnabled, isFalse);
     expect(state.adaptive, isTrue);
     expect(state.rt.q, same(question));
-    state.setApprovedGameBrainEligibilityForTesting(true);
+    await state.submitFamilyAgeRange(FamilyAgeRange.adult18plus);
     expect(state.effectiveGameBrainEnabled, isTrue);
     expect(state.adaptive, isTrue);
     expect(state.rt.q, same(question));
@@ -135,6 +192,32 @@ void main() {
     await state.setGameBrainPreference(false);
     expect(state.adaptive, isTrue);
     expect(state.debugContextEvidenceObservationCount, 1);
+  });
+
+  test('BRAIN-07 observation is independent of GameBrain eligibility',
+      () async {
+    for (final scenario in <(FamilyAgeRange?, bool)>[
+      (FamilyAgeRange.under13, false),
+      (FamilyAgeRange.under13, true),
+      (null, false),
+      (FamilyAgeRange.adult18plus, true),
+    ]) {
+      final (ageRange, preference) = scenario;
+      final state = await _makeState();
+      if (ageRange != null) await state.submitFamilyAgeRange(ageRange);
+      await state.setGameBrainPreference(preference);
+      state
+        ..rt.challenge = Operation.addition
+        ..mode = GameMode.standard
+        ..diff = Difficulty.easy
+        ..numType = NumberType.natural
+        ..questionCount = 10
+        ..startGame();
+      state.rt.timer?.cancel();
+      expect(state.debugHasContextEvidenceObserver, isTrue);
+      state.onAnswer(state.rt.q!.ans);
+      expect(state.debugContextEvidenceObservationCount, 1);
+    }
   });
 
   testWidgets(
@@ -146,8 +229,9 @@ void main() {
     final on = await _makeState(
       questionGenerator: QuestionGenerator(rng: Random(1408)),
     );
+    await on.submitFamilyAgeRange(FamilyAgeRange.adult18plus);
     await on.setGameBrainPreference(true);
-    expect(on.effectiveGameBrainEnabled, isFalse);
+    expect(on.effectiveGameBrainEnabled, isTrue);
 
     for (final state in [off, on]) {
       state
@@ -186,12 +270,18 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.tap(find.byType(Switch));
       await tester.pump();
-      expect(find.text('Saved ON — not active yet'), findsOneWidget);
+      expect(find.text('Saved ON — not active'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(_host(state, const gameplay.GameScreen()));
       expect(find.byKey(const Key('gamebrain-enabled-badge')), findsNothing);
-      state.setApprovedGameBrainEligibilityForTesting(true);
+      await state.submitFamilyAgeRange(FamilyAgeRange.under13);
       await tester.pump();
+      expect(find.byKey(const Key('gamebrain-enabled-badge')), findsNothing);
+      await tester.pumpWidget(_host(state, const MenuScreen()));
+      await state.submitFamilyAgeRange(FamilyAgeRange.adult18plus);
+      await tester.pump();
+      expect(find.text('Active'), findsOneWidget);
+      await tester.pumpWidget(_host(state, const gameplay.GameScreen()));
       expect(find.byKey(const Key('gamebrain-enabled-badge')), findsOneWidget);
       expect(find.text('GAMEBRAIN ENABLED'), findsOneWidget);
       expect(tester.takeException(), isNull);
