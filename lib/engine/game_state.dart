@@ -11,6 +11,8 @@ import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/economy/domain/number_type_unlock_policy.dart';
 import '../features/family/domain/family_eligibility.dart';
 import '../features/game_brain/domain/game_brain_eligibility.dart';
+import '../features/game_brain/experience/question_experience_observation.dart';
+import '../features/game_brain/experience/run_local_question_experience_collector.dart';
 import '../features/game_brain/game_brain.dart';
 import '../features/game_brain/integration/adaptive_shadow_integration.dart';
 import '../features/gameplay/domain/survival_progression_policy.dart';
@@ -448,6 +450,11 @@ class GameState extends ChangeNotifier {
       _gameBrain?.contextEvidenceMemory.observations.length ?? 0;
   @visibleForTesting
   bool get debugHasContextEvidenceObserver => _gameBrain != null;
+  @visibleForTesting
+  int get debugQuestionExperienceObservationCount => _questionExperience.count;
+  @visibleForTesting
+  List<QuestionExperienceObservation> get debugQuestionExperienceObservations =>
+      _questionExperience.snapshot;
   bool get isPlayGamesEligible =>
       familyEligibility == FamilyEligibility.eligible;
   bool get isOperationQuest =>
@@ -517,6 +524,7 @@ class GameState extends ChangeNotifier {
   int _lastQuestionId = 0;
   int _activeQuestionId = 0;
   _QuestionTerminalClaim? _questionTerminalClaim;
+  final _questionExperience = RunLocalQuestionExperienceCollector();
   bool _disposed = false;
 
   MasterLevel? get clearedMasterLevel {
@@ -2575,6 +2583,14 @@ class GameState extends ChangeNotifier {
 
     rt.totalTurns++;
     _checkStandardTurnLimit();
+    _captureQuestionExperienceIfSupported(
+      q,
+      isCorrect ? const AnsweredCorrect() : isTimeout
+          ? const QuestionTimedOut()
+          : isSkip
+              ? const QuestionSkipped()
+              : const AnsweredIncorrect(),
+    );
     _observeContextEvidence(
       q,
       (
@@ -2610,6 +2626,42 @@ class GameState extends ChangeNotifier {
     );
     _lastContextEvidenceResult = advisory;
     _adaptiveShadowEvaluator(advisory, const AdaptiveAuthority.shadow());
+  }
+
+  void _captureQuestionExperienceIfSupported(
+    Question question,
+    QuestionTerminalObservation terminal,
+  ) {
+    final snapshot = _runSnapshot;
+    final numberType = question.numType;
+    final difficulty = question.diff;
+    final supported = effectiveGameBrainEnabled &&
+        snapshot != null &&
+        snapshot.runType == GameRunType.normal &&
+        snapshot.players == 1 &&
+        snapshot.mode == GameMode.standard &&
+        snapshot.questionMechanic == QuestionMechanic.standard &&
+        snapshot.weakSkillsPlan == null &&
+        snapshot.answerStyle == AnswerStyle.choice4 &&
+        _supportsContextRunOperation(snapshot.operation) &&
+        ContextEvidenceKey.supportsOperation(question.type) &&
+        numberType != null &&
+        difficulty != null;
+    if (!supported) return;
+
+    try {
+      _questionExperience.add(QuestionExperienceObservation(
+        presented: QuestionPresentedSnapshot(
+          operation: question.type,
+          numberType: numberType,
+          difficulty: difficulty,
+          answerStyle: snapshot.answerStyle,
+        ),
+        terminal: terminal,
+      ));
+    } catch (_) {
+      // Observation failures must not affect canonical gameplay.
+    }
   }
 
   ContextEvidenceKey? _contextEvidenceKey(
@@ -2677,6 +2729,7 @@ class GameState extends ChangeNotifier {
     _activeRunId = 0;
     _activeQuestionId = 0;
     rt.accepting = false;
+    _questionExperience.clear();
   }
 
   void _onCorrect(PlayerState pl, int pid, int timeTaken) {
@@ -3728,6 +3781,13 @@ class GameState extends ChangeNotifier {
           _QuestionTerminalClaim.switchReplacement,
         )) {
           break;
+        }
+        final question = rt.q;
+        if (question != null) {
+          _captureQuestionExperienceIfSupported(
+            question,
+            const QuestionReplaced(),
+          );
         }
         if (activeMode != GameMode.blitz && activeMode != GameMode.combo) {
           rt.timer?.cancel();
