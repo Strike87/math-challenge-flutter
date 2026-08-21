@@ -12,6 +12,7 @@ import '../features/economy/domain/number_type_unlock_policy.dart';
 import '../features/family/domain/family_eligibility.dart';
 import '../features/game_brain/domain/game_brain_eligibility.dart';
 import '../features/game_brain/experience/question_experience_observation.dart';
+import '../features/game_brain/experience/run_local_question_difficulty_measurement_collector.dart';
 import '../features/game_brain/experience/run_local_question_experience_collector.dart';
 import '../features/game_brain/game_brain.dart';
 import '../features/game_brain/integration/adaptive_shadow_integration.dart';
@@ -456,6 +457,12 @@ class GameState extends ChangeNotifier {
   @visibleForTesting
   List<QuestionExperienceObservation> get debugQuestionExperienceObservations =>
       _questionExperience.snapshot;
+  @visibleForTesting
+  int get debugQuestionDifficultyMeasurementCount =>
+      _questionDifficultyMeasurements.count;
+  @visibleForTesting
+  List<QuestionDifficultyLegality?> get debugQuestionDifficultyMeasurements =>
+      _questionDifficultyMeasurements.snapshot;
   QuestionDifficultyLegality? get currentQuestionDifficultyLegality =>
       _questionDifficultyLegality;
   @visibleForTesting
@@ -531,6 +538,8 @@ class GameState extends ChangeNotifier {
   int _activeQuestionId = 0;
   _QuestionTerminalClaim? _questionTerminalClaim;
   final _questionExperience = RunLocalQuestionExperienceCollector();
+  final _questionDifficultyMeasurements =
+      RunLocalQuestionDifficultyMeasurementCollector();
   QuestionDifficultyLegality? _questionDifficultyLegality;
   bool _disposed = false;
 
@@ -2443,6 +2452,7 @@ class GameState extends ChangeNotifier {
             resolvedDifficulty: runtimeQuestion.diff ?? d,
             legalDifficulties: legalDifficulties,
           );
+    _questionDifficultyMeasurements.add(_questionDifficultyLegality);
     if (rt.answerStyle == AnswerStyle.trueFalse) {
       final proposal = trueFalseProposal(runtimeQuestion);
       rt.proposedAnswer = proposal.answer;
@@ -2765,6 +2775,7 @@ class GameState extends ChangeNotifier {
     _activeQuestionId = 0;
     rt.accepting = false;
     _questionExperience.clear();
+    _questionDifficultyMeasurements.clear();
     _questionDifficultyLegality = null;
   }
 
