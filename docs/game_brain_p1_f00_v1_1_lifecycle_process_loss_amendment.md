@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | `protocol_version` | `P1-F00 v1.1` |
-| `status` | `DRAFT_FOR_INDEPENDENT_REVIEW` |
+| `status` | `REVISED / AWAITING_INDEPENDENT_RE-REVIEW` |
 | Parent | `P1-F00 v1` in `docs/game_brain_p1_f00_difficulty_evidence_feasibility_protocol.md` |
 | Parent status | `LOCKED / HISTORICAL` |
 | Amendment policy | Prospective only |
@@ -16,12 +16,19 @@ P1-F00 v1 remains historically immutable. This prospective successor neither
 rewrites nor unlocks v1. It addresses the readiness finding that lifecycle
 interruption and silent process loss leave v1 denominator rules unexecutable.
 
+### Revision note
+
+Revised after independent review `REQUIRED_CHANGES` and the corrected G → F → E
+proof ordering: admission is now explicitly crash-consistent,
+opportunity-level, and independently re-reviewable; no mechanism or capture is
+authorized.
+
 ## 2. Why amendment is required
 
 Canonical timers use wall-clock `DateTime` deltas without a gameplay lifecycle
 pause rule. Background duration can contribute to a canonical timeout, and
 in-memory state can disappear on process loss without a durable closure receipt.
-This draft freezes treatment of those facts if they later become measurable.
+This amendment freezes treatment of those facts if they later become measurable.
 
 ## 3. Scope boundaries
 
@@ -52,42 +59,59 @@ Phase-1 envelope/natural-play requirement, and ordered terminal precedence are
 unchanged. In particular, v1 Step 1 remains `INCONCLUSIVE` with
 `MEASUREMENT_UNAVAILABLE`; this draft creates no terminal status or precedence.
 
-## 5. Lifecycle terminology
+## 5. Canonical gameplay and scientific admission
+
+A **canonical gameplay window** remains under canonical gameplay authority.
+Measurement integrity or storage success must never decide whether gameplay
+opens, proceeds, closes, generates a question, or records a canonical terminal.
+
+An **admitted confirmatory measurement window** is a separate scientific
+population. It may be admitted only after required integrity admission state
+reaches the future mechanism's defined crash-consistent durable commit boundary.
+If admission cannot be established, gameplay continues normally, but that
+window is nonadmitted to confirmatory P1-F01; this is nonadmission, not
+fabricated confirmatory `O_raw` evidence or a gameplay effect.
+
+The canonical owner's eligible `chooseDifficulty` opening remains the
+conceptual canonical `O_raw` event. The confirmatory `O_raw` population
+contains only admitted canonical openings. Admission does not redefine gameplay
+or canonical legal options.
+
+## 6. Lifecycle terminology
 
 | Term | Prospective meaning |
 | --- | --- |
-| `ACTIVE` | Opportunity is open and no interruption is known. |
-| `BACKGROUNDED_OR_INTERRUPTED` | Opportunity existed and a lifecycle interruption is known; this is not closure or player intent. |
+| `ACTIVE` | An admitted opportunity is open and no interruption is known. |
+| `BACKGROUNDED_OR_INTERRUPTED` | An admitted opportunity existed and a lifecycle interruption is known; this is not closure or player intent. |
 | `EXPLICIT_CLEAN_CLOSURE` | An observable closure establishes required fields and accepted terminal linkage without known interruption. |
-| `EXPLICIT_UNLINKED_CLOSURE` | Opportunity is known to have existed and closed, but has no accepted terminal linkage. |
-| `SILENT_PROCESS_LOSS` | Process/window disappears without durable observable closure; the current non-persistent system cannot claim this as observed. |
+| `EXPLICIT_UNLINKED_CLOSURE` | An admitted opportunity is known to have existed and closed, but has no accepted terminal linkage. |
+| `LEFT_UNCLEAN` | An admitted measurement window is established not to have cleanly closed; causal classification is not required. |
 
 `BACKGROUND != CLOSURE`, `TIMEOUT != MISSING`, `NO_OPPORTUNITY != UNKNOWN`,
-`MISSING != SILENT_PROCESS_LOSS`, and canonical terminal truth != study
-eligibility.
+and canonical terminal truth != study eligibility.
 
-## 6. O_raw prospective definition
+## 7. O_raw prospective definition
 
-An opportunity enters `O_raw` at the canonical owner's eligible
-`chooseDifficulty` opening in the frozen envelope. The owner must supply the
-canonical legal-candidate set and required decision context at that boundary,
-but a future measurement path failing to record either does not prevent
-`O_raw` membership: it counts toward global missingness and makes any affected
-candidate denominator unavailable. Entry is not question generation,
-execution, QEO linkage, or completion. This avoids completed-run-only survivor
-selection.
+For every admitted confirmatory measurement window, integrity accounting for
+canonical eligible `O_raw` openings must be cumulative and monotonic: it
+represents historical admitted openings, not currently open opportunities.
+Terminal completion must not decrement historical opening counts. This prevents
+survivor-only accounting.
 
-An opportunity that later explicitly closes unlinked remains an `O_raw` member
-conceptually. A future governed seam must account for that opening even though
-it cannot become `O_valid`. Out-of-envelope opportunities remain outside
-`O_raw` as in v1.
+The canonical owner supplies the legal-candidate set and required decision
+context at the eligible opening. Entry is not question generation, execution,
+QEO linkage, or completion.
 
-## 7. O_valid lifecycle treatment
+An admitted opportunity that later explicitly closes unlinked remains in the
+confirmatory `O_raw` population even though it cannot become `O_valid`.
+Out-of-envelope opportunities remain outside `O_raw` as in v1.
+
+## 8. O_valid lifecycle treatment
 
 `O_valid` retains every v1 requirement and additionally requires a
 `CLEAN_WINDOW`: no known lifecycle interruption and no observed unclean
 closure. A known `BACKGROUNDED_OR_INTERRUPTED` opportunity is lifecycle-
-censored: it remains in `O_raw`, is excluded from `O_valid`, and is excluded
+censored: it remains in confirmatory `O_raw`, is excluded from `O_valid`, and is excluded
 from `Y_correct` and Wilson denominators. It is not player failure.
 
 An explicit unlinked opportunity remains `O_raw`, is excluded from `O_valid`,
@@ -95,22 +119,28 @@ and is never recoded as incorrect or no opportunity. Silent disappearance is
 never silently valid. If required integrity facts are unavailable, v1 Step 1
 returns `INCONCLUSIVE` / `MEASUREMENT_UNAVAILABLE`.
 
-## 8. Missingness numerator / denominator
+## 9. Legal-set membership and missingness
 
-Global missingness is the count of `O_raw` openings with a required `O_valid`
+Integrity facts for admitted openings must preserve enough legal-set or
+candidate-membership information to evaluate locked candidate denominators
+truthfully. This does not require question text, prompt, answer, timestamp, or
+unrelated payload. Uncertain membership must remain explicit and must not be
+assigned to no candidates, the executed candidate, all candidates, or an
+arbitrary distribution.
+
+Global missingness is the count of admitted `O_raw` openings with a required `O_valid`
 field absent, invalid/duplicated linkage, no accepted QEO link, explicit
 unlinked closure, known lifecycle censoring, or observed unclean-window
-condition, divided by the complete measurable `O_raw` opening population.
+condition, divided by the complete measurable admitted `O_raw` opening population.
 Known interruption counts as integrity missingness, not player failure.
 
-Candidate missingness for candidate `c` is the count of those deficient
-`O_raw` openings whose supplied legal set is known and contains `c`, divided
-by `O_raw` openings whose supplied legal set is known and contains `c`.
-Candidate denominators exist only when legal membership is known. Where it is
-unknown, no denominator is fabricated: that is global measurement unavailability.
+Candidate missingness for candidate `c` is evaluable only where legal
+membership is known and contains `c`. If uncertain openings could belong to a
+candidate and conservative candidate-specific bounds cannot be evaluated, that
+candidate criterion is `INCONCLUSIVE`. No candidate denominator is fabricated.
 
-Silent process loss is not added as if observed. If it makes complete `O_raw`
-unknowable, missingness is unevaluable and v1 Step 1 applies.
+If global accounting is unavailable, v1 Step 1 returns `INCONCLUSIVE` /
+`MEASUREMENT_UNAVAILABLE`. Measurement uncertainty is never `NOT_FEASIBLE`.
 
 ## 9. Background-timeout treatment
 
@@ -120,62 +150,120 @@ is excluded from `O_valid`, `Y_correct`, and Wilson. A timeout without known
 interruption retains v1 treatment. This does not infer interruption when the
 fact is unavailable.
 
-## 10. Window-integrity semantics
+## 10. Complete admitted-window detection (G)
+
+Every admitted confirmatory measurement window must later be distinguishable,
+including after process death or restart, as `CLEANLY_CLOSED` or
+`LEFT_UNCLEAN` / not cleanly closed. This requires complete integrity detection
+for admitted windows, not attribution to crash, OS kill, device shutdown, or
+any other cause.
+
+A window that can disappear without durable evidence of admission and later
+clean/unclean disposition must not be admitted. In-memory disappearance is not
+evidence of cleanliness, observed loss, zero loss, validity, or player failure.
+
+## 11. Window-integrity semantics
 
 | Status | Meaning |
 | --- | --- |
 | `CLEAN_WINDOW` | Required opening and clean closure/linkage facts are observable with no known interruption. |
 | `OBSERVED_UNCLEAN_WINDOW` | A known interruption, explicit unlinked closure, or other observable integrity defect occurred. |
 | `INTEGRITY_UNKNOWN` | A required integrity fact is not measurable; it is neither clean nor unclean evidence. |
-| `PROCESS_LOSS_CENSORING_RISK` | Durable integrity accounting indicates an opening may have been lost before closure accounting; risk, not fabricated observed loss. |
+| `PROCESS_LOSS_CENSORING_RISK` | Validated finite accounting bounds indicate possible divergence; not fabricated observed loss. |
 
 Only known facts make a window observed-unclean. A non-persistent disappearance
-remains unobserved, not a falsely observed `SILENT_PROCESS_LOSS` event.
+cannot support confirmatory admission.
 
-## 11. Silent process loss / censoring
+## 12. Retry, duplication, and finite divergence (F → E)
 
-The current in-memory system cannot establish that a vanished window existed,
-cannot conclude its loss rate is zero, and cannot call it valid or incorrect.
-It therefore cannot truthfully form the complete `O_raw`/missingness
-denominator needed for confirmatory adjudication.
+Recovery/retry must be idempotent, or the future mechanism must separately
+prove a finite maximum duplicate divergence. An uncertain acknowledgement or
+retry must not silently inflate admitted `O_raw` accounting. Unbounded duplicate
+divergence makes measurement integrity unavailable: `INCONCLUSIVE`.
 
-## 12. Bootstrapping constraint
+`K_under` is the proven maximum number of true admitted canonical `O_raw`
+openings that may be absent from durable accounting at an integrity-failure
+boundary. `K_over` is the proven maximum number of durable accounting units
+that may exist without corresponding admitted canonical `O_raw` truth,
+including duplicate/recovery effects. No numerical values are frozen. Both must
+be finite and validated before confirmatory P1-F01 collection; neither may be
+inferred to be one from single-question gameplay.
+
+The future mechanism must establish divergence direction from its validated
+commit/recovery pipeline: `NONE`, `UNDERCOUNT_ONLY`, `OVERCOUNT_ONLY`, or
+`BOTH`. Nominal write ordering alone does not establish `UNDERCOUNT_ONLY`.
+Proof order is G complete admitted-window detection, then F idempotent recovery
+or a finite duplicate bound, then E finite `K_under`, `K_over`, and divergence
+direction.
+
+## 13. Bootstrapping constraint
 
 A pure non-persistent measurement system cannot validate its own silent-loss
 rate when process death erases evidence that the window existed. Confirmatory
 P1-F01 remains closed until a governed path can establish the minimum required
 integrity claim. This is a protocol dependency, not mechanism authorization.
 
-## 13. Required integrity estimand
+## 14. Conservative uncertainty and required integrity estimand
 
 ```text
 potentially_lost_O_raw_proportion =
-  potentially lost canonical O_raw openings /
-  (measurable clean + observed-unclean + potentially lost canonical O_raw openings)
+  potentially lost admitted canonical O_raw openings /
+  (measurable clean + observed-unclean + potentially lost admitted canonical O_raw openings)
 ```
 
-This estimates denominator-integrity risk, not recovered outcomes. A
-candidate-specific denominator also requires legal-candidate membership at
-opening for every included term; otherwise no candidate loss proportion is
-measurable. Observable unclean-window frequency is additionally required but
-does not substitute for this potentially-lost-opening estimand.
+This estimates denominator-integrity risk, not recovered outcomes. When exact
+denominator truth is unavailable but finite validated bounds exist, evaluation
+may use conservative bounded uncertainty. A locked criterion may resolve only
+when every defensible value in its range has the same locked criterion result.
+If the range crosses a locked PASS/FAIL boundary, the result is `INCONCLUSIVE`;
+never choose the favorable edge. Global bounds do not establish candidate
+bounds, and no probabilistic allocation is permitted without a separately
+authorized protocol.
 
-## 14. Minimum conceptual durability class
+## 15. Normative admission and integrity checklist
 
-The minimum class is `B1-LIKE_DIAGNOSTIC_INTEGRITY`: bounded opening/closure
-integrity receipts and legal-set membership sufficient for the stated
-denominator risk and known unclean closures. It must not recover QEO outcomes,
-responses, or study episodes; that would be B2-like study recovery. This is a
-requirement only, not capture, persistence, or implementation authorization.
+Any future confirmatory P1-F01 mechanism must satisfy all eleven items below
+before a window may be admitted:
 
-## 15. Capture-authority firewall
+1. Canonical gameplay remains unaffected by measurement admission, commit, or
+   storage success or failure.
+2. An admitted confirmatory window is admitted only after its required
+   integrity-admission state reaches a crash-consistent durable boundary.
+3. After restart, every admitted window is deterministically distinguishable
+   as cleanly closed or left unclean.
+4. Admitted canonical eligible `O_raw` openings are cumulative and monotonic;
+   closing a window never decrements them.
+5. Each admitted opening preserves its legal-set membership, or preserves
+   explicit membership `UNKNOWN`; neither may be fabricated.
+6. Admission, opening, and closure/recovery accounting commits are
+   crash-consistent: before confirmatory reliance, they prevent torn or
+   partially applied accounting and silent loss of acknowledged committed state.
+7. The proof order is G complete admitted-window detection, then F idempotent
+   recovery or a finite duplicate bound, then E finite accounting divergence.
+8. `K_under` and `K_over` are finite and validated: `K_under` bounds true
+   admitted openings absent from durable accounting, and `K_over` bounds durable
+   accounting units without corresponding admitted-opening truth.
+9. The validated divergence direction is exactly `NONE`, `UNDERCOUNT_ONLY`,
+   `OVERCOUNT_ONLY`, or `BOTH`.
+10. A locked global integrity criterion resolves only if every defensible value
+    in its conservative range gives the same result; otherwise it is
+    `INCONCLUSIVE`.
+11. Candidate uncertainty is evaluated separately: unknown legal membership or
+    unevaluable conservative candidate bounds makes that candidate criterion
+    `INCONCLUSIVE`, without fabricating a candidate denominator.
+
+Failure of any required property makes measurement integrity unavailable.
+The affected window is nonadmitted (or remains nonadmissible), and P1-F01
+cannot fabricate evidence or return `FEASIBLE` from it.
+
+## 16. Capture-authority firewall
 
 P1-F00 v1.1 specifying a needed fact does **not** authorize capture. Lifecycle
 transitions, dirty markers, durable counters, opportunity persistence,
 process-loss markers, and legal-set receipts each need separate governance
 authorization. No current implementation may pretend unavailable facts exist.
 
-## 16. Protocol-authority semantics
+## 17. Protocol-authority semantics
 
 Capture authority does not automatically make a fact admissible. This draft
 permits adjudication use only as written: known interruption/observed unclean
@@ -183,14 +271,16 @@ closure affects `O_valid` and missingness; bounded receipts support only the
 stated denominator estimand. Capture authority != protocol authority, and
 protocol silence != permission.
 
-## 17. Confirmatory-window prerequisites
+## 18. Confirmatory-window prerequisites
 
-No window opens until independent outcome-blind review, a subsequent lock, a
-governed natural-play path for all unchanged v1 fields, and measurable required
+No confirmatory window opens until this v1.1 revision has been independently
+re-reviewed and locked; required capture governance is approved; a concrete
+mechanism is specified; G → F → E proof has passed; and readiness confirms a
+governed natural-play path for all unchanged v1 fields plus measurable required
 integrity estimands. Synthetic/tests may later validate instrumentation but are
 never confirmatory evidence. No real P1-F01 data has been inspected.
 
-## 18. Falsification / false-pass cases
+## 19. Falsification / false-pass cases
 
 | Case | Required result |
 | --- | --- |
@@ -206,7 +296,7 @@ These rules prevent false pass from survivor-only data. They may cause a
 conservative `INCONCLUSIVE` abstention when integrity is not measurable; that
 is not a conclusion that natural-play feasibility failed.
 
-## 19. No-effect / unchanged scope
+## 20. No-effect / unchanged scope
 
 This amendment does not implement DecisionEpisode, CandidateEvaluation,
 Scenario Library, gameplay selection, GameBrain authority, persistence, cloud,
@@ -214,7 +304,7 @@ telemetry, long-term memory, or Player Experience Model. `mayAffectGameplay`
 remains `false`. It changes none of v1 thresholds, `Y_correct`, common support,
 legal-option ownership, natural play, or terminal precedence.
 
-## 20. Independent review requirements
+## 21. Independent review requirements
 
 This is a draft only. An independent outcome-blind reviewer must assess
 denominator integrity, global/candidate missingness, lifecycle classifications,
@@ -222,4 +312,4 @@ process-loss bootstrapping, false-pass/false-fail risk, coherence of retained
 thresholds, any accidental scientific-claim change, and any implied capture
 authority. No confirmatory data may be inspected before review and lock.
 
-P1_F00_V1_1_LIFECYCLE_AMENDMENT = DRAFT_READY_FOR_INDEPENDENT_REVIEW
+P1_F00_V1_1_REQUIRED_CHANGES = APPLIED_AWAITING_INDEPENDENT_REREVIEW
