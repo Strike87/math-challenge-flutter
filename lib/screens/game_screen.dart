@@ -184,6 +184,21 @@ class _GameTopBar extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ModeBadge(label: label.toUpperCase(), color: color),
+                    if (gs.effectiveGameBrainEnabled) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        key: const Key('gamebrain-enabled-badge'),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(GameConfig.grape),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text('GAMEBRAIN ENABLED',
+                            style: TextStyle(color: Colors.white,
+                                fontWeight: FontWeight.w900, fontSize: 10)),
+                      ),
+                    ],
                     if (rt.comboMultiplier > 1.0 &&
                         gs.activeMode != GameMode.combo) ...[
                       const SizedBox(width: 8),

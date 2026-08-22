@@ -373,6 +373,88 @@ datasets, persistent raw learner histories, or collection of new process data.
 Future real-player empirical work requires separately approved privacy and
 validation scope.
 
+## Phase-1 `chooseDifficulty` contract freeze
+
+This is a documentation-only contract for the first future GameBrain decision
+context. It authorizes neither a decision pipeline nor gameplay influence.
+`mayAffectGameplay` remains `false`.
+
+### Decision locus and owner
+
+A `chooseDifficulty` opportunity exists only when its canonical owner
+explicitly opens an eligible opportunity and supplies the activity/context
+snapshot, player-agency constraints, and legal candidates. Multiple difficulty
+values existing in an enum or elsewhere in the game never creates an
+opportunity. The canonical owner owns opportunity definition and legality;
+GameBrain evaluates/reasons only; a future Product/Authority layer may decide
+whether a preference can influence gameplay; the canonical system alone
+executes any choice.
+
+### Supplied immutable context and candidates
+
+The minimum future immutable `DecisionContext` is:
+
+```text
+chooseDifficulty {
+  currentExecutedDifficulty
+  legalDifficultyCandidates
+  operation
+  numberType
+  answerStyle
+  decisionLocus
+}
+```
+
+`legalDifficultyCandidates` is a canonical, explicitly supplied subset of
+`{Easy, Medium, Hard}`. GameBrain evaluates only that supplied subset. It must
+not discover or reconstruct legality from enum ordering, numeric values,
+labels, historical exposure, scenario knowledge, Adaptive, Master, Quest,
+Daily, Weak Skills, or generator rules. If no candidate is supplied, the
+future result is `ABSTAIN_NO_LEGAL_OPTIONS`; no alternative is invented.
+
+The Phase-1 envelope is limited to the GEI-04B-supported context: normal,
+single-player, Standard, Choice4, standard mechanic, supported ordinary
+operation/context, and Easy/Medium/Hard. It excludes Master, Quest, Survival,
+Blitz, Combo, Death, two-player, True/False, missing-number,
+missing-operation, and every other decision type (including mode selection,
+distractor intent, timing, practice, question-generator influence,
+answer-format personalization, and activity selection).
+
+### Truthful observation, scenarios, and future boundary
+
+GEI-04B is the current prerequisite: canonical gameplay records an accepted
+terminal outcome as bounded, run-local `QuestionExperienceObservation` when
+enabled. This contract adds no capture fields, persistence, or new collection.
+
+The later Difficulty Scenario Library may interpret truthful evidence for the
+supplied candidates; scenarios do not execute actions. For example,
+`OverchallengeCandidate` is evidence compatible with an overchallenge
+hypothesis, not an instruction to decrease difficulty. Future scenario use
+must preserve supporting and contradicting evidence, missing evidence,
+alternative explanations, and epistemic state; its scenario-to-evaluation
+synthesis remains independently versioned and gated.
+
+Observed `Medium -> actual outcome` does not establish hypothetical outcomes
+for unexecuted Easy or Hard candidates: those remain predicted or unknown, not
+observed. Reference opportunities may later preserve comparator exposure but
+do not create causal counterfactual truth.
+
+A later, still-unimplemented evaluation may return only `NO_PREFERENCE` or
+`PreferredCandidate(difficulty)` from supplied candidates. It does not mutate
+`GameState` or execute the choice. DecisionEpisode is required later for
+intervention/policy-effect audit; descriptive Experience Memory may later use
+truthful natural observations; reproducibility must use bounded
+`DecisionEvidenceSnapshot`, stability requires K comparable eligible episodes,
+and policy monotonicity is dimension-level rather than candidate-global.
+
+Data governance and Scenario Acceptance Gates precede applicable capture and
+evaluation. P1-F00 must preregister quantitative P1-F01 rules, retain a
+separation between protocol design and outcome adjudication, obtain an
+independent/outside-direct-path review before lock, use prospective amendment
+rules, preserve evidence validity envelopes, and never self-declare a MET gate
+from implementation alone. Product-complexity review remains distinct from
+scientific validity.
+
 ## Frozen rules
 
 1. Core knows educational evidence, not concrete gameplay systems.

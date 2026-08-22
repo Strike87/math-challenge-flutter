@@ -30,6 +30,8 @@ class MenuScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _Header(s: s, gs: gs),
+                const SizedBox(height: 10),
+                _GameBrainControl(gs: gs, s: s),
                 const SizedBox(height: 20),
 
                 // PERSONALIZED LEARNING
@@ -219,6 +221,59 @@ class MenuScreen extends StatelessWidget {
           fontWeight: FontWeight.w800,
           fontSize: 11,
         ),
+      ),
+    );
+  }
+}
+
+class _GameBrainControl extends StatelessWidget {
+  const _GameBrainControl({required this.gs, required this.s});
+
+  final GameState gs;
+  final SettingsService s;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('gamebrain-master-control'),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: s.surface.withValues(alpha: s.dark ? 0.72 : 0.88),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(GameConfig.grape).withValues(alpha: 0.22),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.psychology_outlined,
+            color: Color(GameConfig.grape),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('GameBrain preference',
+                    style:
+                        TextStyle(color: s.text, fontWeight: FontWeight.w800)),
+                Text(
+                  !gs.gameBrainPreference
+                      ? 'Saved OFF'
+                      : gs.effectiveGameBrainEnabled
+                          ? 'Active'
+                          : 'Saved ON — not active',
+                  style: TextStyle(color: s.muted, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: gs.gameBrainPreference,
+            onChanged: gs.setGameBrainPreference,
+          ),
+        ],
       ),
     );
   }

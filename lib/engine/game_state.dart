@@ -10,8 +10,14 @@ import '../features/economy/domain/coin_ledger.dart';
 import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/economy/domain/number_type_unlock_policy.dart';
 import '../features/family/domain/family_eligibility.dart';
+import '../features/game_brain/domain/game_brain_eligibility.dart';
+import '../features/game_brain/experience/p1_f01_integrity_store.dart';
+import '../features/game_brain/experience/question_experience_observation.dart';
+import '../features/game_brain/experience/run_local_question_difficulty_measurement_collector.dart';
+import '../features/game_brain/experience/run_local_question_experience_collector.dart';
 import '../features/game_brain/game_brain.dart';
 import '../features/game_brain/integration/adaptive_shadow_integration.dart';
+import '../features/gameplay/domain/question_difficulty_legality.dart';
 import '../features/gameplay/domain/survival_progression_policy.dart';
 import '../features/gameplay/domain/question_mechanic.dart';
 import '../features/modals/presentation/toast_controller.dart';
@@ -52,6 +58,14 @@ enum GameModal {
   dailyChallenges,
   operationQuest,
   weakSkillsPractice,
+}
+
+enum _QuestionTerminalClaim {
+  answer,
+  skip,
+  timeout,
+  switchReplacement,
+  neutral,
 }
 
 /// Runtime game state (the `rt` object in the original JS).
@@ -234,6 +248,8 @@ class GameState extends ChangeNotifier {
     AdultGateChallenge Function()? adultGateFactory,
     int Function()? nowMillisProvider,
     AdaptiveShadowEvaluator? adaptiveShadowEvaluator,
+    QuestionGenerator? questionGenerator,
+    P1F01IntegrityStore? p1F01IntegrityStore,
   })  : iapAdapter = iapAdapter ?? const UnavailableIapPurchaseAdapter(),
         adService = adService ?? const UnavailableAdMobService(),
         playGamesService = playGamesService ?? NativePlayGamesService(),
@@ -241,6 +257,9 @@ class GameState extends ChangeNotifier {
             nowMillisProvider ?? (() => DateTime.now().millisecondsSinceEpoch),
         _adaptiveShadowEvaluator =
             adaptiveShadowEvaluator ?? evaluateAdaptiveShadow,
+        _qgen = questionGenerator ?? QuestionGenerator(),
+        _ownsP1F01IntegrityStore = p1F01IntegrityStore == null,
+        _p1F01IntegrityStore = p1F01IntegrityStore ?? P1F01IntegrityStore(),
         _adultGateFactory =
             adultGateFactory ?? (() => AdultGateChallenge.random()) {
     _toastController = ToastController(onChanged: notifyListeners);
@@ -260,6 +279,7 @@ class GameState extends ChangeNotifier {
   static const int familyGateSchemaVersion = 2;
   static const String familyGateVersionStorageKey = 'mc_familyGateVersion';
   static const String familyAgeRangeStorageKey = 'mc_familyAgeRange';
+  static const String gameBrainPreferenceStorageKey = 'mc_gameBrainEnabled';
   static const _adaptiveDifficultyEngine = AdaptiveDifficultyEngine();
   static const _survivalProgressionPolicy = SurvivalProgressionPolicy();
 
@@ -325,6 +345,7 @@ class GameState extends ChangeNotifier {
     'mc_animSpeed',
     'mc_reduceMotion',
     'mc_lowPerf',
+    gameBrainPreferenceStorageKey,
   ];
 
   @visibleForTesting
@@ -339,7 +360,9 @@ class GameState extends ChangeNotifier {
   final AdultGateChallenge Function() _adultGateFactory;
   final int Function() _nowMillis;
   final AdaptiveShadowEvaluator _adaptiveShadowEvaluator;
-  final QuestionGenerator _qgen = QuestionGenerator();
+  final QuestionGenerator _qgen;
+  final bool _ownsP1F01IntegrityStore;
+  final P1F01IntegrityStore _p1F01IntegrityStore;
   final Random _rng = Random();
   StreamSubscription<List<IapPurchase>>? _iapPurchaseSub;
 
@@ -361,6 +384,7 @@ class GameState extends ChangeNotifier {
   Difficulty diff = Difficulty.easy;
   int questionCount = 10;
   bool adaptive = false;
+  bool gameBrainPreference = false;
   NumberType numType = NumberType.natural;
   AnswerStyle selectedAnswerStyle = AnswerStyle.choice4;
 
@@ -434,6 +458,29 @@ class GameState extends ChangeNotifier {
       _gameBrain?.contextEvidenceMemory.observations.length ?? 0;
   @visibleForTesting
   bool get debugHasContextEvidenceObserver => _gameBrain != null;
+  @visibleForTesting
+  int get debugQuestionExperienceObservationCount => _questionExperience.count;
+  @visibleForTesting
+  List<QuestionExperienceObservation> get debugQuestionExperienceObservations =>
+      _questionExperience.snapshot;
+  @visibleForTesting
+  int get debugQuestionDifficultyMeasurementCount =>
+      _questionDifficultyMeasurements.count;
+  @visibleForTesting
+  List<QuestionDifficultyLegality?> get debugQuestionDifficultyMeasurements =>
+      _questionDifficultyMeasurements.snapshot;
+  @visibleForTesting
+  List<QuestionDifficultyMeasurementOpportunity>
+      get debugQuestionDifficultyMeasurementOpportunities =>
+          _questionDifficultyMeasurements.opportunities;
+  @visibleForTesting
+  Future<P1F01IntegritySnapshot?> debugP1F01IntegritySnapshot() =>
+      _p1F01IntegrityStore.latestSnapshot();
+  QuestionDifficultyLegality? get currentQuestionDifficultyLegality =>
+      _questionDifficultyLegality;
+  @visibleForTesting
+  QuestionDifficultyLegality? get debugQuestionDifficultyLegality =>
+      currentQuestionDifficultyLegality;
   bool get isPlayGamesEligible =>
       familyEligibility == FamilyEligibility.eligible;
   bool get isOperationQuest =>
@@ -458,6 +505,11 @@ class GameState extends ChangeNotifier {
   NumberType get activeNumberType => _runSnapshot?.numberType ?? numType;
   int get activeQuestionTarget => _runSnapshot?.questionTarget ?? questionCount;
   bool get activeAdaptive => isOperationQuest ? false : adaptive;
+  bool get effectiveGameBrainEnabled =>
+      gameBrainPreference &&
+      gameBrainEligibility == GameBrainEligibility.eligible;
+  GameBrainEligibility get gameBrainEligibility =>
+      gameBrainEligibilityFor(familyAgeRange);
 
   // ─── UI routing ─────────────────────────────────────────────
   GameScreen currentScreen = GameScreen.menu;
@@ -493,6 +545,17 @@ class GameState extends ChangeNotifier {
   bool _directIapStartBusy = false;
   GameModal _adultGateReturnModal = GameModal.none;
   int _turnSeq = 0;
+  int _lastRunId = 0;
+  int _activeRunId = 0;
+  int _lastQuestionId = 0;
+  int _activeQuestionId = 0;
+  _QuestionTerminalClaim? _questionTerminalClaim;
+  final _questionExperience = RunLocalQuestionExperienceCollector();
+  final _questionDifficultyMeasurements =
+      RunLocalQuestionDifficultyMeasurementCollector();
+  QuestionDifficultyLegality? _questionDifficultyLegality;
+  bool _p1F01IntegrityRunEligible = false;
+  bool _p1F01IntegrityMeasurementFailed = false;
   bool _disposed = false;
 
   MasterLevel? get clearedMasterLevel {
@@ -561,6 +624,8 @@ class GameState extends ChangeNotifier {
     if (_disposed) return;
     _disposed = true;
     _turnSeq++;
+    _closeActiveQuestionNeutrally();
+    _invalidateActiveRun();
     rt.gameActive = false;
     _iapPurchaseSub?.cancel();
     _toastController.dispose();
@@ -569,12 +634,17 @@ class GameState extends ChangeNotifier {
     _delayedResultModalTimer?.cancel();
     _cancelDelayedLossEnd();
     rt.timer?.cancel();
+    if (_ownsP1F01IntegrityStore) {
+      unawaited(_p1F01IntegrityStore.close());
+    }
     super.dispose();
   }
 
   // ─── Load / save ────────────────────────────────────────────
   Future<void> load() async {
+    unawaited(_p1F01IntegrityStore.recoverOpenWindows());
     _loadFamilyEligibility();
+    gameBrainPreference = Storage.getBool(gameBrainPreferenceStorageKey, false);
     final skipCloudOwnedLoad = await _recoverCloudResetIntent();
     if (!skipCloudOwnedLoad) {
       cloudResetGeneration = Storage.getInt('mc_cloudResetGeneration', 0);
@@ -628,6 +698,34 @@ class GameState extends ChangeNotifier {
     if (!skipCloudOwnedLoad) await _persistLoadedMigrationState();
     _hydrateDailyBonusPolicy();
     notifyListeners();
+  }
+
+  Future<bool> setGameBrainPreference(bool value) async {
+    try {
+      await Storage.setBool(gameBrainPreferenceStorageKey, value);
+    } on Exception {
+      showToast('Could not save GameBrain preference. Please try again.');
+      return false;
+    }
+    gameBrainPreference = value;
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> clearGameBrainData() async {
+    try {
+      await Storage.remove(gameBrainPreferenceStorageKey);
+      final integrityCleared = await _p1F01IntegrityStore.deleteAll();
+      if (!integrityCleared) {
+        throw Exception('Could not clear P1-F01 integrity state.');
+      }
+    } on Exception {
+      showToast('Could not clear GameBrain data. Please try again.');
+      return false;
+    }
+    gameBrainPreference = false;
+    notifyListeners();
+    return true;
   }
 
   Future<bool> submitFamilyAgeRange(FamilyAgeRange range) async {
@@ -2063,6 +2161,10 @@ class GameState extends ChangeNotifier {
       return;
     }
 
+    _closeActiveQuestionNeutrally();
+    rt.timer?.cancel();
+    _invalidateActiveRun();
+    _activeRunId = ++_lastRunId;
     _cancelDelayedLossEnd();
     _turnSeq++;
     closeModal();
@@ -2089,6 +2191,7 @@ class GameState extends ChangeNotifier {
     _runSnapshot = snapshot;
     _gameBrain = GameBrain();
     _lastContextEvidenceResult = null;
+    _beginP1F01IntegrityWindowIfSupported(snapshot);
     final isMaster = snapshot.operation == Operation.master;
     final isBoss = snapshot.operation == Operation.dailyBoss;
     for (var i = 1; i <= 2; i++) {
@@ -2199,11 +2302,22 @@ class GameState extends ChangeNotifier {
     var type = rt.challenge;
     var d = activeDifficulty;
     var generatedNumType = activeNumberType;
+    var difficultyRoute = _runSnapshot?.runType == GameRunType.operationQuest
+        ? QuestionDifficultyRoute.operationQuestStage
+        : QuestionDifficultyRoute.playerConfigured;
+    Set<Difficulty>? legalDifficulties =
+        _runSnapshot?.runType == GameRunType.operationQuest
+            ? {activeDifficulty}
+            : playerConfigurableDifficultySet.contains(activeDifficulty)
+                ? playerConfigurableDifficultySet
+                : null;
 
     // Follow-up reinforcement
     if (rt.isFollowUp && rt.followUpData != null) {
       type = rt.followUpData!.type;
       d = rt.followUpData!.diff;
+      difficultyRoute = QuestionDifficultyRoute.followUp;
+      legalDifficulties = {d};
       rt.isFollowUp = false;
       rt.followUpData = null;
     }
@@ -2214,6 +2328,8 @@ class GameState extends ChangeNotifier {
       final stageIdx = _masterLevel;
       final lvl = GameConfig.masterLevels[stageIdx];
       d = Difficulty.fromString(lvl.diff);
+      difficultyRoute = QuestionDifficultyRoute.masterStage;
+      legalDifficulties = {d};
       type = Operation.fromString(lvl.type);
       boss = lvl.boss;
       final masterNt = lvl.numType;
@@ -2228,6 +2344,8 @@ class GameState extends ChangeNotifier {
     } else if (rt.challenge == Operation.dailyBoss) {
       final lvl = rt.dailyBoss ?? dailyBoss!;
       d = Difficulty.fromString(lvl.diff);
+      difficultyRoute = QuestionDifficultyRoute.dailyBoss;
+      legalDifficulties = {d};
       type = Operation.fromString(lvl.type);
       boss = lvl.icon;
       numType = lvl.numType == 'mixed'
@@ -2243,6 +2361,8 @@ class GameState extends ChangeNotifier {
     if (activeMode == GameMode.survival) {
       d = Difficulty.fromString(
           GameConfig.phaseKeys[rt.survivalPhase.clamp(0, 4)]);
+      difficultyRoute = QuestionDifficultyRoute.survivalPhase;
+      legalDifficulties = {d};
     }
 
     final operationPool = _runSnapshot?.operationPool;
@@ -2268,6 +2388,8 @@ class GameState extends ChangeNotifier {
         rt.challenge != Operation.dailyBoss &&
         activeMode != GameMode.survival) {
       d = _getAdaptDiff(type);
+      difficultyRoute = QuestionDifficultyRoute.adaptive;
+      legalDifficulties = adaptiveDifficultySet;
     }
 
     // Build question with uniqueness guarantee
@@ -2347,6 +2469,19 @@ class GameState extends ChangeNotifier {
     );
 
     rt.q = runtimeQuestion;
+    _questionDifficultyLegality = legalDifficulties == null
+        ? null
+        : QuestionDifficultyLegality(
+            route: difficultyRoute,
+            resolvedDifficulty: runtimeQuestion.diff ?? d,
+            legalDifficulties: legalDifficulties,
+          );
+    _activeQuestionId = ++_lastQuestionId;
+    final difficultyOpportunity = _questionDifficultyMeasurements.add(
+      _questionDifficultyLegality,
+      _currentQuestionToken,
+    );
+    _admitP1F01DifficultyOpportunityIfSupported(difficultyOpportunity);
     if (rt.answerStyle == AnswerStyle.trueFalse) {
       final proposal = trueFalseProposal(runtimeQuestion);
       rt.proposedAnswer = proposal.answer;
@@ -2356,6 +2491,7 @@ class GameState extends ChangeNotifier {
     rt.lastAnswerCorrect = false;
     rt.bossMood = 'normal';
     rt.qStartTs = DateTime.now().millisecondsSinceEpoch;
+    _questionTerminalClaim = null;
     rt.accepting = true;
 
     // Start per-question timer
@@ -2394,6 +2530,7 @@ class GameState extends ChangeNotifier {
   }
 
   void _startQuestionTimer({int resumeElapsedMs = 0}) {
+    final questionToken = _currentQuestionToken;
     final limitMs =
         rt.qTimerLimit > 0 ? rt.qTimerLimit * 1000 : _getTimerLimitMs();
     final duration = max(0, limitMs - resumeElapsedMs);
@@ -2402,10 +2539,14 @@ class GameState extends ChangeNotifier {
     rt.timerStart = DateTime.now().millisecondsSinceEpoch;
     rt.timer?.cancel();
     rt.timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
+      if (!_isQuestionOpen(questionToken)) {
+        t.cancel();
+        return;
+      }
       final elapsed = DateTime.now().millisecondsSinceEpoch - rt.timerStart;
       if (elapsed >= duration) {
         t.cancel();
-        _onTimeout();
+        _onTimeout(questionToken);
       } else {
         notifyListeners();
       }
@@ -2413,15 +2554,21 @@ class GameState extends ChangeNotifier {
   }
 
   void _startGlobalTimer(int totalMs) {
+    final runId = _activeRunId;
     rt.timerStart = DateTime.now().millisecondsSinceEpoch;
     rt.timerDurationMs = totalMs;
     rt.qTimerLimit = totalMs ~/ 1000;
     rt.timer?.cancel();
     rt.timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
+      if (runId != _activeRunId || !rt.gameActive) {
+        t.cancel();
+        return;
+      }
       final elapsed = DateTime.now().millisecondsSinceEpoch - rt.timerStart;
       rt.blitzElapsedMs = elapsed;
       if (elapsed >= totalMs) {
         t.cancel();
+        _closeActiveQuestionNeutrally();
         _endGame(false, false);
       } else {
         notifyListeners();
@@ -2429,17 +2576,16 @@ class GameState extends ChangeNotifier {
     });
   }
 
-  void _onTimeout() {
-    if (!rt.accepting) return;
-    _onAnswer(null, false, true);
+  void _onTimeout(({int runId, int questionId}) questionToken) {
+    _onAnswer(null, false, true, questionToken);
   }
 
   @visibleForTesting
-  void debugTimeoutForTest() => _onTimeout();
+  void debugTimeoutForTest() => _onTimeout(_currentQuestionToken);
 
   // ─── Answer handler ─────────────────────────────────────────
   void onAnswer(num val) {
-    _onAnswer(val, false, false);
+    _onAnswer(val, false, false, _currentQuestionToken);
   }
 
   void onTrueFalseAnswer(bool response) {
@@ -2457,12 +2603,22 @@ class GameState extends ChangeNotifier {
 
   void skip() {
     if (!rt.accepting) return;
-    _onAnswer(null, true, false);
+    _onAnswer(null, true, false, _currentQuestionToken);
   }
 
-  void _onAnswer(num? val, bool isSkip, bool isTimeout) {
-    if (!rt.accepting || rt.state == 'paused') return;
-    rt.accepting = false;
+  void _onAnswer(
+    num? val,
+    bool isSkip,
+    bool isTimeout,
+    ({int runId, int questionId}) questionToken,
+  ) {
+    if (rt.state == 'paused') return;
+    final terminalClaim = isTimeout
+        ? _QuestionTerminalClaim.timeout
+        : isSkip
+            ? _QuestionTerminalClaim.skip
+            : _QuestionTerminalClaim.answer;
+    if (!_claimQuestionTerminal(questionToken, terminalClaim)) return;
     if (activeMode != GameMode.blitz && activeMode != GameMode.combo) {
       _freezeQuestionTimer();
       rt.timer?.cancel();
@@ -2498,6 +2654,21 @@ class GameState extends ChangeNotifier {
 
     rt.totalTurns++;
     _checkStandardTurnLimit();
+    final observation = _captureQuestionExperienceIfSupported(
+      q,
+      isCorrect
+          ? const AnsweredCorrect()
+          : isTimeout
+              ? const QuestionTimedOut()
+              : isSkip
+                  ? const QuestionSkipped()
+                  : const AnsweredIncorrect(),
+    );
+    if (observation != null) {
+      final linked =
+          _questionDifficultyMeasurements.link(questionToken, observation);
+      _reconcileP1F01TerminalIfSupported(questionToken, linked);
+    }
     _observeContextEvidence(
       q,
       (
@@ -2535,6 +2706,45 @@ class GameState extends ChangeNotifier {
     _adaptiveShadowEvaluator(advisory, const AdaptiveAuthority.shadow());
   }
 
+  QuestionExperienceObservation? _captureQuestionExperienceIfSupported(
+    Question question,
+    QuestionTerminalObservation terminal,
+  ) {
+    final snapshot = _runSnapshot;
+    final numberType = question.numType;
+    final difficulty = question.diff;
+    final supported = effectiveGameBrainEnabled &&
+        snapshot != null &&
+        snapshot.runType == GameRunType.normal &&
+        snapshot.players == 1 &&
+        snapshot.mode == GameMode.standard &&
+        snapshot.questionMechanic == QuestionMechanic.standard &&
+        snapshot.weakSkillsPlan == null &&
+        snapshot.answerStyle == AnswerStyle.choice4 &&
+        _supportsContextRunOperation(snapshot.operation) &&
+        ContextEvidenceKey.supportsOperation(question.type) &&
+        numberType != null &&
+        difficulty != null;
+    if (!supported) return null;
+
+    try {
+      final observation = QuestionExperienceObservation(
+        presented: QuestionPresentedSnapshot(
+          operation: question.type,
+          numberType: numberType,
+          difficulty: difficulty,
+          answerStyle: snapshot.answerStyle,
+        ),
+        terminal: terminal,
+      );
+      _questionExperience.add(observation);
+      return observation;
+    } catch (_) {
+      // Observation failures must not affect canonical gameplay.
+      return null;
+    }
+  }
+
   ContextEvidenceKey? _contextEvidenceKey(
     GameRunSnapshot snapshot,
     Question question,
@@ -2555,12 +2765,142 @@ class GameState extends ChangeNotifier {
       ContextEvidenceKey.supportsOperation(operation) ||
       operation == Operation.mixed;
 
+  bool _supportsP1F01IntegrityRun(GameRunSnapshot snapshot) =>
+      effectiveGameBrainEnabled &&
+      snapshot.runType == GameRunType.normal &&
+      snapshot.players == 1 &&
+      snapshot.mode == GameMode.standard &&
+      snapshot.questionMechanic == QuestionMechanic.standard &&
+      snapshot.weakSkillsPlan == null &&
+      snapshot.answerStyle == AnswerStyle.choice4 &&
+      !activeAdaptive &&
+      playerConfigurableDifficultySet.contains(snapshot.difficulty) &&
+      _supportsContextRunOperation(snapshot.operation);
+
+  void _beginP1F01IntegrityWindowIfSupported(GameRunSnapshot snapshot) {
+    _p1F01IntegrityRunEligible = _supportsP1F01IntegrityRun(snapshot);
+    _p1F01IntegrityMeasurementFailed = !_p1F01IntegrityRunEligible;
+    if (!_p1F01IntegrityRunEligible) return;
+    unawaited(_p1F01IntegrityStore.admitWindow().then((window) {
+      if (window == null) _p1F01IntegrityMeasurementFailed = true;
+    }));
+  }
+
+  void _admitP1F01DifficultyOpportunityIfSupported(
+    QuestionDifficultyMeasurementOpportunity opportunity,
+  ) {
+    if (!_p1F01IntegrityRunEligible ||
+        _p1F01IntegrityMeasurementFailed ||
+        opportunity.legality?.route !=
+            QuestionDifficultyRoute.playerConfigured) {
+      return;
+    }
+    final legalSetCode = P1F01LegalSetCode.fromLegality(opportunity.legality);
+    unawaited(_p1F01IntegrityStore
+        .admitOpportunity(
+      opportunityOrdinalWithinRun: opportunity.opportunityOrdinalWithinRun,
+      legalSetCode: legalSetCode,
+    )
+        .then((result) {
+      if (result == P1F01OpportunityAdmissionResult.failedClosed) {
+        _p1F01IntegrityMeasurementFailed = true;
+      }
+    }));
+  }
+
+  void _reconcileP1F01TerminalIfSupported(
+    ({int runId, int questionId}) questionToken,
+    bool terminalLinkAccepted,
+  ) {
+    if (!_p1F01IntegrityRunEligible || _p1F01IntegrityMeasurementFailed) {
+      return;
+    }
+    final opportunity = _questionDifficultyMeasurements.opportunityFor(
+      questionToken,
+    );
+    if (opportunity == null) {
+      _p1F01IntegrityMeasurementFailed = true;
+      unawaited(_p1F01IntegrityStore.markLeftUnclean());
+      return;
+    }
+    unawaited(_p1F01IntegrityStore
+        .reconcileTerminal(
+      opportunityOrdinalWithinRun: opportunity.opportunityOrdinalWithinRun,
+      terminalLinkAccepted: terminalLinkAccepted,
+    )
+        .then((clean) {
+      if (!clean) _p1F01IntegrityMeasurementFailed = true;
+    }));
+  }
+
+  void _closeP1F01IntegrityCleanly() {
+    if (!_p1F01IntegrityRunEligible) return;
+    final failed = _p1F01IntegrityMeasurementFailed;
+    _p1F01IntegrityRunEligible = false;
+    _p1F01IntegrityMeasurementFailed = false;
+    unawaited(
+      failed
+          ? _p1F01IntegrityStore.markLeftUnclean()
+          : _p1F01IntegrityStore.closeCleanIfConsistent(),
+    );
+  }
+
+  void _leaveP1F01IntegrityUnclean() {
+    if (!_p1F01IntegrityRunEligible) return;
+    _p1F01IntegrityRunEligible = false;
+    _p1F01IntegrityMeasurementFailed = false;
+    unawaited(_p1F01IntegrityStore.markLeftUnclean());
+  }
+
   void _freezeQuestionTimer() {
     if (rt.timerDurationMs <= 0 || rt.timerStart <= 0) return;
     final elapsed = DateTime.now().millisecondsSinceEpoch - rt.timerStart;
     rt.timerDurationMs =
         (rt.timerDurationMs - elapsed).clamp(0, rt.timerDurationMs).toInt();
     rt.timerStart = 0;
+  }
+
+  ({int runId, int questionId}) get _currentQuestionToken => (
+        runId: _activeRunId,
+        questionId: _activeQuestionId,
+      );
+
+  bool _isCurrentQuestion(({int runId, int questionId}) questionToken) =>
+      questionToken.runId > 0 &&
+      questionToken.runId == _activeRunId &&
+      questionToken.questionId > 0 &&
+      questionToken.questionId == _activeQuestionId;
+
+  bool _isQuestionOpen(({int runId, int questionId}) questionToken) =>
+      _isCurrentQuestion(questionToken) &&
+      _questionTerminalClaim == null &&
+      rt.accepting;
+
+  bool _claimQuestionTerminal(
+    ({int runId, int questionId}) questionToken,
+    _QuestionTerminalClaim terminalClaim,
+  ) {
+    if (!_isQuestionOpen(questionToken)) return false;
+    _questionTerminalClaim = terminalClaim;
+    rt.accepting = false;
+    return true;
+  }
+
+  void _closeActiveQuestionNeutrally() {
+    _claimQuestionTerminal(
+      _currentQuestionToken,
+      _QuestionTerminalClaim.neutral,
+    );
+  }
+
+  void _invalidateActiveRun() {
+    _leaveP1F01IntegrityUnclean();
+    _activeRunId = 0;
+    _activeQuestionId = 0;
+    rt.accepting = false;
+    _questionExperience.clear();
+    _questionDifficultyMeasurements.clear();
+    _questionDifficultyLegality = null;
   }
 
   void _onCorrect(PlayerState pl, int pid, int timeTaken) {
@@ -3015,6 +3355,9 @@ class GameState extends ChangeNotifier {
     _logPerformance('end game entered');
     _cancelDelayedLossEnd();
     if (!rt.gameActive || rt.state == 'ended') return;
+    _closeActiveQuestionNeutrally();
+    _closeP1F01IntegrityCleanly();
+    _invalidateActiveRun();
     unawaited(_markCloudDirty());
     rt.gameActive = false;
     rt.state = 'ended';
@@ -3291,6 +3634,9 @@ class GameState extends ChangeNotifier {
     _logPerformance('replay navigation entered');
     final snapshot = _runSnapshot;
     final dismissedResult = currentModal == GameModal.win;
+    _closeActiveQuestionNeutrally();
+    rt.timer?.cancel();
+    _invalidateActiveRun();
     closeModal();
     if (dismissedResult) await _showPendingInterstitialAd();
     if (rt.challenge == Operation.master) {
@@ -3309,6 +3655,8 @@ class GameState extends ChangeNotifier {
 
   Future<void> quitToMenu() async {
     _logPerformance('main menu navigation entered');
+    _closeActiveQuestionNeutrally();
+    _invalidateActiveRun();
     _cancelDelayedLossEnd();
     _turnSeq++;
     final dismissedResult = currentModal == GameModal.win;
@@ -3332,6 +3680,8 @@ class GameState extends ChangeNotifier {
 
   Future<void> returnToOperationQuestMap() async {
     _logPerformance('operation quest map navigation entered');
+    _closeActiveQuestionNeutrally();
+    _invalidateActiveRun();
     _cancelDelayedLossEnd();
     _turnSeq++;
     final dismissedResult = currentModal == GameModal.win;
@@ -3556,14 +3906,19 @@ class GameState extends ChangeNotifier {
 
     switch (pu) {
       case PowerUp.time:
+        final questionToken = _currentQuestionToken;
         rt.timer?.cancel();
         rt.timerDurationMs += 5000;
         if (rt.qTimerLimit > 0) rt.qTimerLimit += 5;
         rt.timer = Timer.periodic(const Duration(milliseconds: 100), (t) {
+          if (!_isQuestionOpen(questionToken)) {
+            t.cancel();
+            return;
+          }
           final elapsed = DateTime.now().millisecondsSinceEpoch - rt.timerStart;
           if (elapsed >= rt.timerDurationMs) {
             t.cancel();
-            _onTimeout();
+            _onTimeout(questionToken);
           } else {
             notifyListeners();
           }
@@ -3592,8 +3947,37 @@ class GameState extends ChangeNotifier {
         rt.frozen = true;
         break;
       case PowerUp.switchOp:
+        final questionToken = _currentQuestionToken;
+        if (!_claimQuestionTerminal(
+          questionToken,
+          _QuestionTerminalClaim.switchReplacement,
+        )) {
+          break;
+        }
+        final question = rt.q;
+        if (question != null) {
+          final observation = _captureQuestionExperienceIfSupported(
+            question,
+            const QuestionReplaced(),
+          );
+          if (observation != null) {
+            final linked = _questionDifficultyMeasurements.link(
+                questionToken, observation);
+            _reconcileP1F01TerminalIfSupported(questionToken, linked);
+          }
+        }
+        if (activeMode != GameMode.blitz && activeMode != GameMode.combo) {
+          rt.timer?.cancel();
+        }
         Timer(const Duration(milliseconds: 500), () {
-          if (!rt.gameActive || rt.state != 'playing') return;
+          if (!_isCurrentQuestion(questionToken) ||
+              _questionTerminalClaim !=
+                  _QuestionTerminalClaim.switchReplacement ||
+              !rt.gameActive ||
+              rt.state != 'playing' ||
+              rt.accepting) {
+            return;
+          }
           _generateQ();
           notifyListeners();
         });
@@ -3933,12 +4317,15 @@ class GameState extends ChangeNotifier {
 
   Future<void> resetAllData() async {
     final nextCloudResetGeneration = cloudResetGeneration + 1;
+    _closeActiveQuestionNeutrally();
+    _invalidateActiveRun();
     rt.timer?.cancel();
     _cancelDelayedLossEnd();
     _turnSeq++;
     for (final key in _resetStorageKeys) {
       await Storage.remove(key);
     }
+    await _p1F01IntegrityStore.deleteAll();
     _resetInMemoryData();
     cloudResetGeneration = nextCloudResetGeneration;
     cloudRevision = null;
@@ -3960,6 +4347,7 @@ class GameState extends ChangeNotifier {
   void _resetInMemoryData() {
     _coinLedger.reset();
     _dailyBonusPolicy.reset();
+    gameBrainPreference = false;
     gamesPlayed = 0;
     selectedAnswerStyle = AnswerStyle.choice4;
     operationQuestProgress = OperationQuestProgress();
