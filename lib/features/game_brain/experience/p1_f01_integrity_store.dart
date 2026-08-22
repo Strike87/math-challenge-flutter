@@ -40,6 +40,7 @@ final class P1F01LegalSetCode {
   const P1F01LegalSetCode._(this.value);
 
   static const unknown = P1F01LegalSetCode._('V1_UNKNOWN');
+  static const allPhase1 = P1F01LegalSetCode._('V1_EMH_MASK_7');
   static const _phase1 = <Difficulty, int>{
     Difficulty.easy: 1,
     Difficulty.medium: 2,
@@ -47,6 +48,14 @@ final class P1F01LegalSetCode {
   };
 
   final String value;
+
+  static P1F01LegalSetCode? fromStoredValue(String value) {
+    if (value == unknown.value ||
+        RegExp(r'^V1_EMH_MASK_[1-7]$').hasMatch(value)) {
+      return P1F01LegalSetCode._(value);
+    }
+    return null;
+  }
 
   static P1F01LegalSetCode fromLegality(
     QuestionDifficultyLegality? legality,
@@ -350,6 +359,20 @@ final class P1F01IntegrityStore {
     return _latestSnapshot();
   }
 
+  Future<List<P1F01IntegritySnapshot>> retainedSnapshots() async {
+    await _queue;
+    final db = await _db();
+    final rows = await db.query(
+      _windowTable,
+      orderBy: 'local_window_sequence ASC',
+    );
+    return List.unmodifiable(
+      await Future.wait(rows.map((row) => _snapshotFromRow(db, row))),
+    );
+  }
+
+  Future<void> drain() => _queue;
+
   @visibleForTesting
   Future<P1F01IntegritySnapshot?> snapshot(int localWindowSequence) async {
     await debugDrain();
@@ -388,19 +411,7 @@ final class P1F01IntegrityStore {
   }
 
   @visibleForTesting
-  Future<List<P1F01IntegritySnapshot>> debugSnapshots() async {
-    await debugDrain();
-    final db = await _db();
-    final rows = await db.query(
-      _windowTable,
-      orderBy: 'local_window_sequence ASC',
-    );
-    final snapshots = <P1F01IntegritySnapshot>[];
-    for (final row in rows) {
-      snapshots.add(await _snapshotFromRow(db, row));
-    }
-    return snapshots;
-  }
+  Future<List<P1F01IntegritySnapshot>> debugSnapshots() => retainedSnapshots();
 
   @visibleForTesting
   Future<void> debugDrain() => _queue;

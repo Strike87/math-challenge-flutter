@@ -11,6 +11,7 @@ import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/economy/domain/number_type_unlock_policy.dart';
 import '../features/family/domain/family_eligibility.dart';
 import '../features/game_brain/domain/game_brain_eligibility.dart';
+import '../features/game_brain/experience/p1_f01_device_validation_probe.dart';
 import '../features/game_brain/experience/p1_f01_integrity_store.dart';
 import '../features/game_brain/experience/question_experience_observation.dart';
 import '../features/game_brain/experience/run_local_question_difficulty_measurement_collector.dart';
@@ -268,6 +269,9 @@ class GameState extends ChangeNotifier {
         unawaited(handleIapPurchase(purchase));
       }
     });
+    P1F01DeviceValidationServiceExtension.register(
+      P1F01DeviceValidationProbe(_p1F01IntegrityStore),
+    );
   }
 
   static const double _masteryMax = AdaptiveDifficultyEngine.maxMastery;
