@@ -280,3 +280,66 @@ Required remaining controlled run:
 - lifecycle: `PROTOCOL_RULE_SUPPORTED_BUT_STUDY_EVALUATOR_NOT_IMPLEMENTED`
 - `DEVICE_STORAGE_FAILURE = NOT_SAFELY_REPRODUCIBLE`
 - `mayAffectGameplay = false`
+
+## Remaining-evidence continuation
+
+This continuation supersedes the earlier `F2 = PARTIAL` and clean-close
+limitations with new physical-device evidence. It does not supersede the
+transaction-boundary limitation.
+
+### Same-install identity and clean close
+
+Before and after the direct no-install restart, package-manager data matched:
+
+- package `com.mohamedk.mathchallenge`, version `1.0.8` / versionCode `37`;
+- UID `10260`;
+- first install `2026-08-22 16:00:14` and last update `2026-08-22 16:56:57`;
+- APK path `/data/app/~~sNCOwxwKvahhBHaakge8xQ==/com.mohamedk.mathchallenge-G4HVCYUY62ePYfGGtS1bOQ==/base.apk`.
+
+`SAME_PACKAGE_INSTALLATION = PROVEN`.
+
+Fresh window `4` reached `CLEANLY_CLOSED` with `O_raw = 10`, admitted ordinal
+`10`, reconciled ordinal `10`, counter `V1_EMH_MASK_7 = 10`, and no defect.
+After force-stop and direct Android relaunch without reinstall, the approved
+probe reported that exact same cleanly closed window and values.
+
+### Fresh F2 and repeated F1
+
+Fresh `OPEN` window `2` had `O_raw = 2`, admitted ordinal `2`, reconciled
+ordinal `1`, `V1_EMH_MASK_7 = 2`, and no defect before `retryConflict`.
+It returned `failedClosed`; all accounting values stayed `2 / 2 / 1 / 2` and
+the window moved fail-closed to `LEFT_UNCLEAN` with a defect marker.
+
+Fresh `OPEN` window `3` had the same accounting baseline before `retryGap`.
+It returned `failedClosed` with no accounting inflation and the same
+fail-closed `LEFT_UNCLEAN` result.
+
+Fresh `OPEN` window `4` received `retryExact` twice. Both returned
+`alreadyAdmitted`; after each call, `O_raw`, admitted ordinal, counter, and
+window sequence remained `1`, and no defect was raised.
+
+`F_DEVICE_STATUS = PROVEN` for the exercised device store semantics.
+
+### Admission-boundary trials
+
+The earliest controllable start interruption produced no new retained window:
+the retained set remained windows `1` through `4`. This supports the
+admission-absent outcome.
+
+The post-admission trial recorded fresh `OPEN` window `5` at `O_raw = 1`,
+admitted ordinal `1`, unreconciled ordinal, and counter `1` before force-stop.
+After direct no-install relaunch, it recovered as `LEFT_UNCLEAN` with
+internally consistent `O_raw = 3`, admitted ordinal `3`, reconciled ordinal
+`2`, and counter `3`. No contradictory durable row or counter was observed,
+but this device procedure cannot attribute the extra admissions to an exact
+transaction-boundary instant.
+
+- `E_DEVICE_STATUS = PARTIAL`
+- `E_BLOCKER = DETERMINISTIC_TRANSACTION_BOUNDARY_TESTABILITY`
+- `K_under = NOT_PROVEN`
+- `K_over = NOT_PROVEN`
+- `DIVERGENCE_STATUS = NOT_PROVEN`
+- possible direction: `NEITHER_PROVEN`
+
+No production code, gameplay authority, or protocol document changed in this
+continuation. `mayAffectGameplay = false` remains true.
