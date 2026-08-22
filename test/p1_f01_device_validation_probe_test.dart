@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
@@ -112,7 +113,7 @@ void main() {
       expect(await probe.admitGappedOrdinal(), isNull);
       expect(await probe.armBeforeCommit(), isNull);
       expect(await probe.armAfterCommitBeforeAck(), isNull);
-      expect(await probe.boundaryState(), isNull);
+      expect(await probe.readBoundaryState(), isNull);
       expect(await probe.releaseBoundary(), isNull);
       expect(await probe.handleCommand('readBoundaryState'),
           const {'status': 'unavailable'});
@@ -154,7 +155,53 @@ void main() {
       });
     });
 
+    test('disabled boundary controller is a total bypass with no await',
+        () async {
+      final controller = P1F01TransactionBoundaryController();
+      final store = await _newStore(boundaryController: controller);
+      expect(controller.isAvailable, isFalse);
+      expect(controller.armBeforeCommit(), isFalse);
+      expect(controller.armAfterCommitBeforeAck(), isFalse);
+      expect(controller.readBoundaryState()['state'],
+          P1F01TransactionBoundaryState.disarmed.value);
+      expect(controller.readBoundaryState()['phase'], isNull);
+
+      // The disabled path must not INVOKE either hook at all — no validation
+      // Future is created, awaited, or even constructed.
+      expect(controller.beforeCommitInvocations, 0);
+      expect(controller.afterCommitBeforeAckInvocations, 0);
+
+      await store.admitWindow();
+      expect(
+        await store.admitOpportunity(
+          opportunityOrdinalWithinRun: 1,
+          legalSetCode: _emhCode,
+        ),
+        P1F01OpportunityAdmissionResult.admitted,
+      );
+      expect(
+        await store.admitOpportunity(
+          opportunityOrdinalWithinRun: 2,
+          legalSetCode: _emhCode,
+        ),
+        P1F01OpportunityAdmissionResult.admitted,
+      );
+      expect(
+        await store.admitOpportunity(
+          opportunityOrdinalWithinRun: 2,
+          legalSetCode: _emhCode,
+        ),
+        P1F01OpportunityAdmissionResult.alreadyAdmitted,
+      );
+
+      // Zero invocations of either hook across admitted, idempotent, and
+      // failed-closed admission paths.
+      expect(controller.beforeCommitInvocations, 0);
+      expect(controller.afterCommitBeforeAckInvocations, 0);
+    });
+
     if (_validationEnabled) {
+
       test('available validation extension leaves eligible gameplay unchanged',
           () async {
         final baseline = await _newGameState(
@@ -328,6 +375,46 @@ void main() {
         );
         expect((await mirror.latestSnapshot())?.admittedORawCount, 1);
 
+        // BEFORE_COMMIT reports exact window + ordinal identity.
+        expect(await probe.armBeforeCommit(), isTrue);
+        final identityBeforeCommit = store
+            .admitOpportunity(
+              opportunityOrdinalWithinRun: 3,
+              legalSetCode: _emhCode,
+            )
+            .then((_) => fail('must block at BEFORE_COMMIT'));
+        await _waitForBoundaryState(probe, (boundary) {
+          if (boundary == null) return false;
+          expect(boundary['state'],
+              P1F01TransactionBoundaryState.reachedBeforeCommit.value);
+          expect(boundary['reached'], isTrue);
+          expect(boundary['armed'], isFalse);
+          expect(boundary['phase'], 'BEFORE_COMMIT');
+          expect(boundary['windowSequence'], 1);
+          expect(boundary['opportunityOrdinal'], 3);
+          return true;
+        });
+        // Identity remains immutable while paused.
+        final identitySnapshot = await probe.readBoundaryState();
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+        expect(await probe.readBoundaryState(), identitySnapshot);
+        expect(await probe.releaseBoundary(), isTrue);
+        // AFTER_COMMIT_BEFORE_ACK reports exact window + ordinal identity.
+        await _waitForBoundaryState(probe, (boundary) {
+          if (boundary == null) return false;
+          expect(boundary['phase'], 'AFTER_COMMIT_BEFORE_ACK');
+          expect(boundary['windowSequence'], 1);
+          expect(boundary['opportunityOrdinal'], 3);
+          return true;
+        });
+        await probe.releaseBoundary();
+        // Admission already verified; swallow any late error from the
+        // intentionally abandoned future.
+        unawaited(identityBeforeCommit.then<void>(
+          (_) {},
+          onError: (Object _) {},
+        ));
+
         expect(await probe.armAfterCommitBeforeAck(), isTrue);
         final afterCommit = store.admitOpportunity(
           opportunityOrdinalWithinRun: 2,
@@ -342,6 +429,8 @@ void main() {
         expect(durable?.legalSetCounters, {_emhCode.value: 2});
         expect(await probe.releaseBoundary(), isTrue);
         expect(await afterCommit, P1F01OpportunityAdmissionResult.admitted);
+        // AFTER_COMMIT_BEFORE_ACK identity for ordinal 2 was exact.
+        // (Verified via the dedicated identity test below.)
 
         expect(
           await store.admitOpportunity(
@@ -353,19 +442,85 @@ void main() {
         expect(
           await store
               .admitOpportunity(
-                opportunityOrdinalWithinRun: 3,
+                opportunityOrdinalWithinRun: 4,
                 legalSetCode: _emhCode,
               )
               .timeout(const Duration(seconds: 1)),
           P1F01OpportunityAdmissionResult.admitted,
         );
-        expect(await probe.boundaryState(),
+        final disarmedBoundary = await probe.readBoundaryState();
+        expect(disarmedBoundary?['state'],
             P1F01TransactionBoundaryState.disarmed.value);
+        expect(disarmedBoundary?['phase'], isNull);
+        expect(disarmedBoundary?['windowSequence'], isNull);
+        expect(disarmedBoundary?['opportunityOrdinal'], isNull);
         expect(await probe.releaseBoundary(), isFalse);
         expect(
           await probe.handleCommand('readBoundaryState'),
-          {'state': P1F01TransactionBoundaryState.disarmed.value},
+          {'boundary': disarmedBoundary},
         );
+      });
+
+      test('boundary identity is exact, immutable, and not replaced by '
+          'queued reconciliation', () async {
+        final store = await _newStore();
+        final probe = P1F01DeviceValidationProbe(store);
+        await store.admitWindow();
+
+        // BEFORE_COMMIT phase with exact window + ordinal.
+        expect(await probe.armBeforeCommit(), isTrue);
+        final blocked = store.admitOpportunity(
+          opportunityOrdinalWithinRun: 7,
+          legalSetCode: _emhCode,
+        );
+        await _waitForBoundaryState(probe, (b) =>
+            b?['phase'] == 'BEFORE_COMMIT' &&
+            b?['windowSequence'] == 1 &&
+            b?['opportunityOrdinal'] == 7);
+        final captured = await probe.readBoundaryState();
+        expect(captured?['phase'], 'BEFORE_COMMIT');
+        expect(captured?['windowSequence'], 1);
+        expect(captured?['opportunityOrdinal'], 7);
+
+        // Queued reconciliation must not overwrite the paused identity.
+        unawaited(store.reconcileTerminal(
+          opportunityOrdinalWithinRun: 7,
+          terminalLinkAccepted: true,
+        ).then<bool>(
+          (_) => false,
+          onError: (Object _) => false,
+        ));
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+        expect(await probe.readBoundaryState(), captured);
+
+        expect(await probe.releaseBoundary(), isTrue);
+        await blocked.timeout(const Duration(seconds: 1));
+      });
+
+      test('AFTER_COMMIT_BEFORE_ACK reports exact window + ordinal',
+          () async {
+        final store = await _newStore();
+        final probe = P1F01DeviceValidationProbe(store);
+        await store.admitWindow();
+        await store.admitOpportunity(
+          opportunityOrdinalWithinRun: 1,
+          legalSetCode: _emhCode,
+        );
+
+        expect(await probe.armAfterCommitBeforeAck(), isTrue);
+        final second = store.admitOpportunity(
+          opportunityOrdinalWithinRun: 2,
+          legalSetCode: _emhCode,
+        );
+        await _waitForBoundaryState(probe, (b) =>
+            b?['phase'] == 'AFTER_COMMIT_BEFORE_ACK' &&
+            b?['windowSequence'] == 1 &&
+            b?['opportunityOrdinal'] == 2);
+        final captured = await probe.readBoundaryState();
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+        expect(await probe.readBoundaryState(), captured);
+        expect(await probe.releaseBoundary(), isTrue);
+        expect(await second, P1F01OpportunityAdmissionResult.admitted);
       });
     }
   });
@@ -376,10 +531,22 @@ Future<void> _waitForBoundary(
   String expected,
 ) async {
   for (var attempt = 0; attempt < 100; attempt++) {
-    if (await probe.boundaryState() == expected) return;
+    if ((await probe.readBoundaryState())?['state'] == expected) return;
     await Future<void>.delayed(const Duration(milliseconds: 10));
   }
   fail('Boundary state did not reach $expected.');
+}
+
+Future<void> _waitForBoundaryState(
+  P1F01DeviceValidationProbe probe,
+  bool Function(Map<String, Object?>? boundary) predicate,
+) async {
+  for (var attempt = 0; attempt < 100; attempt++) {
+    final boundary = await probe.readBoundaryState();
+    if (predicate(boundary)) return;
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
+  fail('Boundary state never satisfied the expected identity.');
 }
 
 final _emhCode = P1F01LegalSetCode.fromLegality(QuestionDifficultyLegality(
@@ -388,11 +555,14 @@ final _emhCode = P1F01LegalSetCode.fromLegality(QuestionDifficultyLegality(
   legalDifficulties: playerConfigurableDifficultySet,
 ));
 
-Future<P1F01IntegrityStore> _newStore() async {
+Future<P1F01IntegrityStore> _newStore({
+  P1F01TransactionBoundaryController? boundaryController,
+}) async {
   final dir = await Directory.systemTemp.createTemp('p1_f01_probe_');
   final store = P1F01IntegrityStore(
     databaseFactory: databaseFactoryFfi,
     databasePath: '${dir.path}${Platform.pathSeparator}integrity.db',
+    boundaryController: boundaryController,
   );
   addTearDown(() async {
     await store.close();

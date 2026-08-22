@@ -49,6 +49,37 @@ enum P1F01TransactionBoundaryState {
   final String value;
 }
 
+enum P1F01TransactionBoundaryPhase {
+  beforeCommit('BEFORE_COMMIT'),
+  afterCommitBeforeAck('AFTER_COMMIT_BEFORE_ACK');
+
+  const P1F01TransactionBoundaryPhase(this.value);
+
+  final String value;
+}
+
+/// Exact immutable identity captured at the moment an admission reaches a
+/// validation boundary hook. Never inferred from snapshots, queue state, or
+/// timing. Contains no question, player, or payload data.
+@immutable
+final class P1F01BoundaryIdentity {
+  const P1F01BoundaryIdentity({
+    required this.phase,
+    required this.windowSequence,
+    required this.opportunityOrdinal,
+  });
+
+  final P1F01TransactionBoundaryPhase phase;
+  final int windowSequence;
+  final int opportunityOrdinal;
+
+  Map<String, Object?> toJson() => {
+        'phase': phase.value,
+        'windowSequence': windowSequence,
+        'opportunityOrdinal': opportunityOrdinal,
+      };
+}
+
 /// Debug-only, in-memory control for physical transaction-boundary validation.
 final class P1F01TransactionBoundaryController {
   static const bool _validationEnabled = bool.fromEnvironment(
@@ -58,7 +89,14 @@ final class P1F01TransactionBoundaryController {
 
   P1F01TransactionBoundaryState _state = P1F01TransactionBoundaryState.disarmed;
   P1F01TransactionBoundaryState? _armedState;
+  P1F01BoundaryIdentity? _identity;
   Completer<void>? _release;
+
+  /// Validation-only invocation counters. Used by tests to prove the
+  /// disabled/default path never invokes either hook. Never read in
+  /// production code paths.
+  int beforeCommitInvocations = 0;
+  int afterCommitBeforeAckInvocations = 0;
 
   static bool availableFor({
     required bool isDebugBuild,
@@ -72,6 +110,25 @@ final class P1F01TransactionBoundaryController {
       );
 
   P1F01TransactionBoundaryState get state => _state;
+
+  /// Exact identity captured when the boundary was reached, or null.
+  P1F01BoundaryIdentity? get identity => _identity;
+
+  Map<String, Object?> readBoundaryState() {
+    final identity = _identity;
+    return {
+      'state': _state.value,
+      'armed': _state == P1F01TransactionBoundaryState.armBeforeCommit ||
+          _state == P1F01TransactionBoundaryState.armAfterCommitBeforeAck,
+      'reached':
+          _state == P1F01TransactionBoundaryState.reachedBeforeCommit ||
+              _state ==
+                  P1F01TransactionBoundaryState.reachedAfterCommitBeforeAck,
+      'phase': identity?.phase.value,
+      'windowSequence': identity?.windowSequence,
+      'opportunityOrdinal': identity?.opportunityOrdinal,
+    };
+  }
 
   bool armBeforeCommit() => _arm(
         P1F01TransactionBoundaryState.armBeforeCommit,
@@ -88,14 +145,28 @@ final class P1F01TransactionBoundaryController {
     return true;
   }
 
-  Future<void> reachedBeforeCommit() => _reach(
+  Future<void> reachedBeforeCommit({
+    required int windowSequence,
+    required int opportunityOrdinal,
+  }) =>
+      _reach(
         P1F01TransactionBoundaryState.armBeforeCommit,
         P1F01TransactionBoundaryState.reachedBeforeCommit,
+        P1F01TransactionBoundaryPhase.beforeCommit,
+        windowSequence: windowSequence,
+        opportunityOrdinal: opportunityOrdinal,
       );
 
-  Future<void> reachedAfterCommitBeforeAck() => _reach(
+  Future<void> reachedAfterCommitBeforeAck({
+    required int windowSequence,
+    required int opportunityOrdinal,
+  }) =>
+      _reach(
         P1F01TransactionBoundaryState.armAfterCommitBeforeAck,
         P1F01TransactionBoundaryState.reachedAfterCommitBeforeAck,
+        P1F01TransactionBoundaryPhase.afterCommitBeforeAck,
+        windowSequence: windowSequence,
+        opportunityOrdinal: opportunityOrdinal,
       );
 
   bool _arm(P1F01TransactionBoundaryState armState) {
@@ -110,15 +181,31 @@ final class P1F01TransactionBoundaryController {
   Future<void> _reach(
     P1F01TransactionBoundaryState armState,
     P1F01TransactionBoundaryState reachedState,
-  ) async {
+    P1F01TransactionBoundaryPhase phase, {
+    required int windowSequence,
+    required int opportunityOrdinal,
+  }) async {
     if (!isAvailable || _armedState != armState) return;
     _armedState = null;
+    if (armState == P1F01TransactionBoundaryState.armBeforeCommit) {
+      beforeCommitInvocations++;
+    } else {
+      afterCommitBeforeAckInvocations++;
+    }
+    // Capture the exact identity of this admission at the hook itself.
+    // Immutable while paused; only cleared/replaced by a new boundary cycle.
+    _identity = P1F01BoundaryIdentity(
+      phase: phase,
+      windowSequence: windowSequence,
+      opportunityOrdinal: opportunityOrdinal,
+    );
     _state = reachedState;
     final release = _release = Completer<void>();
     await release.future;
     if (identical(_release, release)) {
       _release = null;
       _state = P1F01TransactionBoundaryState.disarmed;
+      _identity = null;
     }
   }
 }
@@ -277,6 +364,9 @@ final class P1F01IntegrityStore {
       P1F01IntegrityOperation.admitOpportunity,
       () => _serialize(() async {
         final db = await _db();
+        // Captured directly at the BEFORE_COMMIT hook inside the transaction;
+        // never inferred later from snapshots or queue state.
+        int? boundaryWindowSequence;
         final result = await db.transaction((txn) async {
           _fail(P1F01IntegrityOperation.admitOpportunity);
           final window = await _latestOpenWindow(txn);
@@ -326,12 +416,21 @@ final class P1F01IntegrityStore {
             [sequence, legalSetCode.value],
           );
           if (_boundaryController.isAvailable) {
-            await _boundaryController.reachedBeforeCommit();
+            // Identity is captured here, inside the transaction, from this
+            // admission's own window row — never inferred later.
+            boundaryWindowSequence = sequence;
+            await _boundaryController.reachedBeforeCommit(
+              windowSequence: sequence,
+              opportunityOrdinal: opportunityOrdinalWithinRun,
+            );
           }
           return P1F01OpportunityAdmissionResult.admitted;
         });
-        if (_boundaryController.isAvailable) {
-          await _boundaryController.reachedAfterCommitBeforeAck();
+        if (_boundaryController.isAvailable && boundaryWindowSequence != null) {
+          await _boundaryController.reachedAfterCommitBeforeAck(
+            windowSequence: boundaryWindowSequence!,
+            opportunityOrdinal: opportunityOrdinalWithinRun,
+          );
         }
         return result;
       }),

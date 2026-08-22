@@ -165,9 +165,9 @@ final class P1F01DeviceValidationProbe {
     return _store.boundaryController.armAfterCommitBeforeAck();
   }
 
-  Future<String?> boundaryState() async {
+  Future<Map<String, Object?>?> readBoundaryState() async {
     if (!isAvailable) return null;
-    return _store.boundaryController.state.value;
+    return _store.boundaryController.readBoundaryState();
   }
 
   Future<bool?> releaseBoundary() async {
@@ -200,7 +200,7 @@ final class P1F01DeviceValidationProbe {
       case 'armAfterCommitBeforeAck':
         return {'armed': await armAfterCommitBeforeAck()};
       case 'readBoundaryState':
-        return {'state': await boundaryState()};
+        return {'boundary': await readBoundaryState()};
       case 'releaseBoundary':
         return {'released': await releaseBoundary()};
       default:
