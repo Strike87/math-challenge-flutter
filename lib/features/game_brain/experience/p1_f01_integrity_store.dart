@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -33,6 +35,92 @@ enum P1F01OpportunityAdmissionResult {
   admitted,
   alreadyAdmitted,
   failedClosed,
+}
+
+enum P1F01TransactionBoundaryState {
+  disarmed('DISARMED'),
+  armBeforeCommit('ARM_BEFORE_COMMIT'),
+  reachedBeforeCommit('REACHED_BEFORE_COMMIT'),
+  armAfterCommitBeforeAck('ARM_AFTER_COMMIT_BEFORE_ACK'),
+  reachedAfterCommitBeforeAck('REACHED_AFTER_COMMIT_BEFORE_ACK');
+
+  const P1F01TransactionBoundaryState(this.value);
+
+  final String value;
+}
+
+/// Debug-only, in-memory control for physical transaction-boundary validation.
+final class P1F01TransactionBoundaryController {
+  static const bool _validationEnabled = bool.fromEnvironment(
+    'P1_F01_DEVICE_VALIDATION',
+    defaultValue: false,
+  );
+
+  P1F01TransactionBoundaryState _state = P1F01TransactionBoundaryState.disarmed;
+  P1F01TransactionBoundaryState? _armedState;
+  Completer<void>? _release;
+
+  static bool availableFor({
+    required bool isDebugBuild,
+    required bool validationFlag,
+  }) =>
+      isDebugBuild && validationFlag;
+
+  bool get isAvailable => availableFor(
+        isDebugBuild: kDebugMode,
+        validationFlag: _validationEnabled,
+      );
+
+  P1F01TransactionBoundaryState get state => _state;
+
+  bool armBeforeCommit() => _arm(
+        P1F01TransactionBoundaryState.armBeforeCommit,
+      );
+
+  bool armAfterCommitBeforeAck() => _arm(
+        P1F01TransactionBoundaryState.armAfterCommitBeforeAck,
+      );
+
+  bool releaseBoundary() {
+    final release = _release;
+    if (release == null || release.isCompleted) return false;
+    release.complete();
+    return true;
+  }
+
+  Future<void> reachedBeforeCommit() => _reach(
+        P1F01TransactionBoundaryState.armBeforeCommit,
+        P1F01TransactionBoundaryState.reachedBeforeCommit,
+      );
+
+  Future<void> reachedAfterCommitBeforeAck() => _reach(
+        P1F01TransactionBoundaryState.armAfterCommitBeforeAck,
+        P1F01TransactionBoundaryState.reachedAfterCommitBeforeAck,
+      );
+
+  bool _arm(P1F01TransactionBoundaryState armState) {
+    if (!isAvailable || _state != P1F01TransactionBoundaryState.disarmed) {
+      return false;
+    }
+    _armedState = armState;
+    _state = armState;
+    return true;
+  }
+
+  Future<void> _reach(
+    P1F01TransactionBoundaryState armState,
+    P1F01TransactionBoundaryState reachedState,
+  ) async {
+    if (!isAvailable || _armedState != armState) return;
+    _armedState = null;
+    _state = reachedState;
+    final release = _release = Completer<void>();
+    await release.future;
+    if (identical(_release, release)) {
+      _release = null;
+      _state = P1F01TransactionBoundaryState.disarmed;
+    }
+  }
 }
 
 @immutable
@@ -115,8 +203,11 @@ final class P1F01IntegrityStore {
     DatabaseFactory? databaseFactory,
     String? databasePath,
     this.failureHook,
+    P1F01TransactionBoundaryController? boundaryController,
   })  : _databaseFactory = databaseFactory,
-        _databasePath = databasePath;
+        _databasePath = databasePath,
+        _boundaryController =
+            boundaryController ?? P1F01TransactionBoundaryController();
 
   static const int integrityVersion = 1;
   static const int _maxWindowRows = 8;
@@ -126,8 +217,12 @@ final class P1F01IntegrityStore {
   final DatabaseFactory? _databaseFactory;
   final String? _databasePath;
   final void Function(P1F01IntegrityOperation operation)? failureHook;
+  final P1F01TransactionBoundaryController _boundaryController;
   Future<void> _queue = Future<void>.value();
   Database? _database;
+
+  P1F01TransactionBoundaryController get boundaryController =>
+      _boundaryController;
 
   Future<P1F01IntegritySnapshot?> recoverOpenWindows() =>
       _guarded<P1F01IntegritySnapshot?>(
@@ -182,7 +277,7 @@ final class P1F01IntegrityStore {
       P1F01IntegrityOperation.admitOpportunity,
       () => _serialize(() async {
         final db = await _db();
-        return db.transaction((txn) async {
+        final result = await db.transaction((txn) async {
           _fail(P1F01IntegrityOperation.admitOpportunity);
           final window = await _latestOpenWindow(txn);
           if (window == null) {
@@ -230,8 +325,15 @@ final class P1F01IntegrityStore {
             ''',
             [sequence, legalSetCode.value],
           );
+          if (_boundaryController.isAvailable) {
+            await _boundaryController.reachedBeforeCommit();
+          }
           return P1F01OpportunityAdmissionResult.admitted;
         });
+        if (_boundaryController.isAvailable) {
+          await _boundaryController.reachedAfterCommitBeforeAck();
+        }
+        return result;
       }),
     );
     return result ?? P1F01OpportunityAdmissionResult.failedClosed;

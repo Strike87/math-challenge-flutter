@@ -155,6 +155,26 @@ final class P1F01DeviceValidationProbe {
     );
   }
 
+  Future<bool?> armBeforeCommit() async {
+    if (!isAvailable) return null;
+    return _store.boundaryController.armBeforeCommit();
+  }
+
+  Future<bool?> armAfterCommitBeforeAck() async {
+    if (!isAvailable) return null;
+    return _store.boundaryController.armAfterCommitBeforeAck();
+  }
+
+  Future<String?> boundaryState() async {
+    if (!isAvailable) return null;
+    return _store.boundaryController.state.value;
+  }
+
+  Future<bool?> releaseBoundary() async {
+    if (!isAvailable) return null;
+    return _store.boundaryController.releaseBoundary();
+  }
+
   Future<Map<String, Object?>> handleCommand(String? command) async {
     if (!isAvailable) return const {'status': 'unavailable'};
     switch (command) {
@@ -175,6 +195,14 @@ final class P1F01DeviceValidationProbe {
         return {'result': (await retryConflictingLastAdmission())?.name};
       case 'retryGap':
         return {'result': (await admitGappedOrdinal())?.name};
+      case 'armBeforeCommit':
+        return {'armed': await armBeforeCommit()};
+      case 'armAfterCommitBeforeAck':
+        return {'armed': await armAfterCommitBeforeAck()};
+      case 'readBoundaryState':
+        return {'state': await boundaryState()};
+      case 'releaseBoundary':
+        return {'released': await releaseBoundary()};
       default:
         return const {'status': 'unsupported_command'};
     }

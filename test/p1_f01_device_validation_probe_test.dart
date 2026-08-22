@@ -81,6 +81,20 @@ void main() {
         ),
         isTrue,
       );
+      expect(
+        P1F01TransactionBoundaryController.availableFor(
+          isDebugBuild: false,
+          validationFlag: true,
+        ),
+        isFalse,
+      );
+      expect(
+        P1F01TransactionBoundaryController.availableFor(
+          isDebugBuild: true,
+          validationFlag: true,
+        ),
+        isTrue,
+      );
     });
 
     test('default build cannot access or mutate integrity state', () async {
@@ -96,6 +110,12 @@ void main() {
       expect(await probe.retryLastAdmission(), isNull);
       expect(await probe.retryConflictingLastAdmission(), isNull);
       expect(await probe.admitGappedOrdinal(), isNull);
+      expect(await probe.armBeforeCommit(), isNull);
+      expect(await probe.armAfterCommitBeforeAck(), isNull);
+      expect(await probe.boundaryState(), isNull);
+      expect(await probe.releaseBoundary(), isNull);
+      expect(await probe.handleCommand('readBoundaryState'),
+          const {'status': 'unavailable'});
       expect((await store.latestSnapshot())?.status,
           P1F01IntegrityWindowStatus.open);
     },
@@ -236,8 +256,130 @@ void main() {
           const {'status': 'unsupported_command'},
         );
       });
+
+      test('one-shot boundaries preserve durable admission semantics',
+          () async {
+        final dir = await Directory.systemTemp.createTemp('p1_f01_boundary_');
+        final path = '${dir.path}${Platform.pathSeparator}integrity.db';
+        final store = P1F01IntegrityStore(
+          databaseFactory: databaseFactoryFfi,
+          databasePath: path,
+        );
+        final mirror = P1F01IntegrityStore(
+          databaseFactory: databaseFactoryFfi,
+          databasePath: path,
+        );
+        late final Database durableReader;
+        addTearDown(() async {
+          await store.close();
+          await mirror.close();
+          await durableReader.close();
+          if (await dir.exists()) await dir.delete(recursive: true);
+        });
+        final probe = P1F01DeviceValidationProbe(store);
+        await store.admitWindow();
+        durableReader = await databaseFactoryFfi.openDatabase(
+          path,
+          options: OpenDatabaseOptions(
+            readOnly: true,
+            singleInstance: false,
+          ),
+        );
+
+        expect(await probe.armBeforeCommit(), isTrue);
+        var beforeCommitCompleted = false;
+        final beforeCommit = store
+            .admitOpportunity(
+              opportunityOrdinalWithinRun: 1,
+              legalSetCode: _emhCode,
+            )
+            .whenComplete(() => beforeCommitCompleted = true);
+        await _waitForBoundary(
+          probe,
+          P1F01TransactionBoundaryState.reachedBeforeCommit.value,
+        );
+        expect(beforeCommitCompleted, isFalse);
+        var durableReadCompleted = false;
+        final durableWindowRead =
+            durableReader.query('p1_f01_integrity_window').then((rows) {
+          durableReadCompleted = true;
+          return rows;
+        });
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+        expect(durableReadCompleted, isTrue);
+        final preCommitWindow = (await durableWindowRead).single;
+        expect(preCommitWindow['admitted_o_raw_count'], 0);
+        expect(preCommitWindow['last_admitted_opportunity_ordinal'], isNull);
+        expect(
+          await durableReader.query('p1_f01_integrity_legal_set_count'),
+          isEmpty,
+        );
+        expect(await probe.releaseBoundary(), isTrue);
+        expect(await beforeCommit, P1F01OpportunityAdmissionResult.admitted);
+        expect(
+          (await durableReader.query('p1_f01_integrity_window'))
+              .single['admitted_o_raw_count'],
+          1,
+        );
+        expect(
+          (await durableReader.query('p1_f01_integrity_legal_set_count'))
+              .single['count'],
+          1,
+        );
+        expect((await mirror.latestSnapshot())?.admittedORawCount, 1);
+
+        expect(await probe.armAfterCommitBeforeAck(), isTrue);
+        final afterCommit = store.admitOpportunity(
+          opportunityOrdinalWithinRun: 2,
+          legalSetCode: _emhCode,
+        );
+        await _waitForBoundary(
+          probe,
+          P1F01TransactionBoundaryState.reachedAfterCommitBeforeAck.value,
+        );
+        final durable = await mirror.latestSnapshot();
+        expect(durable?.admittedORawCount, 2);
+        expect(durable?.legalSetCounters, {_emhCode.value: 2});
+        expect(await probe.releaseBoundary(), isTrue);
+        expect(await afterCommit, P1F01OpportunityAdmissionResult.admitted);
+
+        expect(
+          await store.admitOpportunity(
+            opportunityOrdinalWithinRun: 2,
+            legalSetCode: _emhCode,
+          ),
+          P1F01OpportunityAdmissionResult.alreadyAdmitted,
+        );
+        expect(
+          await store
+              .admitOpportunity(
+                opportunityOrdinalWithinRun: 3,
+                legalSetCode: _emhCode,
+              )
+              .timeout(const Duration(seconds: 1)),
+          P1F01OpportunityAdmissionResult.admitted,
+        );
+        expect(await probe.boundaryState(),
+            P1F01TransactionBoundaryState.disarmed.value);
+        expect(await probe.releaseBoundary(), isFalse);
+        expect(
+          await probe.handleCommand('readBoundaryState'),
+          {'state': P1F01TransactionBoundaryState.disarmed.value},
+        );
+      });
     }
   });
+}
+
+Future<void> _waitForBoundary(
+  P1F01DeviceValidationProbe probe,
+  String expected,
+) async {
+  for (var attempt = 0; attempt < 100; attempt++) {
+    if (await probe.boundaryState() == expected) return;
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
+  fail('Boundary state did not reach $expected.');
 }
 
 final _emhCode = P1F01LegalSetCode.fromLegality(QuestionDifficultyLegality(
