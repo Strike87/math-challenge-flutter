@@ -96,9 +96,9 @@ Canonical gameplay envelope proven on device before interruption testing:
 | G1 OPEN -> force-stop -> relaunch | Pre-kill snapshot was `OPEN`; post-relaunch snapshot was durable `LEFT_UNCLEAN`. | PROVEN |
 | G2 repeated recovery | A second force-stop/relaunch preserved the same `LEFT_UNCLEAN` snapshot with no duplicate window or counter inflation. | PROVEN |
 | F1 exact retry | On a fresh live `OPEN` window, `retryExact` returned `alreadyAdmitted` and left all counters unchanged. | PROVEN |
-| F2 conflict retry | `retryConflict` returned `failedClosed` and the durable snapshot stayed unchanged. | PROVEN |
-| F2 gap retry | `retryGap` returned `failedClosed` and the durable snapshot stayed unchanged. | PROVEN |
-| Clean close | A fresh ordinary run reached `CLEANLY_CLOSED` with `lastAdmittedOrdinal == lastReconciledOrdinal == 10`, `hasIntegrityDefect = false`, and `hasCleanClosureSignal = true`. After force-stop and direct relaunch, the retained row was still `CLEANLY_CLOSED`. | PROVEN |
+| F2 conflict retry | `retryConflict` returned `failedClosed` and the exercised snapshot stayed unchanged. | PARTIAL |
+| F2 gap retry | `retryGap` returned `failedClosed` and the exercised snapshot stayed unchanged. | PARTIAL |
+| Clean close | The active run reached `CLEANLY_CLOSED` before restart, but its persistence through direct relaunch was not validly verified. | PARTIAL |
 | Outstanding admission at closure | Not truthfully exercised on device. | NOT_TRUTHFULLY_EXERCISABLE_ON_DEVICE in this run |
 | Admission-boundary interruption | G1 exercised an open-window interruption, but exact mid-admission timing was not deterministically pinned. | `E_TRANSACTION_BOUNDARY = PARTIALLY_EXERCISED` |
 | Background / resume | Not completed in a controlled uninterrupted device session. | NOT PROVEN |
@@ -140,181 +140,17 @@ F retries on the recovered window:
 {"command":"readCurrent","payload":{"snapshot":{"integrityVersion":1,"localWindowSequence":1,"status":"LEFT_UNCLEAN","admittedORawCount":4,"lastAdmittedOrdinal":4,"lastLegalSetCode":"V1_EMH_MASK_7","lastReconciledOrdinal":3,"hasIntegrityDefect":false,"hasCleanClosureSignal":false,"legalSetCounters":{"V1_EMH_MASK_7":4}}}}
 ```
 
-Fresh live-window F1/F2 evidence:
-
-```json
-[
-  {
-    "command": "readCurrent",
-    "payload": {
-      "snapshot": {
-        "integrityVersion": 1,
-        "localWindowSequence": 1,
-        "status": "OPEN",
-        "admittedORawCount": 2,
-        "lastAdmittedOrdinal": 2,
-        "lastLegalSetCode": "V1_EMH_MASK_7",
-        "lastReconciledOrdinal": 1,
-        "hasIntegrityDefect": false,
-        "hasCleanClosureSignal": false,
-        "legalSetCounters": {"V1_EMH_MASK_7": 2}
-      }
-    }
-  },
-  {"command": "retryExact", "payload": {"result": "alreadyAdmitted"}},
-  {
-    "command": "readCurrent",
-    "payload": {
-      "snapshot": {
-        "integrityVersion": 1,
-        "localWindowSequence": 1,
-        "status": "OPEN",
-        "admittedORawCount": 2,
-        "lastAdmittedOrdinal": 2,
-        "lastLegalSetCode": "V1_EMH_MASK_7",
-        "lastReconciledOrdinal": 1,
-        "hasIntegrityDefect": false,
-        "hasCleanClosureSignal": false,
-        "legalSetCounters": {"V1_EMH_MASK_7": 2}
-      }
-    }
-  },
-  {"command": "retryConflict", "payload": {"result": "failedClosed"}},
-  {
-    "command": "readCurrent",
-    "payload": {
-      "snapshot": {
-        "integrityVersion": 1,
-        "localWindowSequence": 1,
-        "status": "LEFT_UNCLEAN",
-        "admittedORawCount": 2,
-        "lastAdmittedOrdinal": 2,
-        "lastLegalSetCode": "V1_EMH_MASK_7",
-        "lastReconciledOrdinal": 1,
-        "hasIntegrityDefect": true,
-        "hasCleanClosureSignal": false,
-        "legalSetCounters": {"V1_EMH_MASK_7": 2}
-      }
-    }
-  }
-]
-```
-
-Separate F2 gap evidence:
-
-```json
-[
-  {
-    "command": "readCurrent",
-    "payload": {
-      "snapshot": {
-        "integrityVersion": 1,
-        "localWindowSequence": 1,
-        "status": "LEFT_UNCLEAN",
-        "admittedORawCount": 2,
-        "lastAdmittedOrdinal": 2,
-        "lastLegalSetCode": "V1_EMH_MASK_7",
-        "lastReconciledOrdinal": 1,
-        "hasIntegrityDefect": true,
-        "hasCleanClosureSignal": false,
-        "legalSetCounters": {"V1_EMH_MASK_7": 2}
-      }
-    }
-  },
-  {"command": "retryGap", "payload": {"result": "failedClosed"}},
-  {
-    "command": "readCurrent",
-    "payload": {
-      "snapshot": {
-        "integrityVersion": 1,
-        "localWindowSequence": 1,
-        "status": "LEFT_UNCLEAN",
-        "admittedORawCount": 2,
-        "lastAdmittedOrdinal": 2,
-        "lastLegalSetCode": "V1_EMH_MASK_7",
-        "lastReconciledOrdinal": 1,
-        "hasIntegrityDefect": true,
-        "hasCleanClosureSignal": false,
-        "legalSetCounters": {"V1_EMH_MASK_7": 2}
-      }
-    }
-  }
-]
-```
-
-Clean close before direct relaunch:
-
-```json
-[
-  {
-    "command": "readRetained",
-    "payload": {
-      "snapshots": [
-        {
-          "integrityVersion": 1,
-          "localWindowSequence": 1,
-          "status": "CLEANLY_CLOSED",
-          "admittedORawCount": 10,
-          "lastAdmittedOrdinal": 10,
-          "lastLegalSetCode": "V1_EMH_MASK_7",
-          "lastReconciledOrdinal": 10,
-          "hasIntegrityDefect": false,
-          "hasCleanClosureSignal": true,
-          "legalSetCounters": {"V1_EMH_MASK_7": 10}
-        }
-      ]
-    }
-  },
-  {
-    "command": "readCurrent",
-    "payload": {
-      "snapshot": {
-        "integrityVersion": 1,
-        "localWindowSequence": 1,
-        "status": "CLEANLY_CLOSED",
-        "admittedORawCount": 10,
-        "lastAdmittedOrdinal": 10,
-        "lastLegalSetCode": "V1_EMH_MASK_7",
-        "lastReconciledOrdinal": 10,
-        "hasIntegrityDefect": false,
-        "hasCleanClosureSignal": true,
-        "legalSetCounters": {"V1_EMH_MASK_7": 10}
-      }
-    }
-  }
-]
-```
-
-Clean close after force-stop and direct relaunch:
-
-After the host-side `flutter run` session died on force-stop, the exact retained
-row was confirmed read-only from the relaunched app sandbox database using:
-
-```powershell
-adb -s 15133255B4018901 exec-out run-as com.mohamedk.mathchallenge cat databases/p1_f01_integrity.db > C:\Users\Strik\AppData\Local\Temp\p1f01_integrity_after_relaunch.db
-```
-
-Local query result:
-
-```json
-{
-  "rows": [[1, 1, "CLEANLY_CLOSED", 10, 10, "V1_EMH_MASK_7", 10, 0, 1]],
-  "counters": [[1, "V1_EMH_MASK_7", 10]]
-}
-```
-
 ## G / F / E conclusions
 
 - `G_DEVICE_STATUS = PROVEN`
-- `F_DEVICE_STATUS = PROVEN`
+- `F_DEVICE_STATUS = PARTIAL`
 - `E_DEVICE_STATUS = PARTIAL`
 
-`G` is proven by durable `OPEN -> LEFT_UNCLEAN` recovery, stable repeated
-recovery, and durable `CLEANLY_CLOSED` retention after clean relaunch. `F` is
-proven because exact, conflicting, and gapped retries all exercised their
-expected semantics on device. `E` remains partial because an open-window
-interruption was exercised, but exact transaction-boundary timing was not
-deterministically controlled.
+`G` is proven by durable `OPEN -> LEFT_UNCLEAN` recovery and stable repeated
+recovery. `F` is partial: exact retry was proven on a fresh `OPEN` window, but
+conflict and gap retries were not recreated against a fresh `OPEN` opportunity.
+`E` remains partial because an open-window interruption was exercised, but exact
+transaction-boundary timing was not deterministically controlled.
 
 ## K_under / K_over
 
@@ -334,8 +170,8 @@ Device evidence:
 
 Conclusions:
 
-- `K_under = FINITE_BUT_BOUND_NOT_ESTABLISHED`
-- `K_over = FINITE_BUT_BOUND_NOT_ESTABLISHED`
+- `K_under = NOT_PROVEN`
+- `K_over = NOT_PROVEN`
 
 ## Divergence
 
@@ -348,14 +184,11 @@ Observed facts:
 
 Conclusion:
 
-- `DIVERGENCE_STATUS = BOUNDED`
+- `DIVERGENCE_STATUS = NOT_PROVEN`
 - `possible direction = NEITHER_PROVEN`
 
-Exercised device paths supported stable no-op exact retry, fail-closed conflict
-and gap retries without inflation, stable repeated `LEFT_UNCLEAN` recovery, and
-exact retained `CLEANLY_CLOSED` persistence. Exact mid-admission interruption
-timing was still not pinned tightly enough to claim zero boundary divergence for
-all possible interruption instants.
+Exact mid-admission interruption timing was not pinned tightly enough to claim
+zero boundary divergence for all possible interruption instants.
 
 ## Lifecycle limitation
 
@@ -385,6 +218,7 @@ Final firewall statement:
 The remaining blocker to a full device PASS is incomplete physical-scenario
 coverage, specifically:
 
+- clean-close persistence through direct relaunch with package identity recorded
 - outstanding-admission closure attempt
 - explicit short and long background/resume scenarios
 - deterministic mid-admission interruption timing
