@@ -388,3 +388,61 @@ coverage, specifically:
 - outstanding-admission closure attempt
 - explicit short and long background/resume scenarios
 - deterministic mid-admission interruption timing
+
+## Continuation after corrected G1
+
+The corrected G1/G2 evidence above remains authoritative: the initial
+apparent loss was a relaunch artifact, not an implementation defect.
+
+### F1 exact retry
+
+On a fresh canonical eligible `OPEN` window, the immediate probe sequence was:
+
+```json
+{"before":{"admittedORawCount":10,"lastAdmittedOrdinal":10,"lastReconciledOrdinal":9,"legalSetCounters":{"V1_EMH_MASK_7":10},"hasIntegrityDefect":false}}
+{"retryExact":{"result":"alreadyAdmitted"}}
+{"after":{"admittedORawCount":10,"lastAdmittedOrdinal":10,"lastReconciledOrdinal":9,"legalSetCounters":{"V1_EMH_MASK_7":10},"hasIntegrityDefect":false}}
+```
+
+`F1 = PROVEN` for `DEVICE_STORE_SEMANTICS`: no second admission, counter
+increment, window creation, or defect was produced.
+
+### F2 retries
+
+`retryConflict` and `retryGap` both returned `failedClosed` and left the
+exercised retained snapshot unchanged. The conflict command was exercised
+after the canonical run had cleanly closed; the gap command was exercised on
+the recovered `LEFT_UNCLEAN` state. Both are safe fail-closed observations,
+but neither recreates an invalid retry against a fresh `OPEN` opportunity.
+
+`F2 = PARTIAL` for device semantics.
+
+### Clean-close continuation limitation
+
+The canonical run reached `CLEANLY_CLOSED` with admitted and reconciled
+ordinals both `10`. A later direct-relaunch observation returned an earlier
+`LEFT_UNCLEAN` snapshot (`2 / 1`). Package identity was not recorded on both
+sides of that observation; the current package reports a later
+`lastUpdateTime`. Therefore this is not valid clean-close persistence evidence
+and is not classified as a store defect.
+
+Required remaining controlled run:
+
+1. record package identity before closure;
+2. reach `CLEANLY_CLOSED` and drain;
+3. force-stop and direct-launch without package replacement;
+4. record package identity again, then attach, drain, and read retained state.
+
+### Remaining conclusions
+
+- `G_DEVICE_STATUS = PROVEN`
+- `F_DEVICE_STATUS = PARTIAL`
+- `E_DEVICE_STATUS = PARTIAL`
+- `K_under = NOT_PROVEN`
+- `K_over = NOT_PROVEN`
+- `DIVERGENCE_STATUS = NOT_PROVEN`
+- `possible direction = NEITHER_PROVEN`
+- `OUTSTANDING_ADMISSION_DEVICE = NOT_TRUTHFULLY_EXERCISABLE`
+- lifecycle: `PROTOCOL_RULE_SUPPORTED_BUT_STUDY_EVALUATOR_NOT_IMPLEMENTED`
+- `DEVICE_STORAGE_FAILURE = NOT_SAFELY_REPRODUCIBLE`
+- `mayAffectGameplay = false`
