@@ -11,6 +11,7 @@ import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/economy/domain/number_type_unlock_policy.dart';
 import '../features/family/domain/family_eligibility.dart';
 import '../features/game_brain/domain/game_brain_eligibility.dart';
+import '../features/game_brain/experience/p1_f01_integrity_store.dart';
 import '../features/game_brain/experience/question_experience_observation.dart';
 import '../features/game_brain/experience/run_local_question_difficulty_measurement_collector.dart';
 import '../features/game_brain/experience/run_local_question_experience_collector.dart';
@@ -248,6 +249,7 @@ class GameState extends ChangeNotifier {
     int Function()? nowMillisProvider,
     AdaptiveShadowEvaluator? adaptiveShadowEvaluator,
     QuestionGenerator? questionGenerator,
+    P1F01IntegrityStore? p1F01IntegrityStore,
   })  : iapAdapter = iapAdapter ?? const UnavailableIapPurchaseAdapter(),
         adService = adService ?? const UnavailableAdMobService(),
         playGamesService = playGamesService ?? NativePlayGamesService(),
@@ -256,6 +258,8 @@ class GameState extends ChangeNotifier {
         _adaptiveShadowEvaluator =
             adaptiveShadowEvaluator ?? evaluateAdaptiveShadow,
         _qgen = questionGenerator ?? QuestionGenerator(),
+        _ownsP1F01IntegrityStore = p1F01IntegrityStore == null,
+        _p1F01IntegrityStore = p1F01IntegrityStore ?? P1F01IntegrityStore(),
         _adultGateFactory =
             adultGateFactory ?? (() => AdultGateChallenge.random()) {
     _toastController = ToastController(onChanged: notifyListeners);
@@ -357,6 +361,8 @@ class GameState extends ChangeNotifier {
   final int Function() _nowMillis;
   final AdaptiveShadowEvaluator _adaptiveShadowEvaluator;
   final QuestionGenerator _qgen;
+  final bool _ownsP1F01IntegrityStore;
+  final P1F01IntegrityStore _p1F01IntegrityStore;
   final Random _rng = Random();
   StreamSubscription<List<IapPurchase>>? _iapPurchaseSub;
 
@@ -467,6 +473,9 @@ class GameState extends ChangeNotifier {
   List<QuestionDifficultyMeasurementOpportunity>
       get debugQuestionDifficultyMeasurementOpportunities =>
           _questionDifficultyMeasurements.opportunities;
+  @visibleForTesting
+  Future<P1F01IntegritySnapshot?> debugP1F01IntegritySnapshot() =>
+      _p1F01IntegrityStore.latestSnapshot();
   QuestionDifficultyLegality? get currentQuestionDifficultyLegality =>
       _questionDifficultyLegality;
   @visibleForTesting
@@ -545,6 +554,8 @@ class GameState extends ChangeNotifier {
   final _questionDifficultyMeasurements =
       RunLocalQuestionDifficultyMeasurementCollector();
   QuestionDifficultyLegality? _questionDifficultyLegality;
+  bool _p1F01IntegrityRunEligible = false;
+  bool _p1F01IntegrityMeasurementFailed = false;
   bool _disposed = false;
 
   MasterLevel? get clearedMasterLevel {
@@ -623,11 +634,15 @@ class GameState extends ChangeNotifier {
     _delayedResultModalTimer?.cancel();
     _cancelDelayedLossEnd();
     rt.timer?.cancel();
+    if (_ownsP1F01IntegrityStore) {
+      unawaited(_p1F01IntegrityStore.close());
+    }
     super.dispose();
   }
 
   // ─── Load / save ────────────────────────────────────────────
   Future<void> load() async {
+    unawaited(_p1F01IntegrityStore.recoverOpenWindows());
     _loadFamilyEligibility();
     gameBrainPreference = Storage.getBool(gameBrainPreferenceStorageKey, false);
     final skipCloudOwnedLoad = await _recoverCloudResetIntent();
@@ -700,6 +715,10 @@ class GameState extends ChangeNotifier {
   Future<bool> clearGameBrainData() async {
     try {
       await Storage.remove(gameBrainPreferenceStorageKey);
+      final integrityCleared = await _p1F01IntegrityStore.deleteAll();
+      if (!integrityCleared) {
+        throw Exception('Could not clear P1-F01 integrity state.');
+      }
     } on Exception {
       showToast('Could not clear GameBrain data. Please try again.');
       return false;
@@ -2172,6 +2191,7 @@ class GameState extends ChangeNotifier {
     _runSnapshot = snapshot;
     _gameBrain = GameBrain();
     _lastContextEvidenceResult = null;
+    _beginP1F01IntegrityWindowIfSupported(snapshot);
     final isMaster = snapshot.operation == Operation.master;
     final isBoss = snapshot.operation == Operation.dailyBoss;
     for (var i = 1; i <= 2; i++) {
@@ -2457,10 +2477,11 @@ class GameState extends ChangeNotifier {
             legalDifficulties: legalDifficulties,
           );
     _activeQuestionId = ++_lastQuestionId;
-    _questionDifficultyMeasurements.add(
+    final difficultyOpportunity = _questionDifficultyMeasurements.add(
       _questionDifficultyLegality,
       _currentQuestionToken,
     );
+    _admitP1F01DifficultyOpportunityIfSupported(difficultyOpportunity);
     if (rt.answerStyle == AnswerStyle.trueFalse) {
       final proposal = trueFalseProposal(runtimeQuestion);
       rt.proposedAnswer = proposal.answer;
@@ -2644,7 +2665,9 @@ class GameState extends ChangeNotifier {
                   : const AnsweredIncorrect(),
     );
     if (observation != null) {
-      _questionDifficultyMeasurements.link(questionToken, observation);
+      final linked =
+          _questionDifficultyMeasurements.link(questionToken, observation);
+      _reconcileP1F01TerminalIfSupported(questionToken, linked);
     }
     _observeContextEvidence(
       q,
@@ -2742,6 +2765,93 @@ class GameState extends ChangeNotifier {
       ContextEvidenceKey.supportsOperation(operation) ||
       operation == Operation.mixed;
 
+  bool _supportsP1F01IntegrityRun(GameRunSnapshot snapshot) =>
+      effectiveGameBrainEnabled &&
+      snapshot.runType == GameRunType.normal &&
+      snapshot.players == 1 &&
+      snapshot.mode == GameMode.standard &&
+      snapshot.questionMechanic == QuestionMechanic.standard &&
+      snapshot.weakSkillsPlan == null &&
+      snapshot.answerStyle == AnswerStyle.choice4 &&
+      !activeAdaptive &&
+      playerConfigurableDifficultySet.contains(snapshot.difficulty) &&
+      _supportsContextRunOperation(snapshot.operation);
+
+  void _beginP1F01IntegrityWindowIfSupported(GameRunSnapshot snapshot) {
+    _p1F01IntegrityRunEligible = _supportsP1F01IntegrityRun(snapshot);
+    _p1F01IntegrityMeasurementFailed = !_p1F01IntegrityRunEligible;
+    if (!_p1F01IntegrityRunEligible) return;
+    unawaited(_p1F01IntegrityStore.admitWindow().then((window) {
+      if (window == null) _p1F01IntegrityMeasurementFailed = true;
+    }));
+  }
+
+  void _admitP1F01DifficultyOpportunityIfSupported(
+    QuestionDifficultyMeasurementOpportunity opportunity,
+  ) {
+    if (!_p1F01IntegrityRunEligible ||
+        _p1F01IntegrityMeasurementFailed ||
+        opportunity.legality?.route !=
+            QuestionDifficultyRoute.playerConfigured) {
+      return;
+    }
+    final legalSetCode = P1F01LegalSetCode.fromLegality(opportunity.legality);
+    unawaited(_p1F01IntegrityStore
+        .admitOpportunity(
+      opportunityOrdinalWithinRun: opportunity.opportunityOrdinalWithinRun,
+      legalSetCode: legalSetCode,
+    )
+        .then((result) {
+      if (result == P1F01OpportunityAdmissionResult.failedClosed) {
+        _p1F01IntegrityMeasurementFailed = true;
+      }
+    }));
+  }
+
+  void _reconcileP1F01TerminalIfSupported(
+    ({int runId, int questionId}) questionToken,
+    bool terminalLinkAccepted,
+  ) {
+    if (!_p1F01IntegrityRunEligible || _p1F01IntegrityMeasurementFailed) {
+      return;
+    }
+    final opportunity = _questionDifficultyMeasurements.opportunityFor(
+      questionToken,
+    );
+    if (opportunity == null) {
+      _p1F01IntegrityMeasurementFailed = true;
+      unawaited(_p1F01IntegrityStore.markLeftUnclean());
+      return;
+    }
+    unawaited(_p1F01IntegrityStore
+        .reconcileTerminal(
+      opportunityOrdinalWithinRun: opportunity.opportunityOrdinalWithinRun,
+      terminalLinkAccepted: terminalLinkAccepted,
+    )
+        .then((clean) {
+      if (!clean) _p1F01IntegrityMeasurementFailed = true;
+    }));
+  }
+
+  void _closeP1F01IntegrityCleanly() {
+    if (!_p1F01IntegrityRunEligible) return;
+    final failed = _p1F01IntegrityMeasurementFailed;
+    _p1F01IntegrityRunEligible = false;
+    _p1F01IntegrityMeasurementFailed = false;
+    unawaited(
+      failed
+          ? _p1F01IntegrityStore.markLeftUnclean()
+          : _p1F01IntegrityStore.closeCleanIfConsistent(),
+    );
+  }
+
+  void _leaveP1F01IntegrityUnclean() {
+    if (!_p1F01IntegrityRunEligible) return;
+    _p1F01IntegrityRunEligible = false;
+    _p1F01IntegrityMeasurementFailed = false;
+    unawaited(_p1F01IntegrityStore.markLeftUnclean());
+  }
+
   void _freezeQuestionTimer() {
     if (rt.timerDurationMs <= 0 || rt.timerStart <= 0) return;
     final elapsed = DateTime.now().millisecondsSinceEpoch - rt.timerStart;
@@ -2784,6 +2894,7 @@ class GameState extends ChangeNotifier {
   }
 
   void _invalidateActiveRun() {
+    _leaveP1F01IntegrityUnclean();
     _activeRunId = 0;
     _activeQuestionId = 0;
     rt.accepting = false;
@@ -3245,6 +3356,7 @@ class GameState extends ChangeNotifier {
     _cancelDelayedLossEnd();
     if (!rt.gameActive || rt.state == 'ended') return;
     _closeActiveQuestionNeutrally();
+    _closeP1F01IntegrityCleanly();
     _invalidateActiveRun();
     unawaited(_markCloudDirty());
     rt.gameActive = false;
@@ -3849,7 +3961,9 @@ class GameState extends ChangeNotifier {
             const QuestionReplaced(),
           );
           if (observation != null) {
-            _questionDifficultyMeasurements.link(questionToken, observation);
+            final linked = _questionDifficultyMeasurements.link(
+                questionToken, observation);
+            _reconcileP1F01TerminalIfSupported(questionToken, linked);
           }
         }
         if (activeMode != GameMode.blitz && activeMode != GameMode.combo) {
@@ -4211,6 +4325,7 @@ class GameState extends ChangeNotifier {
     for (final key in _resetStorageKeys) {
       await Storage.remove(key);
     }
+    await _p1F01IntegrityStore.deleteAll();
     _resetInMemoryData();
     cloudResetGeneration = nextCloudResetGeneration;
     cloudRevision = null;

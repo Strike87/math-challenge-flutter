@@ -14,16 +14,30 @@ final class RunLocalQuestionDifficultyMeasurementCollector {
   List<QuestionDifficultyMeasurementOpportunity> get opportunities =>
       List.unmodifiable(_opportunities);
 
-  void add(
+  QuestionDifficultyMeasurementOpportunity add(
     QuestionDifficultyLegality? legality,
     ({int runId, int questionId}) questionToken,
   ) {
-    _opportunities.add(QuestionDifficultyMeasurementOpportunity(
+    final opportunity = QuestionDifficultyMeasurementOpportunity(
       legality: legality,
       runId: questionToken.runId,
       questionId: questionToken.questionId,
       opportunityOrdinalWithinRun: _opportunities.length + 1,
-    ));
+    );
+    _opportunities.add(opportunity);
+    return opportunity;
+  }
+
+  QuestionDifficultyMeasurementOpportunity? opportunityFor(
+    ({int runId, int questionId}) questionToken,
+  ) {
+    for (final opportunity in _opportunities) {
+      if (opportunity.runId == questionToken.runId &&
+          opportunity.questionId == questionToken.questionId) {
+        return opportunity;
+      }
+    }
+    return null;
   }
 
   bool link(

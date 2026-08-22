@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/features/family/domain/family_eligibility.dart';
 import 'package:math_challenge/features/game_brain/domain/game_brain_eligibility.dart';
+import 'package:math_challenge/features/game_brain/experience/p1_f01_integrity_store.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/models/game_data.dart';
 import 'package:math_challenge/models/player.dart';
@@ -17,6 +19,7 @@ import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +27,7 @@ void main() {
   const audioChannel = MethodChannel('xyz.luan/audioplayers');
 
   setUpAll(() {
+    sqfliteFfiInit();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(globalAudioChannel, (_) async => null);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -134,7 +138,9 @@ void main() {
 
   test('clear isolates preference and preserves the family age state',
       () async {
-    final state = await _makeState();
+    final state = await _makeState(
+      integrityStore: await _testIntegrityStore(),
+    );
     state
       ..coins = 42
       ..gamesPlayed = 7
@@ -293,10 +299,15 @@ Future<GameState> _makeState({
   Map<String, Object> values = const {},
   bool dark = false,
   QuestionGenerator? questionGenerator,
+  P1F01IntegrityStore? integrityStore,
 }) async {
   SharedPreferences.setMockInitialValues(values);
   await Storage.init();
-  return _newState(dark: dark, questionGenerator: questionGenerator);
+  return _newState(
+    dark: dark,
+    questionGenerator: questionGenerator,
+    integrityStore: integrityStore,
+  );
 }
 
 Future<GameState> _reloadState({bool dark = false}) async {
@@ -307,6 +318,7 @@ Future<GameState> _reloadState({bool dark = false}) async {
 Future<GameState> _newState({
   required bool dark,
   QuestionGenerator? questionGenerator,
+  P1F01IntegrityStore? integrityStore,
 }) async {
   final settings = SettingsService()
     ..load(
@@ -322,10 +334,24 @@ Future<GameState> _newState({
     settings: settings,
     audio: AudioService(settings),
     questionGenerator: questionGenerator,
+    p1F01IntegrityStore: integrityStore,
   );
   await state.load();
   addTearDown(state.dispose);
   return state;
+}
+
+Future<P1F01IntegrityStore> _testIntegrityStore() async {
+  final dir = await Directory.systemTemp.createTemp('gb_ux_p1_f01_');
+  final store = P1F01IntegrityStore(
+    databaseFactory: databaseFactoryFfi,
+    databasePath: '${dir.path}${Platform.pathSeparator}integrity.db',
+  );
+  addTearDown(() async {
+    await store.close();
+    if (await dir.exists()) await dir.delete(recursive: true);
+  });
+  return store;
 }
 
 String _questionSignature(Question question) =>
