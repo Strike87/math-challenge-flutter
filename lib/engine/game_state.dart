@@ -480,6 +480,8 @@ class GameState extends ChangeNotifier {
   @visibleForTesting
   Future<P1F01IntegritySnapshot?> debugP1F01IntegritySnapshot() =>
       _p1F01IntegrityStore.latestSnapshot();
+  @visibleForTesting
+  bool get debugP1F01IntegrityRunEligible => _p1F01IntegrityRunEligible;
   QuestionDifficultyLegality? get currentQuestionDifficultyLegality =>
       _questionDifficultyLegality;
   @visibleForTesting
@@ -3958,6 +3960,12 @@ class GameState extends ChangeNotifier {
         )) {
           break;
         }
+        // P1-F00 v1.2: a requested replacement is outside the confirmatory
+        // envelope. Establish the synchronous local admission firewall
+        // BEFORE the replacement question can open; durable LEFT_UNCLEAN
+        // bookkeeping is queued asynchronously and never awaited here.
+        // Gameplay (the replacement itself) proceeds unchanged.
+        _leaveP1F01IntegrityUnclean();
         final question = rt.q;
         if (question != null) {
           final observation = _captureQuestionExperienceIfSupported(
