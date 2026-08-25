@@ -184,6 +184,7 @@ class GameRunSnapshot {
     required this.questionTarget,
     this.operationQuestStageId,
     this.questionMechanic = QuestionMechanic.standard,
+    this.timingStyle = TimingStyle.perQuestion,
     this.operationPool,
     this.integerQuest = false,
     this.decimalQuest = false,
@@ -200,6 +201,7 @@ class GameRunSnapshot {
   final int questionTarget;
   final OperationQuestStageId? operationQuestStageId;
   final QuestionMechanic questionMechanic;
+  final TimingStyle timingStyle;
   final List<Operation>? operationPool;
   final bool integerQuest;
   final bool decimalQuest;
@@ -482,6 +484,11 @@ class GameState extends ChangeNotifier {
       _p1F01IntegrityStore.latestSnapshot();
   @visibleForTesting
   bool get debugP1F01IntegrityRunEligible => _p1F01IntegrityRunEligible;
+  @visibleForTesting
+  void debugStartGameFromSnapshot(GameRunSnapshot snapshot) {
+    _startGame(replaySnapshot: snapshot);
+  }
+
   QuestionDifficultyLegality? get currentQuestionDifficultyLegality =>
       _questionDifficultyLegality;
   @visibleForTesting
@@ -2725,6 +2732,7 @@ class GameState extends ChangeNotifier {
         snapshot.players == 1 &&
         snapshot.mode == GameMode.standard &&
         snapshot.questionMechanic == QuestionMechanic.standard &&
+        snapshot.timingStyle == TimingStyle.perQuestion &&
         snapshot.weakSkillsPlan == null &&
         snapshot.answerStyle == AnswerStyle.choice4 &&
         _supportsContextRunOperation(snapshot.operation) &&
@@ -2757,6 +2765,7 @@ class GameState extends ChangeNotifier {
   ) {
     final supported = snapshot.runType == GameRunType.normal &&
         snapshot.questionMechanic == QuestionMechanic.standard &&
+        snapshot.timingStyle == TimingStyle.perQuestion &&
         snapshot.answerStyle == AnswerStyle.choice4 &&
         _supportsContextRunOperation(snapshot.operation) &&
         ContextEvidenceKey.supportsOperation(question.type);
@@ -2777,6 +2786,7 @@ class GameState extends ChangeNotifier {
       snapshot.players == 1 &&
       snapshot.mode == GameMode.standard &&
       snapshot.questionMechanic == QuestionMechanic.standard &&
+      snapshot.timingStyle == TimingStyle.perQuestion &&
       snapshot.weakSkillsPlan == null &&
       snapshot.answerStyle == AnswerStyle.choice4 &&
       !activeAdaptive &&
