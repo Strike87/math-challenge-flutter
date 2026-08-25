@@ -873,6 +873,25 @@ void main() {
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/08_gameplay_dark.png'));
 
+      state.settings.toggleDark();
+      await state.submitFamilyAgeRange(FamilyAgeRange.adult18plus);
+      await state.setGameBrainPreference(true);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('gamebrain-enabled-badge')), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/08b_gameplay_gamebrain_enabled_light.png'),
+      );
+
+      state.settings.toggleDark();
+      await tester.pumpAndSettle();
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/08b_gameplay_gamebrain_enabled_dark.png'),
+      );
+
       state.rt.timer?.cancel();
     });
 

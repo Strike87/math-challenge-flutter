@@ -249,13 +249,14 @@ class _GameBrainControl extends StatelessWidget {
           const Icon(
             Icons.psychology_outlined,
             color: Color(GameConfig.grape),
+            size: 32,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('GameBrain preference',
+                Text('GameBrain',
                     style:
                         TextStyle(color: s.text, fontWeight: FontWeight.w800)),
                 Text(
