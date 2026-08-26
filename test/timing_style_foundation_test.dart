@@ -54,12 +54,13 @@ void main() {
     int players = 1,
     GameMode mode = GameMode.standard,
     QuestionMechanic questionMechanic = QuestionMechanic.standard,
+    Difficulty difficulty = Difficulty.easy,
   }) =>
       GameRunSnapshot(
         runType: GameRunType.normal,
         mode: mode,
         operation: Operation.addition,
-        difficulty: Difficulty.easy,
+        difficulty: difficulty,
         numberType: NumberType.natural,
         answerStyle: AnswerStyle.choice4,
         players: players,
@@ -81,13 +82,14 @@ void main() {
   Future<GameState> startConfiguredRun({
     TimingStyle timingStyle = TimingStyle.perQuestion,
     int questionCount = 10,
+    Difficulty difficulty = Difficulty.easy,
   }) async {
     final state = await makeState();
     state
       ..players = 1
       ..mode = GameMode.standard
       ..adaptive = false
-      ..diff = Difficulty.easy
+      ..diff = difficulty
       ..questionCount = questionCount
       ..rt.challenge = Operation.addition;
     state.setTimingStyle(timingStyle);
@@ -193,14 +195,14 @@ void main() {
     expect(find.text('Time Bank', skipOffstage: false), findsOneWidget);
     expect(inkWellEnabled(tester, 'Per Question'), isTrue);
     expect(inkWellEnabled(tester, 'Deep Thinking'), isTrue);
-    expect(inkWellEnabled(tester, 'Time Bank'), isFalse);
+    expect(inkWellEnabled(tester, 'Time Bank'), isTrue);
     expect(find.text('Players', skipOffstage: false), findsOneWidget);
     expect(find.text('Game Mode', skipOffstage: false), findsOneWidget);
     expect(
         find.text('Adaptive Difficulty', skipOffstage: false), findsOneWidget);
 
     await tapVisibleText(tester, 'Time Bank');
-    expect(state.setupTimingStyle, TimingStyle.perQuestion);
+    expect(state.setupTimingStyle, TimingStyle.timeBank);
 
     await tapVisibleText(tester, 'Deep Thinking');
     expect(state.setupTimingStyle, TimingStyle.untimed);
@@ -277,7 +279,7 @@ void main() {
     timeBank
       ..players = 1
       ..mode = GameMode.standard
-      ..adaptive = false
+      ..adaptive = true
       ..rt.challenge = Operation.addition
       ..timingStyle = TimingStyle.timeBank;
     timeBank.startGame();
@@ -307,6 +309,7 @@ void main() {
     final timeBank = await makeState();
     timeBank.debugStartGameFromSnapshot(supportedSnapshot(
       timingStyle: TimingStyle.timeBank,
+      difficulty: Difficulty.expert,
     ));
     expect(timeBank.activeRunSnapshot?.timingStyle, TimingStyle.perQuestion);
     timeBank.rt.timer?.cancel();
@@ -508,6 +511,14 @@ void main() {
     final untimed = await startConfiguredRun(timingStyle: TimingStyle.untimed);
     await pumpWithState(tester, untimed, const gameplay.GameScreen());
     expect(timerCircleFinder(), findsNothing);
+
+    final timeBank =
+        await startConfiguredRun(timingStyle: TimingStyle.timeBank);
+    await pumpWithState(tester, timeBank, const gameplay.GameScreen());
+    expect(timerCircleFinder(), findsNothing);
+    expect(find.byKey(const Key('time-bank-display')), findsOneWidget);
+    expect(find.text('TIME BANK'), findsOneWidget);
+    timeBank.handleAppLifecycleChange(resumed: false);
   });
 
   test('non-per-question timing is not player-selectable', () {
@@ -526,7 +537,7 @@ void main() {
     for (final expectation in <(TimingStyle, TimingStyle, bool)>[
       (TimingStyle.perQuestion, TimingStyle.perQuestion, true),
       (TimingStyle.untimed, TimingStyle.untimed, false),
-      (TimingStyle.timeBank, TimingStyle.perQuestion, true),
+      (TimingStyle.timeBank, TimingStyle.timeBank, false),
     ]) {
       final state = await startSupportedSnapshot(expectation.$1);
 
@@ -539,6 +550,184 @@ void main() {
       expect(
           state.debugContextEvidenceObservationCount, expectation.$3 ? 1 : 0);
     }
+  });
+
+  test('Time Bank freezes the fixed budget and replay restores it', () async {
+    for (final expectation in <(Difficulty, int, int)>[
+      (Difficulty.easy, 10, 100000),
+      (Difficulty.medium, 15, 120000),
+      (Difficulty.hard, 25, 150000),
+    ]) {
+      final state = await startConfiguredRun(
+        timingStyle: TimingStyle.timeBank,
+        questionCount: expectation.$2,
+        difficulty: expectation.$1,
+      );
+
+      expect(state.activeRunSnapshot?.timingStyle, TimingStyle.timeBank);
+      expect(state.rt.qTimerLimit, 0);
+      expect(state.rt.timer, isNull);
+      expect(state.rt.timeBankRemainingMs, expectation.$3);
+      expect(state.rt.timeBankTimer?.isActive, isTrue);
+
+      state.handleAppLifecycleChange(resumed: false);
+      state.rt.timeBankRemainingMs = 1;
+      await state.replayGame();
+
+      expect(state.activeRunSnapshot?.timingStyle, TimingStyle.timeBank);
+      expect(state.rt.timeBankRemainingMs, expectation.$3);
+      expect(state.rt.timeBankTimer?.isActive, isTrue);
+    }
+  });
+
+  testWidgets(
+      'Time Bank pauses in background, cannot UI-pause, and exhausts once',
+      (tester) async {
+    final state = await startConfiguredRun(timingStyle: TimingStyle.timeBank);
+    state.skillMap[Operation.addition.name] = SkillData(
+      mastery: 50,
+      confidence: 50,
+    );
+
+    state.handleAppLifecycleChange(resumed: false);
+    final pausedRemaining = state.rt.timeBankRemainingMs;
+    await tester.pump(const Duration(seconds: 2));
+    expect(state.rt.timeBankRemainingMs, pausedRemaining);
+
+    state.rt.timeBankRemainingMs = 0;
+    state.showQuitConfirm();
+    expect(state.rt.state, 'playing');
+    state.handleAppLifecycleChange(resumed: true);
+
+    expect(state.rt.timeBankExhausted, isTrue);
+    expect(state.rt.totalTurns, 1);
+    expect(state.p[1].total, 1);
+    expect(state.reactionPill, contains("Time's Up"));
+    expect(state.skillMap[Operation.addition.name]!.mastery,
+        closeTo(47.5, 0.0001));
+    expect(state.rt.timeBankTimer, isNull);
+    expect(state.rt.state, 'ending');
+
+    state.handleAppLifecycleChange(resumed: true);
+    expect(state.rt.totalTurns, 1);
+    await tester.pump(const Duration(milliseconds: 1300));
+
+    expect(state.rt.gameActive, isFalse);
+    expect(state.rt.totalTurns, 1);
+    expect(state.resultDescription, 'Time remaining: 0s');
+  });
+
+  testWidgets('zero Time Bank preempts an answer before the periodic tick',
+      (tester) async {
+    final state = await startConfiguredRun(timingStyle: TimingStyle.timeBank);
+    final currentQuestion = state.rt.q;
+    state.rt.timeBankTimerStart = DateTime.now().millisecondsSinceEpoch -
+        state.rt.timeBankRemainingMs -
+        1;
+
+    state.onAnswer(currentQuestion!.ans);
+
+    expect(state.rt.timeBankExhausted, isTrue);
+    expect(state.p[1].correct, 0);
+    expect(state.p[1].total, 1);
+    expect(state.rt.totalTurns, 1);
+    expect(state.reactionPill, contains("Time's Up"));
+    expect(state.rt.timeBankTimer, isNull);
+    expect(state.rt.state, 'ending');
+    await tester.pump(const Duration(milliseconds: 1300));
+    expect(state.rt.gameActive, isFalse);
+    expect(state.rt.q, same(currentQuestion));
+    expect(state.rt.totalTurns, 1);
+  });
+
+  test('Time Bank duplicate active resume keeps the live ticker and debit',
+      () async {
+    final state = await startConfiguredRun(timingStyle: TimingStyle.timeBank);
+    final initialRemaining = state.rt.timeBankRemainingMs;
+    final timer = state.rt.timeBankTimer;
+    final activeStart = DateTime.now().millisecondsSinceEpoch - 2000;
+    state.rt.timeBankTimerStart = activeStart;
+
+    state.handleAppLifecycleChange(resumed: true);
+
+    expect(state.rt.timeBankTimer, same(timer));
+    expect(state.rt.timeBankTimerStart, activeStart);
+
+    state.rt.timeBankTimerStart = DateTime.now().millisecondsSinceEpoch - 7000;
+    state.handleAppLifecycleChange(resumed: false);
+
+    expect(state.rt.timeBankTimer, isNull);
+    expect(
+      state.rt.timeBankRemainingMs,
+      inInclusiveRange(initialRemaining - 7005, initialRemaining - 6995),
+    );
+  });
+
+  test('disposing cancels the Time Bank timer', () async {
+    final state = await startConfiguredRun(timingStyle: TimingStyle.timeBank);
+    final timer = state.rt.timeBankTimer;
+    expect(timer?.isActive, isTrue);
+
+    state.dispose();
+
+    expect(timer?.isActive, isFalse);
+  });
+
+  testWidgets('Time Bank has base scoring and blocks timer power-ups',
+      (tester) async {
+    final state = await startConfiguredRun(
+      timingStyle: TimingStyle.timeBank,
+      questionCount: 1,
+    );
+    state.p[1].pups = [PowerUp.time, PowerUp.freeze, PowerUp.fifty];
+
+    expect(state.isPowerUpBlocked(PowerUp.time), isTrue);
+    expect(state.isPowerUpBlocked(PowerUp.freeze), isTrue);
+    state.usePowerUp(PowerUp.time);
+    state.usePowerUp(PowerUp.freeze);
+    expect(state.p[1].pups, containsAll([PowerUp.time, PowerUp.freeze]));
+    expect(state.rt.puUsed, 0);
+
+    state.onAnswer(state.rt.q!.ans);
+    expect(state.rt.timeBankTimer, isNull);
+    expect(state.p[1].score, 10);
+    expect(state.p[1].bonus, 0);
+    expect(state.rt.fastAnswers, 0);
+    await tester.pump(const Duration(seconds: 4));
+
+    expect(state.highScores, isEmpty);
+    expect(state.achievements['speed_demon'], isFalse);
+    expect(state.resultDescription, startsWith('Time remaining: '));
+  });
+
+  test('Time Bank and Deep Thinking mastery are speed-neutral', () async {
+    Future<(double mastery, double confidence)> answerCorrect(
+      TimingStyle timingStyle,
+      int responseMs,
+    ) async {
+      final state = await startConfiguredRun(timingStyle: timingStyle);
+      state.skillMap[Operation.addition.name] = SkillData(
+        mastery: 50,
+        confidence: 50,
+      );
+      state.rt.qStartTs = DateTime.now().millisecondsSinceEpoch - responseMs;
+      state.onAnswer(state.rt.q!.ans);
+      final skill = state.skillMap[Operation.addition.name]!;
+      return (skill.mastery, skill.confidence);
+    }
+
+    final timeBankFast = await answerCorrect(TimingStyle.timeBank, 500);
+    final timeBankSlow = await answerCorrect(TimingStyle.timeBank, 5000);
+    expect(timeBankFast, timeBankSlow);
+
+    final deepThinkingFast = await answerCorrect(TimingStyle.untimed, 500);
+    final deepThinkingSlow = await answerCorrect(TimingStyle.untimed, 5000);
+    expect(deepThinkingFast, deepThinkingSlow);
+
+    final perQuestionFast = await answerCorrect(TimingStyle.perQuestion, 500);
+    final perQuestionSlow = await answerCorrect(TimingStyle.perQuestion, 5000);
+    expect(perQuestionFast.$1, greaterThan(perQuestionSlow.$1));
+    expect(perQuestionFast.$2, greaterThan(perQuestionSlow.$2));
   });
 }
 

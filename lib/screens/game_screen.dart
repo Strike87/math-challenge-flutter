@@ -54,9 +54,19 @@ class _GameScreenState extends State<GameScreen> {
                           _ScorecardsRow(
                             gs: gs,
                             s: s,
-                            timerReserve: rt.timer == null ? 0 : 56,
+                            timerReserve: gs.isTimeBankRun
+                                ? 100
+                                : rt.timer == null
+                                    ? 0
+                                    : 56,
                           ),
-                          if (rt.timer != null)
+                          if (gs.isTimeBankRun)
+                            Positioned(
+                              right: 0,
+                              top: 10,
+                              child: _TimeBankDisplay(gs: gs, s: s),
+                            )
+                          else if (rt.timer != null)
                             Positioned(
                               right: 0,
                               top: 10,
@@ -360,6 +370,63 @@ class _TimerCircle extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _TimeBankDisplay extends StatelessWidget {
+  const _TimeBankDisplay({required this.gs, required this.s});
+
+  final GameState gs;
+  final SettingsService s;
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = gs.timeBankRemainingMs;
+    final seconds = (remaining / 1000).ceil();
+    final value =
+        '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
+    final danger = remaining > 0 && remaining <= 10000;
+    return Container(
+      key: const Key('time-bank-display'),
+      width: 92,
+      height: 56,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: s.dark ? s.surface2 : const Color(0xFFFFF7E5),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: danger
+              ? const Color(GameConfig.punch)
+              : const Color(GameConfig.mango),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'TIME BANK',
+            style: TextStyle(
+              color: s.muted,
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.6,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: danger
+                  ? const Color(GameConfig.punch)
+                  : const Color(GameConfig.mango),
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              fontFamily: AppFonts.headFor(s),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -186,8 +186,14 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed || !mounted) return;
-    unawaited(context.read<gs.GameState>().syncBannerForCurrentScreen());
+    if (!mounted) return;
+    final gameState = context.read<gs.GameState>();
+    gameState.handleAppLifecycleChange(
+      resumed: state == AppLifecycleState.resumed,
+    );
+    if (state == AppLifecycleState.resumed) {
+      unawaited(gameState.syncBannerForCurrentScreen());
+    }
   }
 
   @override

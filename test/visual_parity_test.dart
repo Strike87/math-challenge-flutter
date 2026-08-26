@@ -950,6 +950,204 @@ void main() {
       );
     });
 
+    testWidgets('32. Time Bank config keeps incompatible options visible',
+        (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..players = 1
+        ..mode = GameMode.standard
+        ..adaptive = false;
+      state.goToConfig(Operation.addition.name);
+      await state.selectNumType(NumberType.natural.name);
+      state.setTimingStyle(TimingStyle.timeBank);
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -400),
+      );
+      await tester.pumpAndSettle();
+
+      expect(state.setupTimingStyle, TimingStyle.timeBank);
+      expect(state.canSelectDeepThinking, isTrue);
+      expect(state.canSelectTimeBank, isTrue);
+      expect(find.text('Per Question'), findsOneWidget);
+      expect(find.text('Deep Thinking'), findsOneWidget);
+      expect(find.text('Time Bank'), findsOneWidget);
+      expect(find.text('2 Players'), findsOneWidget);
+      expect(find.text('Adaptive Difficulty'), findsOneWidget);
+      expect(
+        tester
+            .widget<InkWell>(
+              find.ancestor(
+                of: find.text('2 Players', skipOffstage: false),
+                matching: find.byType(InkWell),
+              ),
+            )
+            .onTap,
+        isNull,
+      );
+      expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/32_time_bank_config.png'),
+      );
+    });
+
+    testWidgets('33. Time Bank gameplay shows one bank and disabled timers',
+        (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..players = 1
+        ..mode = GameMode.standard
+        ..adaptive = false
+        ..rt.challenge = Operation.addition;
+      state.setTimingStyle(TimingStyle.timeBank);
+      state.startGame();
+      state.handleAppLifecycleChange(resumed: false);
+      state.p[1].pups = [
+        PowerUp.time,
+        PowerUp.time,
+        PowerUp.fifty,
+        PowerUp.freeze,
+        PowerUp.freeze,
+      ];
+      state.rt.q = const Question(
+        type: Operation.addition,
+        key: 'visual-time-bank',
+        text: '5 + 3',
+        ans: 8,
+        choices: [6, 7, 8, 9],
+        diff: Difficulty.easy,
+        numType: NumberType.natural,
+      );
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(state.activeRunSnapshot?.timingStyle, TimingStyle.timeBank);
+      expect(state.rt.timer, isNull);
+      expect(find.byKey(const Key('time-bank-display')), findsOneWidget);
+      expect(find.text('TIME BANK'), findsOneWidget);
+      expect(find.text('+5s'), findsOneWidget);
+      expect(find.text('▮▮'), findsOneWidget);
+      expect(
+        tester
+            .widget<InkWell>(
+              find.ancestor(
+                of: find.text('+5s'),
+                matching: find.byType(InkWell),
+              ),
+            )
+            .onTap,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<InkWell>(
+              find.ancestor(
+                of: find.text('▮▮'),
+                matching: find.byType(InkWell),
+              ),
+            )
+            .onTap,
+        isNull,
+      );
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/33_time_bank_gameplay.png'),
+      );
+    });
+
+    testWidgets('34. Time Bank warning starts at ten seconds', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..players = 1
+        ..mode = GameMode.standard
+        ..adaptive = false
+        ..rt.challenge = Operation.addition;
+      state.setTimingStyle(TimingStyle.timeBank);
+      state.startGame();
+      state.handleAppLifecycleChange(resumed: false);
+      state
+        ..rt.timeBankRemainingMs = 10000
+        ..rt.q = const Question(
+          type: Operation.addition,
+          key: 'visual-time-bank-warning',
+          text: '9 + 4',
+          ans: 13,
+          choices: [11, 12, 13, 14],
+          diff: Difficulty.easy,
+          numType: NumberType.natural,
+        );
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('time-bank-display')), findsOneWidget);
+      expect(find.text('0:10'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/34_time_bank_gameplay_warning.png'),
+      );
+    });
+
+    testWidgets('35. Time Bank result reports time remaining only',
+        (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..players = 1
+        ..mode = GameMode.standard
+        ..adaptive = false
+        ..rt.challenge = Operation.addition;
+      state.setTimingStyle(TimingStyle.timeBank);
+      state.startGame();
+      state.handleAppLifecycleChange(resumed: false);
+      state
+        ..rt.timeBankRemainingMs = 47000
+        ..rt.q = const Question(
+          type: Operation.addition,
+          key: 'visual-time-bank-result',
+          text: '7 + 6',
+          ans: 13,
+          choices: [11, 12, 13, 14],
+          diff: Difficulty.easy,
+          numType: NumberType.natural,
+        )
+        ..resultIcon = '🌟'
+        ..resultTitle = 'Player Report'
+        ..resultDescription = 'Time remaining: 47s';
+      state.showModal(GameModal.win);
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(state.activeRunSnapshot?.timingStyle, TimingStyle.timeBank);
+      expect(find.text('Time remaining: 47s'), findsOneWidget);
+      expect(find.textContaining('Final Score:'), findsNothing);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/35_time_bank_result.png'),
+      );
+    });
+
     testWidgets('9. Daily Boss screen/modal', (tester) async {
       final state = await _makeState({'mc_dark': false});
       state.currentScreen = GameScreen.menu;

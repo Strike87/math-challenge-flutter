@@ -59,7 +59,8 @@ class ConfigScreen extends StatelessWidget {
                                 2,
                                 s.accent(GameConfig.punch),
                                 enabled: weakSkillsPlan == null &&
-                                    gs.setupTimingStyle != TimingStyle.untimed,
+                                    gs.setupTimingStyle ==
+                                        TimingStyle.perQuestion,
                               ),
                             ],
                             active: gs.setupPlayers,
@@ -180,7 +181,7 @@ class ConfigScreen extends StatelessWidget {
                                 'Time Bank',
                                 TimingStyle.timeBank,
                                 s.accent(GameConfig.mango),
-                                enabled: false,
+                                enabled: gs.canSelectTimeBank,
                               ),
                             ],
                             active: gs.setupTimingStyle,
@@ -188,7 +189,9 @@ class ConfigScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'No countdown - take the time you need.',
+                            gs.setupTimingStyle == TimingStyle.timeBank
+                                ? 'One shared bank: 10s Easy, 8s Medium, or 6s Hard per question.'
+                                : 'No countdown - take the time you need.',
                             style: TextStyle(
                               color: s.muted,
                               fontSize: 12,
@@ -255,8 +258,8 @@ class ConfigScreen extends StatelessWidget {
                                       value: gs.adaptive,
                                       activeThumbColor:
                                           s.accent(GameConfig.coral),
-                                      onChanged: gs.setupTimingStyle ==
-                                              TimingStyle.untimed
+                                      onChanged: gs.setupTimingStyle !=
+                                              TimingStyle.perQuestion
                                           ? null
                                           : gs.setAdaptive,
                                     ),
@@ -689,8 +692,8 @@ class _ModeTabs extends StatelessWidget {
                     active: availableModes[i] == active,
                     disabled: !GameMode.isAvailableForPlayers(
                             availableModes[i], players) ||
-                        (context.watch<GameState>().setupTimingStyle ==
-                                TimingStyle.untimed &&
+                        (context.watch<GameState>().setupTimingStyle !=
+                                TimingStyle.perQuestion &&
                             availableModes[i] != GameMode.standard),
                     compact: compact,
                     settings: s,
