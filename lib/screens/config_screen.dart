@@ -58,7 +58,8 @@ class ConfigScreen extends StatelessWidget {
                                 '👥 2 Players',
                                 2,
                                 s.accent(GameConfig.punch),
-                                enabled: weakSkillsPlan == null,
+                                enabled: weakSkillsPlan == null &&
+                                    gs.setupTimingStyle != TimingStyle.untimed,
                               ),
                             ],
                             active: gs.setupPlayers,
@@ -160,6 +161,40 @@ class ConfigScreen extends StatelessWidget {
                             active: gs.questionCount,
                             onPick: (v) => gs.setOption('q', v),
                           ),
+                          const SizedBox(height: 18),
+                          _SectionTitle('Timing', s),
+                          _ToggleRow(
+                            options: [
+                              _ToggleOpt(
+                                'Per Question',
+                                TimingStyle.perQuestion,
+                                s.accent(GameConfig.sky),
+                              ),
+                              _ToggleOpt(
+                                'Deep Thinking',
+                                TimingStyle.untimed,
+                                s.accent(GameConfig.mint),
+                                enabled: gs.canSelectDeepThinking,
+                              ),
+                              _ToggleOpt(
+                                'Time Bank',
+                                TimingStyle.timeBank,
+                                s.accent(GameConfig.mango),
+                                enabled: false,
+                              ),
+                            ],
+                            active: gs.setupTimingStyle,
+                            onPick: gs.setTimingStyle,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'No countdown - take the time you need.',
+                            style: TextStyle(
+                              color: s.muted,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -220,7 +255,10 @@ class ConfigScreen extends StatelessWidget {
                                       value: gs.adaptive,
                                       activeThumbColor:
                                           s.accent(GameConfig.coral),
-                                      onChanged: gs.setAdaptive,
+                                      onChanged: gs.setupTimingStyle ==
+                                              TimingStyle.untimed
+                                          ? null
+                                          : gs.setAdaptive,
                                     ),
                                   ],
                                 ),
@@ -605,7 +643,9 @@ class _ToggleButton<T> extends StatelessWidget {
 
 ({String icon, String label}) _splitIconLabel(String value) {
   final firstSpace = value.indexOf(' ');
-  if (firstSpace <= 0) return (icon: '', label: value);
+  if (firstSpace <= 0 || value.codeUnitAt(0) < 128) {
+    return (icon: '', label: value);
+  }
   final icon = value.substring(0, firstSpace);
   final label = value.substring(firstSpace + 1).trim();
   if (label.isEmpty) return (icon: '', label: value);
@@ -648,7 +688,10 @@ class _ModeTabs extends StatelessWidget {
                     mode: availableModes[i],
                     active: availableModes[i] == active,
                     disabled: !GameMode.isAvailableForPlayers(
-                        availableModes[i], players),
+                            availableModes[i], players) ||
+                        (context.watch<GameState>().setupTimingStyle ==
+                                TimingStyle.untimed &&
+                            availableModes[i] != GameMode.standard),
                     compact: compact,
                     settings: s,
                     onPick: onPick,

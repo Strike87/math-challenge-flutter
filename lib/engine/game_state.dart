@@ -206,6 +206,24 @@ class GameRunSnapshot {
   final bool integerQuest;
   final bool decimalQuest;
   final WeakSkillsPlan? weakSkillsPlan;
+
+  GameRunSnapshot withTimingStyle(TimingStyle value) => GameRunSnapshot(
+        runType: runType,
+        mode: mode,
+        operation: operation,
+        difficulty: difficulty,
+        numberType: numberType,
+        answerStyle: answerStyle,
+        players: players,
+        questionTarget: questionTarget,
+        operationQuestStageId: operationQuestStageId,
+        questionMechanic: questionMechanic,
+        timingStyle: value,
+        operationPool: operationPool,
+        integerQuest: integerQuest,
+        decimalQuest: decimalQuest,
+        weakSkillsPlan: weakSkillsPlan,
+      );
 }
 
 @visibleForTesting
@@ -278,6 +296,7 @@ class GameState extends ChangeNotifier {
 
   static const double _masteryMax = AdaptiveDifficultyEngine.maxMastery;
   static const double _masteryDefault = AdaptiveDifficultyEngine.defaultMastery;
+  static const int _untimedMasteryResponseMs = 2000;
   static const int dailyBonusCoins = 20;
   static const int rewardedAdCoins = 10;
   static const int rewardedCooldownMs = 300000;
@@ -390,6 +409,7 @@ class GameState extends ChangeNotifier {
   Difficulty diff = Difficulty.easy;
   int questionCount = 10;
   bool adaptive = false;
+  TimingStyle timingStyle = TimingStyle.perQuestion;
   bool gameBrainPreference = false;
   NumberType numType = NumberType.natural;
   AnswerStyle selectedAnswerStyle = AnswerStyle.choice4;
@@ -512,6 +532,37 @@ class GameState extends ChangeNotifier {
       _pendingOperationQuestStageId == null && _pendingWeakSkillsPlan == null
           ? players
           : 1;
+  bool get canSelectDeepThinking =>
+      _pendingOperationQuestStageId == null &&
+      _pendingWeakSkillsPlan == null &&
+      _pendingQuestionMechanic == QuestionMechanic.standard &&
+      mode == GameMode.standard &&
+      setupPlayers == 1 &&
+      !adaptive &&
+      rt.challenge != Operation.master &&
+      rt.challenge != Operation.dailyBoss;
+  TimingStyle get setupTimingStyle =>
+      canSelectDeepThinking && timingStyle == TimingStyle.untimed
+          ? TimingStyle.untimed
+          : TimingStyle.perQuestion;
+  bool get _isDeepThinkingRun {
+    final snapshot = _runSnapshot;
+    return snapshot != null &&
+        snapshot.timingStyle == TimingStyle.untimed &&
+        snapshot.runType == GameRunType.normal &&
+        snapshot.mode == GameMode.standard &&
+        snapshot.players == 1 &&
+        snapshot.questionMechanic == QuestionMechanic.standard &&
+        snapshot.operation != Operation.master &&
+        snapshot.operation != Operation.dailyBoss &&
+        snapshot.operationQuestStageId == null &&
+        snapshot.weakSkillsPlan == null;
+  }
+
+  Iterable<PowerUp> get _availablePowerUpsForActiveRun => _isDeepThinkingRun
+      ? PowerUp.values.where((pu) => pu != PowerUp.time && pu != PowerUp.freeze)
+      : PowerUp.values;
+
   int get activePlayers => _runSnapshot?.players ?? players;
   GameMode get activeMode => _runSnapshot?.mode ?? mode;
   Difficulty get activeDifficulty => _runSnapshot?.difficulty ?? diff;
@@ -1936,7 +1987,10 @@ class GameState extends ChangeNotifier {
 
   // ─── Screen / modal routing ─────────────────────────────────
   void showScreen(GameScreen s) {
-    if (s == GameScreen.menu) _pendingWeakSkillsPlan = null;
+    if (s == GameScreen.menu) {
+      _pendingWeakSkillsPlan = null;
+      _normalizeSetupTimingStyle();
+    }
     _logPerformance('screen transition: ${currentScreen.name} -> ${s.name}');
     currentScreen = s;
     unawaited(syncBannerForCurrentScreen());
@@ -1992,6 +2046,7 @@ class GameState extends ChangeNotifier {
     _pendingQuestionMechanic = missingOperation
         ? QuestionMechanic.missingOperation
         : QuestionMechanic.standard;
+    _normalizeSetupTimingStyle();
     if (op == Operation.master) {
       rt.challenge = Operation.master;
       showModal(GameModal.masterIntro);
@@ -2060,11 +2115,20 @@ class GameState extends ChangeNotifier {
         questionCount = value as int;
         break;
     }
+    _normalizeSetupTimingStyle();
     notifyListeners();
   }
 
   void setAdaptive(bool v) {
     adaptive = v;
+    _normalizeSetupTimingStyle();
+    notifyListeners();
+  }
+
+  void setTimingStyle(TimingStyle style) {
+    timingStyle = style == TimingStyle.untimed && canSelectDeepThinking
+        ? style
+        : TimingStyle.perQuestion;
     notifyListeners();
   }
 
@@ -2084,7 +2148,12 @@ class GameState extends ChangeNotifier {
       : AnswerStyle.choice4;
 
   void goToPlayerSetup() {
+    _normalizeSetupTimingStyle();
     showScreen(GameScreen.player);
+  }
+
+  void _normalizeSetupTimingStyle() {
+    if (!canSelectDeepThinking) timingStyle = TimingStyle.perQuestion;
   }
 
   void showOperationQuest() {
@@ -2183,7 +2252,7 @@ class GameState extends ChangeNotifier {
     closeModal();
 
     final pendingQuestId = _pendingOperationQuestStageId;
-    final snapshot = replaySnapshot ??
+    final snapshot = _normalizeSnapshotTimingStyle(replaySnapshot ??
         (pendingQuestId == null
             ? GameRunSnapshot(
                 runType: GameRunType.normal,
@@ -2195,9 +2264,10 @@ class GameState extends ChangeNotifier {
                 players: setupPlayers,
                 questionTarget: questionCount,
                 questionMechanic: _pendingQuestionMechanic,
+                timingStyle: setupTimingStyle,
                 weakSkillsPlan: _pendingWeakSkillsPlan,
               )
-            : _operationQuestSnapshot(pendingQuestId));
+            : _operationQuestSnapshot(pendingQuestId)));
     _pendingOperationQuestStageId = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     _pendingWeakSkillsPlan = null;
@@ -2264,6 +2334,26 @@ class GameState extends ChangeNotifier {
     }
 
     _nextTurn();
+  }
+
+  bool _supportsUntimedSnapshot(GameRunSnapshot snapshot) =>
+      !adaptive &&
+      snapshot.runType == GameRunType.normal &&
+      snapshot.mode == GameMode.standard &&
+      snapshot.players == 1 &&
+      snapshot.questionMechanic == QuestionMechanic.standard &&
+      snapshot.operation != Operation.master &&
+      snapshot.operation != Operation.dailyBoss &&
+      snapshot.operationQuestStageId == null &&
+      snapshot.weakSkillsPlan == null;
+
+  GameRunSnapshot _normalizeSnapshotTimingStyle(GameRunSnapshot snapshot) {
+    if (snapshot.timingStyle == TimingStyle.perQuestion) return snapshot;
+    if (snapshot.timingStyle == TimingStyle.untimed &&
+        _supportsUntimedSnapshot(snapshot)) {
+      return snapshot;
+    }
+    return snapshot.withTimingStyle(TimingStyle.perQuestion);
   }
 
   GameRunSnapshot _operationQuestSnapshot(OperationQuestStageId id) {
@@ -2508,7 +2598,9 @@ class GameState extends ChangeNotifier {
     rt.accepting = true;
 
     // Start per-question timer
-    if (activeMode != GameMode.blitz && activeMode != GameMode.combo) {
+    if (activeMode != GameMode.blitz &&
+        activeMode != GameMode.combo &&
+        !_isDeepThinkingRun) {
       rt.qTimerLimit = 0;
       _startQuestionTimer();
     }
@@ -2590,6 +2682,7 @@ class GameState extends ChangeNotifier {
   }
 
   void _onTimeout(({int runId, int questionId}) questionToken) {
+    if (_isDeepThinkingRun) return;
     _onAnswer(null, false, true, questionToken);
   }
 
@@ -2656,8 +2749,11 @@ class GameState extends ChangeNotifier {
       pl.history = pl.history.sublist(pl.history.length - 50);
     }
 
-    _updateSkillMap(q.type, q.diff ?? activeDifficulty, isCorrect, timeTaken);
-    _updateAdapt(isCorrect, timeTaken, q.type);
+    final masteryTimeTaken =
+        _isDeepThinkingRun ? _untimedMasteryResponseMs : timeTaken;
+    _updateSkillMap(
+        q.type, q.diff ?? activeDifficulty, isCorrect, masteryTimeTaken);
+    _updateAdapt(isCorrect, masteryTimeTaken, q.type);
 
     if (isCorrect) {
       _onCorrect(pl, pid, timeTaken);
@@ -2924,7 +3020,9 @@ class GameState extends ChangeNotifier {
     pl.streak++;
     pl.maxStreak = max(pl.maxStreak, pl.streak);
     if (timeTaken < pl.fastest) pl.fastest = timeTaken;
-    if (timeTaken < 2000) rt.fastAnswers++;
+    if (!_isDeepThinkingRun && timeTaken < 2000) {
+      rt.fastAnswers++;
+    }
 
     var survivalBossDue = false;
 
@@ -2987,12 +3085,13 @@ class GameState extends ChangeNotifier {
         rt.challenge != Operation.dailyBoss &&
         ![GameMode.combo, GameMode.survival].contains(activeMode);
     if (eligibleForPU && pl.correct == 1) {
-      pl.pups.addAll(PowerUp.values);
+      pl.pups.addAll(_availablePowerUpsForActiveRun);
       showToast('🎁 Got one of each power-up!');
     } else if (eligibleForPU &&
         pl.correct > 1 &&
         pl.correct % GameConfig.puRewardInterval == 0) {
-      final pu = PowerUp.values[_rng.nextInt(PowerUp.values.length)];
+      final powerUps = _availablePowerUpsForActiveRun.toList(growable: false);
+      final pu = powerUps[_rng.nextInt(powerUps.length)];
       pl.pups.add(pu);
       showToast('🎁 Got: ${pu.label}!');
     }
@@ -3004,7 +3103,9 @@ class GameState extends ChangeNotifier {
     final isMaster = rt.challenge == Operation.master;
     final isBoss = rt.challenge == Operation.dailyBoss;
 
-    if (!isBlitz && !isMaster && activeMode != GameMode.combo) {
+    if (_isDeepThinkingRun) {
+      bonus = 0;
+    } else if (!isBlitz && !isMaster && activeMode != GameMode.combo) {
       final remaining = max(0, (rt.qTimerLimit * 1000 - timeTaken) / 1000);
       bonus = remaining.ceil();
       if (timeTaken < 2000) {
@@ -3388,7 +3489,9 @@ class GameState extends ChangeNotifier {
         : null;
 
     // Save high score
-    if (!isOperationQuest && p[1].score > 0) {
+    if (!isOperationQuest &&
+        snapshot.timingStyle == TimingStyle.perQuestion &&
+        p[1].score > 0) {
       highScores.add(HighScore(
         name: p[1].name,
         score: p[1].score,
@@ -3413,7 +3516,10 @@ class GameState extends ChangeNotifier {
     // Streak master
     if (p[1].maxStreak >= 10) unlockAch('streak_master');
     // Speed demon
-    if (rt.fastAnswers >= 5) unlockAch('speed_demon');
+    if (snapshot.timingStyle == TimingStyle.perQuestion &&
+        rt.fastAnswers >= 5) {
+      unlockAch('speed_demon');
+    }
     // Survivor
     if (activeMode == GameMode.death && p[1].score >= 250) {
       unlockAch('survivor');
@@ -3769,9 +3875,11 @@ class GameState extends ChangeNotifier {
 
   void _updateMastery(SkillData sd, bool correct, int timeMs) {
     final timeoutLimitMs = rt.qTimerLimit > 0 ? rt.qTimerLimit * 1000 : 10000;
+    final canTimeout =
+        !_isDeepThinkingRun && (timeMs == 0 || timeMs >= timeoutLimitMs);
     final outcome = correct
         ? MasteryOutcome.correct
-        : timeMs == 0 || timeMs >= timeoutLimitMs
+        : canTimeout
             ? MasteryOutcome.timeout
             : MasteryOutcome.wrong;
     final update = _adaptiveDifficultyEngine.calculateMasteryUpdate(
@@ -4014,6 +4122,9 @@ class GameState extends ChangeNotifier {
       return true;
     }
     if (pu == PowerUp.time || pu == PowerUp.freeze) {
+      if (_isDeepThinkingRun) {
+        return true;
+      }
       if (activeMode == GameMode.blitz || activeMode == GameMode.combo) {
         return true;
       }

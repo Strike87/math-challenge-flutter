@@ -1,13 +1,20 @@
 import 'dart:math';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/engine/question_generator.dart';
 import 'package:math_challenge/features/family/domain/family_eligibility.dart';
+import 'package:math_challenge/features/gameplay/domain/question_mechanic.dart';
+import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/models/enums.dart';
+import 'package:math_challenge/models/game_data.dart';
+import 'package:math_challenge/screens/config_screen.dart';
+import 'package:math_challenge/screens/game_screen.dart' as gameplay;
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -44,16 +51,20 @@ void main() {
 
   GameRunSnapshot supportedSnapshot({
     TimingStyle timingStyle = TimingStyle.perQuestion,
+    int players = 1,
+    GameMode mode = GameMode.standard,
+    QuestionMechanic questionMechanic = QuestionMechanic.standard,
   }) =>
       GameRunSnapshot(
         runType: GameRunType.normal,
-        mode: GameMode.standard,
+        mode: mode,
         operation: Operation.addition,
         difficulty: Difficulty.easy,
         numberType: NumberType.natural,
         answerStyle: AnswerStyle.choice4,
-        players: 1,
+        players: players,
         questionTarget: 10,
+        questionMechanic: questionMechanic,
         timingStyle: timingStyle,
       );
 
@@ -66,6 +77,75 @@ void main() {
     state.rt.timer?.cancel();
     return state;
   }
+
+  Future<GameState> startConfiguredRun({
+    TimingStyle timingStyle = TimingStyle.perQuestion,
+    int questionCount = 10,
+  }) async {
+    final state = await makeState();
+    state
+      ..players = 1
+      ..mode = GameMode.standard
+      ..adaptive = false
+      ..diff = Difficulty.easy
+      ..questionCount = questionCount
+      ..rt.challenge = Operation.addition;
+    state.setTimingStyle(timingStyle);
+    state.startGame();
+    return state;
+  }
+
+  Future<void> pumpWithState(
+    WidgetTester tester,
+    GameState state,
+    Widget child,
+  ) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<GameState>.value(value: state),
+          ChangeNotifierProvider<SettingsService>.value(value: state.settings),
+        ],
+        child: MaterialApp(home: Scaffold(body: child)),
+      ),
+    );
+  }
+
+  bool inkWellEnabled(WidgetTester tester, String label) {
+    final inkWell = find.ancestor(
+      of: find.text(label, skipOffstage: false),
+      matching: find.byType(InkWell),
+    );
+    expect(inkWell, findsOneWidget);
+    return tester.widget<InkWell>(inkWell).onTap != null;
+  }
+
+  Future<void> tapVisibleText(WidgetTester tester, String label) async {
+    final text = find.text(label, skipOffstage: false);
+    await tester.ensureVisible(text);
+    await tester.tap(text, warnIfMissed: false);
+    await tester.pump();
+  }
+
+  Future<void> answerCorrectAndSettle(
+    WidgetTester tester,
+    GameState state,
+  ) async {
+    state.onAnswer(state.rt.q!.ans);
+    await tester.pump(const Duration(seconds: 4));
+  }
+
+  Finder timerCircleFinder() => find.byWidgetPredicate((widget) {
+        if (widget is! Container ||
+            widget.constraints !=
+                const BoxConstraints.tightFor(width: 56, height: 56) ||
+            widget.child is! Text) {
+          return false;
+        }
+        final decoration = widget.decoration;
+        return decoration is BoxDecoration &&
+            decoration.shape == BoxShape.circle;
+      });
 
   test('snapshot defaults to per-question timing', () {
     expect(supportedSnapshot().timingStyle, TimingStyle.perQuestion);
@@ -95,6 +175,151 @@ void main() {
     state.rt.timer?.cancel();
   });
 
+  testWidgets('config timing choices stay visible and enforce eligibility',
+      (tester) async {
+    final state = await makeState();
+    state
+      ..players = 1
+      ..mode = GameMode.standard
+      ..adaptive = false;
+    state.goToConfig(Operation.addition.name);
+    state.showScreen(GameScreen.config);
+    expect(state.canSelectDeepThinking, isTrue);
+
+    await pumpWithState(tester, state, const ConfigScreen());
+    expect(state.setupTimingStyle, TimingStyle.perQuestion);
+    expect(find.text('Per Question', skipOffstage: false), findsOneWidget);
+    expect(find.text('Deep Thinking', skipOffstage: false), findsOneWidget);
+    expect(find.text('Time Bank', skipOffstage: false), findsOneWidget);
+    expect(inkWellEnabled(tester, 'Per Question'), isTrue);
+    expect(inkWellEnabled(tester, 'Deep Thinking'), isTrue);
+    expect(inkWellEnabled(tester, 'Time Bank'), isFalse);
+    expect(find.text('Players', skipOffstage: false), findsOneWidget);
+    expect(find.text('Game Mode', skipOffstage: false), findsOneWidget);
+    expect(
+        find.text('Adaptive Difficulty', skipOffstage: false), findsOneWidget);
+
+    await tapVisibleText(tester, 'Time Bank');
+    expect(state.setupTimingStyle, TimingStyle.perQuestion);
+
+    await tapVisibleText(tester, 'Deep Thinking');
+    expect(state.setupTimingStyle, TimingStyle.untimed);
+    expect(find.text('2 Players', skipOffstage: false), findsOneWidget);
+    expect(find.text('Death', skipOffstage: false), findsOneWidget);
+    expect(find.byType(Switch), findsOneWidget);
+    expect(inkWellEnabled(tester, '2 Players'), isFalse);
+    expect(inkWellEnabled(tester, 'Death'), isFalse);
+    expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
+
+    await tapVisibleText(tester, '2 Players');
+    await tapVisibleText(tester, 'Death');
+    await tester.ensureVisible(find.byType(Switch));
+    await tester.tap(find.byType(Switch), warnIfMissed: false);
+    await tester.pump();
+    expect(state.setupPlayers, 1);
+    expect(state.mode, GameMode.standard);
+    expect(state.adaptive, isFalse);
+    expect(state.setupTimingStyle, TimingStyle.untimed);
+
+    state.setOption('players', 2);
+    await tester.pump();
+    expect(find.text('Deep Thinking', skipOffstage: false), findsOneWidget);
+    expect(inkWellEnabled(tester, 'Deep Thinking'), isFalse);
+    await tapVisibleText(tester, 'Deep Thinking');
+    expect(state.setupTimingStyle, TimingStyle.perQuestion);
+
+    state.setOption('players', 1);
+    state.setAdaptive(true);
+    await tester.pump();
+    expect(find.text('Deep Thinking', skipOffstage: false), findsOneWidget);
+    expect(inkWellEnabled(tester, 'Deep Thinking'), isFalse);
+    await tapVisibleText(tester, 'Deep Thinking');
+    expect(state.setupTimingStyle, TimingStyle.perQuestion);
+
+    state.setAdaptive(false);
+    state.setOption('mode', GameMode.death.name);
+    await tester.pump();
+    expect(find.text('Deep Thinking', skipOffstage: false), findsOneWidget);
+    expect(inkWellEnabled(tester, 'Deep Thinking'), isFalse);
+    await tapVisibleText(tester, 'Deep Thinking');
+    expect(state.setupTimingStyle, TimingStyle.perQuestion);
+  });
+
+  test('stale setup timing cannot start outside the v1 envelope', () async {
+    final twoPlayer = await makeState();
+    twoPlayer
+      ..players = 1
+      ..mode = GameMode.standard
+      ..adaptive = false
+      ..rt.challenge = Operation.addition;
+    twoPlayer.setTimingStyle(TimingStyle.untimed);
+    expect(twoPlayer.setupTimingStyle, TimingStyle.untimed);
+
+    twoPlayer.players = 2;
+    twoPlayer.startGame();
+
+    expect(twoPlayer.activeRunSnapshot?.players, 2);
+    expect(twoPlayer.activeRunSnapshot?.timingStyle, TimingStyle.perQuestion);
+
+    final adaptive = await makeState();
+    adaptive
+      ..players = 1
+      ..mode = GameMode.standard
+      ..adaptive = false
+      ..rt.challenge = Operation.addition;
+    adaptive.setTimingStyle(TimingStyle.untimed);
+    adaptive.adaptive = true;
+    adaptive.startGame();
+
+    expect(adaptive.activeRunSnapshot?.timingStyle, TimingStyle.perQuestion);
+
+    final timeBank = await makeState();
+    timeBank
+      ..players = 1
+      ..mode = GameMode.standard
+      ..adaptive = false
+      ..rt.challenge = Operation.addition
+      ..timingStyle = TimingStyle.timeBank;
+    timeBank.startGame();
+
+    expect(timeBank.activeRunSnapshot?.timingStyle, TimingStyle.perQuestion);
+  });
+
+  test('forged untimed snapshots fail closed outside the v1 envelope',
+      () async {
+    final twoPlayer = await makeState();
+    twoPlayer.debugStartGameFromSnapshot(supportedSnapshot(
+      timingStyle: TimingStyle.untimed,
+      players: 2,
+    ));
+    expect(twoPlayer.activeRunSnapshot?.timingStyle, TimingStyle.perQuestion);
+    twoPlayer.rt.timer?.cancel();
+
+    final specialMechanic = await makeState();
+    specialMechanic.debugStartGameFromSnapshot(supportedSnapshot(
+      timingStyle: TimingStyle.untimed,
+      questionMechanic: QuestionMechanic.missingOperation,
+    ));
+    expect(specialMechanic.activeRunSnapshot?.timingStyle,
+        TimingStyle.perQuestion);
+    specialMechanic.rt.timer?.cancel();
+
+    final timeBank = await makeState();
+    timeBank.debugStartGameFromSnapshot(supportedSnapshot(
+      timingStyle: TimingStyle.timeBank,
+    ));
+    expect(timeBank.activeRunSnapshot?.timingStyle, TimingStyle.perQuestion);
+    timeBank.rt.timer?.cancel();
+  });
+
+  test('selecting Deep Thinking creates an untimed snapshot', () async {
+    final state = await startConfiguredRun(timingStyle: TimingStyle.untimed);
+
+    expect(state.activeRunSnapshot?.timingStyle, TimingStyle.untimed);
+    expect(state.rt.timer, isNull);
+    expect(state.debugQuestionTimerDurationMs(), 0);
+  });
+
   test('replay preserves the active snapshot timing style', () async {
     final state = await startSupportedSnapshot(TimingStyle.untimed);
 
@@ -102,6 +327,187 @@ void main() {
     state.rt.timer?.cancel();
 
     expect(state.activeRunSnapshot?.timingStyle, TimingStyle.untimed);
+  });
+
+  test('configured replay preserves Deep Thinking timing', () async {
+    final state = await startConfiguredRun(timingStyle: TimingStyle.untimed);
+
+    await state.replayGame();
+
+    expect(state.activeRunSnapshot?.timingStyle, TimingStyle.untimed);
+    expect(state.rt.timer, isNull);
+  });
+
+  test('Deep Thinking has no timer-driven timeout path', () async {
+    final state = await startConfiguredRun(timingStyle: TimingStyle.untimed);
+    final question = state.rt.q;
+
+    state.debugTimeoutForTest();
+
+    expect(state.rt.q, same(question));
+    expect(state.rt.totalTurns, 0);
+    expect(state.rt.accepting, isTrue);
+
+    state.onAnswer(state.rt.q!.ans);
+    expect(state.p[1].correct, 1);
+    expect(state.rt.totalTurns, 1);
+  });
+
+  testWidgets('Deep Thinking still completes at the question target',
+      (tester) async {
+    final state = await startConfiguredRun(
+      timingStyle: TimingStyle.untimed,
+      questionCount: 1,
+    );
+
+    await answerCorrectAndSettle(tester, state);
+
+    expect(state.rt.gameActive, isFalse);
+    expect(state.currentModal, GameModal.win);
+  });
+
+  test('per-question timeout behavior remains unchanged', () async {
+    final state = await startConfiguredRun();
+
+    state.debugTimeoutForTest();
+
+    expect(state.rt.totalTurns, 1);
+    expect(state.p[1].correct, 0);
+    expect(state.reactionPill, contains("Time's Up"));
+  });
+
+  test('Blitz and Combo keep global timer behavior when setup was untimed',
+      () async {
+    final blitz = await makeState();
+    blitz
+      ..players = 1
+      ..mode = GameMode.standard
+      ..adaptive = false
+      ..rt.challenge = Operation.addition;
+    blitz.setTimingStyle(TimingStyle.untimed);
+    blitz.setOption('mode', GameMode.blitz.name);
+    blitz.startGame();
+    expect(blitz.activeRunSnapshot?.timingStyle, TimingStyle.perQuestion);
+    expect(blitz.debugQuestionTimerDurationMs(), GameConfig.blitzTimerDefault);
+
+    final combo = await makeState();
+    combo
+      ..players = 1
+      ..mode = GameMode.standard
+      ..adaptive = false
+      ..rt.challenge = Operation.addition;
+    combo.setTimingStyle(TimingStyle.untimed);
+    combo.setOption('mode', GameMode.combo.name);
+    combo.startGame();
+    expect(combo.activeRunSnapshot?.timingStyle, TimingStyle.perQuestion);
+    expect(combo.debugQuestionTimerDurationMs(), GameConfig.comboTimerDefault);
+  });
+
+  test('Deep Thinking mastery keeps wrong/correct evidence without speed tiers',
+      () async {
+    final wrong = await startConfiguredRun(timingStyle: TimingStyle.untimed);
+    wrong.skillMap[Operation.addition.name] = SkillData(
+      mastery: 50,
+      confidence: 50,
+    );
+    wrong.rt.qTimerLimit = 1;
+    wrong.rt.qStartTs = DateTime.now().millisecondsSinceEpoch - 11000;
+    wrong.onAnswer(wrong.rt.q!.choices.firstWhere(
+      (choice) => (choice - wrong.rt.q!.ans).abs() >= 1e-9,
+    ));
+    expect(wrong.skillMap[Operation.addition.name]!.mastery,
+        closeTo(45.5, 0.0001));
+
+    final correct = await startConfiguredRun(timingStyle: TimingStyle.untimed);
+    correct.skillMap[Operation.addition.name] = SkillData(
+      mastery: 50,
+      confidence: 50,
+    );
+    correct.rt.qTimerLimit = 1;
+    correct.rt.qStartTs = DateTime.now().millisecondsSinceEpoch - 11000;
+    correct.onAnswer(correct.rt.q!.ans);
+    expect(correct.skillMap[Operation.addition.name]!.mastery,
+        closeTo(55.2, 0.0001));
+  });
+
+  testWidgets('Deep Thinking scoring and Hall of Fame are timer-independent',
+      (tester) async {
+    final untimed = await startConfiguredRun(
+      timingStyle: TimingStyle.untimed,
+      questionCount: 1,
+    );
+    await answerCorrectAndSettle(tester, untimed);
+
+    expect(untimed.p[1].score, 10);
+    expect(untimed.p[1].bonus, 0);
+    expect(untimed.highScores, isEmpty);
+
+    final perQuestion = await startConfiguredRun(questionCount: 1);
+    await answerCorrectAndSettle(tester, perQuestion);
+
+    expect(perQuestion.p[1].score, greaterThan(10));
+    expect(perQuestion.highScores, isNotEmpty);
+  });
+
+  testWidgets('Deep Thinking does not progress speed demon', (tester) async {
+    final state = await startConfiguredRun(
+      timingStyle: TimingStyle.untimed,
+      questionCount: 5,
+    );
+
+    for (var i = 0; i < 5; i++) {
+      await answerCorrectAndSettle(tester, state);
+    }
+
+    expect(state.rt.fastAnswers, 0);
+    expect(state.achievements['speed_demon'], isFalse);
+  });
+
+  test('Deep Thinking blocks only timer-dependent power-ups', () async {
+    final state = await startConfiguredRun(timingStyle: TimingStyle.untimed);
+    state.p[1].pups = [
+      PowerUp.time,
+      PowerUp.freeze,
+      PowerUp.fifty,
+    ];
+
+    expect(state.isPowerUpBlocked(PowerUp.time), isTrue);
+    expect(state.isPowerUpBlocked(PowerUp.freeze), isTrue);
+    expect(state.isPowerUpBlocked(PowerUp.fifty), isFalse);
+
+    state.usePowerUp(PowerUp.time);
+    state.usePowerUp(PowerUp.freeze);
+
+    expect(state.p[1].pups, contains(PowerUp.time));
+    expect(state.p[1].pups, contains(PowerUp.freeze));
+    expect(state.rt.puUsed, 0);
+    expect(state.rt.frozen, isFalse);
+    expect(state.debugQuestionTimerDurationMs(), 0);
+  });
+
+  test('Deep Thinking rewards only non-timer power-ups', () async {
+    final state = await startConfiguredRun(timingStyle: TimingStyle.untimed);
+
+    state.onAnswer(state.rt.q!.ans);
+
+    expect(state.p[1].pups, isNot(contains(PowerUp.time)));
+    expect(state.p[1].pups, isNot(contains(PowerUp.freeze)));
+    expect(state.p[1].pups, contains(PowerUp.fifty));
+    expect(state.p[1].pups, contains(PowerUp.double));
+    expect(state.p[1].pups, contains(PowerUp.shield));
+    expect(state.p[1].pups, contains(PowerUp.switchOp));
+  });
+
+  testWidgets('gameplay shows countdown only for per-question timing',
+      (tester) async {
+    final perQuestion = await startConfiguredRun();
+    await pumpWithState(tester, perQuestion, const gameplay.GameScreen());
+    expect(timerCircleFinder(), findsOneWidget);
+    perQuestion.rt.timer?.cancel();
+
+    final untimed = await startConfiguredRun(timingStyle: TimingStyle.untimed);
+    await pumpWithState(tester, untimed, const gameplay.GameScreen());
+    expect(timerCircleFinder(), findsNothing);
   });
 
   test('non-per-question timing is not player-selectable', () {
@@ -115,21 +521,23 @@ void main() {
         isNot(contains('timeBank')));
   });
 
-  test('only per-question timing enters current Phase-1 evidence', () async {
-    for (final expectation in <(TimingStyle, bool)>[
-      (TimingStyle.perQuestion, true),
-      (TimingStyle.untimed, false),
-      (TimingStyle.timeBank, false),
+  test('only active per-question timing enters current Phase-1 evidence',
+      () async {
+    for (final expectation in <(TimingStyle, TimingStyle, bool)>[
+      (TimingStyle.perQuestion, TimingStyle.perQuestion, true),
+      (TimingStyle.untimed, TimingStyle.untimed, false),
+      (TimingStyle.timeBank, TimingStyle.perQuestion, true),
     ]) {
       final state = await startSupportedSnapshot(expectation.$1);
 
-      expect(state.debugP1F01IntegrityRunEligible, expectation.$2);
+      expect(state.activeRunSnapshot?.timingStyle, expectation.$2);
+      expect(state.debugP1F01IntegrityRunEligible, expectation.$3);
       state.onAnswer(state.rt.q!.ans);
 
       expect(state.debugQuestionExperienceObservationCount,
-          expectation.$2 ? 1 : 0);
+          expectation.$3 ? 1 : 0);
       expect(
-          state.debugContextEvidenceObservationCount, expectation.$2 ? 1 : 0);
+          state.debugContextEvidenceObservationCount, expectation.$3 ? 1 : 0);
     }
   });
 }

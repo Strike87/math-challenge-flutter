@@ -626,6 +626,28 @@ void main() {
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/04_config_1p.png'));
     });
+    testWidgets('30. Deep Thinking config selector', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..players = 1
+        ..mode = GameMode.standard
+        ..adaptive = false;
+      state.goToConfig(Operation.addition.name);
+      await state.selectNumType(NumberType.natural.name);
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+      expect(find.text('Per Question'), findsOneWidget);
+      expect(find.text('Deep Thinking'), findsOneWidget);
+      expect(find.text('Time Bank'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/30_deep_thinking_config.png'),
+      );
+    });
     testWidgets('4b. Missing Operation config forces Choice4 visually',
         (tester) async {
       final state = await _makeState({
@@ -893,6 +915,39 @@ void main() {
       );
 
       state.rt.timer?.cancel();
+    });
+
+    testWidgets('31. Deep Thinking gameplay has no timer', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..players = 1
+        ..mode = GameMode.standard
+        ..adaptive = false
+        ..rt.challenge = Operation.addition;
+      state.setTimingStyle(TimingStyle.untimed);
+      state.startGame();
+      state.rt.q = const Question(
+        type: Operation.addition,
+        key: 'visual-deep-thinking',
+        text: '5 + 3',
+        ans: 8,
+        choices: [6, 7, 8, 9],
+        diff: Difficulty.easy,
+        numType: NumberType.natural,
+      );
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+      expect(state.activeRunSnapshot?.timingStyle, TimingStyle.untimed);
+      expect(state.rt.timer, isNull);
+      expect(find.text('5 + 3', findRichText: true), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/31_deep_thinking_gameplay.png'),
+      );
     });
 
     testWidgets('9. Daily Boss screen/modal', (tester) async {
