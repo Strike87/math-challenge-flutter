@@ -1,4 +1,5 @@
 import 'enums.dart';
+import 'math_fact.dart';
 
 /// A single generated math question.
 class Question {
@@ -11,6 +12,7 @@ class Question {
   final Difficulty? diff;
   final NumberType? numType;
   final int? ratDP;
+  final MathFact? fact;
 
   const Question({
     required this.type,
@@ -22,6 +24,7 @@ class Question {
     this.diff,
     this.numType,
     this.ratDP,
+    this.fact,
   });
 
   @override
