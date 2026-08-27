@@ -2137,6 +2137,9 @@ class GameState extends ChangeNotifier {
     adaptive = false;
     players = 1;
     mode = GameMode.standard;
+    diff = Difficulty.medium;
+    questionCount = 40;
+    selectedAnswerStyle = AnswerStyle.choice4;
     timingStyle = TimingStyle.perQuestion;
     showScreen(GameScreen.numType);
   }
@@ -2184,6 +2187,10 @@ class GameState extends ChangeNotifier {
     numTypeUnlockFeedback = '';
     numType = nt;
     await save();
+    if (isMentalMathSetup) {
+      startGame();
+      return;
+    }
     showScreen(GameScreen.config);
   }
 
@@ -2504,12 +2511,11 @@ class GameState extends ChangeNotifier {
         Operation.division,
         Operation.mixed,
       }.contains(rt.challenge) &&
-      playerConfigurableDifficultySet.contains(diff) &&
-      const {10, 15, 20, 25}.contains(questionCount) &&
+      diff == Difficulty.medium &&
+      questionCount == 40 &&
       const {NumberType.natural, NumberType.integers, NumberType.rationals}
           .contains(numType) &&
-      const {AnswerStyle.choice4, AnswerStyle.trueFalse}
-          .contains(effectiveAnswerStyle);
+      effectiveAnswerStyle == AnswerStyle.choice4;
 
   GameRunSnapshot _normalizeSnapshotTimingStyle(
     GameRunSnapshot snapshot, {

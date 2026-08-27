@@ -7,7 +7,6 @@ import 'package:math_challenge/engine/question_generator.dart';
 import 'package:math_challenge/features/family/domain/family_eligibility.dart';
 import 'package:math_challenge/features/game_brain/integration/adaptive_shadow_integration.dart';
 import 'package:math_challenge/models/enums.dart';
-import 'package:math_challenge/screens/config_screen.dart';
 import 'package:math_challenge/screens/menu_screen.dart';
 import 'package:math_challenge/screens/practice_style_screen.dart';
 import 'package:math_challenge/services/audio.dart';
@@ -49,11 +48,10 @@ void main() {
     GameState state, {
     Operation operation = Operation.mixed,
     bool missingOperation = false,
-    Difficulty difficulty = Difficulty.easy,
-    int questions = 10,
-    AnswerStyle answerStyle = AnswerStyle.choice4,
     bool mentalMath = true,
+    NumberType numberType = NumberType.natural,
   }) async {
+    state.numTypeUnlocked[numberType.name] = 1;
     state.goToPracticeStyle(
       missingOperation ? 'missingOperation' : operation.name,
     );
@@ -62,12 +60,8 @@ void main() {
     } else {
       state.startTimingPractice();
     }
-    await state.selectNumType(NumberType.natural.name);
-    state
-      ..diff = difficulty
-      ..questionCount = questions
-      ..selectedAnswerStyle = answerStyle;
-    state.startGame();
+    await state.selectNumType(numberType.name);
+    if (!mentalMath) state.startGame();
     state.rt.timer?.cancel();
   }
 
@@ -86,15 +80,6 @@ void main() {
           child: MaterialApp(home: Scaffold(body: child)),
         ),
       );
-
-  bool enabled(WidgetTester tester, String label) {
-    final finder = find.ancestor(
-      of: find.text(label, skipOffstage: false),
-      matching: find.byType(InkWell),
-    );
-    expect(finder, findsOneWidget);
-    return tester.widget<InkWell>(finder).onTap != null;
-  }
 
   testWidgets('existing operation cards lead through Practice Style',
       (tester) async {
@@ -116,9 +101,6 @@ void main() {
     expect(state.setupMentalMathEntry, MentalMathEntry.freePractice);
 
     await state.selectNumType(NumberType.natural.name);
-    state.goToPlayerSetup();
-    expect(state.currentScreen, GameScreen.player);
-    state.startGame();
     state.rt.timer?.cancel();
 
     final snapshot = state.activeRunSnapshot!;
@@ -127,9 +109,13 @@ void main() {
     expect(snapshot.mode, GameMode.standard);
     expect(snapshot.questionMechanic.name, 'standard');
     expect(snapshot.timingStyle, TimingStyle.perQuestion);
+    expect(snapshot.difficulty, Difficulty.medium);
+    expect(snapshot.questionTarget, 40);
+    expect(snapshot.answerStyle, AnswerStyle.choice4);
+    expect(snapshot.players, 1);
   });
 
-  test('all canonical operations and both styles preserve their context',
+  test('all canonical operations and number types preserve their fixed context',
       () async {
     for (final option in const [
       (operation: Operation.addition, missingOperation: false),
@@ -139,64 +125,37 @@ void main() {
       (operation: Operation.mixed, missingOperation: false),
       (operation: Operation.mixed, missingOperation: true),
     ]) {
-      for (final mentalMath in [false, true]) {
+      for (final numberType in const [
+        NumberType.natural,
+        NumberType.integers,
+        NumberType.rationals,
+      ]) {
         final state = await makeState();
         await startFreePractice(
           state,
           operation: option.operation,
           missingOperation: option.missingOperation,
-          difficulty: Difficulty.hard,
-          questions: 25,
-          answerStyle: option.missingOperation
-              ? AnswerStyle.trueFalse
-              : AnswerStyle.choice4,
-          mentalMath: mentalMath,
+          numberType: numberType,
         );
         final snapshot = state.activeRunSnapshot!;
         expect(snapshot.operation, option.operation);
         expect(snapshot.questionMechanic.name,
             option.missingOperation ? 'missingOperation' : 'standard');
-        expect(snapshot.difficulty, Difficulty.hard);
-        expect(snapshot.questionTarget, 25);
-        expect(snapshot.mentalMathEntry,
-            mentalMath ? MentalMathEntry.freePractice : isNull);
-        expect(
-            snapshot.answerStyle,
-            option.missingOperation
-                ? AnswerStyle.choice4
-                : AnswerStyle.choice4);
+        expect(snapshot.numberType, numberType);
+        expect(snapshot.difficulty, Difficulty.medium);
+        expect(snapshot.questionTarget, 40);
+        expect(snapshot.mentalMathEntry, MentalMathEntry.freePractice);
+        expect(snapshot.answerStyle, AnswerStyle.choice4);
 
         await state.replayGame();
         state.rt.timer?.cancel();
         expect(state.activeRunSnapshot?.mentalMathEntry,
-            mentalMath ? MentalMathEntry.freePractice : isNull);
+            MentalMathEntry.freePractice);
         expect(state.activeRunSnapshot?.questionMechanic.name,
             option.missingOperation ? 'missingOperation' : 'standard');
-      }
-    }
-  });
-
-  test('Mental Math supports all fixed difficulties, counts, and answer styles',
-      () async {
-    for (final difficulty in const [
-      Difficulty.easy,
-      Difficulty.medium,
-      Difficulty.hard,
-    ]) {
-      for (final questions in const [10, 15, 20, 25]) {
-        for (final answerStyle in AnswerStyle.values) {
-          final state = await makeState();
-          await startFreePractice(
-            state,
-            operation: Operation.addition,
-            difficulty: difficulty,
-            questions: questions,
-            answerStyle: answerStyle,
-          );
-          expect(state.activeRunSnapshot?.difficulty, difficulty);
-          expect(state.activeRunSnapshot?.questionTarget, questions);
-          expect(state.activeRunSnapshot?.answerStyle, answerStyle);
-        }
+        expect(state.activeRunSnapshot?.difficulty, Difficulty.medium);
+        expect(state.activeRunSnapshot?.questionTarget, 40);
+        expect(state.activeRunSnapshot?.answerStyle, AnswerStyle.choice4);
       }
     }
   });
@@ -207,31 +166,18 @@ void main() {
       (state) => state.adaptive = true,
       (state) => state.timingStyle = TimingStyle.untimed,
       (state) => state.timingStyle = TimingStyle.timeBank,
+      (state) => state.diff = Difficulty.hard,
+      (state) => state.questionCount = 10,
+      (state) => state.selectedAnswerStyle = AnswerStyle.trueFalse,
     ]) {
       final state = await makeState();
       state.goToPracticeStyle('addition');
       state.startMentalMathFreePractice();
-      await state.selectNumType(NumberType.natural.name);
       configure(state);
-      state.startGame();
+      await state.selectNumType(NumberType.natural.name);
       expect(state.currentScreen, isNot(GameScreen.game));
       expect(state.activeRunSnapshot, isNull);
     }
-  });
-
-  testWidgets('unsupported Config choices remain visible but disabled',
-      (tester) async {
-    final state = await makeState();
-    state.goToPracticeStyle('addition');
-    state.startMentalMathFreePractice();
-    await state.selectNumType(NumberType.natural.name);
-    await pump(tester, state, const ConfigScreen());
-
-    expect(enabled(tester, '1 Player'), isTrue);
-    expect(enabled(tester, '2 Players'), isFalse);
-    expect(enabled(tester, 'Deep Thinking'), isFalse);
-    expect(enabled(tester, 'Time Bank'), isFalse);
-    expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
   });
 
   test(
@@ -282,6 +228,16 @@ void main() {
     state.rt.timer?.cancel();
 
     expect(state.activeRunSnapshot?.mentalMathEntry, isNull);
+  });
+
+  test('quit clears the active Mental Math snapshot', () async {
+    final state = await makeState();
+    await startFreePractice(state, operation: Operation.addition);
+
+    await state.quitToMenu();
+
+    expect(state.currentScreen, GameScreen.menu);
+    expect(state.activeRunSnapshot, isNull);
   });
 }
 
