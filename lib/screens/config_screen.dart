@@ -58,7 +58,8 @@ class ConfigScreen extends StatelessWidget {
                                 '👥 2 Players',
                                 2,
                                 s.accent(GameConfig.punch),
-                                enabled: weakSkillsPlan == null &&
+                                enabled: !gs.isMentalMathSetup &&
+                                    weakSkillsPlan == null &&
                                     gs.setupTimingStyle ==
                                         TimingStyle.perQuestion,
                               ),
@@ -71,6 +72,7 @@ class ConfigScreen extends StatelessWidget {
                           _ModeTabs(
                             active: gs.mode,
                             players: gs.setupPlayers,
+                            standardOnly: gs.isMentalMathSetup,
                             onPick: (m) => gs.setOption('mode', m.name),
                           ),
                           const SizedBox(height: 10),
@@ -189,9 +191,14 @@ class ConfigScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            gs.setupTimingStyle == TimingStyle.timeBank
-                                ? 'One shared bank: 10s Easy, 8s Medium, or 6s Hard per question.'
-                                : 'No countdown - take the time you need.',
+                            switch (gs.setupTimingStyle) {
+                              TimingStyle.perQuestion =>
+                                'Timed per question based on your selected difficulty.',
+                              TimingStyle.untimed =>
+                                'No countdown - take the time you need.',
+                              TimingStyle.timeBank =>
+                                'One shared bank: 10s Easy, 8s Medium, or 6s Hard per question.',
+                            },
                             style: TextStyle(
                               color: s.muted,
                               fontSize: 12,
@@ -255,11 +262,14 @@ class ConfigScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(width: 8),
                                     Switch.adaptive(
-                                      value: gs.adaptive,
+                                      value: gs.isMentalMathSetup
+                                          ? false
+                                          : gs.adaptive,
                                       activeThumbColor:
                                           s.accent(GameConfig.coral),
-                                      onChanged: gs.setupTimingStyle !=
-                                              TimingStyle.perQuestion
+                                      onChanged: gs.isMentalMathSetup ||
+                                              gs.setupTimingStyle !=
+                                                  TimingStyle.perQuestion
                                           ? null
                                           : gs.setAdaptive,
                                     ),
@@ -657,10 +667,14 @@ class _ToggleButton<T> extends StatelessWidget {
 
 class _ModeTabs extends StatelessWidget {
   const _ModeTabs(
-      {required this.active, required this.onPick, required this.players});
+      {required this.active,
+      required this.onPick,
+      required this.players,
+      required this.standardOnly});
   final GameMode active;
   final void Function(GameMode) onPick;
   final int players;
+  final bool standardOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -692,6 +706,8 @@ class _ModeTabs extends StatelessWidget {
                     active: availableModes[i] == active,
                     disabled: !GameMode.isAvailableForPlayers(
                             availableModes[i], players) ||
+                        (standardOnly &&
+                            availableModes[i] != GameMode.standard) ||
                         (context.watch<GameState>().setupTimingStyle !=
                                 TimingStyle.perQuestion &&
                             availableModes[i] != GameMode.standard),

@@ -115,7 +115,7 @@ class MenuScreen extends StatelessWidget {
                             '+',
                             'Addition',
                             s.opColor(Operation.addition),
-                            () => gs.goToConfig('addition'),
+                            () => gs.goToPracticeStyle('addition'),
                           ),
                         ),
                         SizedBox(
@@ -125,7 +125,7 @@ class MenuScreen extends StatelessWidget {
                             '−',
                             'Subtraction',
                             s.opColor(Operation.subtraction),
-                            () => gs.goToConfig('subtraction'),
+                            () => gs.goToPracticeStyle('subtraction'),
                           ),
                         ),
                         SizedBox(
@@ -135,7 +135,7 @@ class MenuScreen extends StatelessWidget {
                             '×',
                             'Multiplication',
                             s.opColor(Operation.multiplication),
-                            () => gs.goToConfig('multiplication'),
+                            () => gs.goToPracticeStyle('multiplication'),
                           ),
                         ),
                         SizedBox(
@@ -145,7 +145,7 @@ class MenuScreen extends StatelessWidget {
                             '÷',
                             'Division',
                             s.opColor(Operation.division),
-                            () => gs.goToConfig('division'),
+                            () => gs.goToPracticeStyle('division'),
                           ),
                         ),
                         SizedBox(
@@ -155,7 +155,7 @@ class MenuScreen extends StatelessWidget {
                             '?',
                             'Missing Operation',
                             s.opColor(Operation.mixed),
-                            () => gs.goToConfig('missingOperation'),
+                            () => gs.goToPracticeStyle('missingOperation'),
                           ),
                         ),
                         SizedBox(
@@ -165,7 +165,7 @@ class MenuScreen extends StatelessWidget {
                             '🧮',
                             'Mixed Operations',
                             s.opColor(Operation.mixed),
-                            () => gs.goToConfig('mixed'),
+                            () => gs.goToPracticeStyle('mixed'),
                           ),
                         ),
                       ],

@@ -33,6 +33,7 @@ import 'package:math_challenge/screens/menu_screen.dart';
 import 'package:math_challenge/screens/numtype_screen.dart';
 import 'package:math_challenge/screens/config_screen.dart';
 import 'package:math_challenge/screens/player_screen.dart';
+import 'package:math_challenge/screens/practice_style_screen.dart';
 import 'package:math_challenge/screens/game_screen.dart' as game_screen;
 import 'package:math_challenge/widgets/celebration_overlay.dart';
 import 'package:math_challenge/widgets/common.dart';
@@ -176,6 +177,8 @@ class TestAppShell extends StatelessWidget {
     switch (s) {
       case GameScreen.menu:
         return const MenuScreen();
+      case GameScreen.practiceStyle:
+        return const PracticeStyleScreen();
       case GameScreen.numType:
         return const NumTypeScreen();
       case GameScreen.config:
@@ -1145,6 +1148,55 @@ void main() {
       await expectLater(
         find.byType(TestAppShell),
         matchesGoldenFile('goldens/35_time_bank_result.png'),
+      );
+    });
+
+    testWidgets('36. Practice Style phone light and dark', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.goToPracticeStyle('addition');
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Choose Practice Style'), findsOneWidget);
+      expect(find.text('Timing Practice'), findsOneWidget);
+      expect(find.text('Mental Math'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/36_practice_style_phone_light.png'),
+      );
+
+      state.settings.toggleDark();
+      await tester.pumpAndSettle();
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/36_practice_style_phone_dark.png'),
+      );
+    });
+
+    testWidgets('37. Mental Math Config keeps unsupported choices disabled',
+        (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.goToPracticeStyle('addition');
+      state.startMentalMathFreePractice();
+      await state.selectNumType(NumberType.natural.name);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('2 Players'), findsOneWidget);
+      expect(find.text('Deep Thinking'), findsOneWidget);
+      expect(find.text('Time Bank'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/37_mental_math_config.png'),
       );
     });
 

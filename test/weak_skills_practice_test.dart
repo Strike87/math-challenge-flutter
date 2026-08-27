@@ -405,8 +405,11 @@ void main() {
       await tester.tap(find.text('Addition'));
       await tester.pump();
 
-      expect(state.currentScreen, GameScreen.numType);
+      expect(state.currentScreen, GameScreen.practiceStyle);
       expect(state.rt.challenge, Operation.addition);
+      state.startTimingPractice();
+      await tester.pump();
+      expect(state.currentScreen, GameScreen.numType);
       expect(tester.takeException(), isNull);
     });
   }
@@ -437,6 +440,9 @@ void main() {
       );
       await tester.ensureVisible(find.text('Addition'));
       await tester.tap(find.text('Addition'));
+      await tester.pump();
+      expect(state.currentScreen, GameScreen.practiceStyle);
+      state.startTimingPractice();
       await tester.pump();
       expect(state.currentScreen, GameScreen.numType);
       await state.selectNumType(NumberType.natural.name);

@@ -22,6 +22,7 @@ import 'screens/menu_screen.dart';
 import 'screens/numtype_screen.dart';
 import 'screens/config_screen.dart';
 import 'screens/player_screen.dart';
+import 'screens/practice_style_screen.dart';
 import 'screens/game_screen.dart' as game_screen;
 import 'theme.dart';
 import 'widgets/celebration_overlay.dart';
@@ -278,6 +279,8 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
     switch (s) {
       case gs.GameScreen.menu:
         return const MenuScreen();
+      case gs.GameScreen.practiceStyle:
+        return const PracticeStyleScreen();
       case gs.GameScreen.numType:
         return const NumTypeScreen();
       case gs.GameScreen.config:

@@ -508,9 +508,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Missing Operation'));
     await tester.pump();
-    expect(state.currentScreen, GameScreen.numType);
+    expect(state.currentScreen, GameScreen.practiceStyle);
     expect(state.isMissingOperationPractice, isTrue);
     expect(state.effectiveAnswerStyle, AnswerStyle.choice4);
+    state.startTimingPractice();
+    expect(state.currentScreen, GameScreen.numType);
 
     await tester.pumpWidget(
       MediaQuery(
@@ -558,9 +560,11 @@ void main() {
     await tester.tap(find.text('Mixed Operations'));
     await tester.pump();
 
-    expect(state.currentScreen, GameScreen.numType);
+    expect(state.currentScreen, GameScreen.practiceStyle);
     expect(state.rt.challenge, Operation.mixed);
     expect(state.isMissingOperationPractice, isFalse);
+    state.startTimingPractice();
+    expect(state.currentScreen, GameScreen.numType);
     expect(tester.takeException(), isNull);
   });
 }

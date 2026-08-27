@@ -110,15 +110,20 @@ persistence behavior.
   **Daily Mental Math**, and **Weak Skills Practice**. Targeted Repetition is
   an internal deterministic practice mechanic, not a mode or menu destination,
   and is neither GameBrain nor ML or misconception diagnosis.
-- Reuse the normal visual and navigation flow: **Number Type -> Config ->
-  Player Setup -> Gameplay -> Results**. Do not create a separate mini-app.
+- Free Practice follows the existing Quick Practice operation/mechanic choice,
+  then **Practice Style -> Number Type -> Config -> Player Setup -> Gameplay ->
+  Results**. Practice Style selects Timing Practice or Mental Math; it is not a
+  Mental Math hub. Do not create a separate mini-app.
   Unsupported choices remain visible-disabled where safe; visible-but-disabled
   is preferred to hidden.
 - Reuse the canonical `10`, `15`, `20`, and `25` question-count selector. The
   chosen target is immutable; Targeted Repetition substitutes future questions
   and never adds turns or a separate length control.
 - Supported operations are Addition, Subtraction, Multiplication, Division,
-  and Mixed. Reuse canonical operation and question-generation ownership.
+  Mixed, and the existing operator-blank Missing Operation mechanic. Missing
+  Operation remains canonical Choice4-only (`8 ? 7 = 56`); it is distinct from
+  Quest-only operand-blank Missing Number and from future Targeted Repetition.
+  Reuse canonical operation and question-generation ownership.
 - Reuse available Natural, Integers, and Rationals eligibility. The frozen run
   Number Type never changes, including for a targeted follow-up.
 - The selected visible difficulty (Easy, Medium, or Hard) is fixed. Adaptive is
@@ -156,7 +161,9 @@ persistence behavior.
 ### Entry-specific rules
 
 - **Free Practice** reuses normal Quick Practice configuration, Player Setup,
-  gameplay, and Results surfaces.
+  gameplay, and Results surfaces through the lightweight Practice Style step.
+- **Daily Mental Math** receives its direct menu entry only in MM-04.
+- **Weak Skills Practice** receives Mental Math integration only in MM-03.
 - **Daily Mental Math** uses deterministic local-date-derived configuration,
   distinct from Daily Boss. It inherits no boss lives, rewards, claims,
   achievements, or progress semantics. Daily configuration determinism does
@@ -190,6 +197,8 @@ persistence behavior.
   preserve difficulty, Number Type, operation scope, ranges, signed/rational
   constraints, and division-by-zero safety; if none is legal, decline and use
   normal canonical generation.
+- Any future Targeted Repetition for Missing Operation must preserve its
+  operator-blank mechanic.
 - The representation request occurs upstream of the existing AnswerStyle and
   True / False projection. Targeted Repetition never constructs false
   propositions, chooses wrong values, or creates distractors.

@@ -30,10 +30,11 @@ void main() {
   });
 
   group('RT-051 AdMob parity', () {
-    test('banner eligibility is limited to number type and player setup',
+    test('banner eligibility includes practice style and setup screens',
         () async {
       final state = await _makeState();
 
+      expect(state.isBannerEligibleFor(GameScreen.practiceStyle), isTrue);
       expect(state.isBannerEligibleFor(GameScreen.numType), isTrue);
       expect(state.isBannerEligibleFor(GameScreen.player), isTrue);
       expect(state.isBannerEligibleFor(GameScreen.menu), isFalse);

@@ -195,7 +195,7 @@ class _GameTopBar extends StatelessWidget {
                   children: [
                     ModeBadge(label: label.toUpperCase(), color: color),
                     if (gs.effectiveGameBrainEnabled) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       WarningPulse(
                         active: true,
                         effectsEnabled: !s.reduceMotion && !s.lowPerf,

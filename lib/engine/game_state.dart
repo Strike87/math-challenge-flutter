@@ -38,7 +38,7 @@ import '../services/play_games.dart';
 import 'question_generator.dart';
 
 /// Screen identifier — mirrors the original HTML section IDs.
-enum GameScreen { menu, numType, config, player, game }
+enum GameScreen { menu, practiceStyle, numType, config, player, game }
 
 /// Modal identifier — mirrors the original HTML modal IDs.
 enum GameModal {
@@ -418,6 +418,9 @@ class GameState extends ChangeNotifier {
   OperationQuestStageId? _pendingOperationQuestStageId;
   QuestionMechanic _pendingQuestionMechanic = QuestionMechanic.standard;
   WeakSkillsPlan? _pendingWeakSkillsPlan;
+  MentalMathEntry? _pendingMentalMathEntry;
+  bool? _adaptiveBeforeMentalMath;
+  bool _pendingPracticeStyle = false;
 
   // ─── Options ────────────────────────────────────────────────
   int players = 1;
@@ -544,13 +547,17 @@ class GameState extends ChangeNotifier {
   bool get isMissingNumberQuest =>
       _runSnapshot?.questionMechanic == QuestionMechanic.missingNumber;
   WeakSkillsPlan? get setupWeakSkillsPlan => _pendingWeakSkillsPlan;
-  int get setupPlayers =>
-      _pendingOperationQuestStageId == null && _pendingWeakSkillsPlan == null
-          ? players
-          : 1;
+  MentalMathEntry? get setupMentalMathEntry => _pendingMentalMathEntry;
+  bool get isMentalMathSetup => _pendingMentalMathEntry != null;
+  int get setupPlayers => _pendingOperationQuestStageId == null &&
+          _pendingWeakSkillsPlan == null &&
+          !isMentalMathSetup
+      ? players
+      : 1;
   bool get canSelectDeepThinking =>
       _pendingOperationQuestStageId == null &&
       _pendingWeakSkillsPlan == null &&
+      !isMentalMathSetup &&
       _pendingQuestionMechanic == QuestionMechanic.standard &&
       mode == GameMode.standard &&
       setupPlayers == 1 &&
@@ -604,7 +611,9 @@ class GameState extends ChangeNotifier {
   NumberType get activeNumberType => _runSnapshot?.numberType ?? numType;
   int get activeQuestionTarget => _runSnapshot?.questionTarget ?? questionCount;
   bool get activeAdaptive =>
-      isOperationQuest || isTimeBankRun ? false : adaptive;
+      isOperationQuest || isTimeBankRun || _runSnapshot?.mentalMathEntry != null
+          ? false
+          : adaptive;
   bool get effectiveGameBrainEnabled =>
       gameBrainPreference &&
       gameBrainEligibility == GameBrainEligibility.eligible;
@@ -1864,7 +1873,9 @@ class GameState extends ChangeNotifier {
   bool isBannerEligibleFor(GameScreen screen) =>
       !adsRemoved &&
       currentModal == GameModal.none &&
-      (screen == GameScreen.numType || screen == GameScreen.player);
+      (screen == GameScreen.practiceStyle ||
+          screen == GameScreen.numType ||
+          screen == GameScreen.player);
 
   Widget? bannerWidget() => adsRemoved
       ? null
@@ -2025,6 +2036,8 @@ class GameState extends ChangeNotifier {
   // ─── Screen / modal routing ─────────────────────────────────
   void showScreen(GameScreen s) {
     if (s == GameScreen.menu) {
+      _clearPendingMentalMathEntry();
+      _pendingPracticeStyle = false;
       _pendingWeakSkillsPlan = null;
       _normalizeSetupTimingStyle();
     }
@@ -2076,6 +2089,8 @@ class GameState extends ChangeNotifier {
 
   // ─── Configuration actions ──────────────────────────────────
   void goToConfig(String operationName) {
+    _clearPendingMentalMathEntry();
+    _pendingPracticeStyle = false;
     final missingOperation = operationName == 'missingOperation';
     final weakSkills = operationName == 'weakSkills';
     _pendingWeakSkillsPlan = weakSkills ? selectWeakSkillsPlan(skillMap) : null;
@@ -2095,6 +2110,49 @@ class GameState extends ChangeNotifier {
       return;
     }
     showScreen(GameScreen.numType);
+  }
+
+  void goToPracticeStyle(String operationName) {
+    _clearPendingMentalMathEntry();
+    _pendingPracticeStyle = true;
+    _pendingWeakSkillsPlan = null;
+    _pendingOperationQuestStageId = null;
+    _pendingQuestionMechanic = operationName == 'missingOperation'
+        ? QuestionMechanic.missingOperation
+        : QuestionMechanic.standard;
+    rt.challenge = operationName == 'missingOperation'
+        ? Operation.mixed
+        : Operation.fromString(operationName);
+    showScreen(GameScreen.practiceStyle);
+  }
+
+  void startTimingPractice() {
+    _clearPendingMentalMathEntry();
+    showScreen(GameScreen.numType);
+  }
+
+  void startMentalMathFreePractice() {
+    _pendingMentalMathEntry = MentalMathEntry.freePractice;
+    _adaptiveBeforeMentalMath ??= adaptive;
+    adaptive = false;
+    players = 1;
+    mode = GameMode.standard;
+    timingStyle = TimingStyle.perQuestion;
+    showScreen(GameScreen.numType);
+  }
+
+  void cancelPracticeStyle() {
+    _clearPendingMentalMathEntry();
+    _pendingPracticeStyle = false;
+    _pendingQuestionMechanic = QuestionMechanic.standard;
+    showScreen(GameScreen.menu);
+  }
+
+  void _clearPendingMentalMathEntry() {
+    _pendingMentalMathEntry = null;
+    final previousAdaptive = _adaptiveBeforeMentalMath;
+    _adaptiveBeforeMentalMath = null;
+    if (previousAdaptive != null) adaptive = previousAdaptive;
   }
 
   void continueWeakSkillsSetup() {
@@ -2129,9 +2187,19 @@ class GameState extends ChangeNotifier {
     showScreen(GameScreen.config);
   }
 
+  void backFromNumType() {
+    if (_pendingPracticeStyle) {
+      _clearPendingMentalMathEntry();
+      showScreen(GameScreen.practiceStyle);
+      return;
+    }
+    showScreen(GameScreen.menu);
+  }
+
   void setOption(String key, dynamic value) {
     switch (key) {
       case 'players':
+        if (isMentalMathSetup && value != 1) return;
         players = value as int;
         if (!GameMode.isAvailableForPlayers(mode, players)) {
           mode = GameMode.standard;
@@ -2139,6 +2207,7 @@ class GameState extends ChangeNotifier {
         break;
       case 'mode':
         final nextMode = GameMode.fromString(value as String);
+        if (isMentalMathSetup && nextMode != GameMode.standard) return;
         if (GameMode.isAvailableForPlayers(nextMode, setupPlayers)) {
           mode = nextMode;
         } else {
@@ -2157,6 +2226,7 @@ class GameState extends ChangeNotifier {
   }
 
   void setAdaptive(bool v) {
+    if (isMentalMathSetup) return;
     adaptive = v;
     _normalizeSetupTimingStyle();
     notifyListeners();
@@ -2196,6 +2266,7 @@ class GameState extends ChangeNotifier {
   }
 
   void showOperationQuest() {
+    _clearPendingMentalMathEntry();
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     _pendingOperationQuestStageId = null;
@@ -2203,6 +2274,7 @@ class GameState extends ChangeNotifier {
   }
 
   void startOperationQuestStage(OperationQuestStageId id) {
+    _clearPendingMentalMathEntry();
     if (!operationQuestProgress.isUnlocked(id)) return;
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
@@ -2227,6 +2299,7 @@ class GameState extends ChangeNotifier {
   }
 
   void startMasterMode() {
+    _clearPendingMentalMathEntry();
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     closeModal();
@@ -2243,12 +2316,14 @@ class GameState extends ChangeNotifier {
   }
 
   void showDailyBoss() {
+    _clearPendingMentalMathEntry();
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     showModal(GameModal.dailyBoss);
   }
 
   void startDailyBoss() {
+    _clearPendingMentalMathEntry();
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     closeModal();
@@ -2282,6 +2357,13 @@ class GameState extends ChangeNotifier {
       return;
     }
 
+    if (replaySnapshot == null &&
+        isMentalMathSetup &&
+        !_isValidMentalMathFreePracticeSetup()) {
+      notifyListeners();
+      return;
+    }
+
     _closeActiveQuestionNeutrally();
     rt.timer?.cancel();
     _invalidateActiveRun();
@@ -2307,12 +2389,15 @@ class GameState extends ChangeNotifier {
                     questionMechanic: _pendingQuestionMechanic,
                     timingStyle: setupTimingStyle,
                     weakSkillsPlan: _pendingWeakSkillsPlan,
+                    mentalMathEntry: _pendingMentalMathEntry,
                   )
                 : _operationQuestSnapshot(pendingQuestId)),
         previousSnapshot: previousSnapshot);
     _pendingOperationQuestStageId = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     _pendingWeakSkillsPlan = null;
+    _clearPendingMentalMathEntry();
+    _pendingPracticeStyle = false;
     _runSnapshot = snapshot;
     _gameBrain = GameBrain();
     _lastContextEvidenceResult = null;
@@ -2403,6 +2488,28 @@ class GameState extends ChangeNotifier {
       snapshot.operation != Operation.dailyBoss &&
       snapshot.operationQuestStageId == null &&
       snapshot.weakSkillsPlan == null;
+
+  bool _isValidMentalMathFreePracticeSetup() =>
+      _pendingMentalMathEntry == MentalMathEntry.freePractice &&
+      mode == GameMode.standard &&
+      players == 1 &&
+      (_pendingQuestionMechanic == QuestionMechanic.standard ||
+          _pendingQuestionMechanic == QuestionMechanic.missingOperation) &&
+      timingStyle == TimingStyle.perQuestion &&
+      !adaptive &&
+      const {
+        Operation.addition,
+        Operation.subtraction,
+        Operation.multiplication,
+        Operation.division,
+        Operation.mixed,
+      }.contains(rt.challenge) &&
+      playerConfigurableDifficultySet.contains(diff) &&
+      const {10, 15, 20, 25}.contains(questionCount) &&
+      const {NumberType.natural, NumberType.integers, NumberType.rationals}
+          .contains(numType) &&
+      const {AnswerStyle.choice4, AnswerStyle.trueFalse}
+          .contains(effectiveAnswerStyle);
 
   GameRunSnapshot _normalizeSnapshotTimingStyle(
     GameRunSnapshot snapshot, {
@@ -3641,6 +3748,7 @@ class GameState extends ChangeNotifier {
 
     // Save high score
     if (!isOperationQuest &&
+        snapshot.mentalMathEntry == null &&
         snapshot.timingStyle == TimingStyle.perQuestion &&
         p[1].score > 0) {
       highScores.add(HighScore(
