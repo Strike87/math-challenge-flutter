@@ -197,6 +197,7 @@ class GameRunSnapshot {
     this.integerQuest = false,
     this.decimalQuest = false,
     this.weakSkillsPlan,
+    this.mentalMathEntry,
   });
 
   final GameRunType runType;
@@ -214,6 +215,7 @@ class GameRunSnapshot {
   final bool integerQuest;
   final bool decimalQuest;
   final WeakSkillsPlan? weakSkillsPlan;
+  final MentalMathEntry? mentalMathEntry;
 
   GameRunSnapshot withTimingStyle(TimingStyle value) => GameRunSnapshot(
         runType: runType,
@@ -231,6 +233,7 @@ class GameRunSnapshot {
         integerQuest: integerQuest,
         decimalQuest: decimalQuest,
         weakSkillsPlan: weakSkillsPlan,
+        mentalMathEntry: mentalMathEntry,
       );
 }
 
@@ -2940,6 +2943,7 @@ class GameState extends ChangeNotifier {
     }) outcome,
   ) {
     final snapshot = _runSnapshot!;
+    if (snapshot.mentalMathEntry != null) return;
     final advisory = _gameBrain!.observeContextEvidence(
       ContextEvidenceObservation(
         context: _contextEvidenceKey(snapshot, question),
@@ -2970,6 +2974,7 @@ class GameState extends ChangeNotifier {
         snapshot.questionMechanic == QuestionMechanic.standard &&
         snapshot.timingStyle == TimingStyle.perQuestion &&
         snapshot.weakSkillsPlan == null &&
+        snapshot.mentalMathEntry == null &&
         snapshot.answerStyle == AnswerStyle.choice4 &&
         _supportsContextRunOperation(snapshot.operation) &&
         ContextEvidenceKey.supportsOperation(question.type) &&
@@ -3002,6 +3007,7 @@ class GameState extends ChangeNotifier {
     final supported = snapshot.runType == GameRunType.normal &&
         snapshot.questionMechanic == QuestionMechanic.standard &&
         snapshot.timingStyle == TimingStyle.perQuestion &&
+        snapshot.mentalMathEntry == null &&
         snapshot.answerStyle == AnswerStyle.choice4 &&
         _supportsContextRunOperation(snapshot.operation) &&
         ContextEvidenceKey.supportsOperation(question.type);
@@ -3024,6 +3030,7 @@ class GameState extends ChangeNotifier {
       snapshot.questionMechanic == QuestionMechanic.standard &&
       snapshot.timingStyle == TimingStyle.perQuestion &&
       snapshot.weakSkillsPlan == null &&
+      snapshot.mentalMathEntry == null &&
       snapshot.answerStyle == AnswerStyle.choice4 &&
       !activeAdaptive &&
       playerConfigurableDifficultySet.contains(snapshot.difficulty) &&
