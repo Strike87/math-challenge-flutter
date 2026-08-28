@@ -3577,13 +3577,14 @@ class WinModal extends StatelessWidget {
   Widget build(BuildContext context) {
     final p1 = gs.p[1];
     final p2 = gs.p[2];
+    final mentalMathResult = gs.mentalMathResultSummary;
     final canReplay =
         !(gs.rt.challenge == Operation.dailyBoss && gs.rt.dailyBossWon);
 
     return ModalShell(
-      icon: gs.resultIcon,
-      title: gs.resultTitle,
-      subtitle: 'Round complete',
+      icon: mentalMathResult?.avatarEmoji ?? gs.resultIcon,
+      title: mentalMathResult == null ? gs.resultTitle : 'MENTAL MATH',
+      subtitle: mentalMathResult?.terminalTitle ?? 'Round complete',
       maxHeight: 650,
       actions: [
         if (canReplay)
@@ -3601,35 +3602,74 @@ class WinModal extends StatelessWidget {
               : gs.quitToMenu,
         ),
       ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (gs.resultDescription.isNotEmpty) ...[
-            _ResultHeroMessage(
-              icon: gs.resultIcon,
-              message: gs.resultDescription,
-            ),
-            const SizedBox(height: 12),
-          ],
-          if (gs.activePlayers == 2 && gs.activeMode == GameMode.standard)
-            _CompareResultReport(p1: p1, p2: p2)
-          else
-            _SingleResultReport(player: p1),
-          if (p1.maxStreak > 0) ...[
-            const SizedBox(height: 10),
-            _ResultInfoStrip(
-              icon: Icons.local_fire_department_rounded,
-              label: 'Best streak',
-              value: '${p1.maxStreak}',
-              accent: const Color(GameConfig.mango),
-            ),
-          ],
-          if (gs.newlyUnlocked.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _NewAchievementsCard(achievements: gs.newlyUnlocked),
-          ],
-        ],
-      ),
+      child: mentalMathResult == null
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (gs.resultDescription.isNotEmpty) ...[
+                  _ResultHeroMessage(
+                    icon: gs.resultIcon,
+                    message: gs.resultDescription,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (gs.activePlayers == 2 && gs.activeMode == GameMode.standard)
+                  _CompareResultReport(p1: p1, p2: p2)
+                else
+                  _SingleResultReport(player: p1),
+                if (p1.maxStreak > 0) ...[
+                  const SizedBox(height: 10),
+                  _ResultInfoStrip(
+                    icon: Icons.local_fire_department_rounded,
+                    label: 'Best streak',
+                    value: '${p1.maxStreak}',
+                    accent: const Color(GameConfig.mango),
+                  ),
+                ],
+                if (gs.newlyUnlocked.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _NewAchievementsCard(achievements: gs.newlyUnlocked),
+                ],
+              ],
+            )
+          : _MentalMathResultReport(summary: mentalMathResult),
+    );
+  }
+}
+
+class _MentalMathResultReport extends StatelessWidget {
+  const _MentalMathResultReport({required this.summary});
+
+  final MentalMathResultSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    String seconds(int? milliseconds) => milliseconds == null
+        ? '—'
+        : '${(milliseconds / 1000).toStringAsFixed(1)}s';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ResultHeroMessage(icon: summary.avatarEmoji, message: summary.message),
+        const SizedBox(height: 12),
+        _ResultPanel(
+          title: 'Session Metrics',
+          icon: '📊',
+          child: _ReportBox(
+            rows: [
+              _ReportRow('Peak Momentum', '+${summary.peakMomentum}'),
+              _ReportRow('Best Streak', '${summary.bestStreak}'),
+              _ReportRow('Accuracy', '${summary.accuracyPercent}%'),
+              _ReportRow(
+                  'Average Response Time', seconds(summary.averageResponseMs)),
+              _ReportRow('Fastest Answer', seconds(summary.fastestAnswerMs)),
+              _ReportRow('Facts Recovered',
+                  '${MentalMathResultSummary.factsRecovered}'),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

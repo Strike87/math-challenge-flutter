@@ -410,6 +410,68 @@ void main() {
     ));
   });
 
+  testWidgets('freezes Mental Math result metrics after the terminal answer',
+      (tester) async {
+    final state = await makeState();
+    state.debugStartGameFromSnapshot(snapshot());
+    state.rt.timer?.cancel();
+    state
+      ..rt.momentum = 9
+      ..rt.peakMomentum = 9
+      ..rt.currentStreak = 4
+      ..rt.bestStreak = 4
+      ..rt.completedQuestions = 11
+      ..rt.qStartTs = DateTime.now().millisecondsSinceEpoch - 2000;
+    state.p[1]
+      ..correct = 8
+      ..total = 11;
+
+    state.onAnswer(state.rt.q!.ans);
+    await tester.pump(const Duration(milliseconds: 1301));
+
+    final summary = state.mentalMathResultSummary!;
+    expect(summary.terminalTitle, 'MASTERY REACHED');
+    expect(summary.peakMomentum, 10);
+    expect(summary.bestStreak, 5);
+    expect(summary.accuracyPercent, 75);
+    expect(summary.averageResponseMs, inInclusiveRange(1900, 2100));
+    expect(summary.fastestAnswerMs, inInclusiveRange(1900, 2100));
+    expect(MentalMathResultSummary.factsRecovered, 0);
+
+    state.debugTimeoutForTest();
+    expect(state.mentalMathResultSummary, same(summary));
+
+    await state.quitToMenu();
+    expect(state.mentalMathResultSummary, isNull);
+    expect((
+      state.rt.mentalMathAnsweredResponseTotalMs,
+      state.rt.mentalMathAnsweredResponseCount,
+    ), (0, 0));
+  });
+
+  testWidgets('records Mental Math answer time once and excludes timeouts',
+      (tester) async {
+    final state = await makeState();
+    state.debugStartGameFromSnapshot(snapshot());
+    state.rt.timer?.cancel();
+    state.rt.qStartTs = DateTime.now().millisecondsSinceEpoch - 1000;
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+
+    state.rt.qStartTs = DateTime.now().millisecondsSinceEpoch - 3000;
+    state.onAnswer(state.rt.q!.choices.firstWhere((v) => v != state.rt.q!.ans));
+    await advance(tester, state);
+
+    state.debugTimeoutForTest();
+    expect(state.rt.mentalMathAnsweredResponseCount, 2);
+    expect(state.rt.mentalMathAnsweredResponseTotalMs,
+        inInclusiveRange(3800, 4200));
+
+    state.onAnswer(state.rt.q!.ans);
+    expect(state.rt.mentalMathAnsweredResponseCount, 2);
+    await advance(tester, state);
+  });
+
   testWidgets('ordinary Timing Practice retains its configured behavior',
       (tester) async {
     final state = await makeState();

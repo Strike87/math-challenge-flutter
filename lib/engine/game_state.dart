@@ -75,6 +75,30 @@ enum MentalMathTerminalReason {
   trainingComplete,
 }
 
+@immutable
+class MentalMathResultSummary {
+  const MentalMathResultSummary({
+    required this.avatarEmoji,
+    required this.terminalTitle,
+    required this.message,
+    required this.peakMomentum,
+    required this.bestStreak,
+    required this.accuracyPercent,
+    required this.averageResponseMs,
+    required this.fastestAnswerMs,
+  });
+
+  final String avatarEmoji;
+  final String terminalTitle;
+  final String message;
+  final int peakMomentum;
+  final int bestStreak;
+  final int accuracyPercent;
+  final int? averageResponseMs;
+  final int? fastestAnswerMs;
+  static const int factsRecovered = 0;
+}
+
 /// Runtime game state (the `rt` object in the original JS).
 class RuntimeState {
   Operation challenge;
@@ -131,6 +155,8 @@ class RuntimeState {
   int currentStreak;
   int bestStreak;
   int completedQuestions;
+  int mentalMathAnsweredResponseTotalMs;
+  int mentalMathAnsweredResponseCount;
   int nextQuestionTimerBudgetMs;
   MentalMathTerminalReason? terminalReason;
   Timer? mentalMathCountdownTimer;
@@ -191,6 +217,8 @@ class RuntimeState {
         currentStreak = 0,
         bestStreak = 0,
         completedQuestions = 0,
+        mentalMathAnsweredResponseTotalMs = 0,
+        mentalMathAnsweredResponseCount = 0,
         nextQuestionTimerBudgetMs = 10000,
         terminalReason = null,
         mentalMathCountdownTimer = null,
@@ -684,6 +712,7 @@ class GameState extends ChangeNotifier {
   String resultIcon = '🏆';
   String resultTitle = 'Player Report';
   String resultDescription = '';
+  MentalMathResultSummary? mentalMathResultSummary;
   AdultGateChallenge? adultGateChallenge;
   IapProduct? pendingIapProduct;
   String adultGateError = '';
@@ -2469,6 +2498,7 @@ class GameState extends ChangeNotifier {
     _clearAnswerFeedback();
     celebration = const CelebrationEvent.none();
     screenShakeTick = 0;
+    mentalMathResultSummary = null;
 
     // Reset runtime
     rt = RuntimeState()
@@ -3132,6 +3162,11 @@ class GameState extends ChangeNotifier {
     final pl = p[pid];
     final timeTaken = DateTime.now().millisecondsSinceEpoch - rt.qStartTs;
 
+    if (_isMentalMathFreePracticeRun && !isTimeout) {
+      rt.mentalMathAnsweredResponseTotalMs += timeTaken;
+      rt.mentalMathAnsweredResponseCount++;
+    }
+
     pl.total++;
     pl.timeMs += timeTaken;
     pl.history.add(HistoryEntry(
@@ -3237,6 +3272,7 @@ class GameState extends ChangeNotifier {
   void _clearMentalMathRuntimeState() {
     rt.timer?.cancel();
     rt.mentalMathCountdownTimer?.cancel();
+    mentalMathResultSummary = null;
     rt
       ..timer = null
       ..timerStart = 0
@@ -3247,6 +3283,8 @@ class GameState extends ChangeNotifier {
       ..currentStreak = 0
       ..bestStreak = 0
       ..completedQuestions = 0
+      ..mentalMathAnsweredResponseTotalMs = 0
+      ..mentalMathAnsweredResponseCount = 0
       ..nextQuestionTimerBudgetMs = 10000
       ..terminalReason = null
       ..mentalMathCountdownTimer = null
@@ -4084,6 +4122,43 @@ class GameState extends ChangeNotifier {
   void _prepareResultSummary({required bool win, required bool loss}) {
     final p1 = p[1];
     final p2 = p[2];
+
+    if (_isMentalMathFreePracticeRun && rt.terminalReason != null) {
+      final title = switch (rt.terminalReason!) {
+        MentalMathTerminalReason.masteryReached => 'MASTERY REACHED',
+        MentalMathTerminalReason.practiceComplete => 'PRACTICE COMPLETE',
+        MentalMathTerminalReason.trainingComplete => 'TRAINING COMPLETE',
+      };
+      final message = switch (rt.terminalReason!) {
+        MentalMathTerminalReason.masteryReached =>
+          'Strong run. You reached full momentum.',
+        MentalMathTerminalReason.practiceComplete =>
+          'Practice complete. Your session still built useful fluency.',
+        MentalMathTerminalReason.trainingComplete =>
+          'Training complete. You reached the session limit.',
+      };
+      final completed = rt.completedQuestions;
+      mentalMathResultSummary = MentalMathResultSummary(
+        avatarEmoji: p1.avatar.storageEmoji,
+        terminalTitle: title,
+        message: message,
+        peakMomentum: rt.peakMomentum,
+        bestStreak: rt.bestStreak,
+        accuracyPercent:
+            completed == 0 ? 0 : ((p1.correct / completed) * 100).round(),
+        averageResponseMs: rt.mentalMathAnsweredResponseCount == 0
+            ? null
+            : (rt.mentalMathAnsweredResponseTotalMs /
+                    rt.mentalMathAnsweredResponseCount)
+                .round(),
+        fastestAnswerMs:
+            p1.fastest == PlayerState.noFastestTime ? null : p1.fastest,
+      );
+      resultIcon = p1.avatar.storageEmoji;
+      resultTitle = title;
+      resultDescription = message;
+      return;
+    }
 
     if (loss) {
       resultIcon = '💀';

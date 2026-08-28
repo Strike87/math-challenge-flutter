@@ -1312,6 +1312,134 @@ void main() {
       }
     });
 
+    testWidgets('43. Mental Math result remains usable across responsive sizes',
+        (tester) async {
+      final state = await mentalMathHudState(10);
+      state.mentalMathResultSummary = const MentalMathResultSummary(
+        avatarEmoji: '🐶',
+        terminalTitle: 'MASTERY REACHED',
+        message: 'Strong run. You reached full momentum.',
+        peakMomentum: 10,
+        bestStreak: 5,
+        accuracyPercent: 82,
+        averageResponseMs: 4300,
+        fastestAnswerMs: 2100,
+      );
+      state.showModal(GameModal.win);
+
+      for (final size in const [
+        Size(320, 568),
+        Size(390, 844),
+        Size(844, 390),
+        Size(500, 600),
+        Size(1024, 768),
+      ]) {
+        await setTestDevice(tester, logicalSize: size);
+        await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()),
+        );
+        await tester.pump();
+        expect(find.text('MENTAL MATH'), findsWidgets);
+        expect(find.text('MASTERY REACHED'), findsOneWidget);
+        expect(find.text('Facts Recovered'), findsOneWidget);
+        expectNoVisualException(tester);
+      }
+    });
+
+    Future<GameState> mentalMathResultState({
+      required int momentum,
+      required MentalMathResultSummary summary,
+    }) async {
+      final state = await mentalMathHudState(momentum);
+      state.mentalMathResultSummary = summary;
+      state.showModal(GameModal.win);
+      return state;
+    }
+
+    testWidgets('44. Mental Math mastery result', (tester) async {
+      final state = await mentalMathResultState(
+        momentum: 10,
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'MASTERY REACHED',
+          message: 'Strong run. You reached full momentum.',
+          peakMomentum: 10,
+          bestStreak: 5,
+          accuracyPercent: 82,
+          averageResponseMs: 4300,
+          fastestAnswerMs: 2100,
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pump();
+
+      expect(find.text('MASTERY REACHED'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/42_mental_math_result_mastery.png'),
+      );
+    });
+
+    testWidgets('45. Mental Math practice-complete result', (tester) async {
+      final state = await mentalMathResultState(
+        momentum: -10,
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'PRACTICE COMPLETE',
+          message: 'Practice complete. Your session still built useful fluency.',
+          peakMomentum: 0,
+          bestStreak: 2,
+          accuracyPercent: 38,
+          averageResponseMs: 5800,
+          fastestAnswerMs: 3200,
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pump();
+
+      expect(find.text('PRACTICE COMPLETE'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/43_mental_math_result_practice_complete.png'),
+      );
+    });
+
+    testWidgets('46. Mental Math training-complete result', (tester) async {
+      final state = await mentalMathResultState(
+        momentum: 3,
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'TRAINING COMPLETE',
+          message: 'Training complete. You reached the session limit.',
+          peakMomentum: 7,
+          bestStreak: 4,
+          accuracyPercent: 70,
+          averageResponseMs: 4600,
+          fastestAnswerMs: 1800,
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pump();
+
+      expect(find.text('TRAINING COMPLETE'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/44_mental_math_result_training_complete.png'),
+      );
+    });
+
     testWidgets('9. Daily Boss screen/modal', (tester) async {
       final state = await _makeState({'mc_dark': false});
       state.currentScreen = GameScreen.menu;
