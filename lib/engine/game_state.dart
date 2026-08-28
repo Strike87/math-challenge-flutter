@@ -131,6 +131,7 @@ class RuntimeState {
   int currentStreak;
   int bestStreak;
   int completedQuestions;
+  int nextQuestionTimerBudgetMs;
   MentalMathTerminalReason? terminalReason;
 
   RuntimeState()
@@ -188,6 +189,7 @@ class RuntimeState {
         currentStreak = 0,
         bestStreak = 0,
         completedQuestions = 0,
+        nextQuestionTimerBudgetMs = 10000,
         terminalReason = null;
 }
 
@@ -2830,6 +2832,9 @@ class GameState extends ChangeNotifier {
   }
 
   int _getTimerLimitMs() {
+    if (_isMentalMathFreePracticeRun) {
+      return rt.nextQuestionTimerBudgetMs;
+    }
     if (activeMode == GameMode.blitz || activeMode == GameMode.combo) {
       return rt.blitzTotalMs;
     }
@@ -2852,12 +2857,17 @@ class GameState extends ChangeNotifier {
     return max(GameConfig.timerMinMs, baseMs - penalty);
   }
 
-  void _startQuestionTimer({int resumeElapsedMs = 0}) {
+  void _startQuestionTimer({
+    int resumeElapsedMs = 0,
+    int? remainingMs,
+  }) {
     final questionToken = _currentQuestionToken;
-    final limitMs =
-        rt.qTimerLimit > 0 ? rt.qTimerLimit * 1000 : _getTimerLimitMs();
-    final duration = max(0, limitMs - resumeElapsedMs);
-    rt.qTimerLimit = limitMs ~/ 1000;
+    final isMentalMath = _isMentalMathFreePracticeRun;
+    final limitMs = isMentalMath
+        ? (remainingMs ?? rt.nextQuestionTimerBudgetMs)
+        : (rt.qTimerLimit > 0 ? rt.qTimerLimit * 1000 : _getTimerLimitMs());
+    final duration = isMentalMath ? limitMs : max(0, limitMs - resumeElapsedMs);
+    rt.qTimerLimit = (limitMs / 1000).ceil();
     rt.timerDurationMs = duration;
     rt.timerStart = DateTime.now().millisecondsSinceEpoch;
     rt.timer?.cancel();
@@ -2945,16 +2955,44 @@ class GameState extends ChangeNotifier {
   }
 
   void handleAppLifecycleChange({required bool resumed}) {
-    if (!isTimeBankRun) return;
-    if (!resumed) {
-      _pauseTimeBank();
+    if (isTimeBankRun) {
+      if (!resumed) {
+        _pauseTimeBank();
+        return;
+      }
+      if (rt.timeBankRemainingMs <= 0) {
+        _onTimeBankExhausted(_currentQuestionToken);
+      } else {
+        _startTimeBankTimer();
+      }
       return;
     }
-    if (rt.timeBankRemainingMs <= 0) {
-      _onTimeBankExhausted(_currentQuestionToken);
+    if (!_isMentalMathFreePracticeRun) return;
+    if (!resumed) {
+      _pauseMentalMathQuestionTimer();
     } else {
-      _startTimeBankTimer();
+      _resumeMentalMathQuestionTimer();
     }
+  }
+
+  void _pauseMentalMathQuestionTimer() {
+    final questionToken = _currentQuestionToken;
+    if (!_isQuestionOpen(questionToken) || rt.timer?.isActive != true) return;
+    final elapsed = DateTime.now().millisecondsSinceEpoch - rt.timerStart;
+    rt.timerElapsedAtPause = max(0, rt.timerDurationMs - elapsed);
+    rt.timer?.cancel();
+    rt.timer = null;
+    rt.timerStart = 0;
+    rt.timerDurationMs = rt.timerElapsedAtPause;
+  }
+
+  void _resumeMentalMathQuestionTimer() {
+    final questionToken = _currentQuestionToken;
+    if (!_isQuestionOpen(questionToken) || rt.timer?.isActive == true) return;
+    final remainingMs = rt.timerElapsedAtPause;
+    if (remainingMs <= 0) return;
+    rt.timerElapsedAtPause = 0;
+    _startQuestionTimer(remainingMs: remainingMs);
   }
 
   void _onTimeout(({int runId, int questionId}) questionToken) {
@@ -3109,6 +3147,10 @@ class GameState extends ChangeNotifier {
     rt.completedQuestions++;
     rt.peakMomentum = max(rt.peakMomentum, rt.momentum);
     rt.bestStreak = max(rt.bestStreak, rt.currentStreak);
+    rt.nextQuestionTimerBudgetMs =
+        (rt.nextQuestionTimerBudgetMs + (isCorrect ? -500 : 1000))
+            .clamp(6000, 12000)
+            .toInt();
 
     if (rt.momentum >= 10) {
       rt.terminalReason = MentalMathTerminalReason.masteryReached;
@@ -3121,12 +3163,18 @@ class GameState extends ChangeNotifier {
   }
 
   void _clearMentalMathRuntimeState() {
+    rt.timer?.cancel();
     rt
+      ..timer = null
+      ..timerStart = 0
+      ..timerDurationMs = 0
+      ..timerElapsedAtPause = 0
       ..momentum = 0
       ..peakMomentum = 0
       ..currentStreak = 0
       ..bestStreak = 0
       ..completedQuestions = 0
+      ..nextQuestionTimerBudgetMs = 10000
       ..terminalReason = null;
   }
 

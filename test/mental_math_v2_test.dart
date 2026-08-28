@@ -162,6 +162,142 @@ void main() {
     }
   });
 
+  testWidgets('uses the Mental Math millisecond timer budget and clamps it',
+      (tester) async {
+    final state = await makeState();
+    state.debugStartGameFromSnapshot(snapshot());
+
+    expect(state.rt.nextQuestionTimerBudgetMs, 10000);
+    expect(state.debugQuestionTimerDurationMs(), 10000);
+
+    state.onAnswer(state.rt.q!.ans);
+    expect(state.rt.nextQuestionTimerBudgetMs, 9500);
+    await advance(tester, state);
+    expect(state.debugQuestionTimerDurationMs(), 9500);
+
+    final wrong = state.rt.q!.choices.firstWhere((v) => v != state.rt.q!.ans);
+    state.onAnswer(wrong);
+    expect(state.rt.nextQuestionTimerBudgetMs, 10500);
+    await advance(tester, state);
+
+    state.debugTimeoutForTest();
+    expect(state.rt.nextQuestionTimerBudgetMs, 11500);
+    await advance(tester, state);
+
+    state.rt.nextQuestionTimerBudgetMs = 6000;
+    state.onAnswer(state.rt.q!.ans);
+    expect(state.rt.nextQuestionTimerBudgetMs, 6000);
+    await advance(tester, state);
+
+    state.rt.nextQuestionTimerBudgetMs = 12000;
+    state.onAnswer(state.rt.q!.choices.firstWhere((v) => v != state.rt.q!.ans));
+    expect(state.rt.nextQuestionTimerBudgetMs, 12000);
+    await advance(tester, state);
+  });
+
+  testWidgets('pauses and resumes the same Mental Math question exactly once',
+      (tester) async {
+    final state = await makeState();
+    state.debugStartGameFromSnapshot(snapshot());
+    final question = state.rt.q;
+    state.rt.timerStart = DateTime.now().millisecondsSinceEpoch - 1750;
+
+    state.handleAppLifecycleChange(resumed: false);
+    final pausedRemaining = state.rt.timerElapsedAtPause;
+    expect(pausedRemaining, inInclusiveRange(8200, 8300));
+    expect(state.rt.timer, isNull);
+
+    state.handleAppLifecycleChange(resumed: false);
+    await tester.pump(const Duration(seconds: 2));
+    expect(state.rt.timerElapsedAtPause, pausedRemaining);
+    expect(state.rt.completedQuestions, 0);
+
+    state.handleAppLifecycleChange(resumed: true);
+    final resumedTimer = state.rt.timer;
+    expect(state.rt.q, same(question));
+    expect(state.rt.timerDurationMs, pausedRemaining);
+    expect(resumedTimer?.isActive, isTrue);
+
+    state.handleAppLifecycleChange(resumed: true);
+    expect(state.rt.timer, same(resumedTimer));
+    expect(state.rt.completedQuestions, 0);
+    state.rt.timer?.cancel();
+  });
+
+  testWidgets('expires once after Mental Math resume', (tester) async {
+    final state = await makeState();
+    state.debugStartGameFromSnapshot(snapshot());
+    final question = state.rt.q;
+
+    state.handleAppLifecycleChange(resumed: false);
+    state.handleAppLifecycleChange(resumed: true);
+    expect(state.rt.q, same(question));
+
+    state.rt.timerStart =
+        DateTime.now().millisecondsSinceEpoch - state.rt.timerDurationMs;
+    await tester.pump(const Duration(milliseconds: 101));
+
+    expect((
+      state.rt.momentum,
+      state.rt.currentStreak,
+      state.rt.completedQuestions,
+      state.rt.nextQuestionTimerBudgetMs,
+    ), (-1, 0, 1, 11000));
+
+    state
+      ..debugTimeoutForTest()
+      ..onAnswer(state.rt.q!.ans);
+    expect((
+      state.rt.momentum,
+      state.rt.currentStreak,
+      state.rt.completedQuestions,
+      state.rt.nextQuestionTimerBudgetMs,
+    ), (-1, 0, 1, 11000));
+    await advance(tester, state);
+  });
+
+  testWidgets('clears Mental Math timer state on Main Menu exit',
+      (tester) async {
+    final state = await makeState();
+    state.debugStartGameFromSnapshot(snapshot());
+
+    await state.quitToMenu();
+    expect((
+      state.rt.timer,
+      state.rt.timerStart,
+      state.rt.timerDurationMs,
+      state.rt.timerElapsedAtPause,
+      state.rt.nextQuestionTimerBudgetMs,
+    ), (null, 0, 0, 0, 10000));
+    state.debugTimeoutForTest();
+    expect((
+      state.rt.momentum,
+      state.rt.currentStreak,
+      state.rt.completedQuestions,
+      state.rt.nextQuestionTimerBudgetMs,
+      state.rt.terminalReason,
+    ), (0, 0, 0, 10000, null));
+
+    state.debugStartGameFromSnapshot(snapshot());
+    state.handleAppLifecycleChange(resumed: false);
+    expect(state.rt.timerElapsedAtPause, greaterThan(0));
+    await state.quitToMenu();
+    expect((
+      state.rt.timer,
+      state.rt.timerStart,
+      state.rt.timerDurationMs,
+      state.rt.timerElapsedAtPause,
+      state.rt.nextQuestionTimerBudgetMs,
+    ), (null, 0, 0, 0, 10000));
+
+    state.debugStartGameFromSnapshot(snapshot());
+    expect((
+      state.rt.nextQuestionTimerBudgetMs,
+      state.debugQuestionTimerDurationMs(),
+    ), (10000, 10000));
+    state.rt.timer?.cancel();
+  });
+
   testWidgets('terminal ordering, replay, and menu exit reset runtime state',
       (tester) async {
     final state = await makeState();
