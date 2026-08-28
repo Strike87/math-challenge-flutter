@@ -69,6 +69,12 @@ enum _QuestionTerminalClaim {
   neutral,
 }
 
+enum MentalMathTerminalReason {
+  masteryReached,
+  practiceComplete,
+  trainingComplete,
+}
+
 /// Runtime game state (the `rt` object in the original JS).
 class RuntimeState {
   Operation challenge;
@@ -120,6 +126,12 @@ class RuntimeState {
   _FollowUpData? followUpData;
   int lastDailyBossClaimDay;
   int weakSkillsScheduleIndex;
+  int momentum;
+  int peakMomentum;
+  int currentStreak;
+  int bestStreak;
+  int completedQuestions;
+  MentalMathTerminalReason? terminalReason;
 
   RuntimeState()
       : challenge = Operation.mixed,
@@ -170,7 +182,13 @@ class RuntimeState {
         isFollowUp = false,
         followUpData = null,
         lastDailyBossClaimDay = -1,
-        weakSkillsScheduleIndex = 0;
+        weakSkillsScheduleIndex = 0,
+        momentum = 0,
+        peakMomentum = 0,
+        currentStreak = 0,
+        bestStreak = 0,
+        completedQuestions = 0,
+        terminalReason = null;
 }
 
 class _FollowUpData {
@@ -609,6 +627,8 @@ class GameState extends ChangeNotifier {
   GameMode get activeMode => _runSnapshot?.mode ?? mode;
   Difficulty get activeDifficulty => _runSnapshot?.difficulty ?? diff;
   NumberType get activeNumberType => _runSnapshot?.numberType ?? numType;
+  bool get _isMentalMathFreePracticeRun =>
+      _runSnapshot?.mentalMathEntry == MentalMathEntry.freePractice;
   int get activeQuestionTarget => _runSnapshot?.questionTarget ?? questionCount;
   bool get activeAdaptive =>
       isOperationQuest || isTimeBankRun || _runSnapshot?.mentalMathEntry != null
@@ -2417,11 +2437,13 @@ class GameState extends ChangeNotifier {
         isMasterOrBoss: isMaster || isBoss,
       );
     }
-    _applyPowerUpBonusIfEligible(
-      players: snapshot.players,
-      isMaster: isMaster,
-      isBoss: isBoss,
-    );
+    if (snapshot.mentalMathEntry == null) {
+      _applyPowerUpBonusIfEligible(
+        players: snapshot.players,
+        isMaster: isMaster,
+        isBoss: isBoss,
+      );
+    }
     _clearAnswerFeedback();
     celebration = const CelebrationEvent.none();
     screenShakeTick = 0;
@@ -2434,7 +2456,10 @@ class GameState extends ChangeNotifier {
       ..dailyBossLives = 3
       ..gameActive = true
       ..state = 'playing'
-      ..isWarmUp = (snapshot.mode == GameMode.standard && !isMaster && !isBoss);
+      ..isWarmUp = (snapshot.mode == GameMode.standard &&
+          !isMaster &&
+          !isBoss &&
+          snapshot.mentalMathEntry == null);
     if (snapshot.timingStyle == TimingStyle.timeBank) {
       rt.timeBankRemainingMs =
           snapshot.questionTarget * (_timeBankBaseMs[snapshot.difficulty] ?? 0);
@@ -2593,6 +2618,12 @@ class GameState extends ChangeNotifier {
                 ? playerConfigurableDifficultySet
                 : null;
 
+    if (_isMentalMathFreePracticeRun) {
+      d = _mentalMathDifficultyFor(rt.momentum);
+      difficultyRoute = QuestionDifficultyRoute.playerConfigured;
+      legalDifficulties = {d};
+    }
+
     // Follow-up reinforcement
     if (rt.isFollowUp && rt.followUpData != null) {
       type = rt.followUpData!.type;
@@ -2664,7 +2695,8 @@ class GameState extends ChangeNotifier {
     }
 
     // Adaptive difficulty
-    if (activeAdaptive &&
+    if (!_isMentalMathFreePracticeRun &&
+        activeAdaptive &&
         rt.challenge != Operation.master &&
         rt.challenge != Operation.dailyBoss &&
         activeMode != GameMode.survival) {
@@ -2789,6 +2821,12 @@ class GameState extends ChangeNotifier {
   Difficulty _getAdaptDiff(Operation type) {
     final m = skillMap[type.name]?.mastery ?? _masteryDefault;
     return _adaptiveDifficultyEngine.difficultyForMastery(m);
+  }
+
+  Difficulty _mentalMathDifficultyFor(int momentum) {
+    if (momentum <= -4) return Difficulty.easy;
+    if (momentum >= 4) return Difficulty.hard;
+    return Difficulty.medium;
   }
 
   int _getTimerLimitMs() {
@@ -2946,6 +2984,7 @@ class GameState extends ChangeNotifier {
   }
 
   void skip() {
+    if (_isMentalMathFreePracticeRun) return;
     if (!rt.accepting) return;
     _onAnswer(null, true, false, _currentQuestionToken);
   }
@@ -3004,7 +3043,9 @@ class GameState extends ChangeNotifier {
       masteryTimeTaken,
       timedOut: isTimeout,
     );
-    _updateAdapt(isCorrect, masteryTimeTaken, q.type);
+    if (!_isMentalMathFreePracticeRun) {
+      _updateAdapt(isCorrect, masteryTimeTaken, q.type);
+    }
 
     if (isCorrect) {
       _onCorrect(pl, pid, timeTaken);
@@ -3013,8 +3054,14 @@ class GameState extends ChangeNotifier {
     }
 
     rt.totalTurns++;
+    final mentalMathTerminal = _applyMentalMathOutcome(
+      isCorrect: isCorrect,
+      isSkip: isSkip,
+    );
     final exhaustedTimeBank = isTimeout && rt.timeBankExhausted;
-    if (!exhaustedTimeBank) _checkStandardTurnLimit();
+    if (!exhaustedTimeBank && !_isMentalMathFreePracticeRun) {
+      _checkStandardTurnLimit();
+    }
     final observation = _captureQuestionExperienceIfSupported(
       q,
       isCorrect
@@ -3039,11 +3086,48 @@ class GameState extends ChangeNotifier {
         responseTimeMs: timeTaken,
       ),
     );
-    if (exhaustedTimeBank) {
+    if (mentalMathTerminal || exhaustedTimeBank) {
       _endGameAfterFeedback(false, false);
     } else if (_delayedLossTimer == null) {
       _scheduleNextTurn();
     }
+  }
+
+  bool _applyMentalMathOutcome({
+    required bool isCorrect,
+    required bool isSkip,
+  }) {
+    if (!_isMentalMathFreePracticeRun || isSkip) return false;
+
+    if (isCorrect) {
+      rt.momentum++;
+      rt.currentStreak++;
+    } else {
+      rt.momentum--;
+      rt.currentStreak = 0;
+    }
+    rt.completedQuestions++;
+    rt.peakMomentum = max(rt.peakMomentum, rt.momentum);
+    rt.bestStreak = max(rt.bestStreak, rt.currentStreak);
+
+    if (rt.momentum >= 10) {
+      rt.terminalReason = MentalMathTerminalReason.masteryReached;
+    } else if (rt.momentum <= -10) {
+      rt.terminalReason = MentalMathTerminalReason.practiceComplete;
+    } else if (rt.completedQuestions >= 40) {
+      rt.terminalReason = MentalMathTerminalReason.trainingComplete;
+    }
+    return rt.terminalReason != null;
+  }
+
+  void _clearMentalMathRuntimeState() {
+    rt
+      ..momentum = 0
+      ..peakMomentum = 0
+      ..currentStreak = 0
+      ..bestStreak = 0
+      ..completedQuestions = 0
+      ..terminalReason = null;
   }
 
   void _observeContextEvidence(
@@ -3286,6 +3370,16 @@ class GameState extends ChangeNotifier {
     if (timeTaken < pl.fastest) pl.fastest = timeTaken;
     if (!_isDeepThinkingRun && !isTimeBankRun && timeTaken < 2000) {
       rt.fastAnswers++;
+    }
+
+    if (_isMentalMathFreePracticeRun) {
+      reactionPill = GameConfig.correctRx[_rng.nextInt(GameConfig.correctRx.length)];
+      bigEmoji = reactionPill.split(' ').first;
+      bigEmojiVisible = true;
+      audio.playCorrect();
+      audio.vibrateCorrect();
+      notifyListeners();
+      return;
     }
 
     var survivalBossDue = false;
@@ -3609,7 +3703,8 @@ class GameState extends ChangeNotifier {
         audio.playWrong();
       }
       // Follow-up
-      if (!isSkip &&
+      if (!_isMentalMathFreePracticeRun &&
+          !isSkip &&
           !isTimeout &&
           activeMode == GameMode.standard &&
           rt.challenge != Operation.dailyBoss) {
@@ -3743,11 +3838,13 @@ class GameState extends ChangeNotifier {
     rt.gameActive = false;
     rt.state = 'ended';
     rt.timer?.cancel();
+    final snapshot = _runSnapshot!;
     gamesPlayed++;
     unawaited(_recordCompletedGameForAds());
     _logPerformance('completed-game persistence scheduled');
-    if (gamesPlayed >= 10) unlockAch('persistent');
-    final snapshot = _runSnapshot!;
+    if (snapshot.mentalMathEntry == null && gamesPlayed >= 10) {
+      unlockAch('persistent');
+    }
     final questProgressSave = isOperationQuest
         ? _recordOperationQuestResult(snapshot.operationQuestStageId!)
         : null;
@@ -3772,32 +3869,26 @@ class GameState extends ChangeNotifier {
       if (highScores.length > 10) highScores = highScores.sublist(0, 10);
     }
 
-    if (win && p[1].correct > 0) unlockAch('first_win');
-    // Perfect score
     final perfect = p[1].total > 0 && p[1].correct == p[1].total;
-    if (perfect) {
-      unlockAch('perfect_score');
-    }
-    // Streak master
-    if (p[1].maxStreak >= 10) unlockAch('streak_master');
-    // Speed demon
-    if (snapshot.timingStyle == TimingStyle.perQuestion &&
-        rt.fastAnswers >= 5) {
-      unlockAch('speed_demon');
-    }
-    // Survivor
-    if (activeMode == GameMode.death && p[1].score >= 250) {
-      unlockAch('survivor');
-    }
-    // Skill master
-    for (final e in skillMap.entries) {
-      if (e.value.count >= 5 && e.value.mastery >= 90) {
-        unlockAch('skill_master');
-        break;
+    if (snapshot.mentalMathEntry == null) {
+      if (win && p[1].correct > 0) unlockAch('first_win');
+      if (perfect) unlockAch('perfect_score');
+      if (p[1].maxStreak >= 10) unlockAch('streak_master');
+      if (snapshot.timingStyle == TimingStyle.perQuestion &&
+          rt.fastAnswers >= 5) {
+        unlockAch('speed_demon');
       }
+      if (activeMode == GameMode.death && p[1].score >= 250) {
+        unlockAch('survivor');
+      }
+      for (final e in skillMap.entries) {
+        if (e.value.count >= 5 && e.value.mastery >= 90) {
+          unlockAch('skill_master');
+          break;
+        }
+      }
+      if (adaptLvl >= 8) unlockAch('quick_learner');
     }
-    // Quick learner
-    if (adaptLvl >= 8) unlockAch('quick_learner');
 
     _prepareResultSummary(win: win, loss: loss);
 
@@ -4057,7 +4148,9 @@ class GameState extends ChangeNotifier {
     _masterLevel = 0;
     _masterLives = 3;
     _masterProgress = 0;
+    final wasMentalMathRun = _isMentalMathFreePracticeRun;
     _runSnapshot = null;
+    if (wasMentalMathRun) _clearMentalMathRuntimeState();
     _gameBrain = null;
     _lastContextEvidenceResult = null;
     _pendingOperationQuestStageId = null;
@@ -4398,6 +4491,7 @@ class GameState extends ChangeNotifier {
   }
 
   bool _isPowerUpBlocked(PowerUp pu) {
+    if (_isMentalMathFreePracticeRun) return true;
     if (pu == PowerUp.fifty && rt.answerStyle == AnswerStyle.trueFalse) {
       return true;
     }

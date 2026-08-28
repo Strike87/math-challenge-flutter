@@ -1307,6 +1307,7 @@ class _PowerUpHud extends StatelessWidget {
 }
 
 bool _shouldShowPowerUpHud(GameState gs) {
+  if (gs.activeRunSnapshot?.mentalMathEntry != null) return false;
   if (gs.activePlayers != 1) return false;
   if (gs.rt.challenge == Operation.master ||
       gs.rt.challenge == Operation.dailyBoss) {
@@ -1467,7 +1468,8 @@ class _QuestionCard extends StatelessWidget {
         gs.rt.challenge != Operation.master &&
         gs.rt.challenge != Operation.dailyBoss;
     final showSkip =
-        ![GameMode.death, GameMode.survival].contains(gs.activeMode) &&
+        gs.activeRunSnapshot?.mentalMathEntry == null &&
+            ![GameMode.death, GameMode.survival].contains(gs.activeMode) &&
             gs.rt.challenge != Operation.master &&
             gs.rt.challenge != Operation.dailyBoss;
     final danger = _timerWarning(gs);
