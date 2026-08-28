@@ -3664,8 +3664,7 @@ class _MentalMathResultReport extends StatelessWidget {
               _ReportRow(
                   'Average Response Time', seconds(summary.averageResponseMs)),
               _ReportRow('Fastest Answer', seconds(summary.fastestAnswerMs)),
-              _ReportRow('Facts Recovered',
-                  '${MentalMathResultSummary.factsRecovered}'),
+              _ReportRow('Facts Recovered', '${summary.factsRecovered}'),
             ],
           ),
         ),

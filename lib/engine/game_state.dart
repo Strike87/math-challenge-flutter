@@ -27,6 +27,7 @@ import '../features/weak_skills/domain/weak_skills_policy.dart';
 import '../game_config.dart';
 import '../models/celebration.dart';
 import '../models/enums.dart';
+import '../models/math_fact.dart';
 import '../models/player.dart';
 import '../models/game_data.dart';
 import '../services/storage.dart';
@@ -86,6 +87,7 @@ class MentalMathResultSummary {
     required this.accuracyPercent,
     required this.averageResponseMs,
     required this.fastestAnswerMs,
+    required this.factsRecovered,
   });
 
   final String avatarEmoji;
@@ -96,7 +98,25 @@ class MentalMathResultSummary {
   final int accuracyPercent;
   final int? averageResponseMs;
   final int? fastestAnswerMs;
-  static const int factsRecovered = 0;
+  final int factsRecovered;
+}
+
+class _MentalMathPendingFact {
+  _MentalMathPendingFact({
+    required this.familyKey,
+    required this.fact,
+    required this.mechanic,
+    required this.allowedOperations,
+    required this.earliestEligibleCompletedQuestion,
+  });
+
+  final String familyKey;
+  final MathFact fact;
+  final QuestionMechanic mechanic;
+  final Set<Operation> allowedOperations;
+  final int earliestEligibleCompletedQuestion;
+  final Set<String> seenRepresentationKeys = {};
+  int followUpsUsed = 0;
 }
 
 /// Runtime game state (the `rt` object in the original JS).
@@ -158,6 +178,12 @@ class RuntimeState {
   int mentalMathAnsweredResponseTotalMs;
   int mentalMathAnsweredResponseCount;
   int nextQuestionTimerBudgetMs;
+  final List<_MentalMathPendingFact> mentalMathPendingFacts;
+  final Set<String> mentalMathClosedFactFamilies;
+  String? mentalMathTargetedFamilyKey;
+  String? mentalMathTargetedRepresentationKey;
+  bool mentalMathMustGenerateNormalNext;
+  int factsRecovered;
   MentalMathTerminalReason? terminalReason;
   Timer? mentalMathCountdownTimer;
   int mentalMathCountdownStep;
@@ -220,6 +246,12 @@ class RuntimeState {
         mentalMathAnsweredResponseTotalMs = 0,
         mentalMathAnsweredResponseCount = 0,
         nextQuestionTimerBudgetMs = 10000,
+        mentalMathPendingFacts = [],
+        mentalMathClosedFactFamilies = {},
+        mentalMathTargetedFamilyKey = null,
+        mentalMathTargetedRepresentationKey = null,
+        mentalMathMustGenerateNormalNext = false,
+        factsRecovered = 0,
         terminalReason = null,
         mentalMathCountdownTimer = null,
         mentalMathCountdownStep = -1;
@@ -2698,6 +2730,167 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
+  static const _mentalMathRelatedAttemptLimit = 8;
+
+  Set<Operation> _mentalMathAllowedOperations() =>
+      rt.challenge == Operation.mixed
+          ? const {
+              Operation.addition,
+              Operation.subtraction,
+              Operation.multiplication,
+              Operation.division,
+            }
+          : {rt.challenge};
+
+  String _mentalMathFamilyKey(MathFact fact) {
+    final values = [fact.left, fact.right, fact.result]..sort();
+    final operationFamily = switch (fact.operation) {
+      Operation.addition || Operation.subtraction => 'add-sub',
+      Operation.multiplication || Operation.division => 'multiply-divide',
+      _ => fact.operation.name,
+    };
+    return '$operationFamily:${fact.numberType.name}:${values.join(':')}';
+  }
+
+  String _mentalMathRepresentationKey(MathFact fact) =>
+      '${fact.operation.name}:${fact.left}:${fact.right}:${fact.result}:'
+      '${fact.representation.name}';
+
+  void _closeMentalMathPendingFact(_MentalMathPendingFact entry) {
+    rt.mentalMathPendingFacts.remove(entry);
+    rt.mentalMathClosedFactFamilies.add(entry.familyKey);
+  }
+
+  void _enqueueMentalMathFailure(Question question) {
+    final fact = question.fact;
+    if (fact == null || !fact.isBasicOperation) return;
+    final familyKey = _mentalMathFamilyKey(fact);
+    if (rt.mentalMathClosedFactFamilies.contains(familyKey) ||
+        rt.mentalMathPendingFacts
+            .any((entry) => entry.familyKey == familyKey) ||
+        rt.mentalMathPendingFacts.length >= 3) {
+      return;
+    }
+    final entry = _MentalMathPendingFact(
+      familyKey: familyKey,
+      fact: fact,
+      mechanic: _runSnapshot!.questionMechanic,
+      allowedOperations: _mentalMathAllowedOperations(),
+      earliestEligibleCompletedQuestion: rt.completedQuestions + 2,
+    )..seenRepresentationKeys.add(_mentalMathRepresentationKey(fact));
+    rt.mentalMathPendingFacts.add(entry);
+  }
+
+  Question? _buildMentalMathTargetedQuestion({
+    required Difficulty diff,
+    required NumberType numType,
+  }) {
+    if (rt.mentalMathMustGenerateNormalNext) return null;
+    _MentalMathPendingFact? entry;
+    for (final candidate in rt.mentalMathPendingFacts) {
+      if (rt.completedQuestions >=
+          candidate.earliestEligibleCompletedQuestion) {
+        entry = candidate;
+        break;
+      }
+    }
+    if (entry == null) return null;
+
+    final excludedRepresentations =
+        entry.mechanic == QuestionMechanic.missingOperation
+            ? const {
+                FactRepresentation.missingLeft,
+                FactRepresentation.missingRight,
+              }
+            : const <FactRepresentation>{};
+    for (var attempt = 0; attempt < _mentalMathRelatedAttemptLimit; attempt++) {
+      final related = _qgen.buildRelated(
+        fact: entry.fact,
+        diff: diff,
+        numType: numType,
+        allowedOperations: entry.allowedOperations,
+        excludedRepresentations: excludedRepresentations,
+      );
+      if (related == null) {
+        _closeMentalMathPendingFact(entry);
+        return null;
+      }
+      final representationKey = _mentalMathRepresentationKey(related.fact!);
+      if (entry.seenRepresentationKeys.contains(representationKey)) continue;
+      final question = entry.mechanic == QuestionMechanic.missingOperation
+          ? missingOperationQuestion(related, _rng)
+          : related;
+      if (question == null || question.fact == null) {
+        _closeMentalMathPendingFact(entry);
+        return null;
+      }
+      entry.seenRepresentationKeys.add(representationKey);
+      rt
+        ..usedFacts.add(related.key)
+        ..mentalMathTargetedFamilyKey = entry.familyKey
+        ..mentalMathTargetedRepresentationKey = representationKey
+        ..mentalMathMustGenerateNormalNext = true;
+      return question;
+    }
+    _closeMentalMathPendingFact(entry);
+    return null;
+  }
+
+  void _recordMentalMathTargetedOutcome({
+    required Question question,
+    required bool isCorrect,
+    required bool isTimeout,
+    required bool isSkip,
+    required String? targetedFamilyKey,
+  }) {
+    rt
+      ..mentalMathTargetedFamilyKey = null
+      ..mentalMathTargetedRepresentationKey = null;
+    if (isSkip) return;
+    if (targetedFamilyKey == null) {
+      if (!isCorrect && (isTimeout || rt.selectedAnswer != null)) {
+        _enqueueMentalMathFailure(question);
+      }
+      return;
+    }
+    final index = rt.mentalMathPendingFacts
+        .indexWhere((entry) => entry.familyKey == targetedFamilyKey);
+    if (index < 0) return;
+    final entry = rt.mentalMathPendingFacts[index];
+    entry.followUpsUsed++;
+    if (isCorrect) {
+      rt.factsRecovered++;
+      _closeMentalMathPendingFact(entry);
+    } else if (entry.followUpsUsed >= 2) {
+      _closeMentalMathPendingFact(entry);
+    }
+  }
+
+  void _expireMentalMathPendingFacts() {
+    rt.mentalMathClosedFactFamilies
+        .addAll(rt.mentalMathPendingFacts.map((entry) => entry.familyKey));
+    rt.mentalMathPendingFacts.clear();
+    rt
+      ..mentalMathTargetedFamilyKey = null
+      ..mentalMathTargetedRepresentationKey = null
+      ..mentalMathMustGenerateNormalNext = false;
+  }
+
+  @visibleForTesting
+  int get debugMentalMathPendingFactCount => rt.mentalMathPendingFacts.length;
+
+  @visibleForTesting
+  int get debugMentalMathClosedFactCount =>
+      rt.mentalMathClosedFactFamilies.length;
+
+  @visibleForTesting
+  bool get debugCurrentMentalMathQuestionIsTargeted =>
+      rt.mentalMathTargetedFamilyKey != null;
+
+  @visibleForTesting
+  String? get debugCurrentMentalMathTargetedRepresentationKey =>
+      rt.mentalMathTargetedRepresentationKey;
+
   void _generateQ() {
     var type = rt.challenge;
     var d = activeDifficulty;
@@ -2799,21 +2992,30 @@ class GameState extends ChangeNotifier {
       legalDifficulties = adaptiveDifficultySet;
     }
 
-    // Build question with uniqueness guarantee
-    final filtersQuestQuestions = isMissingOperation || isMissingNumberQuest;
-    Question? q = filtersQuestQuestions
-        ? null
-        : _qgen.build(
-            type: type,
+    // Build question with uniqueness guarantee.
+    final targetedQuestion = _isMentalMathFreePracticeRun
+        ? _buildMentalMathTargetedQuestion(
             diff: d,
             numType: generatedNumType,
-            integerQuest: _runSnapshot?.integerQuest ?? false,
-            decimalQuest: _runSnapshot?.decimalQuest ?? false,
-          );
+          )
+        : null;
+    final filtersQuestQuestions = isMissingOperation || isMissingNumberQuest;
+    Question? q = targetedQuestion ??
+        (filtersQuestQuestions
+            ? null
+            : _qgen.build(
+                type: type,
+                diff: d,
+                numType: generatedNumType,
+                integerQuest: _runSnapshot?.integerQuest ?? false,
+                decimalQuest: _runSnapshot?.decimalQuest ?? false,
+              ));
     Question? retainedMissingOperationQuestion;
     String? retainedMissingOperationKey;
     bool foundUnique = false;
-    for (var attempt = 0; attempt < 500; attempt++) {
+    for (var attempt = 0;
+        targetedQuestion == null && attempt < 500;
+        attempt++) {
       final candidate = _qgen.build(
         type: type,
         diff: d,
@@ -2839,7 +3041,7 @@ class GameState extends ChangeNotifier {
         retainedMissingOperationKey = candidate.key;
       }
     }
-    if (!foundUnique) {
+    if (targetedQuestion == null && !foundUnique) {
       if (retainedMissingOperationQuestion != null) {
         rt.usedFacts
           ..clear()
@@ -2873,7 +3075,14 @@ class GameState extends ChangeNotifier {
       diff: d,
       numType: generatedNumType,
       ratDP: generatedQuestion.ratDP,
+      fact: generatedQuestion.fact,
     );
+
+    if (_isMentalMathFreePracticeRun && targetedQuestion == null) {
+      rt
+        ..mentalMathTargetedFamilyKey = null
+        ..mentalMathMustGenerateNormalNext = false;
+    }
 
     rt.q = runtimeQuestion;
     _questionDifficultyLegality = legalDifficulties == null
@@ -3198,11 +3407,22 @@ class GameState extends ChangeNotifier {
       _onWrong(pl, pid, isSkip, isTimeout, val);
     }
 
+    final targetedFamilyKey = rt.mentalMathTargetedFamilyKey;
     rt.totalTurns++;
     final mentalMathTerminal = _applyMentalMathOutcome(
       isCorrect: isCorrect,
       isSkip: isSkip,
     );
+    if (_isMentalMathFreePracticeRun) {
+      _recordMentalMathTargetedOutcome(
+        question: q,
+        isCorrect: isCorrect,
+        isTimeout: isTimeout,
+        isSkip: isSkip,
+        targetedFamilyKey: targetedFamilyKey,
+      );
+      if (mentalMathTerminal) _expireMentalMathPendingFacts();
+    }
     final exhaustedTimeBank = isTimeout && rt.timeBankExhausted;
     if (!exhaustedTimeBank && !_isMentalMathFreePracticeRun) {
       _checkStandardTurnLimit();
@@ -3286,6 +3506,12 @@ class GameState extends ChangeNotifier {
       ..mentalMathAnsweredResponseTotalMs = 0
       ..mentalMathAnsweredResponseCount = 0
       ..nextQuestionTimerBudgetMs = 10000
+      ..mentalMathPendingFacts.clear()
+      ..mentalMathClosedFactFamilies.clear()
+      ..mentalMathTargetedFamilyKey = null
+      ..mentalMathTargetedRepresentationKey = null
+      ..mentalMathMustGenerateNormalNext = false
+      ..factsRecovered = 0
       ..terminalReason = null
       ..mentalMathCountdownTimer = null
       ..mentalMathCountdownStep = -1;
@@ -3534,7 +3760,8 @@ class GameState extends ChangeNotifier {
     }
 
     if (_isMentalMathFreePracticeRun) {
-      reactionPill = GameConfig.correctRx[_rng.nextInt(GameConfig.correctRx.length)];
+      reactionPill =
+          GameConfig.correctRx[_rng.nextInt(GameConfig.correctRx.length)];
       bigEmoji = reactionPill.split(' ').first;
       bigEmojiVisible = true;
       audio.playCorrect();
@@ -4153,6 +4380,7 @@ class GameState extends ChangeNotifier {
                 .round(),
         fastestAnswerMs:
             p1.fastest == PlayerState.noFastestTime ? null : p1.fastest,
+        factsRecovered: rt.factsRecovered,
       );
       resultIcon = p1.avatar.storageEmoji;
       resultTitle = title;

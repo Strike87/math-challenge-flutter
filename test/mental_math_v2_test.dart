@@ -5,6 +5,8 @@ import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/engine/question_generator.dart';
 import 'package:math_challenge/features/gameplay/domain/question_mechanic.dart';
 import 'package:math_challenge/models/enums.dart';
+import 'package:math_challenge/models/math_fact.dart';
+import 'package:math_challenge/models/player.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
@@ -13,7 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Future<GameState> makeState() async {
+  Future<GameState> makeState({QuestionGenerator? questionGenerator}) async {
     SharedPreferences.setMockInitialValues({});
     await Storage.init();
     final state = GameState(
@@ -29,7 +31,8 @@ void main() {
           animSpeed: 1,
         ),
       audio: _NoOpAudioService(),
-      questionGenerator: QuestionGenerator(rng: Random(2002)),
+      questionGenerator:
+          questionGenerator ?? QuestionGenerator(rng: Random(2002)),
     );
     await state.load();
     addTearDown(state.dispose);
@@ -293,7 +296,12 @@ void main() {
       state.rt.currentStreak,
       state.rt.completedQuestions,
       state.rt.nextQuestionTimerBudgetMs,
-    ), (-1, 0, 1, 11000));
+    ), (
+      -1,
+      0,
+      1,
+      11000
+    ));
 
     state
       ..debugTimeoutForTest()
@@ -303,7 +311,12 @@ void main() {
       state.rt.currentStreak,
       state.rt.completedQuestions,
       state.rt.nextQuestionTimerBudgetMs,
-    ), (-1, 0, 1, 11000));
+    ), (
+      -1,
+      0,
+      1,
+      11000
+    ));
     await advance(tester, state);
   });
 
@@ -319,7 +332,13 @@ void main() {
       state.rt.timerDurationMs,
       state.rt.timerElapsedAtPause,
       state.rt.nextQuestionTimerBudgetMs,
-    ), (null, 0, 0, 0, 10000));
+    ), (
+      null,
+      0,
+      0,
+      0,
+      10000
+    ));
     state.debugTimeoutForTest();
     expect((
       state.rt.momentum,
@@ -327,7 +346,13 @@ void main() {
       state.rt.completedQuestions,
       state.rt.nextQuestionTimerBudgetMs,
       state.rt.terminalReason,
-    ), (0, 0, 0, 10000, null));
+    ), (
+      0,
+      0,
+      0,
+      10000,
+      null
+    ));
 
     state.debugStartGameFromSnapshot(snapshot());
     state.handleAppLifecycleChange(resumed: false);
@@ -339,13 +364,22 @@ void main() {
       state.rt.timerDurationMs,
       state.rt.timerElapsedAtPause,
       state.rt.nextQuestionTimerBudgetMs,
-    ), (null, 0, 0, 0, 10000));
+    ), (
+      null,
+      0,
+      0,
+      0,
+      10000
+    ));
 
     state.debugStartGameFromSnapshot(snapshot());
     expect((
       state.rt.nextQuestionTimerBudgetMs,
       state.debugQuestionTimerDurationMs(),
-    ), (10000, 10000));
+    ), (
+      10000,
+      10000
+    ));
     state.rt.timer?.cancel();
   });
 
@@ -436,7 +470,7 @@ void main() {
     expect(summary.accuracyPercent, 75);
     expect(summary.averageResponseMs, inInclusiveRange(1900, 2100));
     expect(summary.fastestAnswerMs, inInclusiveRange(1900, 2100));
-    expect(MentalMathResultSummary.factsRecovered, 0);
+    expect(summary.factsRecovered, 0);
 
     state.debugTimeoutForTest();
     expect(state.mentalMathResultSummary, same(summary));
@@ -446,7 +480,10 @@ void main() {
     expect((
       state.rt.mentalMathAnsweredResponseTotalMs,
       state.rt.mentalMathAnsweredResponseCount,
-    ), (0, 0));
+    ), (
+      0,
+      0
+    ));
   });
 
   testWidgets('records Mental Math answer time once and excludes timeouts',
@@ -470,6 +507,324 @@ void main() {
     state.onAnswer(state.rt.q!.ans);
     expect(state.rt.mentalMathAnsweredResponseCount, 2);
     await advance(tester, state);
+  });
+
+  testWidgets('schedules wrong and timeout facts after two normal completions',
+      (tester) async {
+    for (final timeout in [false, true]) {
+      final state = await makeState();
+      state.debugStartGameFromSnapshot(
+          snapshot(operation: Operation.multiplication));
+      state.rt.timer?.cancel();
+
+      if (timeout) {
+        state.debugTimeoutForTest();
+      } else {
+        state.onAnswer(state.rt.q!.choices
+            .firstWhere((value) => value != state.rt.q!.ans));
+      }
+      expect(state.debugMentalMathPendingFactCount, 1);
+      await advance(tester, state);
+      expect(state.debugCurrentMentalMathQuestionIsTargeted, isFalse);
+
+      state.onAnswer(state.rt.q!.ans);
+      await advance(tester, state);
+      expect(state.debugCurrentMentalMathQuestionIsTargeted, isFalse);
+
+      state.onAnswer(state.rt.q!.ans);
+      await advance(tester, state);
+      expect(state.debugCurrentMentalMathQuestionIsTargeted, isTrue);
+      expect(state.rt.q!.fact, isNotNull);
+      expect(
+        state.debugCurrentMentalMathTargetedRepresentationKey,
+        contains(state.rt.q!.fact!.representation.name),
+      );
+    }
+  });
+
+  testWidgets('skips the failed source representation for its first follow-up',
+      (tester) async {
+    final generator = _SourceThenDistinctRelatedQuestionGenerator();
+    final state = await makeState(questionGenerator: generator);
+    state.debugStartGameFromSnapshot(
+        snapshot(operation: Operation.multiplication));
+    state.rt.timer?.cancel();
+    final sourceFact = state.rt.q!.fact!;
+
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+
+    expect(state.debugCurrentMentalMathQuestionIsTargeted, isTrue);
+    expect(generator.relatedBuildCount, 2);
+    expect(state.rt.q!.fact!.representation, isNot(sourceFact.representation));
+  });
+
+  testWidgets(
+      'correct and stale terminals do not alter pending eligibility or enqueue',
+      (tester) async {
+    final state = await makeState();
+    state.debugStartGameFromSnapshot(
+        snapshot(operation: Operation.multiplication));
+    state.rt.timer?.cancel();
+
+    state.onAnswer(state.rt.q!.ans);
+    expect(state.debugMentalMathPendingFactCount, 0);
+    await advance(tester, state);
+
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    expect(state.debugMentalMathPendingFactCount, 1);
+    state
+      ..onAnswer(state.rt.q!.ans)
+      ..debugTimeoutForTest();
+    expect((state.debugMentalMathPendingFactCount, state.rt.completedQuestions),
+        (1, 2));
+
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+    expect(state.debugCurrentMentalMathQuestionIsTargeted, isTrue);
+  });
+
+  testWidgets('targeted recovery resolves once and separates the next question',
+      (tester) async {
+    final state = await makeState();
+    state.debugStartGameFromSnapshot(
+        snapshot(operation: Operation.multiplication));
+    state.rt.timer?.cancel();
+
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+
+    expect(state.debugCurrentMentalMathQuestionIsTargeted, isTrue);
+    final recoveredFact = state.rt.q!.fact!;
+    expect(state.debugCurrentMentalMathTargetedRepresentationKey, isNotNull);
+    state.onAnswer(state.rt.q!.ans);
+    expect((state.debugMentalMathPendingFactCount, state.rt.factsRecovered),
+        (0, 1));
+    expect(state.debugCurrentMentalMathTargetedRepresentationKey, isNull);
+    state.onAnswer(state.rt.q!.ans);
+    expect(state.rt.factsRecovered, 1);
+
+    await advance(tester, state);
+    expect(state.debugCurrentMentalMathQuestionIsTargeted, isFalse);
+    state.rt.q = _withFact(state.rt.q!, recoveredFact);
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    expect((
+      state.debugMentalMathPendingFactCount,
+      state.debugMentalMathClosedFactCount
+    ), (
+      0,
+      1
+    ));
+    await advance(tester, state);
+  });
+
+  testWidgets('uses a distinct final target and closes it after two attempts',
+      (tester) async {
+    final state = await makeState();
+    state.debugStartGameFromSnapshot(
+        snapshot(operation: Operation.multiplication));
+    state.rt.timer?.cancel();
+
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+    final firstTarget = state.rt.q!.fact!;
+
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    await advance(tester, state);
+    expect(state.debugCurrentMentalMathQuestionIsTargeted, isFalse);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+    final finalTarget = state.rt.q!.fact!;
+    expect(state.debugCurrentMentalMathQuestionIsTargeted, isTrue);
+    expect(
+      '${finalTarget.operation}:${finalTarget.left}:${finalTarget.right}:'
+      '${finalTarget.result}:${finalTarget.representation}',
+      isNot(
+        '${firstTarget.operation}:${firstTarget.left}:${firstTarget.right}:'
+        '${firstTarget.result}:${firstTarget.representation}',
+      ),
+    );
+
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    expect((state.debugMentalMathPendingFactCount, state.rt.factsRecovered),
+        (0, 0));
+    expect(state.debugMentalMathClosedFactCount, 1);
+    await advance(tester, state);
+    expect(state.debugCurrentMentalMathQuestionIsTargeted, isFalse);
+    state.rt.q = _withFact(state.rt.q!, finalTarget);
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    expect((
+      state.debugMentalMathPendingFactCount,
+      state.debugMentalMathClosedFactCount
+    ), (
+      0,
+      1
+    ));
+    await advance(tester, state);
+  });
+
+  testWidgets(
+      'keeps at most three pending facts and includes terminal recovery',
+      (tester) async {
+    final state = await makeState();
+    state.debugStartGameFromSnapshot(
+        snapshot(operation: Operation.multiplication));
+    state.rt.timer?.cancel();
+
+    for (var i = 0; i < 3; i++) {
+      state.onAnswer(
+          state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+      await advance(tester, state);
+    }
+    expect(state.debugMentalMathPendingFactCount, 3);
+    expect(state.debugCurrentMentalMathQuestionIsTargeted, isTrue);
+
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    await advance(tester, state);
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    expect(state.debugMentalMathPendingFactCount, 3);
+
+    await state.replayGame();
+    await tester.pump(const Duration(seconds: 4));
+    state.rt.timer?.cancel();
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    state.rt.completedQuestions = 3;
+    await advance(tester, state);
+    expect(state.debugCurrentMentalMathQuestionIsTargeted, isTrue);
+    state
+      ..rt.momentum = 9
+      ..rt.completedQuestions = 39;
+    state.onAnswer(state.rt.q!.ans);
+    await tester.pump(const Duration(milliseconds: 1301));
+    expect(state.mentalMathResultSummary!.factsRecovered, 1);
+    expect(state.debugMentalMathPendingFactCount, 0);
+  });
+
+  testWidgets('uses normal generation when related generation is unavailable',
+      (tester) async {
+    final state =
+        await makeState(questionGenerator: _NoRelatedQuestionGenerator());
+    state.debugStartGameFromSnapshot(
+        snapshot(operation: Operation.multiplication));
+    state.rt.timer?.cancel();
+
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+
+    expect(state.debugCurrentMentalMathQuestionIsTargeted, isFalse);
+    expect((
+      state.debugMentalMathPendingFactCount,
+      state.debugMentalMathClosedFactCount
+    ), (
+      0,
+      1
+    ));
+    expect(state.rt.q, isNotNull);
+  });
+
+  testWidgets('closes a pending fact after bounded repeated related attempts',
+      (tester) async {
+    final state =
+        await makeState(questionGenerator: _RepeatedRelatedQuestionGenerator());
+    state.debugStartGameFromSnapshot(
+        snapshot(operation: Operation.multiplication));
+    state.rt.timer?.cancel();
+
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+    expect(state.debugCurrentMentalMathQuestionIsTargeted, isTrue);
+
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+
+    expect(state.debugCurrentMentalMathQuestionIsTargeted, isFalse);
+    expect((
+      state.debugMentalMathPendingFactCount,
+      state.debugMentalMathClosedFactCount
+    ), (
+      0,
+      1
+    ));
+  });
+
+  testWidgets('targeted Missing Operation retains its fact and operator blank',
+      (tester) async {
+    final state = await makeState();
+    state.debugStartGameFromSnapshot(snapshot(
+      operation: Operation.multiplication,
+      mechanic: QuestionMechanic.missingOperation,
+    ));
+    state.rt.timer?.cancel();
+
+    state.onAnswer(
+        state.rt.q!.choices.firstWhere((value) => value != state.rt.q!.ans));
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+    state.onAnswer(state.rt.q!.ans);
+    await advance(tester, state);
+
+    final targeted = state.rt.q!;
+    expect(state.debugCurrentMentalMathQuestionIsTargeted, isTrue);
+    expect(targeted.text, matches(RegExp(r'^-?\d+ \? -?\d+ = -?\d+$')));
+    expect(targeted.choices, unorderedEquals(operatorAnswerChoices));
+    expect(targeted.fact, isNotNull);
+    expect(targeted.fact!.representation, FactRepresentation.direct);
+  });
+
+  testWidgets('stops at question forty without generating question forty-one',
+      (tester) async {
+    final state = await makeState();
+    state.debugStartGameFromSnapshot(snapshot());
+    state
+      ..rt.timer?.cancel()
+      ..rt.completedQuestions = 39;
+    final questionForty = state.rt.q!;
+
+    state.onAnswer(questionForty.ans);
+    expect(state.rt.completedQuestions, 40);
+    expect(state.rt.q, same(questionForty));
+    await tester.pump(const Duration(seconds: 4));
+    expect(state.rt.q, same(questionForty));
   });
 
   testWidgets('ordinary Timing Practice retains its configured behavior',
@@ -531,6 +886,106 @@ void main() {
     expect(state.highScores, isEmpty);
     expect(state.achievements.values.where((value) => value), isEmpty);
   });
+}
+
+Question _withFact(Question question, MathFact fact) => Question(
+      type: question.type,
+      key: question.key,
+      text: question.text,
+      ans: question.ans,
+      choices: question.choices,
+      boss: question.boss,
+      diff: question.diff,
+      numType: question.numType,
+      ratDP: question.ratDP,
+      fact: fact,
+    );
+
+final class _NoRelatedQuestionGenerator extends QuestionGenerator {
+  _NoRelatedQuestionGenerator() : super(rng: Random(4100));
+
+  @override
+  Question? buildRelated({
+    required MathFact fact,
+    required Difficulty diff,
+    required NumberType numType,
+    required Set<Operation> allowedOperations,
+    Set<FactRepresentation> excludedRepresentations = const {},
+  }) =>
+      null;
+}
+
+final class _RepeatedRelatedQuestionGenerator extends QuestionGenerator {
+  _RepeatedRelatedQuestionGenerator() : super(rng: Random(4200));
+
+  @override
+  Question? buildRelated({
+    required MathFact fact,
+    required Difficulty diff,
+    required NumberType numType,
+    required Set<Operation> allowedOperations,
+    Set<FactRepresentation> excludedRepresentations = const {},
+  }) {
+    final related = fact.copyWith(
+      representation: switch (fact.representation) {
+        FactRepresentation.direct => FactRepresentation.missingLeft,
+        FactRepresentation.missingLeft => FactRepresentation.missingRight,
+        FactRepresentation.missingRight => FactRepresentation.direct,
+      },
+    );
+    return Question(
+      type: related.operation,
+      key: 'repeated-related',
+      text: '? × ${related.right} = ${related.result}',
+      ans: related.left,
+      choices: [related.left, related.left + 1],
+      diff: diff,
+      numType: numType,
+      fact: related,
+    );
+  }
+}
+
+final class _SourceThenDistinctRelatedQuestionGenerator
+    extends QuestionGenerator {
+  _SourceThenDistinctRelatedQuestionGenerator() : super(rng: Random(4300));
+
+  int relatedBuildCount = 0;
+
+  @override
+  Question? buildRelated({
+    required MathFact fact,
+    required Difficulty diff,
+    required NumberType numType,
+    required Set<Operation> allowedOperations,
+    Set<FactRepresentation> excludedRepresentations = const {},
+  }) {
+    relatedBuildCount++;
+    final related = fact.copyWith(
+      representation: relatedBuildCount == 1
+          ? fact.representation
+          : switch (fact.representation) {
+              FactRepresentation.direct => FactRepresentation.missingLeft,
+              FactRepresentation.missingLeft => FactRepresentation.missingRight,
+              FactRepresentation.missingRight => FactRepresentation.direct,
+            },
+    );
+    final answer = switch (related.representation) {
+      FactRepresentation.direct => related.result,
+      FactRepresentation.missingLeft => related.left,
+      FactRepresentation.missingRight => related.right,
+    };
+    return Question(
+      type: related.operation,
+      key: 'source-then-distinct-$relatedBuildCount',
+      text: 'related',
+      ans: answer,
+      choices: [answer, answer + 1],
+      diff: diff,
+      numType: numType,
+      fact: related,
+    );
+  }
 }
 
 final class _NoOpAudioService implements AudioService {

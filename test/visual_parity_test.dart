@@ -1324,6 +1324,7 @@ void main() {
         accuracyPercent: 82,
         averageResponseMs: 4300,
         fastestAnswerMs: 2100,
+        factsRecovered: 0,
       );
       state.showModal(GameModal.win);
 
@@ -1368,6 +1369,7 @@ void main() {
           accuracyPercent: 82,
           averageResponseMs: 4300,
           fastestAnswerMs: 2100,
+          factsRecovered: 0,
         ),
       );
       await setTestDevice(tester, logicalSize: phoneSize);
@@ -1396,6 +1398,7 @@ void main() {
           accuracyPercent: 38,
           averageResponseMs: 5800,
           fastestAnswerMs: 3200,
+          factsRecovered: 0,
         ),
       );
       await setTestDevice(tester, logicalSize: phoneSize);
@@ -1424,6 +1427,7 @@ void main() {
           accuracyPercent: 70,
           averageResponseMs: 4600,
           fastestAnswerMs: 1800,
+          factsRecovered: 0,
         ),
       );
       await setTestDevice(tester, logicalSize: phoneSize);

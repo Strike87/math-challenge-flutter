@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
+import 'package:math_challenge/engine/question_generator.dart';
 import 'package:math_challenge/features/gameplay/domain/question_mechanic.dart';
 import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/models/enums.dart';
@@ -74,6 +75,21 @@ void main() {
     expect(missingOperationQuestion(normalized, Random(1))?.ans, 1);
     expect(missingOperationQuestion(ambiguous, Random(1)), isNull);
     expect([0, 1, 2, 3].map(operatorSymbol), ['+', '−', '×', '÷']);
+  });
+
+  test('shared transformer preserves the canonical generated fact', () {
+    final question = List.generate(
+      20,
+      (seed) => QuestionGenerator(rng: Random(seed)).build(
+        type: Operation.multiplication,
+        diff: Difficulty.medium,
+        numType: NumberType.natural,
+      ),
+    ).firstWhere(
+        (candidate) => missingOperationQuestion(candidate, Random(1)) != null);
+
+    expect(missingOperationQuestion(question, Random(1))!.fact,
+        same(question.fact));
   });
 
   test('controlled Missing Operation generations can use different orders', () {

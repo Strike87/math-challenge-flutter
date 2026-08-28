@@ -61,6 +61,7 @@ Question? missingOperationQuestion(Question question, Random random) {
     diff: question.diff,
     numType: question.numType,
     ratDP: question.ratDP,
+    fact: question.fact,
   );
 }
 
