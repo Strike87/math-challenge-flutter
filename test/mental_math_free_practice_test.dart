@@ -46,6 +46,7 @@ void main() {
 
   Future<void> startFreePractice(
     GameState state, {
+    WidgetTester? tester,
     Operation operation = Operation.mixed,
     bool missingOperation = false,
     bool mentalMath = true,
@@ -62,6 +63,9 @@ void main() {
     }
     await state.selectNumType(numberType.name);
     if (!mentalMath) state.startGame();
+    if (mentalMath && tester != null) {
+      await tester.pump(const Duration(seconds: 4));
+    }
     state.rt.timer?.cancel();
   }
 
@@ -101,7 +105,6 @@ void main() {
     expect(state.setupMentalMathEntry, MentalMathEntry.freePractice);
 
     await state.selectNumType(NumberType.natural.name);
-    state.rt.timer?.cancel();
 
     final snapshot = state.activeRunSnapshot!;
     expect(snapshot.mentalMathEntry, MentalMathEntry.freePractice);
@@ -113,6 +116,7 @@ void main() {
     expect(snapshot.questionTarget, 40);
     expect(snapshot.answerStyle, AnswerStyle.choice4);
     expect(snapshot.players, 1);
+    await state.quitToMenu();
   });
 
   test('all canonical operations and number types preserve their fixed context',
@@ -180,9 +184,9 @@ void main() {
     }
   });
 
-  test(
+  testWidgets(
       'Mental Math is evidence-excluded while a normal control remains eligible',
-      () async {
+      (tester) async {
     var evaluations = 0;
     final state = await makeState(
       adaptiveShadowEvaluator: (_, __) {
@@ -192,7 +196,11 @@ void main() {
     );
     await state.submitFamilyAgeRange(FamilyAgeRange.adult18plus);
     await state.setGameBrainPreference(true);
-    await startFreePractice(state, operation: Operation.addition);
+    await startFreePractice(
+      state,
+      operation: Operation.addition,
+      tester: tester,
+    );
     state.onAnswer(state.rt.q!.ans);
 
     expect(state.debugP1F01IntegrityRunEligible, isFalse);
@@ -214,6 +222,9 @@ void main() {
     expect(state.debugQuestionExperienceObservationCount, 1);
     expect(state.debugContextEvidenceObservationCount, 1);
     expect(evaluations, 1);
+    await tester.pump(const Duration(milliseconds: 1301));
+    state.rt.timer?.cancel();
+    await tester.pump(const Duration(milliseconds: 1100));
   });
 
   test('cancelled Free Practice cannot leak into ordinary Quick Practice',

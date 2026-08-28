@@ -133,6 +133,8 @@ class RuntimeState {
   int completedQuestions;
   int nextQuestionTimerBudgetMs;
   MentalMathTerminalReason? terminalReason;
+  Timer? mentalMathCountdownTimer;
+  int mentalMathCountdownStep;
 
   RuntimeState()
       : challenge = Operation.mixed,
@@ -190,7 +192,9 @@ class RuntimeState {
         bestStreak = 0,
         completedQuestions = 0,
         nextQuestionTimerBudgetMs = 10000,
-        terminalReason = null;
+        terminalReason = null,
+        mentalMathCountdownTimer = null,
+        mentalMathCountdownStep = -1;
 }
 
 class _FollowUpData {
@@ -545,7 +549,7 @@ class GameState extends ChangeNotifier {
   bool get debugP1F01IntegrityRunEligible => _p1F01IntegrityRunEligible;
   @visibleForTesting
   void debugStartGameFromSnapshot(GameRunSnapshot snapshot) {
-    _startGame(replaySnapshot: snapshot);
+    _startGame(replaySnapshot: snapshot, skipMentalMathCountdown: true);
   }
 
   QuestionDifficultyLegality? get currentQuestionDifficultyLegality =>
@@ -631,6 +635,17 @@ class GameState extends ChangeNotifier {
   NumberType get activeNumberType => _runSnapshot?.numberType ?? numType;
   bool get _isMentalMathFreePracticeRun =>
       _runSnapshot?.mentalMathEntry == MentalMathEntry.freePractice;
+  bool get isMentalMathCountdown =>
+      _isMentalMathFreePracticeRun && rt.state == 'countdown';
+  bool get isMentalMathGameplay =>
+      _isMentalMathFreePracticeRun && rt.state == 'playing';
+  String get mentalMathCountdownLabel => switch (rt.mentalMathCountdownStep) {
+        3 => '3',
+        2 => '2',
+        1 => '1',
+        0 => 'GO!',
+        _ => '',
+      };
   int get activeQuestionTarget => _runSnapshot?.questionTarget ?? questionCount;
   bool get activeAdaptive =>
       isOperationQuest || isTimeBankRun || _runSnapshot?.mentalMathEntry != null
@@ -756,6 +771,7 @@ class GameState extends ChangeNotifier {
     _disposed = true;
     _turnSeq++;
     _closeActiveQuestionNeutrally();
+    rt.mentalMathCountdownTimer?.cancel();
     _invalidateActiveRun();
     rt.gameActive = false;
     _iapPurchaseSub?.cancel();
@@ -2373,7 +2389,10 @@ class GameState extends ChangeNotifier {
   // ─── Game lifecycle ─────────────────────────────────────────
   void startGame() => _startGame();
 
-  void _startGame({GameRunSnapshot? replaySnapshot}) {
+  void _startGame({
+    GameRunSnapshot? replaySnapshot,
+    bool skipMentalMathCountdown = false,
+  }) {
     _postFeedbackTimer?.cancel();
     _delayedResultModalTimer?.cancel();
 
@@ -2395,6 +2414,7 @@ class GameState extends ChangeNotifier {
 
     _closeActiveQuestionNeutrally();
     rt.timer?.cancel();
+    rt.mentalMathCountdownTimer?.cancel();
     _invalidateActiveRun();
     _activeRunId = ++_lastRunId;
     _cancelDelayedLossEnd();
@@ -2456,8 +2476,10 @@ class GameState extends ChangeNotifier {
       ..dailyBoss = isBoss ? dailyBoss : null
       ..answerStyle = snapshot.answerStyle
       ..dailyBossLives = 3
-      ..gameActive = true
-      ..state = 'playing'
+      ..gameActive = snapshot.mentalMathEntry == null || skipMentalMathCountdown
+      ..state = snapshot.mentalMathEntry == null || skipMentalMathCountdown
+          ? 'playing'
+          : 'countdown'
       ..isWarmUp = (snapshot.mode == GameMode.standard &&
           !isMaster &&
           !isBoss &&
@@ -2484,9 +2506,16 @@ class GameState extends ChangeNotifier {
       // Master reset: 3 lives
     }
 
-    audio.playStart();
-
     showScreen(GameScreen.game);
+
+    if (snapshot.mentalMathEntry != null && !skipMentalMathCountdown) {
+      rt.mentalMathCountdownStep = 3;
+      _startMentalMathCountdown();
+      notifyListeners();
+      return;
+    }
+
+    audio.playStart();
 
     if (snapshot.mode == GameMode.blitz) {
       rt.blitzTotalMs = GameConfig.blitzTimerDefault;
@@ -2498,6 +2527,39 @@ class GameState extends ChangeNotifier {
       _startGlobalTimer(GameConfig.comboTimerDefault);
     }
 
+    _nextTurn();
+  }
+
+  void _startMentalMathCountdown() {
+    if (!isMentalMathCountdown ||
+        rt.mentalMathCountdownTimer?.isActive == true) {
+      return;
+    }
+    final runId = _activeRunId;
+    rt.mentalMathCountdownTimer =
+        Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (runId != _activeRunId || !isMentalMathCountdown) {
+        timer.cancel();
+        return;
+      }
+      if (rt.mentalMathCountdownStep > 0) {
+        rt.mentalMathCountdownStep--;
+        notifyListeners();
+        return;
+      }
+      timer.cancel();
+      rt.mentalMathCountdownTimer = null;
+      _activateMentalMathGameplay(runId);
+    });
+  }
+
+  void _activateMentalMathGameplay(int runId) {
+    if (runId != _activeRunId || !isMentalMathCountdown) return;
+    rt
+      ..mentalMathCountdownStep = -1
+      ..gameActive = true
+      ..state = 'playing';
+    audio.playStart();
     _nextTurn();
   }
 
@@ -2968,6 +3030,15 @@ class GameState extends ChangeNotifier {
       return;
     }
     if (!_isMentalMathFreePracticeRun) return;
+    if (isMentalMathCountdown) {
+      if (!resumed) {
+        rt.mentalMathCountdownTimer?.cancel();
+        rt.mentalMathCountdownTimer = null;
+      } else {
+        _startMentalMathCountdown();
+      }
+      return;
+    }
     if (!resumed) {
       _pauseMentalMathQuestionTimer();
     } else {
@@ -2997,6 +3068,7 @@ class GameState extends ChangeNotifier {
 
   void _onTimeout(({int runId, int questionId}) questionToken) {
     if (_isDeepThinkingRun || isTimeBankRun) return;
+    if (isMentalMathCountdown) return;
     _onAnswer(null, false, true, questionToken);
   }
 
@@ -3164,6 +3236,7 @@ class GameState extends ChangeNotifier {
 
   void _clearMentalMathRuntimeState() {
     rt.timer?.cancel();
+    rt.mentalMathCountdownTimer?.cancel();
     rt
       ..timer = null
       ..timerStart = 0
@@ -3175,7 +3248,9 @@ class GameState extends ChangeNotifier {
       ..bestStreak = 0
       ..completedQuestions = 0
       ..nextQuestionTimerBudgetMs = 10000
-      ..terminalReason = null;
+      ..terminalReason = null
+      ..mentalMathCountdownTimer = null
+      ..mentalMathCountdownStep = -1;
   }
 
   void _observeContextEvidence(

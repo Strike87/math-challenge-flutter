@@ -1178,7 +1178,7 @@ void main() {
       );
     });
 
-    testWidgets('37. Mental Math Config keeps unsupported choices disabled',
+    testWidgets('38. Mental Math countdown phone light and dark',
         (tester) async {
       final state = await _makeState({'mc_dark': false});
       state.goToPracticeStyle('addition');
@@ -1188,16 +1188,128 @@ void main() {
       await tester.pumpWidget(
         TestAppWrapper(state: state, child: const TestAppShell()),
       );
-      await tester.pumpAndSettle();
+      await tester.pump();
 
-      expect(find.text('2 Players'), findsOneWidget);
-      expect(find.text('Deep Thinking'), findsOneWidget);
-      expect(find.text('Time Bank'), findsOneWidget);
+      expect(find.text('Build your momentum'), findsOneWidget);
+      expect(find.byKey(const Key('mental-math-countdown')), findsOneWidget);
       expectNoVisualException(tester);
       await expectLater(
         find.byType(TestAppShell),
-        matchesGoldenFile('goldens/37_mental_math_config.png'),
+        matchesGoldenFile('goldens/38_mental_math_countdown_light.png'),
       );
+
+      state.settings.toggleDark();
+      await tester.pump();
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/38_mental_math_countdown_dark.png'),
+      );
+      await state.quitToMenu();
+    });
+
+    Future<GameState> mentalMathHudState(int momentum) async {
+      final state = await _makeState({'mc_dark': false});
+      state.debugStartGameFromSnapshot(
+        const GameRunSnapshot(
+          runType: GameRunType.normal,
+          mode: GameMode.standard,
+          operation: Operation.addition,
+          difficulty: Difficulty.medium,
+          numberType: NumberType.natural,
+          answerStyle: AnswerStyle.choice4,
+          players: 1,
+          questionTarget: 40,
+          mentalMathEntry: MentalMathEntry.freePractice,
+        ),
+      );
+      state.rt.timer?.cancel();
+      state.rt
+        ..momentum = momentum
+        ..currentStreak = momentum > 0 ? 3 : 0
+        ..timerStart = 0
+        ..timerDurationMs = 8500
+        ..q = const Question(
+          type: Operation.addition,
+          key: '42+17',
+          text: '42 + 17',
+          ans: 59,
+          choices: [57, 58, 59, 60],
+          diff: Difficulty.medium,
+          numType: NumberType.natural,
+        );
+      return state;
+    }
+
+    testWidgets('39. Mental Math gameplay Flow zone', (tester) async {
+      final state = await mentalMathHudState(0);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pump();
+      expect(find.byKey(const Key('mental-math-hud')), findsOneWidget);
+      expect(find.text('FLOW'), findsOneWidget);
+      expect(find.text('Q 1 / 40'), findsNothing);
+      expect(find.text('Player 1'), findsNothing);
+      expect(find.text('50/50'), findsNothing);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/39_mental_math_gameplay_flow.png'),
+      );
+    });
+
+    testWidgets('40. Mental Math gameplay Challenge zone', (tester) async {
+      final state = await mentalMathHudState(4);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pump();
+      expect(find.text('CHALLENGE'), findsOneWidget);
+      expect(find.text('+4'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/40_mental_math_gameplay_challenge.png'),
+      );
+    });
+
+    testWidgets('41. Mental Math gameplay Recovery zone', (tester) async {
+      final state = await mentalMathHudState(-4);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pump();
+      expect(find.text('RECOVERY'), findsOneWidget);
+      expect(find.text('-4'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/41_mental_math_gameplay_recovery.png'),
+      );
+    });
+
+    testWidgets('42. Mental Math HUD remains usable across responsive sizes',
+        (tester) async {
+      final state = await mentalMathHudState(4);
+      for (final size in const [
+        Size(320, 568),
+        Size(390, 844),
+        Size(844, 390),
+        Size(500, 600),
+        Size(1024, 768),
+      ]) {
+        await setTestDevice(tester, logicalSize: size);
+        await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()),
+        );
+        await tester.pump();
+        expect(find.byKey(const Key('mental-math-hud')), findsOneWidget);
+        expectNoVisualException(tester);
+      }
     });
 
     testWidgets('9. Daily Boss screen/modal', (tester) async {

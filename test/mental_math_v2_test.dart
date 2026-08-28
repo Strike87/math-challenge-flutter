@@ -58,6 +58,57 @@ void main() {
     state.rt.timer?.cancel();
   }
 
+  testWidgets('Number Type starts one cancellable Mental Math countdown',
+      (tester) async {
+    final state = await makeState();
+    state.goToPracticeStyle('addition');
+    state.startMentalMathFreePractice();
+    await state.selectNumType(NumberType.natural.name);
+
+    expect(state.currentScreen, GameScreen.game);
+    expect(state.isMentalMathCountdown, isTrue);
+    expect(state.mentalMathCountdownLabel, '3');
+    expect(state.rt.q, isNull);
+    expect(state.rt.timer, isNull);
+    expect((
+      state.rt.momentum,
+      state.rt.currentStreak,
+      state.rt.completedQuestions
+    ), (
+      0,
+      0,
+      0
+    ));
+
+    await tester.pump(const Duration(seconds: 1));
+    expect(state.mentalMathCountdownLabel, '2');
+    state.handleAppLifecycleChange(resumed: false);
+    await tester.pump(const Duration(seconds: 2));
+    expect(state.mentalMathCountdownLabel, '2');
+    expect(state.rt.q, isNull);
+
+    state.handleAppLifecycleChange(resumed: true);
+    state.handleAppLifecycleChange(resumed: true);
+    await tester.pump(const Duration(seconds: 1));
+    expect(state.mentalMathCountdownLabel, '1');
+    await tester.pump(const Duration(seconds: 1));
+    expect(state.mentalMathCountdownLabel, 'GO!');
+    await tester.pump(const Duration(seconds: 1));
+    expect(state.isMentalMathGameplay, isTrue);
+    expect(state.rt.q, isNotNull);
+    expect(state.debugQuestionTimerDurationMs(), 10000);
+    state.rt.timer?.cancel();
+
+    await state.replayGame();
+    expect(state.isMentalMathCountdown, isTrue);
+    expect(state.mentalMathCountdownLabel, '3');
+    await state.quitToMenu();
+    await tester.pump(const Duration(seconds: 5));
+    expect(state.activeRunSnapshot, isNull);
+    expect(state.rt.q, isNull);
+    expect(state.rt.timer, isNull);
+  });
+
   testWidgets('tracks each canonical outcome once without warm-up',
       (tester) async {
     final state = await makeState();
@@ -312,6 +363,8 @@ void main() {
     expect(state.rt.state, 'ending');
 
     await state.replayGame();
+    expect(state.isMentalMathCountdown, isTrue);
+    await tester.pump(const Duration(seconds: 4));
     state.rt.timer?.cancel();
     expect((
       state.rt.momentum,
@@ -336,6 +389,8 @@ void main() {
     expect(state.rt.terminalReason, MentalMathTerminalReason.practiceComplete);
 
     await state.replayGame();
+    expect(state.isMentalMathCountdown, isTrue);
+    await tester.pump(const Duration(seconds: 4));
     state.rt.timer?.cancel();
     state.rt.completedQuestions = 39;
     state.onAnswer(state.rt.q!.ans);
