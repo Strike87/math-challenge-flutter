@@ -75,6 +75,7 @@ void main() {
       ..rt.completedQuestions = 39;
     final coins = value.coins;
     value.onAnswer(value.rt.q!.ans);
+    expect(value.isMentalMathGameplay, isTrue);
     await tester.pump(const Duration(milliseconds: 1301));
     expect(value.mentalMathResultSummary!.dailyRewardAmountGranted, 50);
     expect(value.coins, coins + 50);
