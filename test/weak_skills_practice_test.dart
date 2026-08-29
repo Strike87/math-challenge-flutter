@@ -379,6 +379,7 @@ void main() {
 
     state.rt.momentum = 9;
     state.onAnswer(state.rt.q!.ans);
+    expect(state.isMentalMathGameplay, isTrue);
     await tester.pump(const Duration(milliseconds: 1301));
     expect(state.mentalMathResultSummary?.trainingArenaPracticeAreas,
         orderedEquals(plan.focusedOperations));

@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/engine/question_generator.dart';
@@ -7,9 +8,12 @@ import 'package:math_challenge/features/gameplay/domain/question_mechanic.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/models/math_fact.dart';
 import 'package:math_challenge/models/player.dart';
+import 'package:math_challenge/screens/game_screen.dart' as game_screen;
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
+import 'package:math_challenge/widgets/modals.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -59,6 +63,28 @@ void main() {
   Future<void> advance(WidgetTester tester, GameState state) async {
     await tester.pump(const Duration(milliseconds: 1301));
     state.rt.timer?.cancel();
+  }
+
+  Future<void> pumpGame(WidgetTester tester, GameState state) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: state),
+          ChangeNotifierProvider.value(value: state.settings),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                game_screen.GameScreen(),
+                ModalRouter(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
   }
 
   testWidgets('Number Type starts one cancellable Mental Math countdown',
@@ -442,6 +468,31 @@ void main() {
       0,
       null
     ));
+  });
+
+  testWidgets(
+      'IQ Spark keeps its final-answer feedback visible until the result modal',
+      (tester) async {
+    final state = await makeState();
+    state.debugStartGameFromSnapshot(snapshot());
+    state.rt.timer?.cancel();
+    await pumpGame(tester, state);
+
+    state
+      ..rt.momentum = 9
+      ..rt.completedQuestions = 39;
+    state.onAnswer(state.rt.q!.ans);
+    await tester.pump();
+
+    expect(state.rt.state, 'ending');
+    expect(find.byKey(const Key('mental-math-hud')), findsOneWidget);
+    expect(find.text('IQ SPARK'), findsOneWidget);
+    expect(find.text('STANDARD'), findsNothing);
+
+    await tester.pump(const Duration(milliseconds: 1301));
+
+    expect(state.currentModal, GameModal.win);
+    expect(find.text('MASTERY REACHED'), findsOneWidget);
   });
 
   testWidgets('freezes Mental Math result metrics after the terminal answer',
