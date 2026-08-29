@@ -1,4 +1,107 @@
 import 'enums.dart';
+import '../features/gameplay/domain/question_mechanic.dart';
+
+enum DailyMentalMathFocus { streakMaster, precision, consistency }
+
+extension DailyMentalMathFocusCopy on DailyMentalMathFocus {
+  String get label => switch (this) {
+        DailyMentalMathFocus.streakMaster => 'Streak Master',
+        DailyMentalMathFocus.precision => 'Precision',
+        DailyMentalMathFocus.consistency => 'Consistency',
+      };
+
+  String get target => switch (this) {
+        DailyMentalMathFocus.streakMaster => 'Best Streak ≥ 6',
+        DailyMentalMathFocus.precision => 'Accuracy ≥ 90%',
+        DailyMentalMathFocus.consistency => 'Accuracy ≥ 80% • Best Streak ≥ 4',
+      };
+}
+
+enum DailyMentalMathGrade { c, b, a, s, sPlus }
+
+extension DailyMentalMathGradeCopy on DailyMentalMathGrade {
+  String get label => switch (this) {
+        DailyMentalMathGrade.c => 'C',
+        DailyMentalMathGrade.b => 'B',
+        DailyMentalMathGrade.a => 'A',
+        DailyMentalMathGrade.s => 'S',
+        DailyMentalMathGrade.sPlus => 'S+',
+      };
+}
+
+class DailyMentalMathProfile {
+  const DailyMentalMathProfile({
+    required this.dateKey,
+    required this.operation,
+    required this.numberType,
+    required this.focus,
+  });
+
+  final String dateKey;
+  final Operation operation;
+  final NumberType numberType;
+  final DailyMentalMathFocus focus;
+
+  QuestionMechanic get mechanic => operation == Operation.mixed
+      ? QuestionMechanic.missingOperation
+      : QuestionMechanic.standard;
+
+  String get operationLabel => mechanic == QuestionMechanic.missingOperation
+      ? 'Missing Operation'
+      : operation.label;
+}
+
+class DailyMentalMathRecord {
+  const DailyMentalMathRecord({
+    required this.dateKey,
+    this.rewardClaimed = false,
+    this.officialFocusCompleted = false,
+    this.bestGrade,
+    this.bestAccuracy = 0,
+    this.bestStreak = 0,
+    this.bestAverageResponseMs,
+    this.bestFactsRecovered = 0,
+  });
+
+  final String dateKey;
+  final bool rewardClaimed;
+  final bool officialFocusCompleted;
+  final DailyMentalMathGrade? bestGrade;
+  final int bestAccuracy;
+  final int bestStreak;
+  final int? bestAverageResponseMs;
+  final int bestFactsRecovered;
+
+  Map<String, Object?> toJson() => {
+        'dateKey': dateKey,
+        'rewardClaimed': rewardClaimed,
+        'officialFocusCompleted': officialFocusCompleted,
+        'bestGrade': bestGrade?.name,
+        'bestAccuracy': bestAccuracy,
+        'bestStreak': bestStreak,
+        'bestAverageResponseMs': bestAverageResponseMs,
+        'bestFactsRecovered': bestFactsRecovered,
+      };
+
+  static DailyMentalMathRecord? fromJson(Object? value) {
+    if (value is! Map || value['dateKey'] is! String) return null;
+    final gradeName = value['bestGrade'];
+    return DailyMentalMathRecord(
+      dateKey: value['dateKey'] as String,
+      rewardClaimed: value['rewardClaimed'] == true,
+      officialFocusCompleted: value['officialFocusCompleted'] == true,
+      bestGrade: gradeName is String
+          ? DailyMentalMathGrade.values
+              .where((grade) => grade.name == gradeName)
+              .firstOrNull
+          : null,
+      bestAccuracy: (value['bestAccuracy'] as num?)?.toInt() ?? 0,
+      bestStreak: (value['bestStreak'] as num?)?.toInt() ?? 0,
+      bestAverageResponseMs: (value['bestAverageResponseMs'] as num?)?.toInt(),
+      bestFactsRecovered: (value['bestFactsRecovered'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
 
 /// Master Mode level definition — 5 story stages with bosses.
 class MasterLevel {

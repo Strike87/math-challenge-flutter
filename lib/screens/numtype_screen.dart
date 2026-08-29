@@ -31,7 +31,7 @@ class NumTypeScreen extends StatelessWidget {
                     _SetupHeader(
                       title: 'Number Type',
                       subtitle: 'Pick your number world',
-                      onBack: () => gs.showScreen(GameScreen.menu),
+                      onBack: gs.backFromNumType,
                       s: s,
                     ),
                     const SizedBox(height: 20),

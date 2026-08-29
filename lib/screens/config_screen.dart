@@ -58,7 +58,10 @@ class ConfigScreen extends StatelessWidget {
                                 '👥 2 Players',
                                 2,
                                 s.accent(GameConfig.punch),
-                                enabled: weakSkillsPlan == null,
+                                enabled: !gs.isMentalMathSetup &&
+                                    weakSkillsPlan == null &&
+                                    gs.setupTimingStyle ==
+                                        TimingStyle.perQuestion,
                               ),
                             ],
                             active: gs.setupPlayers,
@@ -69,6 +72,7 @@ class ConfigScreen extends StatelessWidget {
                           _ModeTabs(
                             active: gs.mode,
                             players: gs.setupPlayers,
+                            standardOnly: gs.isMentalMathSetup,
                             onPick: (m) => gs.setOption('mode', m.name),
                           ),
                           const SizedBox(height: 10),
@@ -160,6 +164,47 @@ class ConfigScreen extends StatelessWidget {
                             active: gs.questionCount,
                             onPick: (v) => gs.setOption('q', v),
                           ),
+                          const SizedBox(height: 18),
+                          _SectionTitle('Timing', s),
+                          _ToggleRow(
+                            options: [
+                              _ToggleOpt(
+                                'Per Question',
+                                TimingStyle.perQuestion,
+                                s.accent(GameConfig.sky),
+                              ),
+                              _ToggleOpt(
+                                'Deep Thinking',
+                                TimingStyle.untimed,
+                                s.accent(GameConfig.mint),
+                                enabled: gs.canSelectDeepThinking,
+                              ),
+                              _ToggleOpt(
+                                'Time Bank',
+                                TimingStyle.timeBank,
+                                s.accent(GameConfig.mango),
+                                enabled: gs.canSelectTimeBank,
+                              ),
+                            ],
+                            active: gs.setupTimingStyle,
+                            onPick: gs.setTimingStyle,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            switch (gs.setupTimingStyle) {
+                              TimingStyle.perQuestion =>
+                                'Timed per question based on your selected difficulty.',
+                              TimingStyle.untimed =>
+                                'No countdown - take the time you need.',
+                              TimingStyle.timeBank =>
+                                'One shared bank: 10s Easy, 8s Medium, or 6s Hard per question.',
+                            },
+                            style: TextStyle(
+                              color: s.muted,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -217,10 +262,16 @@ class ConfigScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(width: 8),
                                     Switch.adaptive(
-                                      value: gs.adaptive,
+                                      value: gs.isMentalMathSetup
+                                          ? false
+                                          : gs.adaptive,
                                       activeThumbColor:
                                           s.accent(GameConfig.coral),
-                                      onChanged: gs.setAdaptive,
+                                      onChanged: gs.isMentalMathSetup ||
+                                              gs.setupTimingStyle !=
+                                                  TimingStyle.perQuestion
+                                          ? null
+                                          : gs.setAdaptive,
                                     ),
                                   ],
                                 ),
@@ -605,7 +656,9 @@ class _ToggleButton<T> extends StatelessWidget {
 
 ({String icon, String label}) _splitIconLabel(String value) {
   final firstSpace = value.indexOf(' ');
-  if (firstSpace <= 0) return (icon: '', label: value);
+  if (firstSpace <= 0 || value.codeUnitAt(0) < 128) {
+    return (icon: '', label: value);
+  }
   final icon = value.substring(0, firstSpace);
   final label = value.substring(firstSpace + 1).trim();
   if (label.isEmpty) return (icon: '', label: value);
@@ -614,10 +667,14 @@ class _ToggleButton<T> extends StatelessWidget {
 
 class _ModeTabs extends StatelessWidget {
   const _ModeTabs(
-      {required this.active, required this.onPick, required this.players});
+      {required this.active,
+      required this.onPick,
+      required this.players,
+      required this.standardOnly});
   final GameMode active;
   final void Function(GameMode) onPick;
   final int players;
+  final bool standardOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -648,7 +705,12 @@ class _ModeTabs extends StatelessWidget {
                     mode: availableModes[i],
                     active: availableModes[i] == active,
                     disabled: !GameMode.isAvailableForPlayers(
-                        availableModes[i], players),
+                            availableModes[i], players) ||
+                        (standardOnly &&
+                            availableModes[i] != GameMode.standard) ||
+                        (context.watch<GameState>().setupTimingStyle !=
+                                TimingStyle.perQuestion &&
+                            availableModes[i] != GameMode.standard),
                     compact: compact,
                     settings: s,
                     onPick: onPick,

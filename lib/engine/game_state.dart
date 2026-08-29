@@ -11,6 +11,7 @@ import '../features/economy/domain/daily_bonus_policy.dart';
 import '../features/economy/domain/number_type_unlock_policy.dart';
 import '../features/family/domain/family_eligibility.dart';
 import '../features/game_brain/domain/game_brain_eligibility.dart';
+import '../features/game_brain/experience/p1_f01_device_validation_probe.dart';
 import '../features/game_brain/experience/p1_f01_integrity_store.dart';
 import '../features/game_brain/experience/question_experience_observation.dart';
 import '../features/game_brain/experience/run_local_question_difficulty_measurement_collector.dart';
@@ -26,6 +27,7 @@ import '../features/weak_skills/domain/weak_skills_policy.dart';
 import '../game_config.dart';
 import '../models/celebration.dart';
 import '../models/enums.dart';
+import '../models/math_fact.dart';
 import '../models/player.dart';
 import '../models/game_data.dart';
 import '../services/storage.dart';
@@ -37,7 +39,7 @@ import '../services/play_games.dart';
 import 'question_generator.dart';
 
 /// Screen identifier — mirrors the original HTML section IDs.
-enum GameScreen { menu, numType, config, player, game }
+enum GameScreen { menu, practiceStyle, numType, config, player, game }
 
 /// Modal identifier — mirrors the original HTML modal IDs.
 enum GameModal {
@@ -45,6 +47,7 @@ enum GameModal {
   settings,
   masterIntro,
   dailyBoss,
+  dailyMentalMath,
   stageCleared,
   win,
   quitConfirm,
@@ -66,6 +69,99 @@ enum _QuestionTerminalClaim {
   timeout,
   switchReplacement,
   neutral,
+}
+
+enum MentalMathTerminalReason {
+  masteryReached,
+  practiceComplete,
+  trainingComplete,
+}
+
+@immutable
+class MentalMathResultSummary {
+  const MentalMathResultSummary({
+    required this.avatarEmoji,
+    required this.terminalTitle,
+    required this.message,
+    required this.peakMomentum,
+    required this.bestStreak,
+    required this.accuracyPercent,
+    required this.averageResponseMs,
+    required this.fastestAnswerMs,
+    required this.factsRecovered,
+    this.trainingArenaPracticeAreas,
+    this.dailyFocus,
+    this.currentRunFocusMet = false,
+    this.officialFocusCompleted = false,
+    this.focusGrade,
+    this.todaysBestGrade,
+    this.isNewDailyBest = false,
+    this.dailyRewardAmountGranted = 0,
+    this.dailyRewardAlreadyClaimed = false,
+    this.perfectDay = false,
+  });
+
+  final String avatarEmoji;
+  final String terminalTitle;
+  final String message;
+  final int peakMomentum;
+  final int bestStreak;
+  final int accuracyPercent;
+  final int? averageResponseMs;
+  final int? fastestAnswerMs;
+  final int factsRecovered;
+  final List<Operation>? trainingArenaPracticeAreas;
+  final DailyMentalMathFocus? dailyFocus;
+  final bool currentRunFocusMet;
+  final bool officialFocusCompleted;
+  final DailyMentalMathGrade? focusGrade;
+  final DailyMentalMathGrade? todaysBestGrade;
+  final bool isNewDailyBest;
+  final int dailyRewardAmountGranted;
+  final bool dailyRewardAlreadyClaimed;
+  final bool perfectDay;
+}
+
+class _MentalMathPendingFact {
+  _MentalMathPendingFact({
+    required this.familyKey,
+    required this.fact,
+    required this.mechanic,
+    required this.allowedOperations,
+    required this.earliestEligibleCompletedQuestion,
+  });
+
+  final String familyKey;
+  final MathFact fact;
+  final QuestionMechanic mechanic;
+  final Set<Operation> allowedOperations;
+  final int earliestEligibleCompletedQuestion;
+  final Set<String> seenRepresentationKeys = {};
+  int followUpsUsed = 0;
+}
+
+class _DailyMentalMathCompletion {
+  const _DailyMentalMathCompletion({
+    required this.focus,
+    required this.currentRunFocusMet,
+    required this.officialFocusCompleted,
+    required this.grade,
+    required this.todaysBestGrade,
+    required this.isNewBest,
+    required this.rewardGranted,
+    required this.rewardAlreadyClaimed,
+    required this.perfectDay,
+  });
+
+  final DailyMentalMathFocus focus;
+  final bool currentRunFocusMet;
+  final bool officialFocusCompleted;
+  final DailyMentalMathGrade grade;
+  final DailyMentalMathGrade? todaysBestGrade;
+  final bool isNewBest;
+  final int rewardGranted;
+  final bool rewardAlreadyClaimed;
+  final bool perfectDay;
 }
 
 /// Runtime game state (the `rt` object in the original JS).
@@ -93,6 +189,10 @@ class RuntimeState {
   int timerDurationMs;
   int timerElapsedAtPause;
   int qTimerLimit;
+  Timer? timeBankTimer;
+  int timeBankTimerStart;
+  int timeBankRemainingMs;
+  bool timeBankExhausted;
   int blitzTotalMs;
   int blitzElapsedMs;
   int combo;
@@ -115,6 +215,23 @@ class RuntimeState {
   _FollowUpData? followUpData;
   int lastDailyBossClaimDay;
   int weakSkillsScheduleIndex;
+  int momentum;
+  int peakMomentum;
+  int currentStreak;
+  int bestStreak;
+  int completedQuestions;
+  int mentalMathAnsweredResponseTotalMs;
+  int mentalMathAnsweredResponseCount;
+  int nextQuestionTimerBudgetMs;
+  final List<_MentalMathPendingFact> mentalMathPendingFacts;
+  final Set<String> mentalMathClosedFactFamilies;
+  String? mentalMathTargetedFamilyKey;
+  String? mentalMathTargetedRepresentationKey;
+  bool mentalMathMustGenerateNormalNext;
+  int factsRecovered;
+  MentalMathTerminalReason? terminalReason;
+  Timer? mentalMathCountdownTimer;
+  int mentalMathCountdownStep;
 
   RuntimeState()
       : challenge = Operation.mixed,
@@ -140,6 +257,10 @@ class RuntimeState {
         timerDurationMs = 0,
         timerElapsedAtPause = 0,
         qTimerLimit = 0,
+        timeBankTimer = null,
+        timeBankTimerStart = 0,
+        timeBankRemainingMs = 0,
+        timeBankExhausted = false,
         blitzTotalMs = GameConfig.blitzTimerDefault,
         blitzElapsedMs = 0,
         combo = 0,
@@ -161,7 +282,24 @@ class RuntimeState {
         isFollowUp = false,
         followUpData = null,
         lastDailyBossClaimDay = -1,
-        weakSkillsScheduleIndex = 0;
+        weakSkillsScheduleIndex = 0,
+        momentum = 0,
+        peakMomentum = 0,
+        currentStreak = 0,
+        bestStreak = 0,
+        completedQuestions = 0,
+        mentalMathAnsweredResponseTotalMs = 0,
+        mentalMathAnsweredResponseCount = 0,
+        nextQuestionTimerBudgetMs = 10000,
+        mentalMathPendingFacts = [],
+        mentalMathClosedFactFamilies = {},
+        mentalMathTargetedFamilyKey = null,
+        mentalMathTargetedRepresentationKey = null,
+        mentalMathMustGenerateNormalNext = false,
+        factsRecovered = 0,
+        terminalReason = null,
+        mentalMathCountdownTimer = null,
+        mentalMathCountdownStep = -1;
 }
 
 class _FollowUpData {
@@ -183,10 +321,13 @@ class GameRunSnapshot {
     required this.questionTarget,
     this.operationQuestStageId,
     this.questionMechanic = QuestionMechanic.standard,
+    this.timingStyle = TimingStyle.perQuestion,
     this.operationPool,
     this.integerQuest = false,
     this.decimalQuest = false,
     this.weakSkillsPlan,
+    this.mentalMathEntry,
+    this.dailyMentalMathProfile,
   });
 
   final GameRunType runType;
@@ -199,10 +340,33 @@ class GameRunSnapshot {
   final int questionTarget;
   final OperationQuestStageId? operationQuestStageId;
   final QuestionMechanic questionMechanic;
+  final TimingStyle timingStyle;
   final List<Operation>? operationPool;
   final bool integerQuest;
   final bool decimalQuest;
   final WeakSkillsPlan? weakSkillsPlan;
+  final MentalMathEntry? mentalMathEntry;
+  final DailyMentalMathProfile? dailyMentalMathProfile;
+
+  GameRunSnapshot withTimingStyle(TimingStyle value) => GameRunSnapshot(
+        runType: runType,
+        mode: mode,
+        operation: operation,
+        difficulty: difficulty,
+        numberType: numberType,
+        answerStyle: answerStyle,
+        players: players,
+        questionTarget: questionTarget,
+        operationQuestStageId: operationQuestStageId,
+        questionMechanic: questionMechanic,
+        timingStyle: value,
+        operationPool: operationPool,
+        integerQuest: integerQuest,
+        decimalQuest: decimalQuest,
+        weakSkillsPlan: weakSkillsPlan,
+        mentalMathEntry: mentalMathEntry,
+        dailyMentalMathProfile: dailyMentalMathProfile,
+      );
 }
 
 @visibleForTesting
@@ -268,11 +432,22 @@ class GameState extends ChangeNotifier {
         unawaited(handleIapPurchase(purchase));
       }
     });
+    P1F01DeviceValidationServiceExtension.register(
+      P1F01DeviceValidationProbe(_p1F01IntegrityStore),
+    );
   }
 
   static const double _masteryMax = AdaptiveDifficultyEngine.maxMastery;
   static const double _masteryDefault = AdaptiveDifficultyEngine.defaultMastery;
+  static const int _untimedMasteryResponseMs = 2000;
+  static const Map<Difficulty, int> _timeBankBaseMs = {
+    Difficulty.easy: 10000,
+    Difficulty.medium: 8000,
+    Difficulty.hard: 6000,
+  };
   static const int dailyBonusCoins = 20;
+  static const int dailyMentalMathRewardCoins = 50;
+  static const String _dailyMentalMathStorageKey = 'mc_dailyMentalMath';
   static const int rewardedAdCoins = 10;
   static const int rewardedCooldownMs = 300000;
   static const int interstitialCadenceGames = 3;
@@ -328,6 +503,7 @@ class GameState extends ChangeNotifier {
     'mc_dailyCoinsDate',
     'mc_dailyBossClaimed',
     'mc_lastDailyBossClaimDay',
+    _dailyMentalMathStorageKey,
     'mc_puBonus',
     'mc_livesBonus',
     'mc_shopOwned',
@@ -377,6 +553,9 @@ class GameState extends ChangeNotifier {
   OperationQuestStageId? _pendingOperationQuestStageId;
   QuestionMechanic _pendingQuestionMechanic = QuestionMechanic.standard;
   WeakSkillsPlan? _pendingWeakSkillsPlan;
+  MentalMathEntry? _pendingMentalMathEntry;
+  bool? _adaptiveBeforeMentalMath;
+  bool _pendingPracticeStyle = false;
 
   // ─── Options ────────────────────────────────────────────────
   int players = 1;
@@ -384,6 +563,7 @@ class GameState extends ChangeNotifier {
   Difficulty diff = Difficulty.easy;
   int questionCount = 10;
   bool adaptive = false;
+  TimingStyle timingStyle = TimingStyle.perQuestion;
   bool gameBrainPreference = false;
   NumberType numType = NumberType.natural;
   AnswerStyle selectedAnswerStyle = AnswerStyle.choice4;
@@ -432,6 +612,7 @@ class GameState extends ChangeNotifier {
   List<String> dailyChallengeIds = [];
   DailyBoss? dailyBoss;
   String dailyBossDateKey = '';
+  DailyMentalMathRecord? dailyMentalMathRecord;
   List<String> shopOwned = [];
   List<String> unlockedAvatars = [];
   List<String> unlockedHats = [];
@@ -476,6 +657,13 @@ class GameState extends ChangeNotifier {
   @visibleForTesting
   Future<P1F01IntegritySnapshot?> debugP1F01IntegritySnapshot() =>
       _p1F01IntegrityStore.latestSnapshot();
+  @visibleForTesting
+  bool get debugP1F01IntegrityRunEligible => _p1F01IntegrityRunEligible;
+  @visibleForTesting
+  void debugStartGameFromSnapshot(GameRunSnapshot snapshot) {
+    _startGame(replaySnapshot: snapshot, skipMentalMathCountdown: true);
+  }
+
   QuestionDifficultyLegality? get currentQuestionDifficultyLegality =>
       _questionDifficultyLegality;
   @visibleForTesting
@@ -495,16 +683,99 @@ class GameState extends ChangeNotifier {
   bool get isMissingNumberQuest =>
       _runSnapshot?.questionMechanic == QuestionMechanic.missingNumber;
   WeakSkillsPlan? get setupWeakSkillsPlan => _pendingWeakSkillsPlan;
-  int get setupPlayers =>
-      _pendingOperationQuestStageId == null && _pendingWeakSkillsPlan == null
-          ? players
-          : 1;
+  MentalMathEntry? get setupMentalMathEntry => _pendingMentalMathEntry;
+  bool get isMentalMathSetup => _pendingMentalMathEntry != null;
+  int get setupPlayers => _pendingOperationQuestStageId == null &&
+          _pendingWeakSkillsPlan == null &&
+          !isMentalMathSetup
+      ? players
+      : 1;
+  bool get canSelectDeepThinking =>
+      _pendingOperationQuestStageId == null &&
+      _pendingWeakSkillsPlan == null &&
+      !isMentalMathSetup &&
+      _pendingQuestionMechanic == QuestionMechanic.standard &&
+      mode == GameMode.standard &&
+      setupPlayers == 1 &&
+      !adaptive &&
+      rt.challenge != Operation.master &&
+      rt.challenge != Operation.dailyBoss;
+  bool get canSelectTimeBank =>
+      canSelectDeepThinking && playerConfigurableDifficultySet.contains(diff);
+  TimingStyle get setupTimingStyle => switch (timingStyle) {
+        TimingStyle.untimed when canSelectDeepThinking => TimingStyle.untimed,
+        TimingStyle.timeBank when canSelectTimeBank => TimingStyle.timeBank,
+        _ => TimingStyle.perQuestion,
+      };
+  bool get _isDeepThinkingRun {
+    final snapshot = _runSnapshot;
+    return snapshot != null &&
+        snapshot.timingStyle == TimingStyle.untimed &&
+        snapshot.runType == GameRunType.normal &&
+        snapshot.mode == GameMode.standard &&
+        snapshot.players == 1 &&
+        snapshot.questionMechanic == QuestionMechanic.standard &&
+        snapshot.operation != Operation.master &&
+        snapshot.operation != Operation.dailyBoss &&
+        snapshot.operationQuestStageId == null &&
+        snapshot.weakSkillsPlan == null;
+  }
+
+  bool get isTimeBankRun {
+    final snapshot = _runSnapshot;
+    return snapshot != null &&
+        snapshot.timingStyle == TimingStyle.timeBank &&
+        _supportsTimeBankSnapshot(snapshot);
+  }
+
+  int get timeBankRemainingMs {
+    if (!isTimeBankRun) return 0;
+    if (rt.timeBankTimerStart <= 0) return rt.timeBankRemainingMs;
+    final elapsed =
+        DateTime.now().millisecondsSinceEpoch - rt.timeBankTimerStart;
+    return max(0, rt.timeBankRemainingMs - elapsed);
+  }
+
+  Iterable<PowerUp> get _availablePowerUpsForActiveRun => _isDeepThinkingRun ||
+          isTimeBankRun
+      ? PowerUp.values.where((pu) => pu != PowerUp.time && pu != PowerUp.freeze)
+      : PowerUp.values;
+
   int get activePlayers => _runSnapshot?.players ?? players;
   GameMode get activeMode => _runSnapshot?.mode ?? mode;
   Difficulty get activeDifficulty => _runSnapshot?.difficulty ?? diff;
   NumberType get activeNumberType => _runSnapshot?.numberType ?? numType;
+  bool get _isMentalMathRun => _runSnapshot?.mentalMathEntry != null;
+  bool get isDailyMentalMathRun =>
+      _runSnapshot?.mentalMathEntry == MentalMathEntry.daily;
+  bool get isTrainingArenaIqSparkRun =>
+      _runSnapshot?.mentalMathEntry == MentalMathEntry.weakSkills;
+  DailyMentalMathProfile get dailyMentalMathProfile =>
+      _dailyMentalMathProfileFor(DateTime.now());
+  DailyMentalMathRecord? get currentDailyMentalMathRecord {
+    final record = dailyMentalMathRecord;
+    return record?.dateKey == _dailyDateKey() ? record : null;
+  }
+
+  bool get isDailyMentalMathClearedToday =>
+      currentDailyMentalMathRecord?.rewardClaimed ?? false;
+  bool get isDailyMentalMathPerfectDay => _isDailyMentalMathPerfectDay(
+        currentDailyMentalMathRecord,
+      );
+  bool get isMentalMathCountdown => _isMentalMathRun && rt.state == 'countdown';
+  bool get isMentalMathGameplay => _isMentalMathRun && rt.state == 'playing';
+  String get mentalMathCountdownLabel => switch (rt.mentalMathCountdownStep) {
+        3 => '3',
+        2 => '2',
+        1 => '1',
+        0 => 'GO!',
+        _ => '',
+      };
   int get activeQuestionTarget => _runSnapshot?.questionTarget ?? questionCount;
-  bool get activeAdaptive => isOperationQuest ? false : adaptive;
+  bool get activeAdaptive =>
+      isOperationQuest || isTimeBankRun || _runSnapshot?.mentalMathEntry != null
+          ? false
+          : adaptive;
   bool get effectiveGameBrainEnabled =>
       gameBrainPreference &&
       gameBrainEligibility == GameBrainEligibility.eligible;
@@ -538,6 +809,7 @@ class GameState extends ChangeNotifier {
   String resultIcon = '🏆';
   String resultTitle = 'Player Report';
   String resultDescription = '';
+  MentalMathResultSummary? mentalMathResultSummary;
   AdultGateChallenge? adultGateChallenge;
   IapProduct? pendingIapProduct;
   String adultGateError = '';
@@ -625,6 +897,7 @@ class GameState extends ChangeNotifier {
     _disposed = true;
     _turnSeq++;
     _closeActiveQuestionNeutrally();
+    rt.mentalMathCountdownTimer?.cancel();
     _invalidateActiveRun();
     rt.gameActive = false;
     _iapPurchaseSub?.cancel();
@@ -634,6 +907,7 @@ class GameState extends ChangeNotifier {
     _delayedResultModalTimer?.cancel();
     _cancelDelayedLossEnd();
     rt.timer?.cancel();
+    rt.timeBankTimer?.cancel();
     if (_ownsP1F01IntegrityStore) {
       unawaited(_p1F01IntegrityStore.close());
     }
@@ -688,6 +962,7 @@ class GameState extends ChangeNotifier {
     final today = DateTime.now();
     dailyBossDateKey = _dailyDateKey(today);
     dailyBoss = _generateDailyBoss(today);
+    dailyMentalMathRecord = _loadDailyMentalMathRecord();
     adsRemoved = Storage.getBool('mc_adsRemoved', false);
     iapDeliveredTxs = Storage.getStringList('mc_iapDeliveredTxs', []);
     adGameCount = Storage.getInt('mc_adGameCount', 0);
@@ -799,6 +1074,13 @@ class GameState extends ChangeNotifier {
     await Storage.setObject('mc_avatarCustom1', avatarCustom['1']!.toJson());
     await Storage.setObject('mc_avatarCustom2', avatarCustom['2']!.toJson());
     await Storage.setString('mc_dailyProgress', _encodeDailyProgress());
+    final dailyMentalMath = dailyMentalMathRecord;
+    if (dailyMentalMath == null) {
+      await Storage.remove(_dailyMentalMathStorageKey);
+    } else {
+      await Storage.setObject(
+          _dailyMentalMathStorageKey, dailyMentalMath.toJson());
+    }
     await Storage.setStringList('mc_shopOwned', shopOwned);
     await Storage.setStringList('mc_unlockedAvatars', unlockedAvatars);
     await Storage.setStringList('mc_unlockedHats', unlockedHats);
@@ -1733,6 +2015,59 @@ class GameState extends ChangeNotifier {
   @visibleForTesting
   DailyBoss debugGenerateDailyBoss(DateTime date) => _generateDailyBoss(date);
 
+  static final List<
+      ({
+        Operation operation,
+        NumberType numberType,
+        DailyMentalMathFocus focus
+      })> _dailyMentalMathProfilePool = [
+    for (final operation in const [
+      Operation.addition,
+      Operation.subtraction,
+      Operation.multiplication,
+      Operation.division,
+      Operation.mixed,
+    ])
+      for (final numberType in const [
+        NumberType.natural,
+        NumberType.integers,
+        NumberType.rationals,
+      ])
+        for (final focus in DailyMentalMathFocus.values)
+          (operation: operation, numberType: numberType, focus: focus),
+  ];
+
+  DailyMentalMathProfile _dailyMentalMathProfileFor(DateTime date) {
+    final dateKey = _dailyDateKey(date);
+    final entry = _dailyMentalMathProfilePool[
+        _hashString('daily-mental-math:$dateKey') %
+            _dailyMentalMathProfilePool.length];
+    return DailyMentalMathProfile(
+      dateKey: dateKey,
+      operation: entry.operation,
+      numberType: entry.numberType,
+      focus: entry.focus,
+    );
+  }
+
+  DailyMentalMathRecord? _loadDailyMentalMathRecord() {
+    try {
+      return DailyMentalMathRecord.fromJson(
+        jsonDecode(Storage.getString(_dailyMentalMathStorageKey, '')),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @visibleForTesting
+  DailyMentalMathProfile debugDailyMentalMathProfile(DateTime date) =>
+      _dailyMentalMathProfileFor(date);
+
+  @visibleForTesting
+  int get debugDailyMentalMathProfilePoolSize =>
+      _dailyMentalMathProfilePool.length;
+
   void _updateDailyBossClaimStatus() {
     final today = _dailyDateKey();
     final legacyDay =
@@ -1763,7 +2098,9 @@ class GameState extends ChangeNotifier {
   bool isBannerEligibleFor(GameScreen screen) =>
       !adsRemoved &&
       currentModal == GameModal.none &&
-      (screen == GameScreen.numType || screen == GameScreen.player);
+      (screen == GameScreen.practiceStyle ||
+          screen == GameScreen.numType ||
+          screen == GameScreen.player);
 
   Widget? bannerWidget() => adsRemoved
       ? null
@@ -1923,7 +2260,12 @@ class GameState extends ChangeNotifier {
 
   // ─── Screen / modal routing ─────────────────────────────────
   void showScreen(GameScreen s) {
-    if (s == GameScreen.menu) _pendingWeakSkillsPlan = null;
+    if (s == GameScreen.menu) {
+      _clearPendingMentalMathEntry();
+      _pendingPracticeStyle = false;
+      _pendingWeakSkillsPlan = null;
+      _normalizeSetupTimingStyle();
+    }
     _logPerformance('screen transition: ${currentScreen.name} -> ${s.name}');
     currentScreen = s;
     unawaited(syncBannerForCurrentScreen());
@@ -1934,7 +2276,7 @@ class GameState extends ChangeNotifier {
     _logPerformance('modal transition: ${currentModal.name} -> ${m.name}');
     currentModal = m;
     unawaited(syncBannerForCurrentScreen());
-    if (rt.state == 'playing' && _isPausingModal(m)) {
+    if (rt.state == 'playing' && _isPausingModal(m) && !isTimeBankRun) {
       rt.state = 'paused';
     }
     notifyListeners();
@@ -1972,6 +2314,8 @@ class GameState extends ChangeNotifier {
 
   // ─── Configuration actions ──────────────────────────────────
   void goToConfig(String operationName) {
+    _clearPendingMentalMathEntry();
+    _pendingPracticeStyle = false;
     final missingOperation = operationName == 'missingOperation';
     final weakSkills = operationName == 'weakSkills';
     _pendingWeakSkillsPlan = weakSkills ? selectWeakSkillsPlan(skillMap) : null;
@@ -1979,6 +2323,7 @@ class GameState extends ChangeNotifier {
     _pendingQuestionMechanic = missingOperation
         ? QuestionMechanic.missingOperation
         : QuestionMechanic.standard;
+    _normalizeSetupTimingStyle();
     if (op == Operation.master) {
       rt.challenge = Operation.master;
       showModal(GameModal.masterIntro);
@@ -1992,6 +2337,66 @@ class GameState extends ChangeNotifier {
     showScreen(GameScreen.numType);
   }
 
+  void goToPracticeStyle(String operationName) {
+    _clearPendingMentalMathEntry();
+    _pendingPracticeStyle = true;
+    _pendingWeakSkillsPlan = null;
+    _pendingOperationQuestStageId = null;
+    _pendingQuestionMechanic = operationName == 'missingOperation'
+        ? QuestionMechanic.missingOperation
+        : QuestionMechanic.standard;
+    rt.challenge = operationName == 'missingOperation'
+        ? Operation.mixed
+        : Operation.fromString(operationName);
+    showScreen(GameScreen.practiceStyle);
+  }
+
+  void startTimingPractice() {
+    _clearPendingMentalMathEntry();
+    showScreen(GameScreen.numType);
+  }
+
+  void startMentalMathFreePractice() {
+    _startMentalMathPractice(MentalMathEntry.freePractice);
+  }
+
+  void startMentalMathWeakSkillsPractice() {
+    if (_pendingWeakSkillsPlan == null) return;
+    _startMentalMathPractice(MentalMathEntry.weakSkills);
+  }
+
+  void _startMentalMathPractice(MentalMathEntry entry) {
+    _pendingMentalMathEntry = entry;
+    _adaptiveBeforeMentalMath ??= adaptive;
+    adaptive = false;
+    players = 1;
+    mode = GameMode.standard;
+    diff = Difficulty.medium;
+    questionCount = 40;
+    selectedAnswerStyle = AnswerStyle.choice4;
+    timingStyle = TimingStyle.perQuestion;
+    showScreen(GameScreen.numType);
+  }
+
+  void cancelPracticeStyle() {
+    if (_pendingWeakSkillsPlan != null) {
+      currentScreen = GameScreen.menu;
+      showModal(GameModal.weakSkillsPractice);
+      return;
+    }
+    _clearPendingMentalMathEntry();
+    _pendingPracticeStyle = false;
+    _pendingQuestionMechanic = QuestionMechanic.standard;
+    showScreen(GameScreen.menu);
+  }
+
+  void _clearPendingMentalMathEntry() {
+    _pendingMentalMathEntry = null;
+    final previousAdaptive = _adaptiveBeforeMentalMath;
+    _adaptiveBeforeMentalMath = null;
+    if (previousAdaptive != null) adaptive = previousAdaptive;
+  }
+
   void continueWeakSkillsSetup() {
     if (currentModal != GameModal.weakSkillsPractice ||
         _pendingWeakSkillsPlan == null) {
@@ -2001,7 +2406,8 @@ class GameState extends ChangeNotifier {
       'modal transition: ${currentModal.name} -> ${GameModal.none.name}',
     );
     currentModal = GameModal.none;
-    showScreen(GameScreen.numType);
+    _pendingPracticeStyle = true;
+    showScreen(GameScreen.practiceStyle);
   }
 
   void cancelWeakSkillsSetup() => closeModal();
@@ -2021,12 +2427,26 @@ class GameState extends ChangeNotifier {
     numTypeUnlockFeedback = '';
     numType = nt;
     await save();
+    if (isMentalMathSetup) {
+      startGame();
+      return;
+    }
     showScreen(GameScreen.config);
+  }
+
+  void backFromNumType() {
+    if (_pendingPracticeStyle) {
+      _clearPendingMentalMathEntry();
+      showScreen(GameScreen.practiceStyle);
+      return;
+    }
+    showScreen(GameScreen.menu);
   }
 
   void setOption(String key, dynamic value) {
     switch (key) {
       case 'players':
+        if (isMentalMathSetup && value != 1) return;
         players = value as int;
         if (!GameMode.isAvailableForPlayers(mode, players)) {
           mode = GameMode.standard;
@@ -2034,6 +2454,7 @@ class GameState extends ChangeNotifier {
         break;
       case 'mode':
         final nextMode = GameMode.fromString(value as String);
+        if (isMentalMathSetup && nextMode != GameMode.standard) return;
         if (GameMode.isAvailableForPlayers(nextMode, setupPlayers)) {
           mode = nextMode;
         } else {
@@ -2047,11 +2468,23 @@ class GameState extends ChangeNotifier {
         questionCount = value as int;
         break;
     }
+    _normalizeSetupTimingStyle();
     notifyListeners();
   }
 
   void setAdaptive(bool v) {
+    if (isMentalMathSetup) return;
     adaptive = v;
+    _normalizeSetupTimingStyle();
+    notifyListeners();
+  }
+
+  void setTimingStyle(TimingStyle style) {
+    timingStyle = switch (style) {
+      TimingStyle.untimed when canSelectDeepThinking => style,
+      TimingStyle.timeBank when canSelectTimeBank => style,
+      _ => TimingStyle.perQuestion,
+    };
     notifyListeners();
   }
 
@@ -2071,10 +2504,16 @@ class GameState extends ChangeNotifier {
       : AnswerStyle.choice4;
 
   void goToPlayerSetup() {
+    _normalizeSetupTimingStyle();
     showScreen(GameScreen.player);
   }
 
+  void _normalizeSetupTimingStyle() {
+    timingStyle = setupTimingStyle;
+  }
+
   void showOperationQuest() {
+    _clearPendingMentalMathEntry();
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     _pendingOperationQuestStageId = null;
@@ -2082,6 +2521,7 @@ class GameState extends ChangeNotifier {
   }
 
   void startOperationQuestStage(OperationQuestStageId id) {
+    _clearPendingMentalMathEntry();
     if (!operationQuestProgress.isUnlocked(id)) return;
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
@@ -2106,6 +2546,7 @@ class GameState extends ChangeNotifier {
   }
 
   void startMasterMode() {
+    _clearPendingMentalMathEntry();
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     closeModal();
@@ -2122,12 +2563,42 @@ class GameState extends ChangeNotifier {
   }
 
   void showDailyBoss() {
+    _clearPendingMentalMathEntry();
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     showModal(GameModal.dailyBoss);
   }
 
+  void showDailyMentalMath() {
+    _clearPendingMentalMathEntry();
+    _pendingWeakSkillsPlan = null;
+    _pendingQuestionMechanic = QuestionMechanic.standard;
+    showModal(GameModal.dailyMentalMath);
+  }
+
+  void startDailyMentalMath() {
+    final profile = dailyMentalMathProfile;
+    closeModal();
+    _startGame(
+      replaySnapshot: GameRunSnapshot(
+        runType: GameRunType.normal,
+        mode: GameMode.standard,
+        operation: profile.operation,
+        difficulty: Difficulty.medium,
+        numberType: profile.numberType,
+        answerStyle: AnswerStyle.choice4,
+        players: 1,
+        questionTarget: 40,
+        questionMechanic: profile.mechanic,
+        timingStyle: TimingStyle.perQuestion,
+        mentalMathEntry: MentalMathEntry.daily,
+        dailyMentalMathProfile: profile,
+      ),
+    );
+  }
+
   void startDailyBoss() {
+    _clearPendingMentalMathEntry();
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     closeModal();
@@ -2148,7 +2619,10 @@ class GameState extends ChangeNotifier {
   // ─── Game lifecycle ─────────────────────────────────────────
   void startGame() => _startGame();
 
-  void _startGame({GameRunSnapshot? replaySnapshot}) {
+  void _startGame({
+    GameRunSnapshot? replaySnapshot,
+    bool skipMentalMathCountdown = false,
+  }) {
     _postFeedbackTimer?.cancel();
     _delayedResultModalTimer?.cancel();
 
@@ -2161,8 +2635,16 @@ class GameState extends ChangeNotifier {
       return;
     }
 
+    if (replaySnapshot == null &&
+        isMentalMathSetup &&
+        !_isValidMentalMathFreePracticeSetup()) {
+      notifyListeners();
+      return;
+    }
+
     _closeActiveQuestionNeutrally();
     rt.timer?.cancel();
+    rt.mentalMathCountdownTimer?.cancel();
     _invalidateActiveRun();
     _activeRunId = ++_lastRunId;
     _cancelDelayedLossEnd();
@@ -2170,24 +2652,31 @@ class GameState extends ChangeNotifier {
     closeModal();
 
     final pendingQuestId = _pendingOperationQuestStageId;
-    final snapshot = replaySnapshot ??
-        (pendingQuestId == null
-            ? GameRunSnapshot(
-                runType: GameRunType.normal,
-                mode: mode,
-                operation: rt.challenge,
-                difficulty: diff,
-                numberType: numType,
-                answerStyle: effectiveAnswerStyle,
-                players: setupPlayers,
-                questionTarget: questionCount,
-                questionMechanic: _pendingQuestionMechanic,
-                weakSkillsPlan: _pendingWeakSkillsPlan,
-              )
-            : _operationQuestSnapshot(pendingQuestId));
+    final previousSnapshot = replaySnapshot == null ? null : _runSnapshot;
+    final snapshot = _normalizeSnapshotTimingStyle(
+        replaySnapshot ??
+            (pendingQuestId == null
+                ? GameRunSnapshot(
+                    runType: GameRunType.normal,
+                    mode: mode,
+                    operation: rt.challenge,
+                    difficulty: diff,
+                    numberType: numType,
+                    answerStyle: effectiveAnswerStyle,
+                    players: setupPlayers,
+                    questionTarget: questionCount,
+                    questionMechanic: _pendingQuestionMechanic,
+                    timingStyle: setupTimingStyle,
+                    weakSkillsPlan: _pendingWeakSkillsPlan,
+                    mentalMathEntry: _pendingMentalMathEntry,
+                  )
+                : _operationQuestSnapshot(pendingQuestId)),
+        previousSnapshot: previousSnapshot);
     _pendingOperationQuestStageId = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     _pendingWeakSkillsPlan = null;
+    _clearPendingMentalMathEntry();
+    _pendingPracticeStyle = false;
     _runSnapshot = snapshot;
     _gameBrain = GameBrain();
     _lastContextEvidenceResult = null;
@@ -2200,14 +2689,17 @@ class GameState extends ChangeNotifier {
         isMasterOrBoss: isMaster || isBoss,
       );
     }
-    _applyPowerUpBonusIfEligible(
-      players: snapshot.players,
-      isMaster: isMaster,
-      isBoss: isBoss,
-    );
+    if (snapshot.mentalMathEntry == null) {
+      _applyPowerUpBonusIfEligible(
+        players: snapshot.players,
+        isMaster: isMaster,
+        isBoss: isBoss,
+      );
+    }
     _clearAnswerFeedback();
     celebration = const CelebrationEvent.none();
     screenShakeTick = 0;
+    mentalMathResultSummary = null;
 
     // Reset runtime
     rt = RuntimeState()
@@ -2215,9 +2707,18 @@ class GameState extends ChangeNotifier {
       ..dailyBoss = isBoss ? dailyBoss : null
       ..answerStyle = snapshot.answerStyle
       ..dailyBossLives = 3
-      ..gameActive = true
-      ..state = 'playing'
-      ..isWarmUp = (snapshot.mode == GameMode.standard && !isMaster && !isBoss);
+      ..gameActive = snapshot.mentalMathEntry == null || skipMentalMathCountdown
+      ..state = snapshot.mentalMathEntry == null || skipMentalMathCountdown
+          ? 'playing'
+          : 'countdown'
+      ..isWarmUp = (snapshot.mode == GameMode.standard &&
+          !isMaster &&
+          !isBoss &&
+          snapshot.mentalMathEntry == null);
+    if (snapshot.timingStyle == TimingStyle.timeBank) {
+      rt.timeBankRemainingMs =
+          snapshot.questionTarget * (_timeBankBaseMs[snapshot.difficulty] ?? 0);
+    }
 
     rt.maxTurns = isMaster
         ? (currentMasterLevel?.goal ?? GameConfig.endlessTurns)
@@ -2236,9 +2737,16 @@ class GameState extends ChangeNotifier {
       // Master reset: 3 lives
     }
 
-    audio.playStart();
-
     showScreen(GameScreen.game);
+
+    if (snapshot.mentalMathEntry != null && !skipMentalMathCountdown) {
+      rt.mentalMathCountdownStep = 3;
+      _startMentalMathCountdown();
+      notifyListeners();
+      return;
+    }
+
+    audio.playStart();
 
     if (snapshot.mode == GameMode.blitz) {
       rt.blitzTotalMs = GameConfig.blitzTimerDefault;
@@ -2251,6 +2759,103 @@ class GameState extends ChangeNotifier {
     }
 
     _nextTurn();
+  }
+
+  void _startMentalMathCountdown() {
+    if (!isMentalMathCountdown ||
+        rt.mentalMathCountdownTimer?.isActive == true) {
+      return;
+    }
+    final runId = _activeRunId;
+    rt.mentalMathCountdownTimer =
+        Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (runId != _activeRunId || !isMentalMathCountdown) {
+        timer.cancel();
+        return;
+      }
+      if (rt.mentalMathCountdownStep > 0) {
+        rt.mentalMathCountdownStep--;
+        notifyListeners();
+        return;
+      }
+      timer.cancel();
+      rt.mentalMathCountdownTimer = null;
+      _activateMentalMathGameplay(runId);
+    });
+  }
+
+  void _activateMentalMathGameplay(int runId) {
+    if (runId != _activeRunId || !isMentalMathCountdown) return;
+    rt
+      ..mentalMathCountdownStep = -1
+      ..gameActive = true
+      ..state = 'playing';
+    audio.playStart();
+    _nextTurn();
+  }
+
+  bool _supportsUntimedSnapshot(GameRunSnapshot snapshot) =>
+      !adaptive &&
+      snapshot.runType == GameRunType.normal &&
+      snapshot.mode == GameMode.standard &&
+      snapshot.players == 1 &&
+      snapshot.questionMechanic == QuestionMechanic.standard &&
+      snapshot.operation != Operation.master &&
+      snapshot.operation != Operation.dailyBoss &&
+      snapshot.operationQuestStageId == null &&
+      snapshot.weakSkillsPlan == null;
+
+  bool _supportsTimeBankSnapshot(GameRunSnapshot snapshot) =>
+      snapshot.runType == GameRunType.normal &&
+      snapshot.mode == GameMode.standard &&
+      snapshot.players == 1 &&
+      snapshot.questionMechanic == QuestionMechanic.standard &&
+      playerConfigurableDifficultySet.contains(snapshot.difficulty) &&
+      snapshot.operation != Operation.master &&
+      snapshot.operation != Operation.dailyBoss &&
+      snapshot.operationQuestStageId == null &&
+      snapshot.weakSkillsPlan == null;
+
+  bool _isValidMentalMathFreePracticeSetup() =>
+      (_pendingMentalMathEntry == MentalMathEntry.freePractice ||
+          (_pendingMentalMathEntry == MentalMathEntry.weakSkills &&
+              _pendingWeakSkillsPlan != null)) &&
+      mode == GameMode.standard &&
+      players == 1 &&
+      (_pendingQuestionMechanic == QuestionMechanic.standard ||
+          _pendingQuestionMechanic == QuestionMechanic.missingOperation) &&
+      timingStyle == TimingStyle.perQuestion &&
+      !adaptive &&
+      (_pendingMentalMathEntry == MentalMathEntry.weakSkills
+          ? rt.challenge == Operation.mixed
+          : const {
+              Operation.addition,
+              Operation.subtraction,
+              Operation.multiplication,
+              Operation.division,
+              Operation.mixed,
+            }.contains(rt.challenge)) &&
+      diff == Difficulty.medium &&
+      questionCount == 40 &&
+      const {NumberType.natural, NumberType.integers, NumberType.rationals}
+          .contains(numType) &&
+      effectiveAnswerStyle == AnswerStyle.choice4;
+
+  GameRunSnapshot _normalizeSnapshotTimingStyle(
+    GameRunSnapshot snapshot, {
+    required GameRunSnapshot? previousSnapshot,
+  }) {
+    if (snapshot.timingStyle == TimingStyle.perQuestion) return snapshot;
+    if (snapshot.timingStyle == TimingStyle.untimed &&
+        _supportsUntimedSnapshot(snapshot)) {
+      return snapshot;
+    }
+    if (snapshot.timingStyle == TimingStyle.timeBank &&
+        (!adaptive || identical(snapshot, previousSnapshot)) &&
+        _supportsTimeBankSnapshot(snapshot)) {
+      return snapshot;
+    }
+    return snapshot.withTimingStyle(TimingStyle.perQuestion);
   }
 
   GameRunSnapshot _operationQuestSnapshot(OperationQuestStageId id) {
@@ -2298,6 +2903,167 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
+  static const _mentalMathRelatedAttemptLimit = 8;
+
+  Set<Operation> _mentalMathAllowedOperations() =>
+      rt.challenge == Operation.mixed
+          ? const {
+              Operation.addition,
+              Operation.subtraction,
+              Operation.multiplication,
+              Operation.division,
+            }
+          : {rt.challenge};
+
+  String _mentalMathFamilyKey(MathFact fact) {
+    final values = [fact.left, fact.right, fact.result]..sort();
+    final operationFamily = switch (fact.operation) {
+      Operation.addition || Operation.subtraction => 'add-sub',
+      Operation.multiplication || Operation.division => 'multiply-divide',
+      _ => fact.operation.name,
+    };
+    return '$operationFamily:${fact.numberType.name}:${values.join(':')}';
+  }
+
+  String _mentalMathRepresentationKey(MathFact fact) =>
+      '${fact.operation.name}:${fact.left}:${fact.right}:${fact.result}:'
+      '${fact.representation.name}';
+
+  void _closeMentalMathPendingFact(_MentalMathPendingFact entry) {
+    rt.mentalMathPendingFacts.remove(entry);
+    rt.mentalMathClosedFactFamilies.add(entry.familyKey);
+  }
+
+  void _enqueueMentalMathFailure(Question question) {
+    final fact = question.fact;
+    if (fact == null || !fact.isBasicOperation) return;
+    final familyKey = _mentalMathFamilyKey(fact);
+    if (rt.mentalMathClosedFactFamilies.contains(familyKey) ||
+        rt.mentalMathPendingFacts
+            .any((entry) => entry.familyKey == familyKey) ||
+        rt.mentalMathPendingFacts.length >= 3) {
+      return;
+    }
+    final entry = _MentalMathPendingFact(
+      familyKey: familyKey,
+      fact: fact,
+      mechanic: _runSnapshot!.questionMechanic,
+      allowedOperations: _mentalMathAllowedOperations(),
+      earliestEligibleCompletedQuestion: rt.completedQuestions + 2,
+    )..seenRepresentationKeys.add(_mentalMathRepresentationKey(fact));
+    rt.mentalMathPendingFacts.add(entry);
+  }
+
+  Question? _buildMentalMathTargetedQuestion({
+    required Difficulty diff,
+    required NumberType numType,
+  }) {
+    if (rt.mentalMathMustGenerateNormalNext) return null;
+    _MentalMathPendingFact? entry;
+    for (final candidate in rt.mentalMathPendingFacts) {
+      if (rt.completedQuestions >=
+          candidate.earliestEligibleCompletedQuestion) {
+        entry = candidate;
+        break;
+      }
+    }
+    if (entry == null) return null;
+
+    final excludedRepresentations =
+        entry.mechanic == QuestionMechanic.missingOperation
+            ? const {
+                FactRepresentation.missingLeft,
+                FactRepresentation.missingRight,
+              }
+            : const <FactRepresentation>{};
+    for (var attempt = 0; attempt < _mentalMathRelatedAttemptLimit; attempt++) {
+      final related = _qgen.buildRelated(
+        fact: entry.fact,
+        diff: diff,
+        numType: numType,
+        allowedOperations: entry.allowedOperations,
+        excludedRepresentations: excludedRepresentations,
+      );
+      if (related == null) {
+        _closeMentalMathPendingFact(entry);
+        return null;
+      }
+      final representationKey = _mentalMathRepresentationKey(related.fact!);
+      if (entry.seenRepresentationKeys.contains(representationKey)) continue;
+      final question = entry.mechanic == QuestionMechanic.missingOperation
+          ? missingOperationQuestion(related, _rng)
+          : related;
+      if (question == null || question.fact == null) {
+        _closeMentalMathPendingFact(entry);
+        return null;
+      }
+      entry.seenRepresentationKeys.add(representationKey);
+      rt
+        ..usedFacts.add(related.key)
+        ..mentalMathTargetedFamilyKey = entry.familyKey
+        ..mentalMathTargetedRepresentationKey = representationKey
+        ..mentalMathMustGenerateNormalNext = true;
+      return question;
+    }
+    _closeMentalMathPendingFact(entry);
+    return null;
+  }
+
+  void _recordMentalMathTargetedOutcome({
+    required Question question,
+    required bool isCorrect,
+    required bool isTimeout,
+    required bool isSkip,
+    required String? targetedFamilyKey,
+  }) {
+    rt
+      ..mentalMathTargetedFamilyKey = null
+      ..mentalMathTargetedRepresentationKey = null;
+    if (isSkip) return;
+    if (targetedFamilyKey == null) {
+      if (!isCorrect && (isTimeout || rt.selectedAnswer != null)) {
+        _enqueueMentalMathFailure(question);
+      }
+      return;
+    }
+    final index = rt.mentalMathPendingFacts
+        .indexWhere((entry) => entry.familyKey == targetedFamilyKey);
+    if (index < 0) return;
+    final entry = rt.mentalMathPendingFacts[index];
+    entry.followUpsUsed++;
+    if (isCorrect) {
+      rt.factsRecovered++;
+      _closeMentalMathPendingFact(entry);
+    } else if (entry.followUpsUsed >= 2) {
+      _closeMentalMathPendingFact(entry);
+    }
+  }
+
+  void _expireMentalMathPendingFacts() {
+    rt.mentalMathClosedFactFamilies
+        .addAll(rt.mentalMathPendingFacts.map((entry) => entry.familyKey));
+    rt.mentalMathPendingFacts.clear();
+    rt
+      ..mentalMathTargetedFamilyKey = null
+      ..mentalMathTargetedRepresentationKey = null
+      ..mentalMathMustGenerateNormalNext = false;
+  }
+
+  @visibleForTesting
+  int get debugMentalMathPendingFactCount => rt.mentalMathPendingFacts.length;
+
+  @visibleForTesting
+  int get debugMentalMathClosedFactCount =>
+      rt.mentalMathClosedFactFamilies.length;
+
+  @visibleForTesting
+  bool get debugCurrentMentalMathQuestionIsTargeted =>
+      rt.mentalMathTargetedFamilyKey != null;
+
+  @visibleForTesting
+  String? get debugCurrentMentalMathTargetedRepresentationKey =>
+      rt.mentalMathTargetedRepresentationKey;
+
   void _generateQ() {
     var type = rt.challenge;
     var d = activeDifficulty;
@@ -2311,6 +3077,12 @@ class GameState extends ChangeNotifier {
             : playerConfigurableDifficultySet.contains(activeDifficulty)
                 ? playerConfigurableDifficultySet
                 : null;
+
+    if (_isMentalMathRun) {
+      d = _mentalMathDifficultyFor(rt.momentum);
+      difficultyRoute = QuestionDifficultyRoute.playerConfigured;
+      legalDifficulties = {d};
+    }
 
     // Follow-up reinforcement
     if (rt.isFollowUp && rt.followUpData != null) {
@@ -2365,10 +3137,17 @@ class GameState extends ChangeNotifier {
       legalDifficulties = {d};
     }
 
+    final targetedQuestion = _isMentalMathRun
+        ? _buildMentalMathTargetedQuestion(
+            diff: d,
+            numType: generatedNumType,
+          )
+        : null;
     final operationPool = _runSnapshot?.operationPool;
     if (operationPool != null) {
       type = operationPool[_rng.nextInt(operationPool.length)];
-    } else if (type == Operation.mixed || type == Operation.survival) {
+    } else if (targetedQuestion == null &&
+        (type == Operation.mixed || type == Operation.survival)) {
       final weakSkillsPlan = _runSnapshot?.weakSkillsPlan;
       if (weakSkillsPlan != null) {
         type = weakSkillsPlan.operationAt(rt.weakSkillsScheduleIndex++);
@@ -2383,7 +3162,8 @@ class GameState extends ChangeNotifier {
     }
 
     // Adaptive difficulty
-    if (activeAdaptive &&
+    if (!_isMentalMathRun &&
+        activeAdaptive &&
         rt.challenge != Operation.master &&
         rt.challenge != Operation.dailyBoss &&
         activeMode != GameMode.survival) {
@@ -2392,21 +3172,24 @@ class GameState extends ChangeNotifier {
       legalDifficulties = adaptiveDifficultySet;
     }
 
-    // Build question with uniqueness guarantee
+    // Build question with uniqueness guarantee.
     final filtersQuestQuestions = isMissingOperation || isMissingNumberQuest;
-    Question? q = filtersQuestQuestions
-        ? null
-        : _qgen.build(
-            type: type,
-            diff: d,
-            numType: generatedNumType,
-            integerQuest: _runSnapshot?.integerQuest ?? false,
-            decimalQuest: _runSnapshot?.decimalQuest ?? false,
-          );
+    Question? q = targetedQuestion ??
+        (filtersQuestQuestions
+            ? null
+            : _qgen.build(
+                type: type,
+                diff: d,
+                numType: generatedNumType,
+                integerQuest: _runSnapshot?.integerQuest ?? false,
+                decimalQuest: _runSnapshot?.decimalQuest ?? false,
+              ));
     Question? retainedMissingOperationQuestion;
     String? retainedMissingOperationKey;
     bool foundUnique = false;
-    for (var attempt = 0; attempt < 500; attempt++) {
+    for (var attempt = 0;
+        targetedQuestion == null && attempt < 500;
+        attempt++) {
       final candidate = _qgen.build(
         type: type,
         diff: d,
@@ -2432,7 +3215,7 @@ class GameState extends ChangeNotifier {
         retainedMissingOperationKey = candidate.key;
       }
     }
-    if (!foundUnique) {
+    if (targetedQuestion == null && !foundUnique) {
       if (retainedMissingOperationQuestion != null) {
         rt.usedFacts
           ..clear()
@@ -2466,7 +3249,14 @@ class GameState extends ChangeNotifier {
       diff: d,
       numType: generatedNumType,
       ratDP: generatedQuestion.ratDP,
+      fact: generatedQuestion.fact,
     );
+
+    if (_isMentalMathRun && targetedQuestion == null) {
+      rt
+        ..mentalMathTargetedFamilyKey = null
+        ..mentalMathMustGenerateNormalNext = false;
+    }
 
     rt.q = runtimeQuestion;
     _questionDifficultyLegality = legalDifficulties == null
@@ -2495,7 +3285,11 @@ class GameState extends ChangeNotifier {
     rt.accepting = true;
 
     // Start per-question timer
-    if (activeMode != GameMode.blitz && activeMode != GameMode.combo) {
+    if (isTimeBankRun) {
+      _startTimeBankTimer();
+    } else if (activeMode != GameMode.blitz &&
+        activeMode != GameMode.combo &&
+        !_isDeepThinkingRun) {
       rt.qTimerLimit = 0;
       _startQuestionTimer();
     }
@@ -2506,7 +3300,16 @@ class GameState extends ChangeNotifier {
     return _adaptiveDifficultyEngine.difficultyForMastery(m);
   }
 
+  Difficulty _mentalMathDifficultyFor(int momentum) {
+    if (momentum <= -4) return Difficulty.easy;
+    if (momentum >= 4) return Difficulty.hard;
+    return Difficulty.medium;
+  }
+
   int _getTimerLimitMs() {
+    if (_isMentalMathRun) {
+      return rt.nextQuestionTimerBudgetMs;
+    }
     if (activeMode == GameMode.blitz || activeMode == GameMode.combo) {
       return rt.blitzTotalMs;
     }
@@ -2529,12 +3332,17 @@ class GameState extends ChangeNotifier {
     return max(GameConfig.timerMinMs, baseMs - penalty);
   }
 
-  void _startQuestionTimer({int resumeElapsedMs = 0}) {
+  void _startQuestionTimer({
+    int resumeElapsedMs = 0,
+    int? remainingMs,
+  }) {
     final questionToken = _currentQuestionToken;
-    final limitMs =
-        rt.qTimerLimit > 0 ? rt.qTimerLimit * 1000 : _getTimerLimitMs();
-    final duration = max(0, limitMs - resumeElapsedMs);
-    rt.qTimerLimit = limitMs ~/ 1000;
+    final isMentalMath = _isMentalMathRun;
+    final limitMs = isMentalMath
+        ? (remainingMs ?? rt.nextQuestionTimerBudgetMs)
+        : (rt.qTimerLimit > 0 ? rt.qTimerLimit * 1000 : _getTimerLimitMs());
+    final duration = isMentalMath ? limitMs : max(0, limitMs - resumeElapsedMs);
+    rt.qTimerLimit = (limitMs / 1000).ceil();
     rt.timerDurationMs = duration;
     rt.timerStart = DateTime.now().millisecondsSinceEpoch;
     rt.timer?.cancel();
@@ -2576,7 +3384,104 @@ class GameState extends ChangeNotifier {
     });
   }
 
+  void _startTimeBankTimer() {
+    if (!isTimeBankRun ||
+        rt.timeBankRemainingMs <= 0 ||
+        !_isQuestionOpen(_currentQuestionToken)) {
+      return;
+    }
+    if (rt.timeBankTimer?.isActive == true && rt.timeBankTimerStart > 0) {
+      return;
+    }
+    final questionToken = _currentQuestionToken;
+    rt.timeBankTimer?.cancel();
+    rt.timeBankTimerStart = DateTime.now().millisecondsSinceEpoch;
+    rt.timeBankTimer = Timer.periodic(const Duration(milliseconds: 100), (t) {
+      if (!_isQuestionOpen(questionToken)) {
+        t.cancel();
+        return;
+      }
+      if (timeBankRemainingMs <= 0) {
+        t.cancel();
+        rt.timeBankRemainingMs = 0;
+        rt.timeBankTimerStart = 0;
+        rt.timeBankTimer = null;
+        _onTimeBankExhausted(questionToken);
+      } else {
+        notifyListeners();
+      }
+    });
+  }
+
+  void _pauseTimeBank() {
+    if (!isTimeBankRun) return;
+    rt.timeBankRemainingMs = timeBankRemainingMs;
+    rt.timeBankTimerStart = 0;
+    rt.timeBankTimer?.cancel();
+    rt.timeBankTimer = null;
+  }
+
+  void _onTimeBankExhausted(
+    ({int runId, int questionId}) questionToken,
+  ) {
+    if (!isTimeBankRun || rt.timeBankExhausted) return;
+    rt.timeBankExhausted = true;
+    _onAnswer(null, false, true, questionToken);
+  }
+
+  void handleAppLifecycleChange({required bool resumed}) {
+    if (isTimeBankRun) {
+      if (!resumed) {
+        _pauseTimeBank();
+        return;
+      }
+      if (rt.timeBankRemainingMs <= 0) {
+        _onTimeBankExhausted(_currentQuestionToken);
+      } else {
+        _startTimeBankTimer();
+      }
+      return;
+    }
+    if (!_isMentalMathRun) return;
+    if (isMentalMathCountdown) {
+      if (!resumed) {
+        rt.mentalMathCountdownTimer?.cancel();
+        rt.mentalMathCountdownTimer = null;
+      } else {
+        _startMentalMathCountdown();
+      }
+      return;
+    }
+    if (!resumed) {
+      _pauseMentalMathQuestionTimer();
+    } else {
+      _resumeMentalMathQuestionTimer();
+    }
+  }
+
+  void _pauseMentalMathQuestionTimer() {
+    final questionToken = _currentQuestionToken;
+    if (!_isQuestionOpen(questionToken) || rt.timer?.isActive != true) return;
+    final elapsed = DateTime.now().millisecondsSinceEpoch - rt.timerStart;
+    rt.timerElapsedAtPause = max(0, rt.timerDurationMs - elapsed);
+    rt.timer?.cancel();
+    rt.timer = null;
+    rt.timerStart = 0;
+    rt.timerDurationMs = rt.timerElapsedAtPause;
+  }
+
+  void _resumeMentalMathQuestionTimer() {
+    final questionToken = _currentQuestionToken;
+    if (!_isQuestionOpen(questionToken) || rt.timer?.isActive == true) return;
+    final remainingMs = rt.timerElapsedAtPause;
+    if (remainingMs <= 0) return;
+    rt.timerElapsedAtPause = 0;
+    _startQuestionTimer(remainingMs: remainingMs);
+  }
+
   void _onTimeout(({int runId, int questionId}) questionToken) {
+    if (_isDeepThinkingRun || isTimeBankRun) return;
+    if (isMentalMathCountdown) return;
     _onAnswer(null, false, true, questionToken);
   }
 
@@ -2602,6 +3507,7 @@ class GameState extends ChangeNotifier {
   }
 
   void skip() {
+    if (_isMentalMathRun) return;
     if (!rt.accepting) return;
     _onAnswer(null, true, false, _currentQuestionToken);
   }
@@ -2613,6 +3519,13 @@ class GameState extends ChangeNotifier {
     ({int runId, int questionId}) questionToken,
   ) {
     if (rt.state == 'paused') return;
+    if (isTimeBankRun &&
+        !isTimeout &&
+        _isQuestionOpen(questionToken) &&
+        timeBankRemainingMs <= 0) {
+      _onTimeBankExhausted(questionToken);
+      return;
+    }
     final terminalClaim = isTimeout
         ? _QuestionTerminalClaim.timeout
         : isSkip
@@ -2632,6 +3545,11 @@ class GameState extends ChangeNotifier {
     final pl = p[pid];
     final timeTaken = DateTime.now().millisecondsSinceEpoch - rt.qStartTs;
 
+    if (_isMentalMathRun && !isTimeout) {
+      rt.mentalMathAnsweredResponseTotalMs += timeTaken;
+      rt.mentalMathAnsweredResponseCount++;
+    }
+
     pl.total++;
     pl.timeMs += timeTaken;
     pl.history.add(HistoryEntry(
@@ -2643,8 +3561,19 @@ class GameState extends ChangeNotifier {
       pl.history = pl.history.sublist(pl.history.length - 50);
     }
 
-    _updateSkillMap(q.type, q.diff ?? activeDifficulty, isCorrect, timeTaken);
-    _updateAdapt(isCorrect, timeTaken, q.type);
+    final masteryTimeTaken = _isDeepThinkingRun || isTimeBankRun
+        ? _untimedMasteryResponseMs
+        : timeTaken;
+    _updateSkillMap(
+      q.type,
+      q.diff ?? activeDifficulty,
+      isCorrect,
+      masteryTimeTaken,
+      timedOut: isTimeout,
+    );
+    if (!_isMentalMathRun) {
+      _updateAdapt(isCorrect, masteryTimeTaken, q.type);
+    }
 
     if (isCorrect) {
       _onCorrect(pl, pid, timeTaken);
@@ -2652,8 +3581,26 @@ class GameState extends ChangeNotifier {
       _onWrong(pl, pid, isSkip, isTimeout, val);
     }
 
+    final targetedFamilyKey = rt.mentalMathTargetedFamilyKey;
     rt.totalTurns++;
-    _checkStandardTurnLimit();
+    final mentalMathTerminal = _applyMentalMathOutcome(
+      isCorrect: isCorrect,
+      isSkip: isSkip,
+    );
+    if (_isMentalMathRun) {
+      _recordMentalMathTargetedOutcome(
+        question: q,
+        isCorrect: isCorrect,
+        isTimeout: isTimeout,
+        isSkip: isSkip,
+        targetedFamilyKey: targetedFamilyKey,
+      );
+      if (mentalMathTerminal) _expireMentalMathPendingFacts();
+    }
+    final exhaustedTimeBank = isTimeout && rt.timeBankExhausted;
+    if (!exhaustedTimeBank && !_isMentalMathRun) {
+      _checkStandardTurnLimit();
+    }
     final observation = _captureQuestionExperienceIfSupported(
       q,
       isCorrect
@@ -2678,7 +3625,70 @@ class GameState extends ChangeNotifier {
         responseTimeMs: timeTaken,
       ),
     );
-    if (_delayedLossTimer == null) _scheduleNextTurn();
+    if (mentalMathTerminal || exhaustedTimeBank) {
+      _endGameAfterFeedback(false, false);
+    } else if (_delayedLossTimer == null) {
+      _scheduleNextTurn();
+    }
+  }
+
+  bool _applyMentalMathOutcome({
+    required bool isCorrect,
+    required bool isSkip,
+  }) {
+    if (!_isMentalMathRun || isSkip) return false;
+
+    if (isCorrect) {
+      rt.momentum++;
+      rt.currentStreak++;
+    } else {
+      rt.momentum--;
+      rt.currentStreak = 0;
+    }
+    rt.completedQuestions++;
+    rt.peakMomentum = max(rt.peakMomentum, rt.momentum);
+    rt.bestStreak = max(rt.bestStreak, rt.currentStreak);
+    rt.nextQuestionTimerBudgetMs =
+        (rt.nextQuestionTimerBudgetMs + (isCorrect ? -500 : 1000))
+            .clamp(6000, 12000)
+            .toInt();
+
+    if (rt.momentum >= 10) {
+      rt.terminalReason = MentalMathTerminalReason.masteryReached;
+    } else if (rt.momentum <= -10) {
+      rt.terminalReason = MentalMathTerminalReason.practiceComplete;
+    } else if (rt.completedQuestions >= 40) {
+      rt.terminalReason = MentalMathTerminalReason.trainingComplete;
+    }
+    return rt.terminalReason != null;
+  }
+
+  void _clearMentalMathRuntimeState() {
+    rt.timer?.cancel();
+    rt.mentalMathCountdownTimer?.cancel();
+    mentalMathResultSummary = null;
+    rt
+      ..timer = null
+      ..timerStart = 0
+      ..timerDurationMs = 0
+      ..timerElapsedAtPause = 0
+      ..momentum = 0
+      ..peakMomentum = 0
+      ..currentStreak = 0
+      ..bestStreak = 0
+      ..completedQuestions = 0
+      ..mentalMathAnsweredResponseTotalMs = 0
+      ..mentalMathAnsweredResponseCount = 0
+      ..nextQuestionTimerBudgetMs = 10000
+      ..mentalMathPendingFacts.clear()
+      ..mentalMathClosedFactFamilies.clear()
+      ..mentalMathTargetedFamilyKey = null
+      ..mentalMathTargetedRepresentationKey = null
+      ..mentalMathMustGenerateNormalNext = false
+      ..factsRecovered = 0
+      ..terminalReason = null
+      ..mentalMathCountdownTimer = null
+      ..mentalMathCountdownStep = -1;
   }
 
   void _observeContextEvidence(
@@ -2691,6 +3701,7 @@ class GameState extends ChangeNotifier {
     }) outcome,
   ) {
     final snapshot = _runSnapshot!;
+    if (snapshot.mentalMathEntry != null) return;
     final advisory = _gameBrain!.observeContextEvidence(
       ContextEvidenceObservation(
         context: _contextEvidenceKey(snapshot, question),
@@ -2719,7 +3730,9 @@ class GameState extends ChangeNotifier {
         snapshot.players == 1 &&
         snapshot.mode == GameMode.standard &&
         snapshot.questionMechanic == QuestionMechanic.standard &&
+        snapshot.timingStyle == TimingStyle.perQuestion &&
         snapshot.weakSkillsPlan == null &&
+        snapshot.mentalMathEntry == null &&
         snapshot.answerStyle == AnswerStyle.choice4 &&
         _supportsContextRunOperation(snapshot.operation) &&
         ContextEvidenceKey.supportsOperation(question.type) &&
@@ -2751,6 +3764,8 @@ class GameState extends ChangeNotifier {
   ) {
     final supported = snapshot.runType == GameRunType.normal &&
         snapshot.questionMechanic == QuestionMechanic.standard &&
+        snapshot.timingStyle == TimingStyle.perQuestion &&
+        snapshot.mentalMathEntry == null &&
         snapshot.answerStyle == AnswerStyle.choice4 &&
         _supportsContextRunOperation(snapshot.operation) &&
         ContextEvidenceKey.supportsOperation(question.type);
@@ -2771,7 +3786,9 @@ class GameState extends ChangeNotifier {
       snapshot.players == 1 &&
       snapshot.mode == GameMode.standard &&
       snapshot.questionMechanic == QuestionMechanic.standard &&
+      snapshot.timingStyle == TimingStyle.perQuestion &&
       snapshot.weakSkillsPlan == null &&
+      snapshot.mentalMathEntry == null &&
       snapshot.answerStyle == AnswerStyle.choice4 &&
       !activeAdaptive &&
       playerConfigurableDifficultySet.contains(snapshot.difficulty) &&
@@ -2883,6 +3900,7 @@ class GameState extends ChangeNotifier {
     if (!_isQuestionOpen(questionToken)) return false;
     _questionTerminalClaim = terminalClaim;
     rt.accepting = false;
+    _pauseTimeBank();
     return true;
   }
 
@@ -2898,6 +3916,9 @@ class GameState extends ChangeNotifier {
     _activeRunId = 0;
     _activeQuestionId = 0;
     rt.accepting = false;
+    rt.timeBankTimer?.cancel();
+    rt.timeBankTimer = null;
+    rt.timeBankTimerStart = 0;
     _questionExperience.clear();
     _questionDifficultyMeasurements.clear();
     _questionDifficultyLegality = null;
@@ -2908,7 +3929,20 @@ class GameState extends ChangeNotifier {
     pl.streak++;
     pl.maxStreak = max(pl.maxStreak, pl.streak);
     if (timeTaken < pl.fastest) pl.fastest = timeTaken;
-    if (timeTaken < 2000) rt.fastAnswers++;
+    if (!_isDeepThinkingRun && !isTimeBankRun && timeTaken < 2000) {
+      rt.fastAnswers++;
+    }
+
+    if (_isMentalMathRun) {
+      reactionPill =
+          GameConfig.correctRx[_rng.nextInt(GameConfig.correctRx.length)];
+      bigEmoji = reactionPill.split(' ').first;
+      bigEmojiVisible = true;
+      audio.playCorrect();
+      audio.vibrateCorrect();
+      notifyListeners();
+      return;
+    }
 
     var survivalBossDue = false;
 
@@ -2971,12 +4005,13 @@ class GameState extends ChangeNotifier {
         rt.challenge != Operation.dailyBoss &&
         ![GameMode.combo, GameMode.survival].contains(activeMode);
     if (eligibleForPU && pl.correct == 1) {
-      pl.pups.addAll(PowerUp.values);
+      pl.pups.addAll(_availablePowerUpsForActiveRun);
       showToast('🎁 Got one of each power-up!');
     } else if (eligibleForPU &&
         pl.correct > 1 &&
         pl.correct % GameConfig.puRewardInterval == 0) {
-      final pu = PowerUp.values[_rng.nextInt(PowerUp.values.length)];
+      final powerUps = _availablePowerUpsForActiveRun.toList(growable: false);
+      final pu = powerUps[_rng.nextInt(powerUps.length)];
       pl.pups.add(pu);
       showToast('🎁 Got: ${pu.label}!');
     }
@@ -2988,7 +4023,9 @@ class GameState extends ChangeNotifier {
     final isMaster = rt.challenge == Operation.master;
     final isBoss = rt.challenge == Operation.dailyBoss;
 
-    if (!isBlitz && !isMaster && activeMode != GameMode.combo) {
+    if (_isDeepThinkingRun || isTimeBankRun) {
+      bonus = 0;
+    } else if (!isBlitz && !isMaster && activeMode != GameMode.combo) {
       final remaining = max(0, (rt.qTimerLimit * 1000 - timeTaken) / 1000);
       bonus = remaining.ceil();
       if (timeTaken < 2000) {
@@ -3228,7 +4265,8 @@ class GameState extends ChangeNotifier {
         audio.playWrong();
       }
       // Follow-up
-      if (!isSkip &&
+      if (!_isMentalMathRun &&
+          !isSkip &&
           !isTimeout &&
           activeMode == GameMode.standard &&
           rt.challenge != Operation.dailyBoss) {
@@ -3362,17 +4400,22 @@ class GameState extends ChangeNotifier {
     rt.gameActive = false;
     rt.state = 'ended';
     rt.timer?.cancel();
+    final snapshot = _runSnapshot!;
     gamesPlayed++;
     unawaited(_recordCompletedGameForAds());
     _logPerformance('completed-game persistence scheduled');
-    if (gamesPlayed >= 10) unlockAch('persistent');
-    final snapshot = _runSnapshot!;
+    if (snapshot.mentalMathEntry == null && gamesPlayed >= 10) {
+      unlockAch('persistent');
+    }
     final questProgressSave = isOperationQuest
         ? _recordOperationQuestResult(snapshot.operationQuestStageId!)
         : null;
 
     // Save high score
-    if (!isOperationQuest && p[1].score > 0) {
+    if (!isOperationQuest &&
+        snapshot.mentalMathEntry == null &&
+        snapshot.timingStyle == TimingStyle.perQuestion &&
+        p[1].score > 0) {
       highScores.add(HighScore(
         name: p[1].name,
         score: p[1].score,
@@ -3388,29 +4431,26 @@ class GameState extends ChangeNotifier {
       if (highScores.length > 10) highScores = highScores.sublist(0, 10);
     }
 
-    if (win && p[1].correct > 0) unlockAch('first_win');
-    // Perfect score
     final perfect = p[1].total > 0 && p[1].correct == p[1].total;
-    if (perfect) {
-      unlockAch('perfect_score');
-    }
-    // Streak master
-    if (p[1].maxStreak >= 10) unlockAch('streak_master');
-    // Speed demon
-    if (rt.fastAnswers >= 5) unlockAch('speed_demon');
-    // Survivor
-    if (activeMode == GameMode.death && p[1].score >= 250) {
-      unlockAch('survivor');
-    }
-    // Skill master
-    for (final e in skillMap.entries) {
-      if (e.value.count >= 5 && e.value.mastery >= 90) {
-        unlockAch('skill_master');
-        break;
+    if (snapshot.mentalMathEntry == null) {
+      if (win && p[1].correct > 0) unlockAch('first_win');
+      if (perfect) unlockAch('perfect_score');
+      if (p[1].maxStreak >= 10) unlockAch('streak_master');
+      if (snapshot.timingStyle == TimingStyle.perQuestion &&
+          rt.fastAnswers >= 5) {
+        unlockAch('speed_demon');
       }
+      if (activeMode == GameMode.death && p[1].score >= 250) {
+        unlockAch('survivor');
+      }
+      for (final e in skillMap.entries) {
+        if (e.value.count >= 5 && e.value.mastery >= 90) {
+          unlockAch('skill_master');
+          break;
+        }
+      }
+      if (adaptLvl >= 8) unlockAch('quick_learner');
     }
-    // Quick learner
-    if (adaptLvl >= 8) unlockAch('quick_learner');
 
     _prepareResultSummary(win: win, loss: loss);
 
@@ -3480,9 +4520,189 @@ class GameState extends ChangeNotifier {
     );
   }
 
+  bool _dailyFocusMet(
+    DailyMentalMathFocus focus, {
+    required int accuracy,
+    required int bestStreak,
+  }) =>
+      switch (focus) {
+        DailyMentalMathFocus.streakMaster => bestStreak >= 6,
+        DailyMentalMathFocus.precision => accuracy >= 90,
+        DailyMentalMathFocus.consistency => accuracy >= 80 && bestStreak >= 4,
+      };
+
+  DailyMentalMathGrade _dailyGrade({
+    required MentalMathTerminalReason terminal,
+    required int accuracy,
+    required int bestStreak,
+    required bool focusMet,
+  }) {
+    if (terminal != MentalMathTerminalReason.masteryReached) {
+      return DailyMentalMathGrade.c;
+    }
+    if (focusMet && accuracy >= 95 && bestStreak >= 8) {
+      return DailyMentalMathGrade.sPlus;
+    }
+    if (focusMet && accuracy >= 90 && bestStreak >= 6) {
+      return DailyMentalMathGrade.s;
+    }
+    if (accuracy >= 80 && bestStreak >= 4) return DailyMentalMathGrade.a;
+    return DailyMentalMathGrade.b;
+  }
+
+  bool _dailyBestBeats(
+    DailyMentalMathRecord? record, {
+    required DailyMentalMathGrade grade,
+    required int accuracy,
+    required int bestStreak,
+    required int? averageResponseMs,
+    required int factsRecovered,
+  }) {
+    if (record?.bestGrade == null) return true;
+    final existing = record!;
+    final gradeOrder = grade.index.compareTo(existing.bestGrade!.index);
+    if (gradeOrder != 0) return gradeOrder > 0;
+    final accuracyOrder = accuracy.compareTo(existing.bestAccuracy);
+    if (accuracyOrder != 0) return accuracyOrder > 0;
+    final streakOrder = bestStreak.compareTo(existing.bestStreak);
+    if (streakOrder != 0) return streakOrder > 0;
+    final existingTime = existing.bestAverageResponseMs;
+    if (averageResponseMs != existingTime) {
+      if (averageResponseMs == null) return false;
+      if (existingTime == null) return true;
+      final timeOrder = averageResponseMs.compareTo(existingTime);
+      if (timeOrder != 0) return timeOrder < 0;
+    }
+    return factsRecovered > existing.bestFactsRecovered;
+  }
+
+  bool _isDailyMentalMathPerfectDay(DailyMentalMathRecord? record) =>
+      record != null &&
+      record.rewardClaimed &&
+      record.officialFocusCompleted &&
+      (record.bestGrade?.index ?? -1) >= DailyMentalMathGrade.s.index;
+
+  _DailyMentalMathCompletion _completeDailyMentalMath({
+    required int accuracy,
+    required int? averageResponseMs,
+  }) {
+    final profile = _runSnapshot!.dailyMentalMathProfile!;
+    final previous = currentDailyMentalMathRecord ??
+        DailyMentalMathRecord(dateKey: profile.dateKey);
+    final focusMet = _dailyFocusMet(
+      profile.focus,
+      accuracy: accuracy,
+      bestStreak: rt.bestStreak,
+    );
+    final grade = _dailyGrade(
+      terminal: rt.terminalReason!,
+      accuracy: accuracy,
+      bestStreak: rt.bestStreak,
+      focusMet: focusMet,
+    );
+    final isNewBest = _dailyBestBeats(
+      previous,
+      grade: grade,
+      accuracy: accuracy,
+      bestStreak: rt.bestStreak,
+      averageResponseMs: averageResponseMs,
+      factsRecovered: rt.factsRecovered,
+    );
+    final cleared =
+        rt.terminalReason == MentalMathTerminalReason.masteryReached;
+    final officialFocus =
+        previous.officialFocusCompleted || (cleared && focusMet);
+    final rewardAlreadyClaimed = previous.rewardClaimed;
+    final rewardGranted =
+        cleared && !rewardAlreadyClaimed ? dailyMentalMathRewardCoins : 0;
+    final record = DailyMentalMathRecord(
+      dateKey: profile.dateKey,
+      rewardClaimed: previous.rewardClaimed || rewardGranted > 0,
+      officialFocusCompleted: officialFocus,
+      bestGrade: isNewBest ? grade : previous.bestGrade,
+      bestAccuracy: isNewBest ? accuracy : previous.bestAccuracy,
+      bestStreak: isNewBest ? rt.bestStreak : previous.bestStreak,
+      bestAverageResponseMs:
+          isNewBest ? averageResponseMs : previous.bestAverageResponseMs,
+      bestFactsRecovered:
+          isNewBest ? rt.factsRecovered : previous.bestFactsRecovered,
+    );
+    dailyMentalMathRecord = record;
+    if (rewardGranted > 0) addCoins(rewardGranted, true);
+    return _DailyMentalMathCompletion(
+      focus: profile.focus,
+      currentRunFocusMet: focusMet,
+      officialFocusCompleted: officialFocus,
+      grade: grade,
+      todaysBestGrade: record.bestGrade,
+      isNewBest: isNewBest,
+      rewardGranted: rewardGranted,
+      rewardAlreadyClaimed: rewardAlreadyClaimed,
+      perfectDay: _isDailyMentalMathPerfectDay(record),
+    );
+  }
+
   void _prepareResultSummary({required bool win, required bool loss}) {
     final p1 = p[1];
     final p2 = p[2];
+
+    if (_isMentalMathRun && rt.terminalReason != null) {
+      final title = switch (rt.terminalReason!) {
+        MentalMathTerminalReason.masteryReached => 'MASTERY REACHED',
+        MentalMathTerminalReason.practiceComplete => 'PRACTICE COMPLETE',
+        MentalMathTerminalReason.trainingComplete => 'TRAINING COMPLETE',
+      };
+      final message = switch (rt.terminalReason!) {
+        MentalMathTerminalReason.masteryReached =>
+          'Strong run. You reached full momentum.',
+        MentalMathTerminalReason.practiceComplete =>
+          'Practice complete. Your session still built useful fluency.',
+        MentalMathTerminalReason.trainingComplete =>
+          'Training complete. You reached the session limit.',
+      };
+      final completed = rt.completedQuestions;
+      final accuracy =
+          completed == 0 ? 0 : ((p1.correct / completed) * 100).round();
+      final averageResponseMs = rt.mentalMathAnsweredResponseCount == 0
+          ? null
+          : (rt.mentalMathAnsweredResponseTotalMs /
+                  rt.mentalMathAnsweredResponseCount)
+              .round();
+      final daily = isDailyMentalMathRun
+          ? _completeDailyMentalMath(
+              accuracy: accuracy,
+              averageResponseMs: averageResponseMs,
+            )
+          : null;
+      mentalMathResultSummary = MentalMathResultSummary(
+        avatarEmoji: p1.avatar.storageEmoji,
+        terminalTitle: title,
+        message: message,
+        peakMomentum: rt.peakMomentum,
+        bestStreak: rt.bestStreak,
+        accuracyPercent: accuracy,
+        averageResponseMs: averageResponseMs,
+        fastestAnswerMs:
+            p1.fastest == PlayerState.noFastestTime ? null : p1.fastest,
+        factsRecovered: rt.factsRecovered,
+        trainingArenaPracticeAreas: isTrainingArenaIqSparkRun
+            ? List.unmodifiable(_runSnapshot!.weakSkillsPlan!.focusedOperations)
+            : null,
+        dailyFocus: daily?.focus,
+        currentRunFocusMet: daily?.currentRunFocusMet ?? false,
+        officialFocusCompleted: daily?.officialFocusCompleted ?? false,
+        focusGrade: daily?.grade,
+        todaysBestGrade: daily?.todaysBestGrade,
+        isNewDailyBest: daily?.isNewBest ?? false,
+        dailyRewardAmountGranted: daily?.rewardGranted ?? 0,
+        dailyRewardAlreadyClaimed: daily?.rewardAlreadyClaimed ?? false,
+        perfectDay: daily?.perfectDay ?? false,
+      );
+      resultIcon = p1.avatar.storageEmoji;
+      resultTitle = title;
+      resultDescription = message;
+      return;
+    }
 
     if (loss) {
       resultIcon = '💀';
@@ -3611,7 +4831,9 @@ class GameState extends ChangeNotifier {
     resultTitle = activeMode == GameMode.blitz || activeMode == GameMode.combo
         ? "Time's Up!"
         : 'Player Report';
-    resultDescription = 'Final Score: ${p1.score}';
+    resultDescription = isTimeBankRun
+        ? 'Time remaining: ${(timeBankRemainingMs / 1000).ceil()}s'
+        : 'Final Score: ${p1.score}';
   }
 
   void advanceStage() {
@@ -3668,7 +4890,9 @@ class GameState extends ChangeNotifier {
     _masterLevel = 0;
     _masterLives = 3;
     _masterProgress = 0;
+    final wasMentalMathRun = _isMentalMathRun;
     _runSnapshot = null;
+    if (wasMentalMathRun) _clearMentalMathRuntimeState();
     _gameBrain = null;
     _lastContextEvidenceResult = null;
     _pendingOperationQuestStageId = null;
@@ -3723,7 +4947,13 @@ class GameState extends ChangeNotifier {
     _recomputeAdaptiveLevel();
   }
 
-  void _updateSkillMap(Operation type, Difficulty d, bool correct, int timeMs) {
+  void _updateSkillMap(
+    Operation type,
+    Difficulty d,
+    bool correct,
+    int timeMs, {
+    bool timedOut = false,
+  }) {
     final sd = skillMap[type.name] ?? SkillData();
     if (correct) {
       switch (d) {
@@ -3746,16 +4976,25 @@ class GameState extends ChangeNotifier {
       sd.correct++;
     }
     sd.count++;
-    _updateMastery(sd, correct, timeMs);
+    _updateMastery(sd, correct, timeMs, timedOut: timedOut);
     skillMap[type.name] = sd;
     unawaited(_markCloudDirty());
   }
 
-  void _updateMastery(SkillData sd, bool correct, int timeMs) {
+  void _updateMastery(
+    SkillData sd,
+    bool correct,
+    int timeMs, {
+    required bool timedOut,
+  }) {
     final timeoutLimitMs = rt.qTimerLimit > 0 ? rt.qTimerLimit * 1000 : 10000;
+    final canTimeout = timedOut ||
+        (!_isDeepThinkingRun &&
+            !isTimeBankRun &&
+            (timeMs == 0 || timeMs >= timeoutLimitMs));
     final outcome = correct
         ? MasteryOutcome.correct
-        : timeMs == 0 || timeMs >= timeoutLimitMs
+        : canTimeout
             ? MasteryOutcome.timeout
             : MasteryOutcome.wrong;
     final update = _adaptiveDifficultyEngine.calculateMasteryUpdate(
@@ -3954,6 +5193,12 @@ class GameState extends ChangeNotifier {
         )) {
           break;
         }
+        // P1-F00 v1.2: a requested replacement is outside the confirmatory
+        // envelope. Establish the synchronous local admission firewall
+        // BEFORE the replacement question can open; durable LEFT_UNCLEAN
+        // bookkeeping is queued asynchronously and never awaited here.
+        // Gameplay (the replacement itself) proceeds unchanged.
+        _leaveP1F01IntegrityUnclean();
         final question = rt.q;
         if (question != null) {
           final observation = _captureQuestionExperienceIfSupported(
@@ -3988,10 +5233,14 @@ class GameState extends ChangeNotifier {
   }
 
   bool _isPowerUpBlocked(PowerUp pu) {
+    if (_isMentalMathRun) return true;
     if (pu == PowerUp.fifty && rt.answerStyle == AnswerStyle.trueFalse) {
       return true;
     }
     if (pu == PowerUp.time || pu == PowerUp.freeze) {
+      if (_isDeepThinkingRun || isTimeBankRun) {
+        return true;
+      }
       if (activeMode == GameMode.blitz || activeMode == GameMode.combo) {
         return true;
       }
@@ -4380,6 +5629,7 @@ class GameState extends ChangeNotifier {
     final today = DateTime.now();
     dailyBossDateKey = _dailyDateKey(today);
     dailyBoss = _generateDailyBoss(today);
+    dailyMentalMathRecord = null;
     shopOwned = [];
     unlockedAvatars = [];
     unlockedHats = [];

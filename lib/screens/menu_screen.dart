@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
 import '../game_config.dart';
 import '../models/enums.dart';
+import '../models/game_data.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
 
@@ -39,7 +40,7 @@ class MenuScreen extends StatelessWidget {
                 _CampaignCard(
                   key: const Key('weak-skills-practice-row'),
                   icon: '🚀',
-                  title: 'Weak Skills Practice',
+                  title: 'Training Arena',
                   subtitle: 'Build Your Skills',
                   color: const Color(GameConfig.grape),
                   gradientColors: _weakSkillsGradient,
@@ -82,6 +83,24 @@ class MenuScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 _CampaignCard(
+                  key: const Key('daily-mental-math-row'),
+                  icon: '🧠⚡',
+                  title: 'Daily IQ Spark',
+                  subtitle: gs.isDailyMentalMathPerfectDay
+                      ? '★ PERFECT DAY'
+                      : gs.isDailyMentalMathClearedToday
+                          ? 'CLEARED TODAY${gs.currentDailyMentalMathRecord?.bestGrade == null ? '' : ' • Grade ${gs.currentDailyMentalMathRecord!.bestGrade!.label}'}'
+                          : '${gs.dailyMentalMathProfile.operationLabel.toUpperCase()} • ${gs.dailyMentalMathProfile.numberType.label.toUpperCase()} • AVAILABLE',
+                  color: s.accent(GameConfig.grape),
+                  gradientColors: const [
+                    Color(GameConfig.grape),
+                    Color(GameConfig.sky),
+                    Color(GameConfig.mint),
+                  ],
+                  onTap: gs.showDailyMentalMath,
+                ),
+                const SizedBox(height: 10),
+                _CampaignCard(
                   icon: '🧭',
                   title: 'Operation Quest',
                   subtitle: '10 TRAILS • 30 STAGES',
@@ -115,7 +134,7 @@ class MenuScreen extends StatelessWidget {
                             '+',
                             'Addition',
                             s.opColor(Operation.addition),
-                            () => gs.goToConfig('addition'),
+                            () => gs.goToPracticeStyle('addition'),
                           ),
                         ),
                         SizedBox(
@@ -125,7 +144,7 @@ class MenuScreen extends StatelessWidget {
                             '−',
                             'Subtraction',
                             s.opColor(Operation.subtraction),
-                            () => gs.goToConfig('subtraction'),
+                            () => gs.goToPracticeStyle('subtraction'),
                           ),
                         ),
                         SizedBox(
@@ -135,7 +154,7 @@ class MenuScreen extends StatelessWidget {
                             '×',
                             'Multiplication',
                             s.opColor(Operation.multiplication),
-                            () => gs.goToConfig('multiplication'),
+                            () => gs.goToPracticeStyle('multiplication'),
                           ),
                         ),
                         SizedBox(
@@ -145,7 +164,7 @@ class MenuScreen extends StatelessWidget {
                             '÷',
                             'Division',
                             s.opColor(Operation.division),
-                            () => gs.goToConfig('division'),
+                            () => gs.goToPracticeStyle('division'),
                           ),
                         ),
                         SizedBox(
@@ -155,7 +174,7 @@ class MenuScreen extends StatelessWidget {
                             '?',
                             'Missing Operation',
                             s.opColor(Operation.mixed),
-                            () => gs.goToConfig('missingOperation'),
+                            () => gs.goToPracticeStyle('missingOperation'),
                           ),
                         ),
                         SizedBox(
@@ -165,7 +184,7 @@ class MenuScreen extends StatelessWidget {
                             '🧮',
                             'Mixed Operations',
                             s.opColor(Operation.mixed),
-                            () => gs.goToConfig('mixed'),
+                            () => gs.goToPracticeStyle('mixed'),
                           ),
                         ),
                       ],
@@ -249,13 +268,14 @@ class _GameBrainControl extends StatelessWidget {
           const Icon(
             Icons.psychology_outlined,
             color: Color(GameConfig.grape),
+            size: 32,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('GameBrain preference',
+                Text('GameBrain',
                     style:
                         TextStyle(color: s.text, fontWeight: FontWeight.w800)),
                 Text(

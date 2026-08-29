@@ -62,9 +62,27 @@ Parity-reasoner availability policy:
 - the fallback agent must remain independent from the implementation pass where
   the workflow requires independence and must remain read-only;
 - disclose any parity-reasoner model substitution in the parity report;
-- if no reliable supported parity-capable model is available, block the task;
-- do not bypass or proceed past a required parity gate merely because the
-  preferred model is unavailable.
+- if the configured reviewer cannot complete because of an unsupported role or
+  model, account quota or usage exhaustion, tool or service unavailability, or
+  repeated failure to return a terminal audit result, attempt an alternate
+  independent read-only reviewer when reasonably available;
+- if no independent reviewer is available after documented attempts, the
+  project owner may authorize an `OWNER_AUTHORIZED_BOUNDED_FALLBACK_AUDIT` for
+  ordinary bounded feature work. It is not independent: use an available
+  general-purpose reviewer with fresh read-only instructions where possible,
+  inspect the actual source and baseline, make no changes, explicitly record
+  `INDEPENDENT_REVIEW_UNAVAILABLE`, assess contract, regression, architecture,
+  side-effect, persistence, and scope risks, and return exactly one terminal
+  classification: `PASS`, `BLOCKED`, or `INCONCLUSIVE`;
+- a `PASS` from the explicitly owner-authorized bounded fallback satisfies the
+  pre-implementation audit gate, but does not waive focused/regression tests,
+  analyzer and diff checks, scope review, or post-implementation review;
+- never use this fallback to waive a truly independent review for destructive
+  persistence or schema migration, billing or payment behavior, production
+  credentials or security, or irreversible user-data mutation. A change to
+  this high-risk rule requires a separate explicit governance amendment,
+  independently reviewed and committed before the affected implementation
+  begins; no inline owner waiver is permitted.
 
 Reviewer availability policy:
 
@@ -74,8 +92,12 @@ Reviewer availability policy:
   independent from the implementation pass and can reliably review the
   repository;
 - disclose any reviewer-model substitution in the review report;
-- if no reliable supported reviewer model is available, block the task;
-- do not commit until the preferred or fallback reviewer passes.
+- apply the same `OWNER_AUTHORIZED_BOUNDED_FALLBACK_AUDIT` policy above when
+  no independent final reviewer is available; disclose its non-independence
+  and the documented unavailability attempts;
+- do not commit until the preferred or independent fallback reviewer passes,
+  or the project owner has explicitly authorized and the bounded fallback has
+  returned `PASS` for ordinary bounded work.
 
 Use one bounded task per cycle:
 

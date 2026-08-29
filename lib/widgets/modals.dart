@@ -113,6 +113,8 @@ class _ModalRouterState extends State<ModalRouter> {
         return MasterIntroModal(gs: gs);
       case GameModal.dailyBoss:
         return DailyBossModal(gs: gs);
+      case GameModal.dailyMentalMath:
+        return DailyMentalMathModal(gs: gs);
       case GameModal.stageCleared:
         return StageClearedModal(gs: gs);
       case GameModal.win:
@@ -174,12 +176,10 @@ class WeakSkillsPracticeModal extends StatelessWidget {
 
     return ModalShell(
       icon: plan.isFallback ? '🧠' : '🎯',
-      title: plan.isFallback
+      title: 'TRAINING ARENA',
+      subtitle: plan.isFallback
           ? 'Building Your Practice Profile'
           : 'Recommended Practice',
-      subtitle: plan.isFallback
-          ? 'Practice first, personalize next'
-          : 'Your personalized practice round',
       actions: [
         NeoButton(
           label: 'Cancel',
@@ -3219,6 +3219,99 @@ class _ModalSectionLabel extends StatelessWidget {
   }
 }
 
+class DailyMentalMathModal extends StatelessWidget {
+  const DailyMentalMathModal({super.key, required this.gs});
+  final GameState gs;
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = gs.dailyMentalMathProfile;
+    final record = gs.currentDailyMentalMathRecord;
+    final cleared = gs.isDailyMentalMathClearedToday;
+    final s = context.watch<SettingsService>();
+    return ModalShell(
+      icon: '🧠⚡',
+      title: 'DAILY IQ SPARK',
+      subtitle: "Today's challenge",
+      actions: [
+        NeoButton(
+          key: const Key('daily-mental-math-start'),
+          label: record?.bestGrade == null
+              ? "Start Today's Challenge"
+              : 'Improve Your Best',
+          color: GameConfig.grape,
+          onPressed: gs.startDailyMentalMath,
+        ),
+        NeoButton(
+          label: 'Cancel',
+          autofocus: true,
+          outlined: true,
+          color: s.muted.toARGB32(),
+          onPressed: gs.closeModal,
+        ),
+      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _DailyBossMetric(
+            icon: Icons.calculate_rounded,
+            label: 'Operation',
+            value: profile.operationLabel,
+            color: GameConfig.sky,
+          ),
+          const SizedBox(height: 8),
+          _DailyBossMetric(
+            icon: Icons.tag_rounded,
+            label: 'Number Type',
+            value: profile.numberType.label,
+            color: GameConfig.grape,
+          ),
+          const SizedBox(height: 12),
+          _DailyBossMetric(
+            icon: Icons.local_fire_department_rounded,
+            label: 'Daily Focus',
+            value: '${profile.focus.label} • ${profile.focus.target}',
+            color: GameConfig.mango,
+          ),
+          const SizedBox(height: 8),
+          _DailyBossMetric(
+            icon: Icons.flag_rounded,
+            label: 'Goal',
+            value: 'Reach +10 Momentum',
+            color: GameConfig.mint,
+          ),
+          const SizedBox(height: 8),
+          _DailyBossMetric(
+            icon: Icons.monetization_on_rounded,
+            label: 'Reward',
+            value: '50 Coins',
+            color: GameConfig.coin,
+          ),
+          const SizedBox(height: 12),
+          _DailyBossStatusCard(
+            claimed: cleared,
+            reward: GameState.dailyMentalMathRewardCoins,
+            availableStatus: 'AVAILABLE',
+          ),
+          if (record?.bestGrade != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              gs.isDailyMentalMathPerfectDay
+                  ? '★ PERFECT DAY'
+                  : "TODAY'S BEST • Grade ${record!.bestGrade!.label}",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: s.muted,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _DailyBossMetric extends StatelessWidget {
   const _DailyBossMetric({
     required this.icon,
@@ -3285,10 +3378,12 @@ class _DailyBossStatusCard extends StatelessWidget {
   const _DailyBossStatusCard({
     required this.claimed,
     required this.reward,
+    this.availableStatus = 'Ready to fight',
   });
 
   final bool claimed;
   final int reward;
+  final String availableStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -3340,7 +3435,7 @@ class _DailyBossStatusCard extends StatelessWidget {
                 Text(
                   claimed
                       ? 'Cleared today. Replay for practice.'
-                      : 'Ready to fight',
+                      : availableStatus,
                   style: TextStyle(
                     color: s.muted,
                     fontSize: 11,
@@ -3577,13 +3672,18 @@ class WinModal extends StatelessWidget {
   Widget build(BuildContext context) {
     final p1 = gs.p[1];
     final p2 = gs.p[2];
+    final mentalMathResult = gs.mentalMathResultSummary;
     final canReplay =
         !(gs.rt.challenge == Operation.dailyBoss && gs.rt.dailyBossWon);
 
     return ModalShell(
-      icon: gs.resultIcon,
-      title: gs.resultTitle,
-      subtitle: 'Round complete',
+      icon: mentalMathResult?.avatarEmoji ?? gs.resultIcon,
+      title: mentalMathResult == null
+          ? gs.resultTitle
+          : mentalMathResult.dailyFocus == null
+              ? 'IQ SPARK'
+              : 'DAILY IQ SPARK',
+      subtitle: mentalMathResult?.terminalTitle ?? 'Round complete',
       maxHeight: 650,
       actions: [
         if (canReplay)
@@ -3601,35 +3701,131 @@ class WinModal extends StatelessWidget {
               : gs.quitToMenu,
         ),
       ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (gs.resultDescription.isNotEmpty) ...[
-            _ResultHeroMessage(
-              icon: gs.resultIcon,
-              message: gs.resultDescription,
+      child: mentalMathResult == null
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (gs.resultDescription.isNotEmpty) ...[
+                  _ResultHeroMessage(
+                    icon: gs.resultIcon,
+                    message: gs.resultDescription,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (gs.activePlayers == 2 && gs.activeMode == GameMode.standard)
+                  _CompareResultReport(p1: p1, p2: p2)
+                else
+                  _SingleResultReport(player: p1),
+                if (p1.maxStreak > 0) ...[
+                  const SizedBox(height: 10),
+                  _ResultInfoStrip(
+                    icon: Icons.local_fire_department_rounded,
+                    label: 'Best streak',
+                    value: '${p1.maxStreak}',
+                    accent: const Color(GameConfig.mango),
+                  ),
+                ],
+                if (gs.newlyUnlocked.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _NewAchievementsCard(achievements: gs.newlyUnlocked),
+                ],
+              ],
+            )
+          : _MentalMathResultReport(summary: mentalMathResult),
+    );
+  }
+}
+
+class _MentalMathResultReport extends StatelessWidget {
+  const _MentalMathResultReport({required this.summary});
+
+  final MentalMathResultSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    String seconds(int? milliseconds) => milliseconds == null
+        ? '—'
+        : '${(milliseconds / 1000).toStringAsFixed(1)}s';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ResultHeroMessage(icon: summary.avatarEmoji, message: summary.message),
+        const SizedBox(height: 12),
+        if (summary.trainingArenaPracticeAreas != null) ...[
+          _ResultPanel(
+            title: 'Training Arena',
+            icon: '🎯',
+            child: _ReportBox(
+              rows: [
+                _ReportRow(
+                  'Practice Areas',
+                  summary.trainingArenaPracticeAreas!
+                      .map((operation) => operation.label)
+                      .join('\n'),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-          ],
-          if (gs.activePlayers == 2 && gs.activeMode == GameMode.standard)
-            _CompareResultReport(p1: p1, p2: p2)
-          else
-            _SingleResultReport(player: p1),
-          if (p1.maxStreak > 0) ...[
-            const SizedBox(height: 10),
-            _ResultInfoStrip(
-              icon: Icons.local_fire_department_rounded,
-              label: 'Best streak',
-              value: '${p1.maxStreak}',
-              accent: const Color(GameConfig.mango),
-            ),
-          ],
-          if (gs.newlyUnlocked.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _NewAchievementsCard(achievements: gs.newlyUnlocked),
-          ],
+          ),
+          const SizedBox(height: 12),
         ],
-      ),
+        if (summary.dailyFocus != null) ...[
+          _ResultPanel(
+            title: 'Daily Focus',
+            icon: '🎯',
+            child: _ReportBox(
+              rows: [
+                _ReportRow('Focus', summary.dailyFocus!.label),
+                _ReportRow(
+                  'Status',
+                  summary.currentRunFocusMet ? '✓ COMPLETE' : 'Not completed',
+                ),
+                _ReportRow('Focus Grade', summary.focusGrade!.label),
+                _ReportRow(
+                  "Today's Best",
+                  'Grade ${summary.todaysBestGrade!.label}',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (summary.isNewDailyBest)
+            const _ResultHeroMessage(icon: '⭐', message: 'NEW DAILY BEST!'),
+          if (summary.dailyRewardAmountGranted > 0)
+            _ResultHeroMessage(
+              icon: '🪙',
+              message: '+${summary.dailyRewardAmountGranted} COINS',
+            )
+          else if (summary.dailyRewardAlreadyClaimed)
+            const _ResultHeroMessage(
+              icon: '✓',
+              message: 'DAILY REWARD ALREADY CLAIMED',
+            )
+          else
+            const _ResultHeroMessage(
+              icon: '🎯',
+              message: 'REACH +10 MOMENTUM TO EARN TODAY\'S REWARD',
+            ),
+          if (summary.perfectDay)
+            const _ResultHeroMessage(icon: '★', message: '★ PERFECT DAY ★'),
+          const SizedBox(height: 12),
+        ],
+        _ResultPanel(
+          title: 'Session Metrics',
+          icon: '📊',
+          child: _ReportBox(
+            rows: [
+              _ReportRow('Peak Momentum', '+${summary.peakMomentum}'),
+              _ReportRow('Best Streak', '${summary.bestStreak}'),
+              _ReportRow('Accuracy', '${summary.accuracyPercent}%'),
+              _ReportRow(
+                  'Average Response Time', seconds(summary.averageResponseMs)),
+              _ReportRow('Fastest Answer', seconds(summary.fastestAnswerMs)),
+              _ReportRow('Facts Recovered', '${summary.factsRecovered}'),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

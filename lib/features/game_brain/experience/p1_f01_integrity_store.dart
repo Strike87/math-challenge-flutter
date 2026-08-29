@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -35,11 +37,185 @@ enum P1F01OpportunityAdmissionResult {
   failedClosed,
 }
 
+enum P1F01TransactionBoundaryState {
+  disarmed('DISARMED'),
+  armBeforeCommit('ARM_BEFORE_COMMIT'),
+  reachedBeforeCommit('REACHED_BEFORE_COMMIT'),
+  armAfterCommitBeforeAck('ARM_AFTER_COMMIT_BEFORE_ACK'),
+  reachedAfterCommitBeforeAck('REACHED_AFTER_COMMIT_BEFORE_ACK');
+
+  const P1F01TransactionBoundaryState(this.value);
+
+  final String value;
+}
+
+enum P1F01TransactionBoundaryPhase {
+  beforeCommit('BEFORE_COMMIT'),
+  afterCommitBeforeAck('AFTER_COMMIT_BEFORE_ACK');
+
+  const P1F01TransactionBoundaryPhase(this.value);
+
+  final String value;
+}
+
+/// Exact immutable identity captured at the moment an admission reaches a
+/// validation boundary hook. Never inferred from snapshots, queue state, or
+/// timing. Contains no question, player, or payload data.
+@immutable
+final class P1F01BoundaryIdentity {
+  const P1F01BoundaryIdentity({
+    required this.phase,
+    required this.windowSequence,
+    required this.opportunityOrdinal,
+  });
+
+  final P1F01TransactionBoundaryPhase phase;
+  final int windowSequence;
+  final int opportunityOrdinal;
+
+  Map<String, Object?> toJson() => {
+        'phase': phase.value,
+        'windowSequence': windowSequence,
+        'opportunityOrdinal': opportunityOrdinal,
+      };
+}
+
+/// Debug-only, in-memory control for physical transaction-boundary validation.
+final class P1F01TransactionBoundaryController {
+  static const bool _validationEnabled = bool.fromEnvironment(
+    'P1_F01_DEVICE_VALIDATION',
+    defaultValue: false,
+  );
+
+  P1F01TransactionBoundaryState _state = P1F01TransactionBoundaryState.disarmed;
+  P1F01TransactionBoundaryState? _armedState;
+  P1F01BoundaryIdentity? _identity;
+  Completer<void>? _release;
+
+  /// Validation-only invocation counters. Used by tests to prove the
+  /// disabled/default path never invokes either hook. Never read in
+  /// production code paths.
+  int beforeCommitInvocations = 0;
+  int afterCommitBeforeAckInvocations = 0;
+
+  static bool availableFor({
+    required bool isDebugBuild,
+    required bool validationFlag,
+  }) =>
+      isDebugBuild && validationFlag;
+
+  bool get isAvailable => availableFor(
+        isDebugBuild: kDebugMode,
+        validationFlag: _validationEnabled,
+      );
+
+  P1F01TransactionBoundaryState get state => _state;
+
+  /// Exact identity captured when the boundary was reached, or null.
+  P1F01BoundaryIdentity? get identity => _identity;
+
+  Map<String, Object?> readBoundaryState() {
+    final identity = _identity;
+    return {
+      'state': _state.value,
+      'armed': _state == P1F01TransactionBoundaryState.armBeforeCommit ||
+          _state == P1F01TransactionBoundaryState.armAfterCommitBeforeAck,
+      'reached':
+          _state == P1F01TransactionBoundaryState.reachedBeforeCommit ||
+              _state ==
+                  P1F01TransactionBoundaryState.reachedAfterCommitBeforeAck,
+      'phase': identity?.phase.value,
+      'windowSequence': identity?.windowSequence,
+      'opportunityOrdinal': identity?.opportunityOrdinal,
+    };
+  }
+
+  bool armBeforeCommit() => _arm(
+        P1F01TransactionBoundaryState.armBeforeCommit,
+      );
+
+  bool armAfterCommitBeforeAck() => _arm(
+        P1F01TransactionBoundaryState.armAfterCommitBeforeAck,
+      );
+
+  bool releaseBoundary() {
+    final release = _release;
+    if (release == null || release.isCompleted) return false;
+    release.complete();
+    return true;
+  }
+
+  Future<void> reachedBeforeCommit({
+    required int windowSequence,
+    required int opportunityOrdinal,
+  }) =>
+      _reach(
+        P1F01TransactionBoundaryState.armBeforeCommit,
+        P1F01TransactionBoundaryState.reachedBeforeCommit,
+        P1F01TransactionBoundaryPhase.beforeCommit,
+        windowSequence: windowSequence,
+        opportunityOrdinal: opportunityOrdinal,
+      );
+
+  Future<void> reachedAfterCommitBeforeAck({
+    required int windowSequence,
+    required int opportunityOrdinal,
+  }) =>
+      _reach(
+        P1F01TransactionBoundaryState.armAfterCommitBeforeAck,
+        P1F01TransactionBoundaryState.reachedAfterCommitBeforeAck,
+        P1F01TransactionBoundaryPhase.afterCommitBeforeAck,
+        windowSequence: windowSequence,
+        opportunityOrdinal: opportunityOrdinal,
+      );
+
+  bool _arm(P1F01TransactionBoundaryState armState) {
+    if (!isAvailable || _state != P1F01TransactionBoundaryState.disarmed) {
+      return false;
+    }
+    _armedState = armState;
+    _state = armState;
+    return true;
+  }
+
+  Future<void> _reach(
+    P1F01TransactionBoundaryState armState,
+    P1F01TransactionBoundaryState reachedState,
+    P1F01TransactionBoundaryPhase phase, {
+    required int windowSequence,
+    required int opportunityOrdinal,
+  }) async {
+    if (!isAvailable || _armedState != armState) return;
+    _armedState = null;
+    if (armState == P1F01TransactionBoundaryState.armBeforeCommit) {
+      beforeCommitInvocations++;
+    } else {
+      afterCommitBeforeAckInvocations++;
+    }
+    // Capture the exact identity of this admission at the hook itself.
+    // Immutable while paused; only cleared/replaced by a new boundary cycle.
+    _identity = P1F01BoundaryIdentity(
+      phase: phase,
+      windowSequence: windowSequence,
+      opportunityOrdinal: opportunityOrdinal,
+    );
+    _state = reachedState;
+    final release = _release = Completer<void>();
+    await release.future;
+    if (identical(_release, release)) {
+      _release = null;
+      _state = P1F01TransactionBoundaryState.disarmed;
+      _identity = null;
+    }
+  }
+}
+
 @immutable
 final class P1F01LegalSetCode {
   const P1F01LegalSetCode._(this.value);
 
   static const unknown = P1F01LegalSetCode._('V1_UNKNOWN');
+  static const allPhase1 = P1F01LegalSetCode._('V1_EMH_MASK_7');
   static const _phase1 = <Difficulty, int>{
     Difficulty.easy: 1,
     Difficulty.medium: 2,
@@ -47,6 +223,14 @@ final class P1F01LegalSetCode {
   };
 
   final String value;
+
+  static P1F01LegalSetCode? fromStoredValue(String value) {
+    if (value == unknown.value ||
+        RegExp(r'^V1_EMH_MASK_[1-7]$').hasMatch(value)) {
+      return P1F01LegalSetCode._(value);
+    }
+    return null;
+  }
 
   static P1F01LegalSetCode fromLegality(
     QuestionDifficultyLegality? legality,
@@ -106,8 +290,11 @@ final class P1F01IntegrityStore {
     DatabaseFactory? databaseFactory,
     String? databasePath,
     this.failureHook,
+    P1F01TransactionBoundaryController? boundaryController,
   })  : _databaseFactory = databaseFactory,
-        _databasePath = databasePath;
+        _databasePath = databasePath,
+        _boundaryController =
+            boundaryController ?? P1F01TransactionBoundaryController();
 
   static const int integrityVersion = 1;
   static const int _maxWindowRows = 8;
@@ -117,8 +304,12 @@ final class P1F01IntegrityStore {
   final DatabaseFactory? _databaseFactory;
   final String? _databasePath;
   final void Function(P1F01IntegrityOperation operation)? failureHook;
+  final P1F01TransactionBoundaryController _boundaryController;
   Future<void> _queue = Future<void>.value();
   Database? _database;
+
+  P1F01TransactionBoundaryController get boundaryController =>
+      _boundaryController;
 
   Future<P1F01IntegritySnapshot?> recoverOpenWindows() =>
       _guarded<P1F01IntegritySnapshot?>(
@@ -173,7 +364,10 @@ final class P1F01IntegrityStore {
       P1F01IntegrityOperation.admitOpportunity,
       () => _serialize(() async {
         final db = await _db();
-        return db.transaction((txn) async {
+        // Captured directly at the BEFORE_COMMIT hook inside the transaction;
+        // never inferred later from snapshots or queue state.
+        int? boundaryWindowSequence;
+        final result = await db.transaction((txn) async {
           _fail(P1F01IntegrityOperation.admitOpportunity);
           final window = await _latestOpenWindow(txn);
           if (window == null) {
@@ -221,8 +415,24 @@ final class P1F01IntegrityStore {
             ''',
             [sequence, legalSetCode.value],
           );
+          if (_boundaryController.isAvailable) {
+            // Identity is captured here, inside the transaction, from this
+            // admission's own window row — never inferred later.
+            boundaryWindowSequence = sequence;
+            await _boundaryController.reachedBeforeCommit(
+              windowSequence: sequence,
+              opportunityOrdinal: opportunityOrdinalWithinRun,
+            );
+          }
           return P1F01OpportunityAdmissionResult.admitted;
         });
+        if (_boundaryController.isAvailable && boundaryWindowSequence != null) {
+          await _boundaryController.reachedAfterCommitBeforeAck(
+            windowSequence: boundaryWindowSequence!,
+            opportunityOrdinal: opportunityOrdinalWithinRun,
+          );
+        }
+        return result;
       }),
     );
     return result ?? P1F01OpportunityAdmissionResult.failedClosed;
@@ -350,6 +560,20 @@ final class P1F01IntegrityStore {
     return _latestSnapshot();
   }
 
+  Future<List<P1F01IntegritySnapshot>> retainedSnapshots() async {
+    await _queue;
+    final db = await _db();
+    final rows = await db.query(
+      _windowTable,
+      orderBy: 'local_window_sequence ASC',
+    );
+    return List.unmodifiable(
+      await Future.wait(rows.map((row) => _snapshotFromRow(db, row))),
+    );
+  }
+
+  Future<void> drain() => _queue;
+
   @visibleForTesting
   Future<P1F01IntegritySnapshot?> snapshot(int localWindowSequence) async {
     await debugDrain();
@@ -388,19 +612,7 @@ final class P1F01IntegrityStore {
   }
 
   @visibleForTesting
-  Future<List<P1F01IntegritySnapshot>> debugSnapshots() async {
-    await debugDrain();
-    final db = await _db();
-    final rows = await db.query(
-      _windowTable,
-      orderBy: 'local_window_sequence ASC',
-    );
-    final snapshots = <P1F01IntegritySnapshot>[];
-    for (final row in rows) {
-      snapshots.add(await _snapshotFromRow(db, row));
-    }
-    return snapshots;
-  }
+  Future<List<P1F01IntegritySnapshot>> debugSnapshots() => retainedSnapshots();
 
   @visibleForTesting
   Future<void> debugDrain() => _queue;

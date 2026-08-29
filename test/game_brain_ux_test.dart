@@ -271,7 +271,8 @@ void main() {
       final state = await _makeState(dark: dark);
       await tester.pumpWidget(_host(state, const MenuScreen()));
       expect(find.byKey(const Key('gamebrain-master-control')), findsOneWidget);
-      expect(find.text('GameBrain preference'), findsOneWidget);
+      expect(find.text('GameBrain'), findsOneWidget);
+      expect(find.text('GameBrain preference'), findsNothing);
       expect(find.text('Saved OFF'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.tap(find.byType(Switch));
@@ -289,7 +290,14 @@ void main() {
       expect(find.text('Active'), findsOneWidget);
       await tester.pumpWidget(_host(state, const gameplay.GameScreen()));
       expect(find.byKey(const Key('gamebrain-enabled-badge')), findsOneWidget);
-      expect(find.text('GAMEBRAIN ENABLED'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('gamebrain-enabled-badge')),
+          matching: find.byIcon(Icons.psychology_outlined),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('GAMEBRAIN ENABLED'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   }

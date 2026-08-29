@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
+import 'package:math_challenge/engine/question_generator.dart';
 import 'package:math_challenge/features/gameplay/domain/question_mechanic.dart';
 import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/models/enums.dart';
@@ -74,6 +75,21 @@ void main() {
     expect(missingOperationQuestion(normalized, Random(1))?.ans, 1);
     expect(missingOperationQuestion(ambiguous, Random(1)), isNull);
     expect([0, 1, 2, 3].map(operatorSymbol), ['+', '−', '×', '÷']);
+  });
+
+  test('shared transformer preserves the canonical generated fact', () {
+    final question = List.generate(
+      20,
+      (seed) => QuestionGenerator(rng: Random(seed)).build(
+        type: Operation.multiplication,
+        diff: Difficulty.medium,
+        numType: NumberType.natural,
+      ),
+    ).firstWhere(
+        (candidate) => missingOperationQuestion(candidate, Random(1)) != null);
+
+    expect(missingOperationQuestion(question, Random(1))!.fact,
+        same(question.fact));
   });
 
   test('controlled Missing Operation generations can use different orders', () {
@@ -508,9 +524,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Missing Operation'));
     await tester.pump();
-    expect(state.currentScreen, GameScreen.numType);
+    expect(state.currentScreen, GameScreen.practiceStyle);
     expect(state.isMissingOperationPractice, isTrue);
     expect(state.effectiveAnswerStyle, AnswerStyle.choice4);
+    state.startTimingPractice();
+    expect(state.currentScreen, GameScreen.numType);
 
     await tester.pumpWidget(
       MediaQuery(
@@ -558,9 +576,11 @@ void main() {
     await tester.tap(find.text('Mixed Operations'));
     await tester.pump();
 
-    expect(state.currentScreen, GameScreen.numType);
+    expect(state.currentScreen, GameScreen.practiceStyle);
     expect(state.rt.challenge, Operation.mixed);
     expect(state.isMissingOperationPractice, isFalse);
+    state.startTimingPractice();
+    expect(state.currentScreen, GameScreen.numType);
     expect(tester.takeException(), isNull);
   });
 }

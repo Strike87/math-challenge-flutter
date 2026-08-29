@@ -71,24 +71,40 @@ class _FamilyAgeGateScreenState extends State<FamilyAgeGateScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          'Choose your age range',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: settings.text,
-                            fontFamily: AppFonts.headFor(settings),
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Select the option that applies to you.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: settings.muted,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                          decoration: BoxDecoration(
+                            color: settings
+                                .accent(GameConfig.sky)
+                                .withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Choose your age range',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: settings.text,
+                                  fontFamily: AppFonts.headFor(settings),
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Select the option that applies to you.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: settings.muted,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 28),

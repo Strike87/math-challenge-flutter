@@ -176,6 +176,12 @@ enum GameMode {
 /// Identifies whether a run came from normal setup or Operation Quest.
 enum GameRunType { normal, operationQuest }
 
+/// Identifies the Mental Math entry that owns a run, when applicable.
+enum MentalMathEntry { freePractice, daily, weakSkills }
+
+/// Canonical timing configuration for a game run.
+enum TimingStyle { perQuestion, untimed, timeBank }
+
 /// Answer presentation used for a game session.
 enum AnswerStyle {
   choice4,

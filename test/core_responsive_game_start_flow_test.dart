@@ -5,6 +5,7 @@ import 'package:math_challenge/screens/config_screen.dart';
 import 'package:math_challenge/screens/menu_screen.dart';
 import 'package:math_challenge/screens/numtype_screen.dart';
 import 'package:math_challenge/screens/player_screen.dart';
+import 'package:math_challenge/screens/practice_style_screen.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
@@ -45,9 +46,13 @@ void main() {
         );
         expect(menuScroll, findsOneWidget);
         expect(
-          tester.state<ScrollableState>(
-            find.descendant(of: menuScroll, matching: find.byType(Scrollable)),
-          ).position.maxScrollExtent,
+          tester
+              .state<ScrollableState>(
+                find.descendant(
+                    of: menuScroll, matching: find.byType(Scrollable)),
+              )
+              .position
+              .maxScrollExtent,
           greaterThan(0),
         );
         if (viewport.width == 1280) {
@@ -55,7 +60,8 @@ void main() {
             of: find.byType(MenuScreen),
             matching: find.byWidgetPredicate(
               (widget) =>
-                  widget is ConstrainedBox && widget.constraints.maxWidth == 720,
+                  widget is ConstrainedBox &&
+                  widget.constraints.maxWidth == 720,
             ),
           );
           expect(content, findsOneWidget);
@@ -65,6 +71,14 @@ void main() {
         }
         await _expectHitTestable(tester, find.text('Addition'));
         await tester.tap(find.text('Addition'));
+        await tester.pumpAndSettle();
+
+        expect(state.currentScreen, GameScreen.practiceStyle);
+        expect(find.byType(PracticeStyleScreen), findsOneWidget);
+        final timingPracticeButton =
+            find.byKey(const Key('timing-practice-button'));
+        await _expectHitTestable(tester, timingPracticeButton);
+        await tester.tap(timingPracticeButton);
         await tester.pumpAndSettle();
 
         expect(state.currentScreen, GameScreen.numType);
@@ -163,6 +177,7 @@ class _TestHost extends StatelessWidget {
             body: Consumer<GameState>(
               builder: (context, state, _) => switch (state.currentScreen) {
                 GameScreen.menu => const MenuScreen(),
+                GameScreen.practiceStyle => const PracticeStyleScreen(),
                 GameScreen.numType => const NumTypeScreen(),
                 GameScreen.config => const ConfigScreen(),
                 GameScreen.player => const PlayerSetupScreen(),

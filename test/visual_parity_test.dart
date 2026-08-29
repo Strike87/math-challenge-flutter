@@ -33,6 +33,7 @@ import 'package:math_challenge/screens/menu_screen.dart';
 import 'package:math_challenge/screens/numtype_screen.dart';
 import 'package:math_challenge/screens/config_screen.dart';
 import 'package:math_challenge/screens/player_screen.dart';
+import 'package:math_challenge/screens/practice_style_screen.dart';
 import 'package:math_challenge/screens/game_screen.dart' as game_screen;
 import 'package:math_challenge/widgets/celebration_overlay.dart';
 import 'package:math_challenge/widgets/common.dart';
@@ -176,6 +177,8 @@ class TestAppShell extends StatelessWidget {
     switch (s) {
       case GameScreen.menu:
         return const MenuScreen();
+      case GameScreen.practiceStyle:
+        return const PracticeStyleScreen();
       case GameScreen.numType:
         return const NumTypeScreen();
       case GameScreen.config:
@@ -218,9 +221,28 @@ class MockAudioService implements AudioService {
   void vibratePowerUp() {}
 }
 
+class _DailyMentalMathVisualState extends GameState {
+  _DailyMentalMathVisualState({
+    required super.settings,
+    required super.audio,
+    required DailyMentalMathProfile profile,
+  }) : _profile = profile;
+
+  final DailyMentalMathProfile _profile;
+
+  @override
+  DailyMentalMathProfile get dailyMentalMathProfile => _profile;
+
+  @override
+  DailyMentalMathRecord? get currentDailyMentalMathRecord =>
+      dailyMentalMathRecord;
+}
+
 Future<GameState> _makeState(
   Map<String, Object> prefs, {
   bool familyEligible = false,
+  GameState Function(SettingsService settings, AudioService audio)?
+      stateBuilder,
 }) async {
   SharedPreferences.setMockInitialValues({
     ...prefs,
@@ -241,10 +263,12 @@ Future<GameState> _makeState(
       reduceMotion: true,
       animSpeed: 1,
     );
-  final state = GameState(
-    settings: settings,
-    audio: MockAudioService(),
-  );
+  final audio = MockAudioService();
+  final state = stateBuilder?.call(settings, audio) ??
+      GameState(
+        settings: settings,
+        audio: audio,
+      );
   await state.load();
   state.dailyBoss = GameConfig.dailyBosses.first;
   state.dailyBossDateKey = '2026-06-28';
@@ -288,7 +312,7 @@ void expectQuickPracticeSemantics() {
 
   expect(find.text('🧮'), findsOneWidget);
   expect(find.text('MISSING NUMBER'), findsNothing);
-  expect(find.text('Weak Skills Practice'), findsOneWidget);
+  expect(find.text('Training Arena'), findsOneWidget);
   expect(find.text('🚀'), findsOneWidget);
 }
 
@@ -301,6 +325,29 @@ void main() {
   group('RT-040: Visual Parity', () {
     const phoneSize = Size(390, 844);
     const tabletSize = Size(834, 1194);
+    const dailyProfile = DailyMentalMathProfile(
+      dateKey: '2040-02-03',
+      operation: Operation.multiplication,
+      numberType: NumberType.natural,
+      focus: DailyMentalMathFocus.streakMaster,
+    );
+
+    Future<_DailyMentalMathVisualState> dailyVisualState({
+      DailyMentalMathRecord? record,
+    }) async {
+      final state = await _makeState(
+        {'mc_dark': false},
+        stateBuilder: (settings, audio) => _DailyMentalMathVisualState(
+          settings: settings,
+          audio: audio,
+          profile: dailyProfile,
+        ),
+      ) as _DailyMentalMathVisualState;
+      state
+        ..dailyBoss = null
+        ..dailyMentalMathRecord = record;
+      return state;
+    }
 
     testWidgets('20. Skills Dashboard phone light and dark', (tester) async {
       final state = await _makeState({'mc_dark': false});
@@ -626,6 +673,28 @@ void main() {
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/04_config_1p.png'));
     });
+    testWidgets('30. Deep Thinking config selector', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..players = 1
+        ..mode = GameMode.standard
+        ..adaptive = false;
+      state.goToConfig(Operation.addition.name);
+      await state.selectNumType(NumberType.natural.name);
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+      expect(find.text('Per Question'), findsOneWidget);
+      expect(find.text('Deep Thinking'), findsOneWidget);
+      expect(find.text('Time Bank'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/30_deep_thinking_config.png'),
+      );
+    });
     testWidgets('4b. Missing Operation config forces Choice4 visually',
         (tester) async {
       final state = await _makeState({
@@ -683,6 +752,7 @@ void main() {
       };
       state.goToConfig('weakSkills');
       state.continueWeakSkillsSetup();
+      state.startTimingPractice();
       await state.selectNumType(NumberType.natural.name);
       state.setAdaptive(true);
       await setTestDevice(tester, logicalSize: phoneSize);
@@ -703,6 +773,7 @@ void main() {
       final state = await _makeState({'mc_dark': false});
       state.goToConfig('weakSkills');
       state.continueWeakSkillsSetup();
+      state.startTimingPractice();
       await state.selectNumType(NumberType.natural.name);
       state.setAdaptive(true);
       await setTestDevice(tester, logicalSize: phoneSize);
@@ -873,7 +944,1017 @@ void main() {
       await expectLater(find.byType(TestAppShell),
           matchesGoldenFile('goldens/08_gameplay_dark.png'));
 
+      state.settings.toggleDark();
+      await state.submitFamilyAgeRange(FamilyAgeRange.adult18plus);
+      await state.setGameBrainPreference(true);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('gamebrain-enabled-badge')), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/08b_gameplay_gamebrain_enabled_light.png'),
+      );
+
+      state.settings.toggleDark();
+      await tester.pumpAndSettle();
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/08b_gameplay_gamebrain_enabled_dark.png'),
+      );
+
       state.rt.timer?.cancel();
+    });
+
+    testWidgets('31. Deep Thinking gameplay has no timer', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..players = 1
+        ..mode = GameMode.standard
+        ..adaptive = false
+        ..rt.challenge = Operation.addition;
+      state.setTimingStyle(TimingStyle.untimed);
+      state.startGame();
+      state.rt.q = const Question(
+        type: Operation.addition,
+        key: 'visual-deep-thinking',
+        text: '5 + 3',
+        ans: 8,
+        choices: [6, 7, 8, 9],
+        diff: Difficulty.easy,
+        numType: NumberType.natural,
+      );
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()));
+      await tester.pumpAndSettle();
+      expect(state.activeRunSnapshot?.timingStyle, TimingStyle.untimed);
+      expect(state.rt.timer, isNull);
+      expect(find.text('5 + 3', findRichText: true), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/31_deep_thinking_gameplay.png'),
+      );
+    });
+
+    testWidgets('32. Time Bank config keeps incompatible options visible',
+        (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..players = 1
+        ..mode = GameMode.standard
+        ..adaptive = false;
+      state.goToConfig(Operation.addition.name);
+      await state.selectNumType(NumberType.natural.name);
+      state.setTimingStyle(TimingStyle.timeBank);
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -400),
+      );
+      await tester.pumpAndSettle();
+
+      expect(state.setupTimingStyle, TimingStyle.timeBank);
+      expect(state.canSelectDeepThinking, isTrue);
+      expect(state.canSelectTimeBank, isTrue);
+      expect(find.text('Per Question'), findsOneWidget);
+      expect(find.text('Deep Thinking'), findsOneWidget);
+      expect(find.text('Time Bank'), findsOneWidget);
+      expect(find.text('2 Players'), findsOneWidget);
+      expect(find.text('Adaptive Difficulty'), findsOneWidget);
+      expect(
+        tester
+            .widget<InkWell>(
+              find.ancestor(
+                of: find.text('2 Players', skipOffstage: false),
+                matching: find.byType(InkWell),
+              ),
+            )
+            .onTap,
+        isNull,
+      );
+      expect(tester.widget<Switch>(find.byType(Switch)).onChanged, isNull);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/32_time_bank_config.png'),
+      );
+    });
+
+    testWidgets('33. Time Bank gameplay shows one bank and disabled timers',
+        (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..players = 1
+        ..mode = GameMode.standard
+        ..adaptive = false
+        ..rt.challenge = Operation.addition;
+      state.setTimingStyle(TimingStyle.timeBank);
+      state.startGame();
+      state.handleAppLifecycleChange(resumed: false);
+      state.p[1].pups = [
+        PowerUp.time,
+        PowerUp.time,
+        PowerUp.fifty,
+        PowerUp.freeze,
+        PowerUp.freeze,
+      ];
+      state.rt.q = const Question(
+        type: Operation.addition,
+        key: 'visual-time-bank',
+        text: '5 + 3',
+        ans: 8,
+        choices: [6, 7, 8, 9],
+        diff: Difficulty.easy,
+        numType: NumberType.natural,
+      );
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(state.activeRunSnapshot?.timingStyle, TimingStyle.timeBank);
+      expect(state.rt.timer, isNull);
+      expect(find.byKey(const Key('time-bank-display')), findsOneWidget);
+      expect(find.text('TIME BANK'), findsOneWidget);
+      expect(find.text('+5s'), findsOneWidget);
+      expect(find.text('▮▮'), findsOneWidget);
+      expect(
+        tester
+            .widget<InkWell>(
+              find.ancestor(
+                of: find.text('+5s'),
+                matching: find.byType(InkWell),
+              ),
+            )
+            .onTap,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<InkWell>(
+              find.ancestor(
+                of: find.text('▮▮'),
+                matching: find.byType(InkWell),
+              ),
+            )
+            .onTap,
+        isNull,
+      );
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/33_time_bank_gameplay.png'),
+      );
+    });
+
+    testWidgets('34. Time Bank warning starts at ten seconds', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..players = 1
+        ..mode = GameMode.standard
+        ..adaptive = false
+        ..rt.challenge = Operation.addition;
+      state.setTimingStyle(TimingStyle.timeBank);
+      state.startGame();
+      state.handleAppLifecycleChange(resumed: false);
+      state
+        ..rt.timeBankRemainingMs = 10000
+        ..rt.q = const Question(
+          type: Operation.addition,
+          key: 'visual-time-bank-warning',
+          text: '9 + 4',
+          ans: 13,
+          choices: [11, 12, 13, 14],
+          diff: Difficulty.easy,
+          numType: NumberType.natural,
+        );
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('time-bank-display')), findsOneWidget);
+      expect(find.text('0:10'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/34_time_bank_gameplay_warning.png'),
+      );
+    });
+
+    testWidgets('35. Time Bank result reports time remaining only',
+        (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state
+        ..players = 1
+        ..mode = GameMode.standard
+        ..adaptive = false
+        ..rt.challenge = Operation.addition;
+      state.setTimingStyle(TimingStyle.timeBank);
+      state.startGame();
+      state.handleAppLifecycleChange(resumed: false);
+      state
+        ..rt.timeBankRemainingMs = 47000
+        ..rt.q = const Question(
+          type: Operation.addition,
+          key: 'visual-time-bank-result',
+          text: '7 + 6',
+          ans: 13,
+          choices: [11, 12, 13, 14],
+          diff: Difficulty.easy,
+          numType: NumberType.natural,
+        )
+        ..resultIcon = '🌟'
+        ..resultTitle = 'Player Report'
+        ..resultDescription = 'Time remaining: 47s';
+      state.showModal(GameModal.win);
+
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(state.activeRunSnapshot?.timingStyle, TimingStyle.timeBank);
+      expect(find.text('Time remaining: 47s'), findsOneWidget);
+      expect(find.textContaining('Final Score:'), findsNothing);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/35_time_bank_result.png'),
+      );
+    });
+
+    testWidgets('36. Practice Style phone light and dark', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.goToPracticeStyle('addition');
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Choose Practice Style'), findsOneWidget);
+      expect(find.text('Timing Practice'), findsOneWidget);
+      expect(find.text('IQ Spark'), findsOneWidget);
+      expect(find.text('Mental Math'), findsNothing);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/36_practice_style_phone_light.png'),
+      );
+
+      state.settings.toggleDark();
+      await tester.pumpAndSettle();
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/36_practice_style_phone_dark.png'),
+      );
+    });
+
+    testWidgets('37. Training Arena Practice Style', (tester) async {
+      final state = await _makeState({'mc_dark': false});
+      state.skillMap = {
+        Operation.addition.name: SkillData(mastery: 5, count: 3),
+        Operation.subtraction.name: SkillData(mastery: 20, count: 3),
+        Operation.multiplication.name: SkillData(mastery: 30, count: 3),
+        Operation.division.name: SkillData(mastery: 40, count: 3),
+      };
+      state.goToConfig('weakSkills');
+      state.continueWeakSkillsSetup();
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Training Arena'), findsOneWidget);
+      expect(find.text('Timing Practice'), findsOneWidget);
+      expect(find.text('IQ Spark'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/50_training_arena_practice_style.png'),
+      );
+    });
+
+    testWidgets('38. Mental Math countdown phone light and dark',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      final state = await _makeState({'mc_dark': false});
+      state.goToPracticeStyle('addition');
+      state.startMentalMathFreePractice();
+      await state.selectNumType(NumberType.natural.name);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pump();
+
+      expect(find.text('Build your momentum'), findsOneWidget);
+      expect(find.text('IQ SPARK'), findsOneWidget);
+      expect(find.text('MENTAL MATH'), findsNothing);
+      expect(
+          find.bySemanticsLabel(RegExp('IQ Spark countdown')), findsOneWidget);
+      expect(find.byKey(const Key('mental-math-countdown')), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/38_mental_math_countdown_light.png'),
+      );
+
+      state.settings.toggleDark();
+      await tester.pump();
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/38_mental_math_countdown_dark.png'),
+      );
+      semantics.dispose();
+      await state.quitToMenu();
+    });
+
+    Future<GameState> mentalMathHudState(int momentum) async {
+      final state = await _makeState({'mc_dark': false});
+      state.debugStartGameFromSnapshot(
+        const GameRunSnapshot(
+          runType: GameRunType.normal,
+          mode: GameMode.standard,
+          operation: Operation.addition,
+          difficulty: Difficulty.medium,
+          numberType: NumberType.natural,
+          answerStyle: AnswerStyle.choice4,
+          players: 1,
+          questionTarget: 40,
+          mentalMathEntry: MentalMathEntry.freePractice,
+        ),
+      );
+      state.rt.timer?.cancel();
+      state.rt
+        ..momentum = momentum
+        ..currentStreak = momentum > 0 ? 3 : 0
+        ..timerStart = 0
+        ..timerDurationMs = 8500
+        ..q = const Question(
+          type: Operation.addition,
+          key: '42+17',
+          text: '42 + 17',
+          ans: 59,
+          choices: [57, 58, 59, 60],
+          diff: Difficulty.medium,
+          numType: NumberType.natural,
+        );
+      return state;
+    }
+
+    testWidgets('39. Mental Math gameplay Flow zone', (tester) async {
+      final state = await mentalMathHudState(0);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pump();
+      expect(find.byKey(const Key('mental-math-hud')), findsOneWidget);
+      expect(find.text('IQ SPARK'), findsOneWidget);
+      expect(find.text('MENTAL MATH'), findsNothing);
+      expect(find.text('FLOW'), findsOneWidget);
+      expect(find.text('Q 1 / 40'), findsNothing);
+      expect(find.text('Player 1'), findsNothing);
+      expect(find.text('50/50'), findsNothing);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/39_mental_math_gameplay_flow.png'),
+      );
+    });
+
+    testWidgets('40. Mental Math gameplay Challenge zone', (tester) async {
+      final state = await mentalMathHudState(4);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pump();
+      expect(find.text('CHALLENGE'), findsOneWidget);
+      expect(find.text('+4'), findsOneWidget);
+      expect(find.text('IQ SPARK'), findsOneWidget);
+      expect(find.text('MENTAL MATH'), findsNothing);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/40_mental_math_gameplay_challenge.png'),
+      );
+    });
+
+    testWidgets('41. Mental Math gameplay Recovery zone', (tester) async {
+      final state = await mentalMathHudState(-4);
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pump();
+      expect(find.text('RECOVERY'), findsOneWidget);
+      expect(find.text('-4'), findsOneWidget);
+      expect(find.text('IQ SPARK'), findsOneWidget);
+      expect(find.text('MENTAL MATH'), findsNothing);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/41_mental_math_gameplay_recovery.png'),
+      );
+    });
+
+    testWidgets('42. Mental Math HUD remains usable across responsive sizes',
+        (tester) async {
+      final state = await mentalMathHudState(4);
+      for (final size in const [
+        Size(320, 568),
+        Size(390, 844),
+        Size(844, 390),
+        Size(500, 600),
+        Size(1024, 768),
+      ]) {
+        await setTestDevice(tester, logicalSize: size);
+        await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()),
+        );
+        await tester.pump();
+        expect(find.byKey(const Key('mental-math-hud')), findsOneWidget);
+        expect(find.text('IQ SPARK'), findsOneWidget);
+        expect(find.text('MENTAL MATH'), findsNothing);
+        expectNoVisualException(tester);
+      }
+    });
+
+    testWidgets('43. Mental Math result remains usable across responsive sizes',
+        (tester) async {
+      final state = await mentalMathHudState(10);
+      state.mentalMathResultSummary = const MentalMathResultSummary(
+        avatarEmoji: '🐶',
+        terminalTitle: 'MASTERY REACHED',
+        message: 'Strong run. You reached full momentum.',
+        peakMomentum: 10,
+        bestStreak: 5,
+        accuracyPercent: 82,
+        averageResponseMs: 4300,
+        fastestAnswerMs: 2100,
+        factsRecovered: 0,
+      );
+      state.showModal(GameModal.win);
+
+      for (final size in const [
+        Size(320, 568),
+        Size(390, 844),
+        Size(844, 390),
+        Size(500, 600),
+        Size(1024, 768),
+      ]) {
+        await setTestDevice(tester, logicalSize: size);
+        await tester.pumpWidget(
+          TestAppWrapper(state: state, child: const TestAppShell()),
+        );
+        await tester.pump();
+        expect(find.text('IQ SPARK'), findsWidgets);
+        expect(find.text('MENTAL MATH'), findsNothing);
+        expect(find.text('MASTERY REACHED'), findsOneWidget);
+        expect(find.text('Facts Recovered'), findsOneWidget);
+        expectNoVisualException(tester);
+      }
+    });
+
+    Future<GameState> mentalMathResultState({
+      required int momentum,
+      required MentalMathResultSummary summary,
+    }) async {
+      final state = await mentalMathHudState(momentum);
+      state.mentalMathResultSummary = summary;
+      state.showModal(GameModal.win);
+      return state;
+    }
+
+    testWidgets('44. Mental Math mastery result', (tester) async {
+      final state = await mentalMathResultState(
+        momentum: 10,
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'MASTERY REACHED',
+          message: 'Strong run. You reached full momentum.',
+          peakMomentum: 10,
+          bestStreak: 5,
+          accuracyPercent: 82,
+          averageResponseMs: 4300,
+          fastestAnswerMs: 2100,
+          factsRecovered: 0,
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pump();
+
+      expect(find.text('MASTERY REACHED'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/42_mental_math_result_mastery.png'),
+      );
+    });
+
+    testWidgets('45. Mental Math practice-complete result', (tester) async {
+      final state = await mentalMathResultState(
+        momentum: -10,
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'PRACTICE COMPLETE',
+          message:
+              'Practice complete. Your session still built useful fluency.',
+          peakMomentum: 0,
+          bestStreak: 2,
+          accuracyPercent: 38,
+          averageResponseMs: 5800,
+          fastestAnswerMs: 3200,
+          factsRecovered: 0,
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pump();
+
+      expect(find.text('PRACTICE COMPLETE'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile(
+            'goldens/43_mental_math_result_practice_complete.png'),
+      );
+    });
+
+    testWidgets('46. Mental Math training-complete result', (tester) async {
+      final state = await mentalMathResultState(
+        momentum: 3,
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'TRAINING COMPLETE',
+          message: 'Training complete. You reached the session limit.',
+          peakMomentum: 7,
+          bestStreak: 4,
+          accuracyPercent: 70,
+          averageResponseMs: 4600,
+          fastestAnswerMs: 1800,
+          factsRecovered: 0,
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pump();
+
+      expect(find.text('TRAINING COMPLETE'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile(
+            'goldens/44_mental_math_result_training_complete.png'),
+      );
+    });
+
+    testWidgets('47. Training Arena IQ Spark result', (tester) async {
+      final state = await mentalMathResultState(
+        momentum: 10,
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'MASTERY REACHED',
+          message: 'Strong run. You reached full momentum.',
+          peakMomentum: 10,
+          bestStreak: 5,
+          accuracyPercent: 82,
+          averageResponseMs: 4300,
+          fastestAnswerMs: 2100,
+          factsRecovered: 1,
+          trainingArenaPracticeAreas: [
+            Operation.addition,
+            Operation.subtraction,
+          ],
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pump();
+
+      expect(find.text('Training Arena'), findsOneWidget);
+      expect(find.text('Practice Areas'), findsOneWidget);
+      expect(find.text('Addition\nSubtraction'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/51_training_arena_iq_result.png'),
+      );
+    });
+
+    testWidgets('48. Daily Mental Math menu card', (tester) async {
+      final state = await dailyVisualState();
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      final dailyCard = find.byKey(const Key('daily-mental-math-row'));
+      await tester.ensureVisible(dailyCard);
+      await tester.pumpAndSettle();
+      expect(find.text('CHALLENGES'), findsOneWidget);
+      expect(find.text('Daily Boss'), findsOneWidget);
+      expect(find.text('Daily IQ Spark'), findsOneWidget);
+      expect(find.text('Daily Mental Math'), findsNothing);
+      expect(find.text('Operation Quest'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Daily Boss')).dy,
+        lessThan(tester.getTopLeft(find.text('Daily IQ Spark')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('Daily IQ Spark')).dy,
+        lessThan(tester.getTopLeft(find.text('Operation Quest')).dy),
+      );
+      expect(find.textContaining('MULTIPLY'), findsOneWidget);
+      expect(find.textContaining('NATURAL'), findsOneWidget);
+      expect(find.textContaining('AVAILABLE'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/45_daily_mental_math_menu.png'),
+      );
+    });
+
+    testWidgets('48. Daily Mental Math challenge modal', (tester) async {
+      final state = await dailyVisualState();
+      state.showDailyMentalMath();
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('DAILY IQ SPARK'), findsOneWidget);
+      expect(find.text('DAILY MENTAL MATH'), findsNothing);
+      expect(find.text("Today's challenge"), findsOneWidget);
+      expect(find.text('Multiply'), findsOneWidget);
+      expect(find.text('Natural'), findsOneWidget);
+      expect(find.text('Daily Focus'), findsOneWidget);
+      expect(find.textContaining('Streak Master'), findsOneWidget);
+      expect(find.text('Reach +10 Momentum'), findsOneWidget);
+      expect(find.text('50 Coins'), findsOneWidget);
+      expect(find.text('🪙 50'), findsOneWidget);
+      expect(find.text('AVAILABLE'), findsOneWidget);
+      expect(find.text('Ready to fight'), findsNothing);
+      expect(
+        find.byKey(const Key('daily-mental-math-start')),
+        findsOneWidget,
+      );
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/46_daily_mental_math_modal.png'),
+      );
+    });
+
+    Future<_DailyMentalMathVisualState> dailyResultState({
+      required MentalMathResultSummary summary,
+    }) async {
+      final state = await dailyVisualState();
+      state
+        ..mentalMathResultSummary = summary
+        ..showModal(GameModal.win);
+      return state;
+    }
+
+    testWidgets('49. Daily Mental Math first-clear result', (tester) async {
+      final state = await dailyResultState(
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'MASTERY REACHED',
+          message: 'Strong run. You reached full momentum.',
+          peakMomentum: 10,
+          bestStreak: 6,
+          accuracyPercent: 82,
+          averageResponseMs: 4300,
+          fastestAnswerMs: 2100,
+          factsRecovered: 1,
+          dailyFocus: DailyMentalMathFocus.streakMaster,
+          currentRunFocusMet: true,
+          officialFocusCompleted: true,
+          focusGrade: DailyMentalMathGrade.a,
+          todaysBestGrade: DailyMentalMathGrade.a,
+          isNewDailyBest: true,
+          dailyRewardAmountGranted: 50,
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('DAILY IQ SPARK'), findsOneWidget);
+      expect(find.text('DAILY MENTAL MATH'), findsNothing);
+      expect(find.text('MASTERY REACHED'), findsOneWidget);
+      expect(find.text('Daily Focus'), findsOneWidget);
+      expect(find.text('Focus Grade'), findsOneWidget);
+      expect(find.text("Today's Best"), findsOneWidget);
+      expect(find.text('NEW DAILY BEST!'), findsOneWidget);
+      expect(find.text('+50 COINS'), findsOneWidget);
+      expect(find.text('Facts Recovered'), findsOneWidget);
+      final resultModal = find.byType(ModalRouter);
+      expect(
+        find.descendant(of: resultModal, matching: find.text('High Score')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: resultModal, matching: find.text('Hall of Fame')),
+        findsNothing,
+      );
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/47_daily_mental_math_first_clear.png'),
+      );
+    });
+
+    testWidgets('50. Daily Mental Math Perfect Day result', (tester) async {
+      final state = await dailyResultState(
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'MASTERY REACHED',
+          message: 'Strong run. You reached full momentum.',
+          peakMomentum: 10,
+          bestStreak: 8,
+          accuracyPercent: 95,
+          averageResponseMs: 3200,
+          fastestAnswerMs: 1600,
+          factsRecovered: 2,
+          dailyFocus: DailyMentalMathFocus.precision,
+          currentRunFocusMet: true,
+          officialFocusCompleted: true,
+          focusGrade: DailyMentalMathGrade.s,
+          todaysBestGrade: DailyMentalMathGrade.s,
+          dailyRewardAlreadyClaimed: true,
+          perfectDay: true,
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('DAILY IQ SPARK'), findsOneWidget);
+      expect(find.text('DAILY MENTAL MATH'), findsNothing);
+      expect(find.text('MASTERY REACHED'), findsOneWidget);
+      expect(find.text('Focus Grade'), findsOneWidget);
+      expect(find.text("Today's Best"), findsOneWidget);
+      expect(find.text('DAILY REWARD ALREADY CLAIMED'), findsOneWidget);
+      expect(find.text('★ PERFECT DAY ★'), findsOneWidget);
+      expect(find.text('+50 COINS'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(ModalRouter),
+          matching: find.textContaining('Achievement'),
+        ),
+        findsNothing,
+      );
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/48_daily_mental_math_perfect_day.png'),
+      );
+    });
+
+    testWidgets('51. Daily Mental Math stays usable across responsive sizes',
+        (tester) async {
+      for (final size in const [
+        Size(390, 844),
+        Size(844, 390),
+        Size(1024, 768),
+      ]) {
+        final menuState = await dailyVisualState();
+        await setTestDevice(tester, logicalSize: size);
+        await tester.pumpWidget(
+          TestAppWrapper(state: menuState, child: const TestAppShell()),
+        );
+        await tester.pumpAndSettle();
+        final card = find.byKey(const Key('daily-mental-math-row'));
+        await tester.ensureVisible(card);
+        await tester.pumpAndSettle();
+        expect(card, findsOneWidget);
+        expectNoVisualException(tester);
+
+        final modalState = await dailyVisualState();
+        modalState.showDailyMentalMath();
+        await tester.pumpWidget(
+          TestAppWrapper(state: modalState, child: const TestAppShell()),
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Reach +10 Momentum'));
+        await tester.ensureVisible(find.text('50 Coins'));
+        await tester.pumpAndSettle();
+        await _expectHitTestableInDeviceViewport(
+          tester,
+          "Start Today's Challenge",
+        );
+        expectNoVisualException(tester);
+
+        final resultState = await dailyResultState(
+          summary: const MentalMathResultSummary(
+            avatarEmoji: '🐶',
+            terminalTitle: 'MASTERY REACHED',
+            message: 'Strong run. You reached full momentum.',
+            peakMomentum: 10,
+            bestStreak: 8,
+            accuracyPercent: 95,
+            averageResponseMs: 3200,
+            fastestAnswerMs: 1600,
+            factsRecovered: 2,
+            dailyFocus: DailyMentalMathFocus.precision,
+            currentRunFocusMet: true,
+            officialFocusCompleted: true,
+            focusGrade: DailyMentalMathGrade.s,
+            todaysBestGrade: DailyMentalMathGrade.s,
+            dailyRewardAlreadyClaimed: true,
+            perfectDay: true,
+          ),
+        );
+        await tester.pumpWidget(
+          TestAppWrapper(state: resultState, child: const TestAppShell()),
+        );
+        await tester.pumpAndSettle();
+        final metrics = find.text('Facts Recovered');
+        await tester.ensureVisible(metrics);
+        await tester.pumpAndSettle();
+        expect(metrics, findsOneWidget);
+        await _expectHitTestableInDeviceViewport(tester, 'Replay');
+        expectNoVisualException(tester);
+      }
+    });
+
+    testWidgets('52. Daily Mental Math modal details', (tester) async {
+      final state = await dailyVisualState();
+      state.showDailyMentalMath();
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      final scroll = find.descendant(
+        of: find.byType(ModalRouter),
+        matching: find.byType(SingleChildScrollView),
+      );
+      expect(scroll, findsOneWidget);
+      await tester.drag(scroll, const Offset(0, -310));
+      await tester.pumpAndSettle();
+
+      expect(find.text('DAILY IQ SPARK'), findsOneWidget);
+      expect(find.text('DAILY MENTAL MATH'), findsNothing);
+      expect(find.text('Goal'), findsOneWidget);
+      expect(find.text('Reach +10 Momentum'), findsOneWidget);
+      expect(find.text('Reward'), findsOneWidget);
+      expect(find.text('50 Coins'), findsOneWidget);
+      expect(find.text('AVAILABLE'), findsOneWidget);
+      expect(find.text('Ready to fight'), findsNothing);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/49_daily_mental_math_modal_details.png'),
+      );
+    });
+
+    testWidgets('53. Daily Mental Math first-clear metrics details',
+        (tester) async {
+      final state = await dailyResultState(
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'MASTERY REACHED',
+          message: 'Strong run. You reached full momentum.',
+          peakMomentum: 10,
+          bestStreak: 6,
+          accuracyPercent: 82,
+          averageResponseMs: 4300,
+          fastestAnswerMs: 2100,
+          factsRecovered: 1,
+          dailyFocus: DailyMentalMathFocus.streakMaster,
+          currentRunFocusMet: true,
+          officialFocusCompleted: true,
+          focusGrade: DailyMentalMathGrade.a,
+          todaysBestGrade: DailyMentalMathGrade.a,
+          isNewDailyBest: true,
+          dailyRewardAmountGranted: 50,
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Facts Recovered'));
+      await tester.pumpAndSettle();
+      for (final label in const [
+        'Peak Momentum',
+        'Best Streak',
+        'Accuracy',
+        'Average Response Time',
+        'Fastest Answer',
+        'Facts Recovered',
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+      expect(find.text('DAILY IQ SPARK'), findsOneWidget);
+      expect(find.text('DAILY MENTAL MATH'), findsNothing);
+      expect(find.text('MASTERY REACHED'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile(
+          'goldens/50_daily_mental_math_first_clear_metrics.png',
+        ),
+      );
+    });
+
+    testWidgets('54. Daily Mental Math Perfect Day metrics details',
+        (tester) async {
+      final state = await dailyResultState(
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'MASTERY REACHED',
+          message: 'Strong run. You reached full momentum.',
+          peakMomentum: 10,
+          bestStreak: 8,
+          accuracyPercent: 95,
+          averageResponseMs: 3200,
+          fastestAnswerMs: 1600,
+          factsRecovered: 2,
+          dailyFocus: DailyMentalMathFocus.precision,
+          currentRunFocusMet: true,
+          officialFocusCompleted: true,
+          focusGrade: DailyMentalMathGrade.s,
+          todaysBestGrade: DailyMentalMathGrade.s,
+          dailyRewardAlreadyClaimed: true,
+          perfectDay: true,
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      final scroll = find.descendant(
+        of: find.byType(ModalRouter),
+        matching: find.byType(SingleChildScrollView),
+      );
+      expect(scroll, findsOneWidget);
+      await tester.drag(scroll, const Offset(0, -360));
+      await tester.pumpAndSettle();
+
+      expect(find.text('★ PERFECT DAY ★'), findsOneWidget);
+      for (final label in const [
+        'Peak Momentum',
+        'Best Streak',
+        'Accuracy',
+        'Average Response Time',
+        'Fastest Answer',
+        'Facts Recovered',
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+      expect(find.text('DAILY IQ SPARK'), findsOneWidget);
+      expect(find.text('DAILY MENTAL MATH'), findsNothing);
+      expect(find.text('MASTERY REACHED'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile(
+          'goldens/51_daily_mental_math_perfect_day_metrics.png',
+        ),
+      );
     });
 
     testWidgets('9. Daily Boss screen/modal', (tester) async {

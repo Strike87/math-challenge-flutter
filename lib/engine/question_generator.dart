@@ -1,5 +1,6 @@
 import 'dart:math';
 import '../models/enums.dart';
+import '../models/math_fact.dart';
 import '../models/player.dart';
 
 /// Random question generator.
@@ -24,6 +25,13 @@ class QuestionGenerator {
         : decimalQuest
             ? _buildDecimalQuest(type, diff)
             : _applyNumType(_buildBase(type, diff), type, diff, numType);
+    final fact = q.fact.copyWith(
+      difficulty: diff,
+      numberType: numType,
+      rationalDecimalPlaces: q.ratDP,
+      allowsRelatedMissingRepresentations:
+          numType == NumberType.natural || !q.numberTypeTransformed,
+    );
     final choices = _buildChoices(q, numType);
     return Question(
       type: q.type,
@@ -34,7 +42,108 @@ class QuestionGenerator {
       diff: diff,
       numType: numType,
       ratDP: q.ratDP,
+      fact: fact,
     );
+  }
+
+  /// Builds a different, legal representation of a generator-created fact.
+  ///
+  /// [allowedOperations] contains effective basic operations. Supplying both
+  /// members of an inverse pair permits that pair; a single-operation scope
+  /// cannot escape to its inverse.
+  Question? buildRelated({
+    required MathFact fact,
+    required Difficulty diff,
+    required NumberType numType,
+    required Set<Operation> allowedOperations,
+    Set<FactRepresentation> excludedRepresentations = const {},
+  }) {
+    if (fact.difficulty != diff ||
+        fact.numberType != numType ||
+        !fact.isMathematicallyValid ||
+        !allowedOperations.contains(fact.operation)) {
+      return null;
+    }
+
+    final candidates = <MathFact>[];
+    void add(MathFact candidate) {
+      if (_representationAllowed(candidate.representation, diff) &&
+          (candidate.representation == FactRepresentation.direct ||
+              fact.allowsRelatedMissingRepresentations) &&
+          !excludedRepresentations.contains(candidate.representation) &&
+          !_sameRenderedForm(candidate, fact) &&
+          candidate.isMathematicallyValid &&
+          _isWithinCanonicalRange(candidate)) {
+        candidates.add(candidate);
+      }
+    }
+
+    void same(Operation operation, num left, num right, num result,
+        FactRepresentation representation) {
+      if (allowedOperations.contains(operation)) {
+        add(MathFact(
+          operation: operation,
+          left: left,
+          right: right,
+          result: result,
+          representation: representation,
+          difficulty: diff,
+          numberType: numType,
+          rationalDecimalPlaces: fact.rationalDecimalPlaces,
+          allowsRelatedMissingRepresentations:
+              fact.allowsRelatedMissingRepresentations,
+        ));
+      }
+    }
+
+    same(fact.operation, fact.left, fact.right, fact.result,
+        FactRepresentation.direct);
+    same(fact.operation, fact.left, fact.right, fact.result,
+        FactRepresentation.missingLeft);
+    same(fact.operation, fact.left, fact.right, fact.result,
+        FactRepresentation.missingRight);
+    if (fact.operation == Operation.addition ||
+        fact.operation == Operation.multiplication) {
+      same(fact.operation, fact.right, fact.left, fact.result,
+          FactRepresentation.direct);
+      same(fact.operation, fact.right, fact.left, fact.result,
+          FactRepresentation.missingLeft);
+      same(fact.operation, fact.right, fact.left, fact.result,
+          FactRepresentation.missingRight);
+    }
+
+    final inverse = _inverseOperation(fact.operation);
+    if (inverse != null && allowedOperations.contains(inverse)) {
+      switch (fact.operation) {
+        case Operation.addition:
+          same(inverse, fact.result, fact.right, fact.left,
+              FactRepresentation.direct);
+          same(inverse, fact.result, fact.left, fact.right,
+              FactRepresentation.direct);
+        case Operation.subtraction:
+          same(inverse, fact.result, fact.right, fact.left,
+              FactRepresentation.direct);
+          same(inverse, fact.right, fact.result, fact.left,
+              FactRepresentation.direct);
+        case Operation.multiplication:
+          if (fact.left != 0 && fact.right != 0) {
+            same(inverse, fact.result, fact.right, fact.left,
+                FactRepresentation.direct);
+            same(inverse, fact.result, fact.left, fact.right,
+                FactRepresentation.direct);
+          }
+        case Operation.division:
+          same(inverse, fact.result, fact.right, fact.left,
+              FactRepresentation.direct);
+          same(inverse, fact.right, fact.result, fact.left,
+              FactRepresentation.direct);
+        default:
+          break;
+      }
+    }
+
+    if (candidates.isEmpty) return null;
+    return _renderFact(candidates[_rng.nextInt(candidates.length)]);
   }
 
   _QBase _buildDecimalQuest(Operation type, Difficulty diff) {
@@ -56,6 +165,7 @@ class QuestionGenerator {
           text: '$a + $b = ?',
           ans: quantize(a + b),
           ratDP: decimalPlaces,
+          fact: _fact(type, a, b, quantize(a + b), FactRepresentation.direct),
         );
       case Operation.subtraction:
         final b = decimal(1, 15);
@@ -67,6 +177,7 @@ class QuestionGenerator {
           text: '$a − $b = ?',
           ans: result,
           ratDP: decimalPlaces,
+          fact: _fact(type, a, b, result, FactRepresentation.direct),
         );
       case Operation.multiplication:
         final a = decimal(1, 15);
@@ -77,6 +188,7 @@ class QuestionGenerator {
           text: '$a × $b = ?',
           ans: quantize(a * b),
           ratDP: decimalPlaces,
+          fact: _fact(type, a, b, quantize(a * b), FactRepresentation.direct),
         );
       case Operation.division:
         final b = _randInt(2, 9);
@@ -88,6 +200,7 @@ class QuestionGenerator {
           text: '$a ÷ $b = ?',
           ans: result,
           ratDP: decimalPlaces,
+          fact: _fact(type, a, b, result, FactRepresentation.direct),
         );
       default:
         throw ArgumentError.value(
@@ -113,6 +226,7 @@ class QuestionGenerator {
           key: 'qi+$a+$b',
           text: '${wrap(a)} + ${wrap(b)} = ?',
           ans: a + b,
+          fact: _fact(type, a, b, a + b, FactRepresentation.direct),
         );
       case Operation.subtraction:
         final a = signed(magnitude(1, 9, 15, 79));
@@ -122,6 +236,7 @@ class QuestionGenerator {
           key: 'qi-$a-$b',
           text: '${wrap(a)} − ${wrap(b)} = ?',
           ans: a - b,
+          fact: _fact(type, a, b, a - b, FactRepresentation.direct),
         );
       case Operation.multiplication:
         final a = signed(magnitude(2, 10, 3, 12));
@@ -131,6 +246,7 @@ class QuestionGenerator {
           key: 'qix${a}x$b',
           text: '${wrap(a)} × ${wrap(b)} = ?',
           ans: a * b,
+          fact: _fact(type, a, b, a * b, FactRepresentation.direct),
         );
       case Operation.division:
         final divisor = signed(magnitude(2, 10, 3, 12));
@@ -141,6 +257,8 @@ class QuestionGenerator {
           key: 'qid$dividend/$divisor',
           text: '${wrap(dividend)} ÷ ${wrap(divisor)} = ?',
           ans: quotient,
+          fact: _fact(
+              type, dividend, divisor, quotient, FactRepresentation.direct),
         );
       default:
         throw ArgumentError.value(
@@ -193,7 +311,19 @@ class QuestionGenerator {
         text = '$a + ? = ${a + b}';
         ans = b;
       }
-      return _QBase(type: type, key: key, text: text, ans: ans);
+      return _QBase(
+        type: type,
+        key: key,
+        text: text,
+        ans: ans,
+        fact: _fact(
+          type,
+          a,
+          b,
+          a + b,
+          _representationForMissing(missing),
+        ),
+      );
     }
 
     if (type == Operation.subtraction) {
@@ -235,7 +365,13 @@ class QuestionGenerator {
         text = '$a - ? = $result';
         ans = b;
       }
-      return _QBase(type: type, key: key, text: text, ans: ans);
+      return _QBase(
+        type: type,
+        key: key,
+        text: text,
+        ans: ans,
+        fact: _fact(type, a, b, result, _representationForMissing(missing)),
+      );
     }
 
     if (type == Operation.multiplication) {
@@ -279,7 +415,13 @@ class QuestionGenerator {
         text = '$a × ? = $prod';
         ans = b;
       }
-      return _QBase(type: type, key: key, text: text, ans: ans);
+      return _QBase(
+        type: type,
+        key: key,
+        text: text,
+        ans: ans,
+        fact: _fact(type, a, b, prod, _representationForMissing(missing)),
+      );
     }
 
     if (type == Operation.division) {
@@ -324,7 +466,19 @@ class QuestionGenerator {
         text = '$a ÷ ? = $quotient';
         ans = b;
       }
-      return _QBase(type: type, key: key, text: text, ans: ans);
+      return _QBase(
+        type: type,
+        key: key,
+        text: text,
+        ans: ans,
+        fact: _fact(
+          type,
+          a,
+          b,
+          quotient,
+          _representationForMissing(missing),
+        ),
+      );
     }
 
     // Fallback to multiplication
@@ -340,6 +494,13 @@ class QuestionGenerator {
       key: 'm${min(a2, b2)}x${max(a2, b2)}',
       text: '$a2 × $b2 = ?',
       ans: a2 * b2,
+      fact: _fact(
+        Operation.multiplication,
+        a2,
+        b2,
+        a2 * b2,
+        FactRepresentation.direct,
+      ),
     );
   }
 
@@ -381,6 +542,8 @@ class QuestionGenerator {
             ans: a + b,
             text: '${wrap(a)} + ${wrap(b)} = ?',
             key: 'int+$a+$b',
+            fact: _fact(type, a, b, a + b, FactRepresentation.direct),
+            numberTypeTransformed: true,
           );
         }
       } else if (type == Operation.subtraction) {
@@ -397,6 +560,8 @@ class QuestionGenerator {
             ans: a - b,
             text: '${wrap(a)} − ${wrap(b)} = ?',
             key: 'int-$a-$b',
+            fact: _fact(type, a, b, a - b, FactRepresentation.direct),
+            numberTypeTransformed: true,
           );
         }
       } else if (type == Operation.multiplication) {
@@ -414,6 +579,8 @@ class QuestionGenerator {
             ans: a * b,
             text: '${wrap(a)} × ${wrap(b)} = ?',
             key: 'intx${a}x$b',
+            fact: _fact(type, a, b, a * b, FactRepresentation.direct),
+            numberTypeTransformed: true,
           );
         }
       } else if (type == Operation.division) {
@@ -432,6 +599,8 @@ class QuestionGenerator {
               ans: ans.toInt(),
               text: '${wrap(a)} ÷ ${wrap(b)} = ?',
               key: 'intd$a/$b',
+              fact: _fact(type, a, b, ans.toInt(), FactRepresentation.direct),
+              numberTypeTransformed: true,
             );
           }
         }
@@ -460,6 +629,8 @@ class QuestionGenerator {
           text: '$a + $b = ?',
           key: 'ra$a+$b',
           ratDP: decPlaces,
+          fact: _fact(type, a, b, ans, FactRepresentation.direct),
+          numberTypeTransformed: true,
         );
       }
       if (type == Operation.subtraction) {
@@ -475,6 +646,8 @@ class QuestionGenerator {
           text: '$a − $b = ?',
           key: 'rs$a-$b',
           ratDP: decPlaces,
+          fact: _fact(type, a, b, ans, FactRepresentation.direct),
+          numberTypeTransformed: true,
         );
       }
       if (type == Operation.multiplication) {
@@ -488,6 +661,8 @@ class QuestionGenerator {
           text: '$a × $b = ?',
           key: 'rm${a}x$b',
           ratDP: decPlaces,
+          fact: _fact(type, a, b, ans, FactRepresentation.direct),
+          numberTypeTransformed: true,
         );
       }
       if (type == Operation.division) {
@@ -501,6 +676,8 @@ class QuestionGenerator {
           text: '$a ÷ $b = ?',
           key: 'rd$a/$b',
           ratDP: decPlaces,
+          fact: _fact(type, a, b, ans, FactRepresentation.direct),
+          numberTypeTransformed: true,
         );
       }
     }
@@ -554,6 +731,164 @@ class QuestionGenerator {
   }
 
   int _randInt(int min, int max) => min + _rng.nextInt(max - min + 1);
+
+  MathFact _fact(
+    Operation operation,
+    num left,
+    num right,
+    num result,
+    FactRepresentation representation,
+  ) =>
+      MathFact(
+        operation: operation,
+        left: left,
+        right: right,
+        result: result,
+        representation: representation,
+        difficulty: Difficulty.easy,
+        numberType: NumberType.natural,
+      );
+
+  FactRepresentation _representationForMissing(int missing) =>
+      switch (missing) {
+        1 => FactRepresentation.missingLeft,
+        2 => FactRepresentation.missingRight,
+        _ => FactRepresentation.direct,
+      };
+
+  bool _representationAllowed(
+          FactRepresentation representation, Difficulty diff) =>
+      diff != Difficulty.easy || representation == FactRepresentation.direct;
+
+  Operation? _inverseOperation(Operation operation) => switch (operation) {
+        Operation.addition => Operation.subtraction,
+        Operation.subtraction => Operation.addition,
+        Operation.multiplication => Operation.division,
+        Operation.division => Operation.multiplication,
+        _ => null,
+      };
+
+  bool _sameRenderedForm(MathFact left, MathFact right) =>
+      left.operation == right.operation &&
+      left.left == right.left &&
+      left.right == right.right &&
+      left.result == right.result &&
+      left.representation == right.representation;
+
+  bool _isWithinCanonicalRange(MathFact fact) {
+    if (fact.numberType == NumberType.mixed) return false;
+    if (fact.numberType == NumberType.rationals) {
+      return _isWithinRationalRange(fact);
+    }
+    final abs = fact.numberType == NumberType.integers;
+    num value(num number) => abs ? number.abs() : number;
+    final range = _operandRange(fact.operation, fact.difficulty);
+    bool inRange(num number) => number >= range.$1 && number <= range.$2;
+
+    return switch (fact.operation) {
+      Operation.addition =>
+        inRange(value(fact.left)) && inRange(value(fact.right)),
+      Operation.subtraction =>
+        inRange(value(fact.right)) && inRange(value(fact.result)),
+      Operation.multiplication =>
+        inRange(value(fact.left)) && inRange(value(fact.right)),
+      Operation.division => fact.right != 0 &&
+          inRange(value(fact.right)) &&
+          inRange(value(fact.result)),
+      _ => false,
+    };
+  }
+
+  (int, int) _operandRange(Operation operation, Difficulty difficulty) {
+    final index = difficulty.index;
+    return switch (operation) {
+      Operation.addition => const [
+          (1, 10),
+          (11, 49),
+          (25, 99),
+          (50, 199),
+          (100, 499)
+        ][index],
+      Operation.subtraction => const [
+          (1, 9),
+          (5, 44),
+          (15, 79),
+          (50, 149),
+          (100, 399)
+        ][index],
+      Operation.multiplication => const [
+          (2, 5),
+          (2, 10),
+          (3, 12),
+          (11, 20),
+          (15, 25)
+        ][index],
+      Operation.division => const [
+          (2, 5),
+          (2, 10),
+          (3, 12),
+          (11, 15),
+          (12, 20)
+        ][index],
+      _ => throw ArgumentError.value(operation, 'operation'),
+    };
+  }
+
+  bool _isWithinRationalRange(MathFact fact) {
+    bool decimalOperand(num value) => value > 1 && value < 16;
+    bool smallInteger(num value) =>
+        value == value.roundToDouble() && value >= 2 && value <= 9;
+    return switch (fact.operation) {
+      Operation.addition =>
+        decimalOperand(fact.left) && decimalOperand(fact.right),
+      Operation.subtraction =>
+        decimalOperand(fact.right) && fact.left > fact.right && fact.left < 25,
+      Operation.multiplication =>
+        decimalOperand(fact.left) && smallInteger(fact.right),
+      Operation.division => fact.right != 0 &&
+          smallInteger(fact.right) &&
+          decimalOperand(fact.result),
+      _ => false,
+    };
+  }
+
+  Question _renderFact(MathFact fact) {
+    String number(num value) => value < 0 ? '($value)' : '$value';
+    final symbol = fact.operation.symbol;
+    final text = switch (fact.representation) {
+      FactRepresentation.direct =>
+        '${number(fact.left)} $symbol ${number(fact.right)} = ?',
+      FactRepresentation.missingLeft =>
+        '? $symbol ${number(fact.right)} = ${number(fact.result)}',
+      FactRepresentation.missingRight =>
+        '${number(fact.left)} $symbol ? = ${number(fact.result)}',
+    };
+    final answer = switch (fact.representation) {
+      FactRepresentation.direct => fact.result,
+      FactRepresentation.missingLeft => fact.left,
+      FactRepresentation.missingRight => fact.right,
+    };
+    final q = _QBase(
+      type: fact.operation,
+      key: 'fact:${fact.operation.name}:${fact.left}:${fact.right}:'
+          '${fact.result}:${fact.representation.name}',
+      text: text,
+      ans: answer,
+      ratDP: fact.rationalDecimalPlaces,
+      fact: fact,
+    );
+    return Question(
+      type: q.type,
+      key: q.key,
+      text: q.text,
+      ans: q.ans,
+      choices: _buildChoices(q, fact.numberType),
+      diff: fact.difficulty,
+      numType: fact.numberType,
+      ratDP: q.ratDP,
+      fact: fact,
+    );
+  }
 }
 
 class _QBase {
@@ -562,11 +897,15 @@ class _QBase {
   String text;
   num ans;
   final int? ratDP;
+  final MathFact fact;
+  final bool numberTypeTransformed;
   _QBase({
     required this.type,
     required this.key,
     required this.text,
     required this.ans,
     this.ratDP,
+    required this.fact,
+    this.numberTypeTransformed = false,
   });
 }

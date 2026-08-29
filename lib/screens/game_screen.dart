@@ -26,6 +26,20 @@ class _GameScreenState extends State<GameScreen> {
     final s = context.watch<SettingsService>();
     final rt = gs.rt;
 
+    if (gs.isMentalMathCountdown) {
+      return SafeArea(child: _MentalMathCountdown(gs: gs, s: s));
+    }
+    if (gs.isMentalMathGameplay) {
+      return SafeArea(
+        child: ScreenShake(
+          tick: gs.screenShakeTick,
+          enabled: !s.reduceMotion,
+          duration: s.duration(500),
+          child: _MentalMathGameplay(gs: gs, s: s),
+        ),
+      );
+    }
+
     return SafeArea(
       child: ScreenShake(
         tick: gs.screenShakeTick,
@@ -54,9 +68,19 @@ class _GameScreenState extends State<GameScreen> {
                           _ScorecardsRow(
                             gs: gs,
                             s: s,
-                            timerReserve: rt.timer == null ? 0 : 56,
+                            timerReserve: gs.isTimeBankRun
+                                ? 100
+                                : rt.timer == null
+                                    ? 0
+                                    : 56,
                           ),
-                          if (rt.timer != null)
+                          if (gs.isTimeBankRun)
+                            Positioned(
+                              right: 0,
+                              top: 10,
+                              child: _TimeBankDisplay(gs: gs, s: s),
+                            )
+                          else if (rt.timer != null)
                             Positioned(
                               right: 0,
                               top: 10,
@@ -138,6 +162,262 @@ class _GameScreenState extends State<GameScreen> {
   }
 }
 
+class _MentalMathCountdown extends StatelessWidget {
+  const _MentalMathCountdown({required this.gs, required this.s});
+
+  final GameState gs;
+  final SettingsService s;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatar = gs.p[1].avatar;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ModeBadge(
+                label: 'IQ SPARK',
+                color: const Color(GameConfig.grape),
+              ),
+              const SizedBox(height: 20),
+              AvatarWidget(avatar: avatar, size: 92),
+              const SizedBox(height: 20),
+              Text(
+                'Build your momentum',
+                style: TextStyle(
+                  color: s.text,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  fontFamily: AppFonts.headFor(s),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Reach +10 to master',
+                style: TextStyle(color: s.muted, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 34),
+              Semantics(
+                liveRegion: true,
+                label: 'IQ Spark countdown ${gs.mentalMathCountdownLabel}',
+                child: Text(
+                  gs.mentalMathCountdownLabel,
+                  key: const Key('mental-math-countdown'),
+                  style: TextStyle(
+                    color: const Color(GameConfig.grape),
+                    fontFamily: AppFonts.headFor(s),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 96,
+                    height: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 40),
+              QuitPill(onPressed: gs.showQuitConfirm),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MentalMathGameplay extends StatelessWidget {
+  const _MentalMathGameplay({required this.gs, required this.s});
+
+  final GameState gs;
+  final SettingsService s;
+
+  @override
+  Widget build(BuildContext context) {
+    final rt = gs.rt;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+          child: Row(
+            children: [
+              QuitPill(onPressed: gs.showQuitConfirm),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Center(
+                  child: ModeBadge(
+                    label: 'IQ SPARK',
+                    color: const Color(GameConfig.grape),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 72),
+            ],
+          ),
+        ),
+        _MentalMathHud(gs: gs, s: s),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Center(
+              child: ConstrainedBox(
+                key: const Key('gameplay-content'),
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: Column(
+                  children: [
+                    _QuestionCard(gs: gs, s: s),
+                    const SizedBox(height: 16),
+                    if (rt.answerStyle == AnswerStyle.trueFalse)
+                      _TrueFalseAnswers(gs: gs)
+                    else
+                      _AnswersGrid(gs: gs, s: s),
+                    const SizedBox(height: 12),
+                    if (gs.reactionPill.isNotEmpty)
+                      ReactionPill(text: gs.reactionPill, s: s),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MentalMathHud extends StatelessWidget {
+  const _MentalMathHud({required this.gs, required this.s});
+
+  final GameState gs;
+  final SettingsService s;
+
+  @override
+  Widget build(BuildContext context) {
+    final momentum = gs.rt.momentum.clamp(-10, 10).toInt();
+    final zone = switch (momentum) {
+      <= -4 => 'RECOVERY',
+      >= 8 => 'MASTERY',
+      >= 4 => 'CHALLENGE',
+      _ => 'FLOW',
+    };
+    final color = momentum < 0
+        ? const Color(GameConfig.punch)
+        : momentum > 0
+            ? const Color(GameConfig.mint)
+            : const Color(GameConfig.sky);
+    final timer = _timerRemainingMs(gs) / 1000;
+    return Container(
+      key: const Key('mental-math-hud'),
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      decoration: BoxDecoration(
+        color: s.surface.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: color.withValues(alpha: 0.6), width: 2),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(99),
+            ),
+            child: Text(
+              zone,
+              key: const Key('mental-math-zone'),
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.1,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _MentalMathMetric(
+                  label: 'MOMENTUM',
+                  value: momentum > 0 ? '+$momentum' : '$momentum',
+                  color: color,
+                ),
+              ),
+              Expanded(
+                child: _MentalMathMetric(
+                  label: 'STREAK',
+                  value: gs.rt.currentStreak == 0
+                      ? '—'
+                      : '×${gs.rt.currentStreak}',
+                  color: const Color(GameConfig.mango),
+                ),
+              ),
+              Expanded(
+                child: _MentalMathMetric(
+                  label: 'TIMER',
+                  value: '${timer.toStringAsFixed(1)}s',
+                  color: const Color(GameConfig.sky),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Text('−10', style: TextStyle(color: s.muted, fontSize: 11)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: LinearProgressIndicator(
+                  value: (momentum + 10) / 20,
+                  minHeight: 7,
+                  backgroundColor: s.surface2,
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text('+10', style: TextStyle(color: s.muted, fontSize: 11)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MentalMathMetric extends StatelessWidget {
+  const _MentalMathMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<SettingsService>();
+    return Column(
+      children: [
+        Text(label,
+            style: TextStyle(
+                color: s.muted, fontSize: 10, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 2),
+        Text(value,
+            style: TextStyle(
+              color: color,
+              fontSize: 24,
+              height: 1,
+              fontWeight: FontWeight.w900,
+              fontFamily: AppFonts.headFor(s),
+            )),
+      ],
+    );
+  }
+}
+
 class _GameTopBar extends StatelessWidget {
   const _GameTopBar({
     required this.gs,
@@ -185,18 +465,41 @@ class _GameTopBar extends StatelessWidget {
                   children: [
                     ModeBadge(label: label.toUpperCase(), color: color),
                     if (gs.effectiveGameBrainEnabled) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        key: const Key('gamebrain-enabled-badge'),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(GameConfig.grape),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text('GAMEBRAIN ENABLED',
-                            style: TextStyle(color: Colors.white,
-                                fontWeight: FontWeight.w900, fontSize: 10)),
+                      const SizedBox(width: 10),
+                      WarningPulse(
+                        active: true,
+                        effectsEnabled: !s.reduceMotion && !s.lowPerf,
+                        duration: s.duration(1000),
+                        builder: (_, opacity) {
+                          final pulse =
+                              !s.reduceMotion && !s.lowPerf ? 1 - opacity : 0.0;
+                          return Transform.scale(
+                            scale: 1 + (pulse * 0.04),
+                            child: Container(
+                              key: const Key('gamebrain-enabled-badge'),
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: const Color(GameConfig.grape),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(GameConfig.grape)
+                                        .withValues(
+                                            alpha: 0.16 + (pulse * 0.12)),
+                                    blurRadius: 8 + (pulse * 4),
+                                  ),
+                                ],
+                              ),
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.psychology_outlined,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ],
                     if (rt.comboMultiplier > 1.0 &&
@@ -337,6 +640,63 @@ class _TimerCircle extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _TimeBankDisplay extends StatelessWidget {
+  const _TimeBankDisplay({required this.gs, required this.s});
+
+  final GameState gs;
+  final SettingsService s;
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = gs.timeBankRemainingMs;
+    final seconds = (remaining / 1000).ceil();
+    final value =
+        '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
+    final danger = remaining > 0 && remaining <= 10000;
+    return Container(
+      key: const Key('time-bank-display'),
+      width: 92,
+      height: 56,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: s.dark ? s.surface2 : const Color(0xFFFFF7E5),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: danger
+              ? const Color(GameConfig.punch)
+              : const Color(GameConfig.mango),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'TIME BANK',
+            style: TextStyle(
+              color: s.muted,
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.6,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: danger
+                  ? const Color(GameConfig.punch)
+                  : const Color(GameConfig.mango),
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              fontFamily: AppFonts.headFor(s),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1217,6 +1577,7 @@ class _PowerUpHud extends StatelessWidget {
 }
 
 bool _shouldShowPowerUpHud(GameState gs) {
+  if (gs.activeRunSnapshot?.mentalMathEntry != null) return false;
   if (gs.activePlayers != 1) return false;
   if (gs.rt.challenge == Operation.master ||
       gs.rt.challenge == Operation.dailyBoss) {
@@ -1372,14 +1733,16 @@ class _QuestionCard extends StatelessWidget {
         gs.rt.answerStyle == AnswerStyle.trueFalse && proposedAnswer != null
             ? q.text.replaceFirst('?', _formatAnswer(proposedAnswer))
             : q.text;
-    final showCounter = gs.activeMode != GameMode.blitz &&
+    final isMentalMath = gs.isMentalMathGameplay;
+    final showCounter = !isMentalMath &&
+        gs.activeMode != GameMode.blitz &&
         gs.activeMode != GameMode.combo &&
         gs.rt.challenge != Operation.master &&
         gs.rt.challenge != Operation.dailyBoss;
-    final showSkip =
+    final showSkip = gs.activeRunSnapshot?.mentalMathEntry == null &&
         ![GameMode.death, GameMode.survival].contains(gs.activeMode) &&
-            gs.rt.challenge != Operation.master &&
-            gs.rt.challenge != Operation.dailyBoss;
+        gs.rt.challenge != Operation.master &&
+        gs.rt.challenge != Operation.dailyBoss;
     final danger = _timerWarning(gs);
     final effectsEnabled = danger && !s.lowPerf && !s.reduceMotion;
     final card = Container(
@@ -1528,7 +1891,7 @@ class _QuestionCard extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 16),
-          _QuestionTimerBar(gs: gs, s: s),
+          if (!isMentalMath) _QuestionTimerBar(gs: gs, s: s),
         ],
       ),
     );

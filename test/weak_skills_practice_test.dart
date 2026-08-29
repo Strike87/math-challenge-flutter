@@ -6,6 +6,7 @@ import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/models/game_data.dart';
 import 'package:math_challenge/screens/config_screen.dart';
 import 'package:math_challenge/screens/menu_screen.dart';
+import 'package:math_challenge/screens/practice_style_screen.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
@@ -27,9 +28,11 @@ void main() {
     expect(state.currentScreen, GameScreen.menu);
 
     state.continueWeakSkillsSetup();
-    expect(state.currentScreen, GameScreen.numType);
+    expect(state.currentScreen, GameScreen.practiceStyle);
     expect(state.currentModal, GameModal.none);
     expect(state.rt.challenge, Operation.mixed);
+    state.startTimingPractice();
+    expect(state.currentScreen, GameScreen.numType);
 
     await state.selectNumType(NumberType.integers.name);
     expect(state.setupWeakSkillsPlan, same(plan));
@@ -87,6 +90,7 @@ void main() {
     state.goToConfig('weakSkills');
     final plan = state.setupWeakSkillsPlan!;
     state.continueWeakSkillsSetup();
+    state.startTimingPractice();
     state
       ..numType = NumberType.rationals
       ..diff = Difficulty.hard
@@ -136,6 +140,7 @@ void main() {
       ..adaptive = false;
     state.goToConfig('weakSkills');
     state.continueWeakSkillsSetup();
+    state.startTimingPractice();
     state.startGame();
     state.rt.timer?.cancel();
 
@@ -177,6 +182,7 @@ void main() {
       ..adaptive = true;
     state.goToConfig('weakSkills');
     state.continueWeakSkillsSetup();
+    state.startTimingPractice();
     state.startGame();
     state.rt.timer?.cancel();
     final question = state.rt.q!;
@@ -212,7 +218,7 @@ void main() {
           ModalRouter(),
         ]),
         size: const Size(390, 844));
-    expect(find.text('Weak Skills Practice'), findsOneWidget);
+    expect(find.text('Training Arena'), findsOneWidget);
     expect(find.text('🚀'), findsOneWidget);
     for (final label in [
       'Addition',
@@ -229,13 +235,14 @@ void main() {
     );
     expect(rowSize.width, 358);
     expect(rowSize.height, greaterThanOrEqualTo(86));
-    await tester.ensureVisible(find.text('Weak Skills Practice'));
-    await tester.tap(find.text('Weak Skills Practice'));
+    await tester.ensureVisible(find.text('Training Arena'));
+    await tester.tap(find.text('Training Arena'));
     await tester.pumpAndSettle();
     final plan = state.setupWeakSkillsPlan;
     expect(plan, isNotNull);
     expect(state.currentModal, GameModal.weakSkillsPractice);
     expect(state.currentScreen, GameScreen.menu);
+    expect(find.text('TRAINING ARENA'), findsOneWidget);
     expect(find.text('Recommended Practice'), findsOneWidget);
     expect(find.text('Practice areas'), findsOneWidget);
     final modal = find.byType(ModalRouter);
@@ -270,9 +277,10 @@ void main() {
     _setTiedWeakestSkills(state);
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
-    expect(state.currentScreen, GameScreen.numType);
+    expect(state.currentScreen, GameScreen.practiceStyle);
     expect(state.currentModal, GameModal.none);
     expect(state.setupWeakSkillsPlan, same(plan));
+    state.startTimingPractice();
 
     await state.selectNumType(NumberType.natural.name);
     await _pumpScreen(tester, state, const ConfigScreen(), textScale: 2);
@@ -316,11 +324,64 @@ void main() {
     expect(state.currentScreen, GameScreen.menu);
 
     _setFocusedSkills(state);
-    await tester.ensureVisible(find.text('Weak Skills Practice'));
-    await tester.tap(find.text('Weak Skills Practice'));
+    await tester.ensureVisible(find.text('Training Arena'));
+    await tester.tap(find.text('Training Arena'));
     await tester.pumpAndSettle();
     expect(state.setupWeakSkillsPlan, isNot(same(fallbackPlan)));
     expect(state.setupWeakSkillsPlan!.isFallback, isFalse);
+  });
+
+  testWidgets(
+      'Training Arena keeps its plan through IQ Spark and targeted recovery',
+      (tester) async {
+    final state = await _makeState();
+    addTearDown(state.dispose);
+    _setFocusedSkills(state);
+
+    state.goToConfig('weakSkills');
+    final plan = state.setupWeakSkillsPlan!;
+    state.continueWeakSkillsSetup();
+    await _pumpScreen(tester, state, const PracticeStyleScreen());
+    expect(find.text('Training Arena'), findsOneWidget);
+    expect(find.text('Timing Practice'), findsOneWidget);
+    expect(find.text('IQ Spark'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('mental-math-button')));
+    await tester.pump();
+    expect(state.setupMentalMathEntry, MentalMathEntry.weakSkills);
+    expect(state.currentScreen, GameScreen.numType);
+    await state.selectNumType(NumberType.natural.name);
+    expect(state.isMentalMathCountdown, isTrue);
+    expect(state.activeRunSnapshot?.weakSkillsPlan, same(plan));
+    expect(
+        state.activeRunSnapshot?.mentalMathEntry, MentalMathEntry.weakSkills);
+    expect(state.activeRunSnapshot?.players, 1);
+    expect(state.activeAdaptive, isFalse);
+
+    await tester.pump(const Duration(seconds: 4));
+    state.rt.timer?.cancel();
+    expect(state.rt.q!.type, plan.operationAt(0));
+    expect(state.rt.weakSkillsScheduleIndex, 1);
+    final wrong = state.rt.q!.choices.firstWhere(
+      (choice) => choice != state.rt.q!.ans,
+    );
+    state.onAnswer(wrong);
+    await tester.pump(const Duration(milliseconds: 1301));
+    state.rt.timer?.cancel();
+    state.onAnswer(state.rt.q!.ans);
+    await tester.pump(const Duration(milliseconds: 1301));
+    state.rt.timer?.cancel();
+    state.onAnswer(state.rt.q!.ans);
+    await tester.pump(const Duration(milliseconds: 1301));
+    state.rt.timer?.cancel();
+    expect(state.debugCurrentMentalMathQuestionIsTargeted, isTrue);
+    expect(state.rt.weakSkillsScheduleIndex, 3);
+
+    state.rt.momentum = 9;
+    state.onAnswer(state.rt.q!.ans);
+    await tester.pump(const Duration(milliseconds: 1301));
+    expect(state.mentalMathResultSummary?.trainingArenaPracticeAreas,
+        orderedEquals(plan.focusedOperations));
   });
 
   testWidgets('Weak Skills uses the ordinary Players row geometry',
@@ -336,6 +397,7 @@ void main() {
     state.showScreen(GameScreen.menu);
     state.goToConfig('weakSkills');
     state.continueWeakSkillsSetup();
+    state.startTimingPractice();
     await state.selectNumType(NumberType.natural.name);
     await _pumpScreen(tester, state, const ConfigScreen());
     final weakOnePlayer = tester.getRect(find.text('1 Player'));
@@ -396,7 +458,7 @@ void main() {
       expect(find.byType(SingleChildScrollView), findsOneWidget);
       for (final content in [
         find.text('Master Challenge'),
-        find.text('Weak Skills Practice'),
+        find.text('Training Arena'),
         find.text('QUICK PRACTICE'),
         find.text('Addition'),
       ]) {
@@ -405,8 +467,11 @@ void main() {
       await tester.tap(find.text('Addition'));
       await tester.pump();
 
-      expect(state.currentScreen, GameScreen.numType);
+      expect(state.currentScreen, GameScreen.practiceStyle);
       expect(state.rt.challenge, Operation.addition);
+      state.startTimingPractice();
+      await tester.pump();
+      expect(state.currentScreen, GameScreen.numType);
       expect(tester.takeException(), isNull);
     });
   }
@@ -437,6 +502,9 @@ void main() {
       );
       await tester.ensureVisible(find.text('Addition'));
       await tester.tap(find.text('Addition'));
+      await tester.pump();
+      expect(state.currentScreen, GameScreen.practiceStyle);
+      state.startTimingPractice();
       await tester.pump();
       expect(state.currentScreen, GameScreen.numType);
       await state.selectNumType(NumberType.natural.name);
@@ -511,7 +579,7 @@ void main() {
         size: testCase.size,
         textScale: testCase.textScale,
       );
-      final weakSkills = find.text('Weak Skills Practice');
+      final weakSkills = find.text('Training Arena');
       await tester.ensureVisible(weakSkills);
       await tester.tap(weakSkills);
       await tester.pumpAndSettle();
@@ -520,7 +588,8 @@ void main() {
       await tester.ensureVisible(popupContinue);
       await tester.tap(popupContinue);
       await tester.pumpAndSettle();
-      expect(state.currentScreen, GameScreen.numType);
+      expect(state.currentScreen, GameScreen.practiceStyle);
+      state.startTimingPractice();
       await state.selectNumType(NumberType.natural.name);
 
       await _pumpScreen(
