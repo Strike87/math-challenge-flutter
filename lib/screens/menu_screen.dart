@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
 import '../game_config.dart';
 import '../models/enums.dart';
+import '../models/game_data.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
 
@@ -79,6 +80,24 @@ class MenuScreen extends StatelessWidget {
                     Color(GameConfig.mango),
                   ],
                   onTap: gs.isDailyBossClaimedToday ? () {} : gs.showDailyBoss,
+                ),
+                const SizedBox(height: 10),
+                _CampaignCard(
+                  key: const Key('daily-mental-math-row'),
+                  icon: '🧠⚡',
+                  title: 'Daily IQ Spark',
+                  subtitle: gs.isDailyMentalMathPerfectDay
+                      ? '★ PERFECT DAY'
+                      : gs.isDailyMentalMathClearedToday
+                          ? 'CLEARED TODAY${gs.currentDailyMentalMathRecord?.bestGrade == null ? '' : ' • Grade ${gs.currentDailyMentalMathRecord!.bestGrade!.label}'}'
+                          : '${gs.dailyMentalMathProfile.operationLabel.toUpperCase()} • ${gs.dailyMentalMathProfile.numberType.label.toUpperCase()} • AVAILABLE',
+                  color: s.accent(GameConfig.grape),
+                  gradientColors: const [
+                    Color(GameConfig.grape),
+                    Color(GameConfig.sky),
+                    Color(GameConfig.mint),
+                  ],
+                  onTap: gs.showDailyMentalMath,
                 ),
                 const SizedBox(height: 10),
                 _CampaignCard(

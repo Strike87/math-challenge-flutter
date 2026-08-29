@@ -221,9 +221,28 @@ class MockAudioService implements AudioService {
   void vibratePowerUp() {}
 }
 
+class _DailyMentalMathVisualState extends GameState {
+  _DailyMentalMathVisualState({
+    required super.settings,
+    required super.audio,
+    required DailyMentalMathProfile profile,
+  }) : _profile = profile;
+
+  final DailyMentalMathProfile _profile;
+
+  @override
+  DailyMentalMathProfile get dailyMentalMathProfile => _profile;
+
+  @override
+  DailyMentalMathRecord? get currentDailyMentalMathRecord =>
+      dailyMentalMathRecord;
+}
+
 Future<GameState> _makeState(
   Map<String, Object> prefs, {
   bool familyEligible = false,
+  GameState Function(SettingsService settings, AudioService audio)?
+      stateBuilder,
 }) async {
   SharedPreferences.setMockInitialValues({
     ...prefs,
@@ -244,10 +263,12 @@ Future<GameState> _makeState(
       reduceMotion: true,
       animSpeed: 1,
     );
-  final state = GameState(
-    settings: settings,
-    audio: MockAudioService(),
-  );
+  final audio = MockAudioService();
+  final state = stateBuilder?.call(settings, audio) ??
+      GameState(
+        settings: settings,
+        audio: audio,
+      );
   await state.load();
   state.dailyBoss = GameConfig.dailyBosses.first;
   state.dailyBossDateKey = '2026-06-28';
@@ -304,6 +325,29 @@ void main() {
   group('RT-040: Visual Parity', () {
     const phoneSize = Size(390, 844);
     const tabletSize = Size(834, 1194);
+    const dailyProfile = DailyMentalMathProfile(
+      dateKey: '2040-02-03',
+      operation: Operation.multiplication,
+      numberType: NumberType.natural,
+      focus: DailyMentalMathFocus.streakMaster,
+    );
+
+    Future<_DailyMentalMathVisualState> dailyVisualState({
+      DailyMentalMathRecord? record,
+    }) async {
+      final state = await _makeState(
+        {'mc_dark': false},
+        stateBuilder: (settings, audio) => _DailyMentalMathVisualState(
+          settings: settings,
+          audio: audio,
+          profile: dailyProfile,
+        ),
+      ) as _DailyMentalMathVisualState;
+      state
+        ..dailyBoss = null
+        ..dailyMentalMathRecord = record;
+      return state;
+    }
 
     testWidgets('20. Skills Dashboard phone light and dark', (tester) async {
       final state = await _makeState({'mc_dark': false});
@@ -1162,7 +1206,8 @@ void main() {
 
       expect(find.text('Choose Practice Style'), findsOneWidget);
       expect(find.text('Timing Practice'), findsOneWidget);
-      expect(find.text('Mental Math'), findsOneWidget);
+      expect(find.text('IQ Spark'), findsOneWidget);
+      expect(find.text('Mental Math'), findsNothing);
       expectNoVisualException(tester);
       await expectLater(
         find.byType(TestAppShell),
@@ -1180,6 +1225,7 @@ void main() {
 
     testWidgets('38. Mental Math countdown phone light and dark',
         (tester) async {
+      final semantics = tester.ensureSemantics();
       final state = await _makeState({'mc_dark': false});
       state.goToPracticeStyle('addition');
       state.startMentalMathFreePractice();
@@ -1191,6 +1237,9 @@ void main() {
       await tester.pump();
 
       expect(find.text('Build your momentum'), findsOneWidget);
+      expect(find.text('IQ SPARK'), findsOneWidget);
+      expect(find.text('MENTAL MATH'), findsNothing);
+      expect(find.bySemanticsLabel(RegExp('IQ Spark countdown')), findsOneWidget);
       expect(find.byKey(const Key('mental-math-countdown')), findsOneWidget);
       expectNoVisualException(tester);
       await expectLater(
@@ -1205,6 +1254,7 @@ void main() {
         find.byType(TestAppShell),
         matchesGoldenFile('goldens/38_mental_math_countdown_dark.png'),
       );
+      semantics.dispose();
       await state.quitToMenu();
     });
 
@@ -1249,6 +1299,8 @@ void main() {
       );
       await tester.pump();
       expect(find.byKey(const Key('mental-math-hud')), findsOneWidget);
+      expect(find.text('IQ SPARK'), findsOneWidget);
+      expect(find.text('MENTAL MATH'), findsNothing);
       expect(find.text('FLOW'), findsOneWidget);
       expect(find.text('Q 1 / 40'), findsNothing);
       expect(find.text('Player 1'), findsNothing);
@@ -1269,6 +1321,8 @@ void main() {
       await tester.pump();
       expect(find.text('CHALLENGE'), findsOneWidget);
       expect(find.text('+4'), findsOneWidget);
+      expect(find.text('IQ SPARK'), findsOneWidget);
+      expect(find.text('MENTAL MATH'), findsNothing);
       expectNoVisualException(tester);
       await expectLater(
         find.byType(TestAppShell),
@@ -1285,6 +1339,8 @@ void main() {
       await tester.pump();
       expect(find.text('RECOVERY'), findsOneWidget);
       expect(find.text('-4'), findsOneWidget);
+      expect(find.text('IQ SPARK'), findsOneWidget);
+      expect(find.text('MENTAL MATH'), findsNothing);
       expectNoVisualException(tester);
       await expectLater(
         find.byType(TestAppShell),
@@ -1308,6 +1364,8 @@ void main() {
         );
         await tester.pump();
         expect(find.byKey(const Key('mental-math-hud')), findsOneWidget);
+        expect(find.text('IQ SPARK'), findsOneWidget);
+        expect(find.text('MENTAL MATH'), findsNothing);
         expectNoVisualException(tester);
       }
     });
@@ -1340,7 +1398,8 @@ void main() {
           TestAppWrapper(state: state, child: const TestAppShell()),
         );
         await tester.pump();
-        expect(find.text('MENTAL MATH'), findsWidgets);
+        expect(find.text('IQ SPARK'), findsWidgets);
+        expect(find.text('MENTAL MATH'), findsNothing);
         expect(find.text('MASTERY REACHED'), findsOneWidget);
         expect(find.text('Facts Recovered'), findsOneWidget);
         expectNoVisualException(tester);
@@ -1441,6 +1500,393 @@ void main() {
       await expectLater(
         find.byType(TestAppShell),
         matchesGoldenFile('goldens/44_mental_math_result_training_complete.png'),
+      );
+    });
+
+    testWidgets('47. Daily Mental Math menu card', (tester) async {
+      final state = await dailyVisualState();
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      final dailyCard = find.byKey(const Key('daily-mental-math-row'));
+      await tester.ensureVisible(dailyCard);
+      await tester.pumpAndSettle();
+      expect(find.text('CHALLENGES'), findsOneWidget);
+      expect(find.text('Daily Boss'), findsOneWidget);
+      expect(find.text('Daily IQ Spark'), findsOneWidget);
+      expect(find.text('Daily Mental Math'), findsNothing);
+      expect(find.text('Operation Quest'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Daily Boss')).dy,
+        lessThan(tester.getTopLeft(find.text('Daily IQ Spark')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('Daily IQ Spark')).dy,
+        lessThan(tester.getTopLeft(find.text('Operation Quest')).dy),
+      );
+      expect(find.textContaining('MULTIPLY'), findsOneWidget);
+      expect(find.textContaining('NATURAL'), findsOneWidget);
+      expect(find.textContaining('AVAILABLE'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/45_daily_mental_math_menu.png'),
+      );
+    });
+
+    testWidgets('48. Daily Mental Math challenge modal', (tester) async {
+      final state = await dailyVisualState();
+      state.showDailyMentalMath();
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('DAILY IQ SPARK'), findsOneWidget);
+      expect(find.text('DAILY MENTAL MATH'), findsNothing);
+      expect(find.text("Today's challenge"), findsOneWidget);
+      expect(find.text('Multiply'), findsOneWidget);
+      expect(find.text('Natural'), findsOneWidget);
+      expect(find.text('Daily Focus'), findsOneWidget);
+      expect(find.textContaining('Streak Master'), findsOneWidget);
+      expect(find.text('Reach +10 Momentum'), findsOneWidget);
+      expect(find.text('50 Coins'), findsOneWidget);
+      expect(find.text('🪙 50'), findsOneWidget);
+      expect(find.text('AVAILABLE'), findsOneWidget);
+      expect(find.text('Ready to fight'), findsNothing);
+      expect(
+        find.byKey(const Key('daily-mental-math-start')),
+        findsOneWidget,
+      );
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/46_daily_mental_math_modal.png'),
+      );
+    });
+
+    Future<_DailyMentalMathVisualState> dailyResultState({
+      required MentalMathResultSummary summary,
+    }) async {
+      final state = await dailyVisualState();
+      state
+        ..mentalMathResultSummary = summary
+        ..showModal(GameModal.win);
+      return state;
+    }
+
+    testWidgets('49. Daily Mental Math first-clear result', (tester) async {
+      final state = await dailyResultState(
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'MASTERY REACHED',
+          message: 'Strong run. You reached full momentum.',
+          peakMomentum: 10,
+          bestStreak: 6,
+          accuracyPercent: 82,
+          averageResponseMs: 4300,
+          fastestAnswerMs: 2100,
+          factsRecovered: 1,
+          dailyFocus: DailyMentalMathFocus.streakMaster,
+          currentRunFocusMet: true,
+          officialFocusCompleted: true,
+          focusGrade: DailyMentalMathGrade.a,
+          todaysBestGrade: DailyMentalMathGrade.a,
+          isNewDailyBest: true,
+          dailyRewardAmountGranted: 50,
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('DAILY IQ SPARK'), findsOneWidget);
+      expect(find.text('DAILY MENTAL MATH'), findsNothing);
+      expect(find.text('MASTERY REACHED'), findsOneWidget);
+      expect(find.text('Daily Focus'), findsOneWidget);
+      expect(find.text('Focus Grade'), findsOneWidget);
+      expect(find.text("Today's Best"), findsOneWidget);
+      expect(find.text('NEW DAILY BEST!'), findsOneWidget);
+      expect(find.text('+50 COINS'), findsOneWidget);
+      expect(find.text('Facts Recovered'), findsOneWidget);
+      final resultModal = find.byType(ModalRouter);
+      expect(
+        find.descendant(of: resultModal, matching: find.text('High Score')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: resultModal, matching: find.text('Hall of Fame')),
+        findsNothing,
+      );
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/47_daily_mental_math_first_clear.png'),
+      );
+    });
+
+    testWidgets('50. Daily Mental Math Perfect Day result', (tester) async {
+      final state = await dailyResultState(
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'MASTERY REACHED',
+          message: 'Strong run. You reached full momentum.',
+          peakMomentum: 10,
+          bestStreak: 8,
+          accuracyPercent: 95,
+          averageResponseMs: 3200,
+          fastestAnswerMs: 1600,
+          factsRecovered: 2,
+          dailyFocus: DailyMentalMathFocus.precision,
+          currentRunFocusMet: true,
+          officialFocusCompleted: true,
+          focusGrade: DailyMentalMathGrade.s,
+          todaysBestGrade: DailyMentalMathGrade.s,
+          dailyRewardAlreadyClaimed: true,
+          perfectDay: true,
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('DAILY IQ SPARK'), findsOneWidget);
+      expect(find.text('DAILY MENTAL MATH'), findsNothing);
+      expect(find.text('MASTERY REACHED'), findsOneWidget);
+      expect(find.text('Focus Grade'), findsOneWidget);
+      expect(find.text("Today's Best"), findsOneWidget);
+      expect(find.text('DAILY REWARD ALREADY CLAIMED'), findsOneWidget);
+      expect(find.text('★ PERFECT DAY ★'), findsOneWidget);
+      expect(find.text('+50 COINS'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(ModalRouter),
+          matching: find.textContaining('Achievement'),
+        ),
+        findsNothing,
+      );
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/48_daily_mental_math_perfect_day.png'),
+      );
+    });
+
+    testWidgets('51. Daily Mental Math stays usable across responsive sizes',
+        (tester) async {
+      for (final size in const [
+        Size(390, 844),
+        Size(844, 390),
+        Size(1024, 768),
+      ]) {
+        final menuState = await dailyVisualState();
+        await setTestDevice(tester, logicalSize: size);
+        await tester.pumpWidget(
+          TestAppWrapper(state: menuState, child: const TestAppShell()),
+        );
+        await tester.pumpAndSettle();
+        final card = find.byKey(const Key('daily-mental-math-row'));
+        await tester.ensureVisible(card);
+        await tester.pumpAndSettle();
+        expect(card, findsOneWidget);
+        expectNoVisualException(tester);
+
+        final modalState = await dailyVisualState();
+        modalState.showDailyMentalMath();
+        await tester.pumpWidget(
+          TestAppWrapper(state: modalState, child: const TestAppShell()),
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Reach +10 Momentum'));
+        await tester.ensureVisible(find.text('50 Coins'));
+        await tester.pumpAndSettle();
+        await _expectHitTestableInDeviceViewport(
+          tester,
+          "Start Today's Challenge",
+        );
+        expectNoVisualException(tester);
+
+        final resultState = await dailyResultState(
+          summary: const MentalMathResultSummary(
+            avatarEmoji: '🐶',
+            terminalTitle: 'MASTERY REACHED',
+            message: 'Strong run. You reached full momentum.',
+            peakMomentum: 10,
+            bestStreak: 8,
+            accuracyPercent: 95,
+            averageResponseMs: 3200,
+            fastestAnswerMs: 1600,
+            factsRecovered: 2,
+            dailyFocus: DailyMentalMathFocus.precision,
+            currentRunFocusMet: true,
+            officialFocusCompleted: true,
+            focusGrade: DailyMentalMathGrade.s,
+            todaysBestGrade: DailyMentalMathGrade.s,
+            dailyRewardAlreadyClaimed: true,
+            perfectDay: true,
+          ),
+        );
+        await tester.pumpWidget(
+          TestAppWrapper(state: resultState, child: const TestAppShell()),
+        );
+        await tester.pumpAndSettle();
+        final metrics = find.text('Facts Recovered');
+        await tester.ensureVisible(metrics);
+        await tester.pumpAndSettle();
+        expect(metrics, findsOneWidget);
+        await _expectHitTestableInDeviceViewport(tester, 'Replay');
+        expectNoVisualException(tester);
+      }
+    });
+
+    testWidgets('52. Daily Mental Math modal details', (tester) async {
+      final state = await dailyVisualState();
+      state.showDailyMentalMath();
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      final scroll = find.descendant(
+        of: find.byType(ModalRouter),
+        matching: find.byType(SingleChildScrollView),
+      );
+      expect(scroll, findsOneWidget);
+      await tester.drag(scroll, const Offset(0, -310));
+      await tester.pumpAndSettle();
+
+      expect(find.text('DAILY IQ SPARK'), findsOneWidget);
+      expect(find.text('DAILY MENTAL MATH'), findsNothing);
+      expect(find.text('Goal'), findsOneWidget);
+      expect(find.text('Reach +10 Momentum'), findsOneWidget);
+      expect(find.text('Reward'), findsOneWidget);
+      expect(find.text('50 Coins'), findsOneWidget);
+      expect(find.text('AVAILABLE'), findsOneWidget);
+      expect(find.text('Ready to fight'), findsNothing);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile('goldens/49_daily_mental_math_modal_details.png'),
+      );
+    });
+
+    testWidgets('53. Daily Mental Math first-clear metrics details',
+        (tester) async {
+      final state = await dailyResultState(
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'MASTERY REACHED',
+          message: 'Strong run. You reached full momentum.',
+          peakMomentum: 10,
+          bestStreak: 6,
+          accuracyPercent: 82,
+          averageResponseMs: 4300,
+          fastestAnswerMs: 2100,
+          factsRecovered: 1,
+          dailyFocus: DailyMentalMathFocus.streakMaster,
+          currentRunFocusMet: true,
+          officialFocusCompleted: true,
+          focusGrade: DailyMentalMathGrade.a,
+          todaysBestGrade: DailyMentalMathGrade.a,
+          isNewDailyBest: true,
+          dailyRewardAmountGranted: 50,
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Facts Recovered'));
+      await tester.pumpAndSettle();
+      for (final label in const [
+        'Peak Momentum',
+        'Best Streak',
+        'Accuracy',
+        'Average Response Time',
+        'Fastest Answer',
+        'Facts Recovered',
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+      expect(find.text('DAILY IQ SPARK'), findsOneWidget);
+      expect(find.text('DAILY MENTAL MATH'), findsNothing);
+      expect(find.text('MASTERY REACHED'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile(
+          'goldens/50_daily_mental_math_first_clear_metrics.png',
+        ),
+      );
+    });
+
+    testWidgets('54. Daily Mental Math Perfect Day metrics details',
+        (tester) async {
+      final state = await dailyResultState(
+        summary: const MentalMathResultSummary(
+          avatarEmoji: '🐶',
+          terminalTitle: 'MASTERY REACHED',
+          message: 'Strong run. You reached full momentum.',
+          peakMomentum: 10,
+          bestStreak: 8,
+          accuracyPercent: 95,
+          averageResponseMs: 3200,
+          fastestAnswerMs: 1600,
+          factsRecovered: 2,
+          dailyFocus: DailyMentalMathFocus.precision,
+          currentRunFocusMet: true,
+          officialFocusCompleted: true,
+          focusGrade: DailyMentalMathGrade.s,
+          todaysBestGrade: DailyMentalMathGrade.s,
+          dailyRewardAlreadyClaimed: true,
+          perfectDay: true,
+        ),
+      );
+      await setTestDevice(tester, logicalSize: phoneSize);
+      await tester.pumpWidget(
+        TestAppWrapper(state: state, child: const TestAppShell()),
+      );
+      await tester.pumpAndSettle();
+
+      final scroll = find.descendant(
+        of: find.byType(ModalRouter),
+        matching: find.byType(SingleChildScrollView),
+      );
+      expect(scroll, findsOneWidget);
+      await tester.drag(scroll, const Offset(0, -360));
+      await tester.pumpAndSettle();
+
+      expect(find.text('★ PERFECT DAY ★'), findsOneWidget);
+      for (final label in const [
+        'Peak Momentum',
+        'Best Streak',
+        'Accuracy',
+        'Average Response Time',
+        'Fastest Answer',
+        'Facts Recovered',
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+      expect(find.text('DAILY IQ SPARK'), findsOneWidget);
+      expect(find.text('DAILY MENTAL MATH'), findsNothing);
+      expect(find.text('MASTERY REACHED'), findsOneWidget);
+      expectNoVisualException(tester);
+      await expectLater(
+        find.byType(TestAppShell),
+        matchesGoldenFile(
+          'goldens/51_daily_mental_math_perfect_day_metrics.png',
+        ),
       );
     });
 

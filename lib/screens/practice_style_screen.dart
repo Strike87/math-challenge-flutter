@@ -46,7 +46,7 @@ class PracticeStyleScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 _StyleCard(
-                  title: 'Mental Math',
+                  title: 'IQ Spark',
                   description:
                       'Focus on clear, steady practice at your own pace.',
                   icon: Icons.psychology_alt_outlined,

@@ -180,7 +180,7 @@ class _MentalMathCountdown extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ModeBadge(
-                label: 'MENTAL MATH',
+                label: 'IQ SPARK',
                 color: const Color(GameConfig.grape),
               ),
               const SizedBox(height: 20),
@@ -203,7 +203,7 @@ class _MentalMathCountdown extends StatelessWidget {
               const SizedBox(height: 34),
               Semantics(
                 liveRegion: true,
-                label: 'Mental Math countdown ${gs.mentalMathCountdownLabel}',
+                label: 'IQ Spark countdown ${gs.mentalMathCountdownLabel}',
                 child: Text(
                   gs.mentalMathCountdownLabel,
                   key: const Key('mental-math-countdown'),
@@ -246,7 +246,7 @@ class _MentalMathGameplay extends StatelessWidget {
               Expanded(
                 child: Center(
                   child: ModeBadge(
-                    label: 'MENTAL MATH',
+                    label: 'IQ SPARK',
                     color: const Color(GameConfig.grape),
                   ),
                 ),

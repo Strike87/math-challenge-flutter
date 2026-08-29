@@ -47,6 +47,7 @@ enum GameModal {
   settings,
   masterIntro,
   dailyBoss,
+  dailyMentalMath,
   stageCleared,
   win,
   quitConfirm,
@@ -88,6 +89,15 @@ class MentalMathResultSummary {
     required this.averageResponseMs,
     required this.fastestAnswerMs,
     required this.factsRecovered,
+    this.dailyFocus,
+    this.currentRunFocusMet = false,
+    this.officialFocusCompleted = false,
+    this.focusGrade,
+    this.todaysBestGrade,
+    this.isNewDailyBest = false,
+    this.dailyRewardAmountGranted = 0,
+    this.dailyRewardAlreadyClaimed = false,
+    this.perfectDay = false,
   });
 
   final String avatarEmoji;
@@ -99,6 +109,15 @@ class MentalMathResultSummary {
   final int? averageResponseMs;
   final int? fastestAnswerMs;
   final int factsRecovered;
+  final DailyMentalMathFocus? dailyFocus;
+  final bool currentRunFocusMet;
+  final bool officialFocusCompleted;
+  final DailyMentalMathGrade? focusGrade;
+  final DailyMentalMathGrade? todaysBestGrade;
+  final bool isNewDailyBest;
+  final int dailyRewardAmountGranted;
+  final bool dailyRewardAlreadyClaimed;
+  final bool perfectDay;
 }
 
 class _MentalMathPendingFact {
@@ -117,6 +136,30 @@ class _MentalMathPendingFact {
   final int earliestEligibleCompletedQuestion;
   final Set<String> seenRepresentationKeys = {};
   int followUpsUsed = 0;
+}
+
+class _DailyMentalMathCompletion {
+  const _DailyMentalMathCompletion({
+    required this.focus,
+    required this.currentRunFocusMet,
+    required this.officialFocusCompleted,
+    required this.grade,
+    required this.todaysBestGrade,
+    required this.isNewBest,
+    required this.rewardGranted,
+    required this.rewardAlreadyClaimed,
+    required this.perfectDay,
+  });
+
+  final DailyMentalMathFocus focus;
+  final bool currentRunFocusMet;
+  final bool officialFocusCompleted;
+  final DailyMentalMathGrade grade;
+  final DailyMentalMathGrade? todaysBestGrade;
+  final bool isNewBest;
+  final int rewardGranted;
+  final bool rewardAlreadyClaimed;
+  final bool perfectDay;
 }
 
 /// Runtime game state (the `rt` object in the original JS).
@@ -282,6 +325,7 @@ class GameRunSnapshot {
     this.decimalQuest = false,
     this.weakSkillsPlan,
     this.mentalMathEntry,
+    this.dailyMentalMathProfile,
   });
 
   final GameRunType runType;
@@ -300,6 +344,7 @@ class GameRunSnapshot {
   final bool decimalQuest;
   final WeakSkillsPlan? weakSkillsPlan;
   final MentalMathEntry? mentalMathEntry;
+  final DailyMentalMathProfile? dailyMentalMathProfile;
 
   GameRunSnapshot withTimingStyle(TimingStyle value) => GameRunSnapshot(
         runType: runType,
@@ -318,6 +363,7 @@ class GameRunSnapshot {
         decimalQuest: decimalQuest,
         weakSkillsPlan: weakSkillsPlan,
         mentalMathEntry: mentalMathEntry,
+        dailyMentalMathProfile: dailyMentalMathProfile,
       );
 }
 
@@ -398,6 +444,8 @@ class GameState extends ChangeNotifier {
     Difficulty.hard: 6000,
   };
   static const int dailyBonusCoins = 20;
+  static const int dailyMentalMathRewardCoins = 50;
+  static const String _dailyMentalMathStorageKey = 'mc_dailyMentalMath';
   static const int rewardedAdCoins = 10;
   static const int rewardedCooldownMs = 300000;
   static const int interstitialCadenceGames = 3;
@@ -453,6 +501,7 @@ class GameState extends ChangeNotifier {
     'mc_dailyCoinsDate',
     'mc_dailyBossClaimed',
     'mc_lastDailyBossClaimDay',
+    _dailyMentalMathStorageKey,
     'mc_puBonus',
     'mc_livesBonus',
     'mc_shopOwned',
@@ -561,6 +610,7 @@ class GameState extends ChangeNotifier {
   List<String> dailyChallengeIds = [];
   DailyBoss? dailyBoss;
   String dailyBossDateKey = '';
+  DailyMentalMathRecord? dailyMentalMathRecord;
   List<String> shopOwned = [];
   List<String> unlockedAvatars = [];
   List<String> unlockedHats = [];
@@ -693,12 +743,23 @@ class GameState extends ChangeNotifier {
   GameMode get activeMode => _runSnapshot?.mode ?? mode;
   Difficulty get activeDifficulty => _runSnapshot?.difficulty ?? diff;
   NumberType get activeNumberType => _runSnapshot?.numberType ?? numType;
-  bool get _isMentalMathFreePracticeRun =>
-      _runSnapshot?.mentalMathEntry == MentalMathEntry.freePractice;
-  bool get isMentalMathCountdown =>
-      _isMentalMathFreePracticeRun && rt.state == 'countdown';
-  bool get isMentalMathGameplay =>
-      _isMentalMathFreePracticeRun && rt.state == 'playing';
+  bool get _isMentalMathRun => _runSnapshot?.mentalMathEntry != null;
+  bool get isDailyMentalMathRun =>
+      _runSnapshot?.mentalMathEntry == MentalMathEntry.daily;
+  DailyMentalMathProfile get dailyMentalMathProfile =>
+      _dailyMentalMathProfileFor(DateTime.now());
+  DailyMentalMathRecord? get currentDailyMentalMathRecord {
+    final record = dailyMentalMathRecord;
+    return record?.dateKey == _dailyDateKey() ? record : null;
+  }
+
+  bool get isDailyMentalMathClearedToday =>
+      currentDailyMentalMathRecord?.rewardClaimed ?? false;
+  bool get isDailyMentalMathPerfectDay => _isDailyMentalMathPerfectDay(
+        currentDailyMentalMathRecord,
+      );
+  bool get isMentalMathCountdown => _isMentalMathRun && rt.state == 'countdown';
+  bool get isMentalMathGameplay => _isMentalMathRun && rt.state == 'playing';
   String get mentalMathCountdownLabel => switch (rt.mentalMathCountdownStep) {
         3 => '3',
         2 => '2',
@@ -897,6 +958,7 @@ class GameState extends ChangeNotifier {
     final today = DateTime.now();
     dailyBossDateKey = _dailyDateKey(today);
     dailyBoss = _generateDailyBoss(today);
+    dailyMentalMathRecord = _loadDailyMentalMathRecord();
     adsRemoved = Storage.getBool('mc_adsRemoved', false);
     iapDeliveredTxs = Storage.getStringList('mc_iapDeliveredTxs', []);
     adGameCount = Storage.getInt('mc_adGameCount', 0);
@@ -1008,6 +1070,13 @@ class GameState extends ChangeNotifier {
     await Storage.setObject('mc_avatarCustom1', avatarCustom['1']!.toJson());
     await Storage.setObject('mc_avatarCustom2', avatarCustom['2']!.toJson());
     await Storage.setString('mc_dailyProgress', _encodeDailyProgress());
+    final dailyMentalMath = dailyMentalMathRecord;
+    if (dailyMentalMath == null) {
+      await Storage.remove(_dailyMentalMathStorageKey);
+    } else {
+      await Storage.setObject(
+          _dailyMentalMathStorageKey, dailyMentalMath.toJson());
+    }
     await Storage.setStringList('mc_shopOwned', shopOwned);
     await Storage.setStringList('mc_unlockedAvatars', unlockedAvatars);
     await Storage.setStringList('mc_unlockedHats', unlockedHats);
@@ -1942,6 +2011,59 @@ class GameState extends ChangeNotifier {
   @visibleForTesting
   DailyBoss debugGenerateDailyBoss(DateTime date) => _generateDailyBoss(date);
 
+  static final List<
+      ({
+        Operation operation,
+        NumberType numberType,
+        DailyMentalMathFocus focus
+      })> _dailyMentalMathProfilePool = [
+    for (final operation in const [
+      Operation.addition,
+      Operation.subtraction,
+      Operation.multiplication,
+      Operation.division,
+      Operation.mixed,
+    ])
+      for (final numberType in const [
+        NumberType.natural,
+        NumberType.integers,
+        NumberType.rationals,
+      ])
+        for (final focus in DailyMentalMathFocus.values)
+          (operation: operation, numberType: numberType, focus: focus),
+  ];
+
+  DailyMentalMathProfile _dailyMentalMathProfileFor(DateTime date) {
+    final dateKey = _dailyDateKey(date);
+    final entry = _dailyMentalMathProfilePool[
+        _hashString('daily-mental-math:$dateKey') %
+            _dailyMentalMathProfilePool.length];
+    return DailyMentalMathProfile(
+      dateKey: dateKey,
+      operation: entry.operation,
+      numberType: entry.numberType,
+      focus: entry.focus,
+    );
+  }
+
+  DailyMentalMathRecord? _loadDailyMentalMathRecord() {
+    try {
+      return DailyMentalMathRecord.fromJson(
+        jsonDecode(Storage.getString(_dailyMentalMathStorageKey, '')),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @visibleForTesting
+  DailyMentalMathProfile debugDailyMentalMathProfile(DateTime date) =>
+      _dailyMentalMathProfileFor(date);
+
+  @visibleForTesting
+  int get debugDailyMentalMathProfilePoolSize =>
+      _dailyMentalMathProfilePool.length;
+
   void _updateDailyBossClaimStatus() {
     final today = _dailyDateKey();
     final legacyDay =
@@ -2428,6 +2550,34 @@ class GameState extends ChangeNotifier {
     showModal(GameModal.dailyBoss);
   }
 
+  void showDailyMentalMath() {
+    _clearPendingMentalMathEntry();
+    _pendingWeakSkillsPlan = null;
+    _pendingQuestionMechanic = QuestionMechanic.standard;
+    showModal(GameModal.dailyMentalMath);
+  }
+
+  void startDailyMentalMath() {
+    final profile = dailyMentalMathProfile;
+    closeModal();
+    _startGame(
+      replaySnapshot: GameRunSnapshot(
+        runType: GameRunType.normal,
+        mode: GameMode.standard,
+        operation: profile.operation,
+        difficulty: Difficulty.medium,
+        numberType: profile.numberType,
+        answerStyle: AnswerStyle.choice4,
+        players: 1,
+        questionTarget: 40,
+        questionMechanic: profile.mechanic,
+        timingStyle: TimingStyle.perQuestion,
+        mentalMathEntry: MentalMathEntry.daily,
+        dailyMentalMathProfile: profile,
+      ),
+    );
+  }
+
   void startDailyBoss() {
     _clearPendingMentalMathEntry();
     _pendingWeakSkillsPlan = null;
@@ -2905,7 +3055,7 @@ class GameState extends ChangeNotifier {
                 ? playerConfigurableDifficultySet
                 : null;
 
-    if (_isMentalMathFreePracticeRun) {
+    if (_isMentalMathRun) {
       d = _mentalMathDifficultyFor(rt.momentum);
       difficultyRoute = QuestionDifficultyRoute.playerConfigured;
       legalDifficulties = {d};
@@ -2982,7 +3132,7 @@ class GameState extends ChangeNotifier {
     }
 
     // Adaptive difficulty
-    if (!_isMentalMathFreePracticeRun &&
+    if (!_isMentalMathRun &&
         activeAdaptive &&
         rt.challenge != Operation.master &&
         rt.challenge != Operation.dailyBoss &&
@@ -2993,7 +3143,7 @@ class GameState extends ChangeNotifier {
     }
 
     // Build question with uniqueness guarantee.
-    final targetedQuestion = _isMentalMathFreePracticeRun
+    final targetedQuestion = _isMentalMathRun
         ? _buildMentalMathTargetedQuestion(
             diff: d,
             numType: generatedNumType,
@@ -3078,7 +3228,7 @@ class GameState extends ChangeNotifier {
       fact: generatedQuestion.fact,
     );
 
-    if (_isMentalMathFreePracticeRun && targetedQuestion == null) {
+    if (_isMentalMathRun && targetedQuestion == null) {
       rt
         ..mentalMathTargetedFamilyKey = null
         ..mentalMathMustGenerateNormalNext = false;
@@ -3133,7 +3283,7 @@ class GameState extends ChangeNotifier {
   }
 
   int _getTimerLimitMs() {
-    if (_isMentalMathFreePracticeRun) {
+    if (_isMentalMathRun) {
       return rt.nextQuestionTimerBudgetMs;
     }
     if (activeMode == GameMode.blitz || activeMode == GameMode.combo) {
@@ -3163,7 +3313,7 @@ class GameState extends ChangeNotifier {
     int? remainingMs,
   }) {
     final questionToken = _currentQuestionToken;
-    final isMentalMath = _isMentalMathFreePracticeRun;
+    final isMentalMath = _isMentalMathRun;
     final limitMs = isMentalMath
         ? (remainingMs ?? rt.nextQuestionTimerBudgetMs)
         : (rt.qTimerLimit > 0 ? rt.qTimerLimit * 1000 : _getTimerLimitMs());
@@ -3268,7 +3418,7 @@ class GameState extends ChangeNotifier {
       }
       return;
     }
-    if (!_isMentalMathFreePracticeRun) return;
+    if (!_isMentalMathRun) return;
     if (isMentalMathCountdown) {
       if (!resumed) {
         rt.mentalMathCountdownTimer?.cancel();
@@ -3333,7 +3483,7 @@ class GameState extends ChangeNotifier {
   }
 
   void skip() {
-    if (_isMentalMathFreePracticeRun) return;
+    if (_isMentalMathRun) return;
     if (!rt.accepting) return;
     _onAnswer(null, true, false, _currentQuestionToken);
   }
@@ -3371,7 +3521,7 @@ class GameState extends ChangeNotifier {
     final pl = p[pid];
     final timeTaken = DateTime.now().millisecondsSinceEpoch - rt.qStartTs;
 
-    if (_isMentalMathFreePracticeRun && !isTimeout) {
+    if (_isMentalMathRun && !isTimeout) {
       rt.mentalMathAnsweredResponseTotalMs += timeTaken;
       rt.mentalMathAnsweredResponseCount++;
     }
@@ -3397,7 +3547,7 @@ class GameState extends ChangeNotifier {
       masteryTimeTaken,
       timedOut: isTimeout,
     );
-    if (!_isMentalMathFreePracticeRun) {
+    if (!_isMentalMathRun) {
       _updateAdapt(isCorrect, masteryTimeTaken, q.type);
     }
 
@@ -3413,7 +3563,7 @@ class GameState extends ChangeNotifier {
       isCorrect: isCorrect,
       isSkip: isSkip,
     );
-    if (_isMentalMathFreePracticeRun) {
+    if (_isMentalMathRun) {
       _recordMentalMathTargetedOutcome(
         question: q,
         isCorrect: isCorrect,
@@ -3424,7 +3574,7 @@ class GameState extends ChangeNotifier {
       if (mentalMathTerminal) _expireMentalMathPendingFacts();
     }
     final exhaustedTimeBank = isTimeout && rt.timeBankExhausted;
-    if (!exhaustedTimeBank && !_isMentalMathFreePracticeRun) {
+    if (!exhaustedTimeBank && !_isMentalMathRun) {
       _checkStandardTurnLimit();
     }
     final observation = _captureQuestionExperienceIfSupported(
@@ -3462,7 +3612,7 @@ class GameState extends ChangeNotifier {
     required bool isCorrect,
     required bool isSkip,
   }) {
-    if (!_isMentalMathFreePracticeRun || isSkip) return false;
+    if (!_isMentalMathRun || isSkip) return false;
 
     if (isCorrect) {
       rt.momentum++;
@@ -3759,7 +3909,7 @@ class GameState extends ChangeNotifier {
       rt.fastAnswers++;
     }
 
-    if (_isMentalMathFreePracticeRun) {
+    if (_isMentalMathRun) {
       reactionPill =
           GameConfig.correctRx[_rng.nextInt(GameConfig.correctRx.length)];
       bigEmoji = reactionPill.split(' ').first;
@@ -4091,7 +4241,7 @@ class GameState extends ChangeNotifier {
         audio.playWrong();
       }
       // Follow-up
-      if (!_isMentalMathFreePracticeRun &&
+      if (!_isMentalMathRun &&
           !isSkip &&
           !isTimeout &&
           activeMode == GameMode.standard &&
@@ -4346,11 +4496,133 @@ class GameState extends ChangeNotifier {
     );
   }
 
+  bool _dailyFocusMet(
+    DailyMentalMathFocus focus, {
+    required int accuracy,
+    required int bestStreak,
+  }) =>
+      switch (focus) {
+        DailyMentalMathFocus.streakMaster => bestStreak >= 6,
+        DailyMentalMathFocus.precision => accuracy >= 90,
+        DailyMentalMathFocus.consistency => accuracy >= 80 && bestStreak >= 4,
+      };
+
+  DailyMentalMathGrade _dailyGrade({
+    required MentalMathTerminalReason terminal,
+    required int accuracy,
+    required int bestStreak,
+    required bool focusMet,
+  }) {
+    if (terminal != MentalMathTerminalReason.masteryReached) {
+      return DailyMentalMathGrade.c;
+    }
+    if (focusMet && accuracy >= 95 && bestStreak >= 8) {
+      return DailyMentalMathGrade.sPlus;
+    }
+    if (focusMet && accuracy >= 90 && bestStreak >= 6) {
+      return DailyMentalMathGrade.s;
+    }
+    if (accuracy >= 80 && bestStreak >= 4) return DailyMentalMathGrade.a;
+    return DailyMentalMathGrade.b;
+  }
+
+  bool _dailyBestBeats(
+    DailyMentalMathRecord? record, {
+    required DailyMentalMathGrade grade,
+    required int accuracy,
+    required int bestStreak,
+    required int? averageResponseMs,
+    required int factsRecovered,
+  }) {
+    if (record?.bestGrade == null) return true;
+    final existing = record!;
+    final gradeOrder = grade.index.compareTo(existing.bestGrade!.index);
+    if (gradeOrder != 0) return gradeOrder > 0;
+    final accuracyOrder = accuracy.compareTo(existing.bestAccuracy);
+    if (accuracyOrder != 0) return accuracyOrder > 0;
+    final streakOrder = bestStreak.compareTo(existing.bestStreak);
+    if (streakOrder != 0) return streakOrder > 0;
+    final existingTime = existing.bestAverageResponseMs;
+    if (averageResponseMs != existingTime) {
+      if (averageResponseMs == null) return false;
+      if (existingTime == null) return true;
+      final timeOrder = averageResponseMs.compareTo(existingTime);
+      if (timeOrder != 0) return timeOrder < 0;
+    }
+    return factsRecovered > existing.bestFactsRecovered;
+  }
+
+  bool _isDailyMentalMathPerfectDay(DailyMentalMathRecord? record) =>
+      record != null &&
+      record.rewardClaimed &&
+      record.officialFocusCompleted &&
+      (record.bestGrade?.index ?? -1) >= DailyMentalMathGrade.s.index;
+
+  _DailyMentalMathCompletion _completeDailyMentalMath({
+    required int accuracy,
+    required int? averageResponseMs,
+  }) {
+    final profile = _runSnapshot!.dailyMentalMathProfile!;
+    final previous = currentDailyMentalMathRecord ??
+        DailyMentalMathRecord(dateKey: profile.dateKey);
+    final focusMet = _dailyFocusMet(
+      profile.focus,
+      accuracy: accuracy,
+      bestStreak: rt.bestStreak,
+    );
+    final grade = _dailyGrade(
+      terminal: rt.terminalReason!,
+      accuracy: accuracy,
+      bestStreak: rt.bestStreak,
+      focusMet: focusMet,
+    );
+    final isNewBest = _dailyBestBeats(
+      previous,
+      grade: grade,
+      accuracy: accuracy,
+      bestStreak: rt.bestStreak,
+      averageResponseMs: averageResponseMs,
+      factsRecovered: rt.factsRecovered,
+    );
+    final cleared =
+        rt.terminalReason == MentalMathTerminalReason.masteryReached;
+    final officialFocus =
+        previous.officialFocusCompleted || (cleared && focusMet);
+    final rewardAlreadyClaimed = previous.rewardClaimed;
+    final rewardGranted =
+        cleared && !rewardAlreadyClaimed ? dailyMentalMathRewardCoins : 0;
+    final record = DailyMentalMathRecord(
+      dateKey: profile.dateKey,
+      rewardClaimed: previous.rewardClaimed || rewardGranted > 0,
+      officialFocusCompleted: officialFocus,
+      bestGrade: isNewBest ? grade : previous.bestGrade,
+      bestAccuracy: isNewBest ? accuracy : previous.bestAccuracy,
+      bestStreak: isNewBest ? rt.bestStreak : previous.bestStreak,
+      bestAverageResponseMs:
+          isNewBest ? averageResponseMs : previous.bestAverageResponseMs,
+      bestFactsRecovered:
+          isNewBest ? rt.factsRecovered : previous.bestFactsRecovered,
+    );
+    dailyMentalMathRecord = record;
+    if (rewardGranted > 0) addCoins(rewardGranted, true);
+    return _DailyMentalMathCompletion(
+      focus: profile.focus,
+      currentRunFocusMet: focusMet,
+      officialFocusCompleted: officialFocus,
+      grade: grade,
+      todaysBestGrade: record.bestGrade,
+      isNewBest: isNewBest,
+      rewardGranted: rewardGranted,
+      rewardAlreadyClaimed: rewardAlreadyClaimed,
+      perfectDay: _isDailyMentalMathPerfectDay(record),
+    );
+  }
+
   void _prepareResultSummary({required bool win, required bool loss}) {
     final p1 = p[1];
     final p2 = p[2];
 
-    if (_isMentalMathFreePracticeRun && rt.terminalReason != null) {
+    if (_isMentalMathRun && rt.terminalReason != null) {
       final title = switch (rt.terminalReason!) {
         MentalMathTerminalReason.masteryReached => 'MASTERY REACHED',
         MentalMathTerminalReason.practiceComplete => 'PRACTICE COMPLETE',
@@ -4365,22 +4637,39 @@ class GameState extends ChangeNotifier {
           'Training complete. You reached the session limit.',
       };
       final completed = rt.completedQuestions;
+      final accuracy =
+          completed == 0 ? 0 : ((p1.correct / completed) * 100).round();
+      final averageResponseMs = rt.mentalMathAnsweredResponseCount == 0
+          ? null
+          : (rt.mentalMathAnsweredResponseTotalMs /
+                  rt.mentalMathAnsweredResponseCount)
+              .round();
+      final daily = isDailyMentalMathRun
+          ? _completeDailyMentalMath(
+              accuracy: accuracy,
+              averageResponseMs: averageResponseMs,
+            )
+          : null;
       mentalMathResultSummary = MentalMathResultSummary(
         avatarEmoji: p1.avatar.storageEmoji,
         terminalTitle: title,
         message: message,
         peakMomentum: rt.peakMomentum,
         bestStreak: rt.bestStreak,
-        accuracyPercent:
-            completed == 0 ? 0 : ((p1.correct / completed) * 100).round(),
-        averageResponseMs: rt.mentalMathAnsweredResponseCount == 0
-            ? null
-            : (rt.mentalMathAnsweredResponseTotalMs /
-                    rt.mentalMathAnsweredResponseCount)
-                .round(),
+        accuracyPercent: accuracy,
+        averageResponseMs: averageResponseMs,
         fastestAnswerMs:
             p1.fastest == PlayerState.noFastestTime ? null : p1.fastest,
         factsRecovered: rt.factsRecovered,
+        dailyFocus: daily?.focus,
+        currentRunFocusMet: daily?.currentRunFocusMet ?? false,
+        officialFocusCompleted: daily?.officialFocusCompleted ?? false,
+        focusGrade: daily?.grade,
+        todaysBestGrade: daily?.todaysBestGrade,
+        isNewDailyBest: daily?.isNewBest ?? false,
+        dailyRewardAmountGranted: daily?.rewardGranted ?? 0,
+        dailyRewardAlreadyClaimed: daily?.rewardAlreadyClaimed ?? false,
+        perfectDay: daily?.perfectDay ?? false,
       );
       resultIcon = p1.avatar.storageEmoji;
       resultTitle = title;
@@ -4574,7 +4863,7 @@ class GameState extends ChangeNotifier {
     _masterLevel = 0;
     _masterLives = 3;
     _masterProgress = 0;
-    final wasMentalMathRun = _isMentalMathFreePracticeRun;
+    final wasMentalMathRun = _isMentalMathRun;
     _runSnapshot = null;
     if (wasMentalMathRun) _clearMentalMathRuntimeState();
     _gameBrain = null;
@@ -4917,7 +5206,7 @@ class GameState extends ChangeNotifier {
   }
 
   bool _isPowerUpBlocked(PowerUp pu) {
-    if (_isMentalMathFreePracticeRun) return true;
+    if (_isMentalMathRun) return true;
     if (pu == PowerUp.fifty && rt.answerStyle == AnswerStyle.trueFalse) {
       return true;
     }
@@ -5313,6 +5602,7 @@ class GameState extends ChangeNotifier {
     final today = DateTime.now();
     dailyBossDateKey = _dailyDateKey(today);
     dailyBoss = _generateDailyBoss(today);
+    dailyMentalMathRecord = null;
     shopOwned = [];
     unlockedAvatars = [];
     unlockedHats = [];
