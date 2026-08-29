@@ -40,7 +40,7 @@ class MenuScreen extends StatelessWidget {
                 _CampaignCard(
                   key: const Key('weak-skills-practice-row'),
                   icon: '🚀',
-                  title: 'Weak Skills Practice',
+                  title: 'Training Arena',
                   subtitle: 'Build Your Skills',
                   color: const Color(GameConfig.grape),
                   gradientColors: _weakSkillsGradient,

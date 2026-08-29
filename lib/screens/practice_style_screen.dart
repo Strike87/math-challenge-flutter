@@ -13,6 +13,7 @@ class PracticeStyleScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<GameState>();
     final settings = context.watch<SettingsService>();
+    final isTrainingArena = state.setupWeakSkillsPlan != null;
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
@@ -22,7 +23,16 @@ class PracticeStyleScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _Header(settings: settings, onBack: state.cancelPracticeStyle),
+                _Header(
+                  settings: settings,
+                  onBack: state.cancelPracticeStyle,
+                  title: isTrainingArena
+                      ? 'Training Arena'
+                      : 'Choose Practice Style',
+                  subtitle: isTrainingArena
+                      ? 'Pick how you want to train'
+                      : 'Pick how you want to practice',
+                ),
                 const SizedBox(height: 20),
                 Text(
                   'CHOOSE YOUR STYLE',
@@ -47,12 +57,15 @@ class PracticeStyleScreen extends StatelessWidget {
                 const SizedBox(height: 14),
                 _StyleCard(
                   title: 'IQ Spark',
-                  description:
-                      'Focus on clear, steady practice at your own pace.',
+                  description: isTrainingArena
+                      ? 'Momentum-driven focused practice.'
+                      : 'Focus on clear, steady practice at your own pace.',
                   icon: Icons.psychology_alt_outlined,
                   color: GameConfig.sky,
                   buttonKey: const Key('mental-math-button'),
-                  onPressed: state.startMentalMathFreePractice,
+                  onPressed: isTrainingArena
+                      ? state.startMentalMathWeakSkillsPractice
+                      : state.startMentalMathFreePractice,
                 ),
               ],
             ),
@@ -64,10 +77,17 @@ class PracticeStyleScreen extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.settings, required this.onBack});
+  const _Header({
+    required this.settings,
+    required this.onBack,
+    required this.title,
+    required this.subtitle,
+  });
 
   final SettingsService settings;
   final VoidCallback onBack;
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -97,13 +117,13 @@ class _Header extends StatelessWidget {
             Expanded(
               child: Column(
                 children: [
-                  Text('Choose Practice Style',
+                  Text(title,
                       style: TextStyle(
                           color: settings.text,
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
                           fontFamily: AppFonts.headFor(settings))),
-                  Text('Pick how you want to practice',
+                  Text(subtitle,
                       style: TextStyle(
                           color: settings.muted,
                           fontSize: 10.5,

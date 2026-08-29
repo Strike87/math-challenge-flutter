@@ -89,6 +89,7 @@ class MentalMathResultSummary {
     required this.averageResponseMs,
     required this.fastestAnswerMs,
     required this.factsRecovered,
+    this.trainingArenaPracticeAreas,
     this.dailyFocus,
     this.currentRunFocusMet = false,
     this.officialFocusCompleted = false,
@@ -109,6 +110,7 @@ class MentalMathResultSummary {
   final int? averageResponseMs;
   final int? fastestAnswerMs;
   final int factsRecovered;
+  final List<Operation>? trainingArenaPracticeAreas;
   final DailyMentalMathFocus? dailyFocus;
   final bool currentRunFocusMet;
   final bool officialFocusCompleted;
@@ -746,6 +748,8 @@ class GameState extends ChangeNotifier {
   bool get _isMentalMathRun => _runSnapshot?.mentalMathEntry != null;
   bool get isDailyMentalMathRun =>
       _runSnapshot?.mentalMathEntry == MentalMathEntry.daily;
+  bool get isTrainingArenaIqSparkRun =>
+      _runSnapshot?.mentalMathEntry == MentalMathEntry.weakSkills;
   DailyMentalMathProfile get dailyMentalMathProfile =>
       _dailyMentalMathProfileFor(DateTime.now());
   DailyMentalMathRecord? get currentDailyMentalMathRecord {
@@ -2353,7 +2357,16 @@ class GameState extends ChangeNotifier {
   }
 
   void startMentalMathFreePractice() {
-    _pendingMentalMathEntry = MentalMathEntry.freePractice;
+    _startMentalMathPractice(MentalMathEntry.freePractice);
+  }
+
+  void startMentalMathWeakSkillsPractice() {
+    if (_pendingWeakSkillsPlan == null) return;
+    _startMentalMathPractice(MentalMathEntry.weakSkills);
+  }
+
+  void _startMentalMathPractice(MentalMathEntry entry) {
+    _pendingMentalMathEntry = entry;
     _adaptiveBeforeMentalMath ??= adaptive;
     adaptive = false;
     players = 1;
@@ -2366,6 +2379,11 @@ class GameState extends ChangeNotifier {
   }
 
   void cancelPracticeStyle() {
+    if (_pendingWeakSkillsPlan != null) {
+      currentScreen = GameScreen.menu;
+      showModal(GameModal.weakSkillsPractice);
+      return;
+    }
     _clearPendingMentalMathEntry();
     _pendingPracticeStyle = false;
     _pendingQuestionMechanic = QuestionMechanic.standard;
@@ -2388,7 +2406,8 @@ class GameState extends ChangeNotifier {
       'modal transition: ${currentModal.name} -> ${GameModal.none.name}',
     );
     currentModal = GameModal.none;
-    showScreen(GameScreen.numType);
+    _pendingPracticeStyle = true;
+    showScreen(GameScreen.practiceStyle);
   }
 
   void cancelWeakSkillsSetup() => closeModal();
@@ -2798,20 +2817,24 @@ class GameState extends ChangeNotifier {
       snapshot.weakSkillsPlan == null;
 
   bool _isValidMentalMathFreePracticeSetup() =>
-      _pendingMentalMathEntry == MentalMathEntry.freePractice &&
+      (_pendingMentalMathEntry == MentalMathEntry.freePractice ||
+          (_pendingMentalMathEntry == MentalMathEntry.weakSkills &&
+              _pendingWeakSkillsPlan != null)) &&
       mode == GameMode.standard &&
       players == 1 &&
       (_pendingQuestionMechanic == QuestionMechanic.standard ||
           _pendingQuestionMechanic == QuestionMechanic.missingOperation) &&
       timingStyle == TimingStyle.perQuestion &&
       !adaptive &&
-      const {
-        Operation.addition,
-        Operation.subtraction,
-        Operation.multiplication,
-        Operation.division,
-        Operation.mixed,
-      }.contains(rt.challenge) &&
+      (_pendingMentalMathEntry == MentalMathEntry.weakSkills
+          ? rt.challenge == Operation.mixed
+          : const {
+              Operation.addition,
+              Operation.subtraction,
+              Operation.multiplication,
+              Operation.division,
+              Operation.mixed,
+            }.contains(rt.challenge)) &&
       diff == Difficulty.medium &&
       questionCount == 40 &&
       const {NumberType.natural, NumberType.integers, NumberType.rationals}
@@ -3114,10 +3137,17 @@ class GameState extends ChangeNotifier {
       legalDifficulties = {d};
     }
 
+    final targetedQuestion = _isMentalMathRun
+        ? _buildMentalMathTargetedQuestion(
+            diff: d,
+            numType: generatedNumType,
+          )
+        : null;
     final operationPool = _runSnapshot?.operationPool;
     if (operationPool != null) {
       type = operationPool[_rng.nextInt(operationPool.length)];
-    } else if (type == Operation.mixed || type == Operation.survival) {
+    } else if (targetedQuestion == null &&
+        (type == Operation.mixed || type == Operation.survival)) {
       final weakSkillsPlan = _runSnapshot?.weakSkillsPlan;
       if (weakSkillsPlan != null) {
         type = weakSkillsPlan.operationAt(rt.weakSkillsScheduleIndex++);
@@ -3143,12 +3173,6 @@ class GameState extends ChangeNotifier {
     }
 
     // Build question with uniqueness guarantee.
-    final targetedQuestion = _isMentalMathRun
-        ? _buildMentalMathTargetedQuestion(
-            diff: d,
-            numType: generatedNumType,
-          )
-        : null;
     final filtersQuestQuestions = isMissingOperation || isMissingNumberQuest;
     Question? q = targetedQuestion ??
         (filtersQuestQuestions
@@ -4661,6 +4685,9 @@ class GameState extends ChangeNotifier {
         fastestAnswerMs:
             p1.fastest == PlayerState.noFastestTime ? null : p1.fastest,
         factsRecovered: rt.factsRecovered,
+        trainingArenaPracticeAreas: isTrainingArenaIqSparkRun
+            ? List.unmodifiable(_runSnapshot!.weakSkillsPlan!.focusedOperations)
+            : null,
         dailyFocus: daily?.focus,
         currentRunFocusMet: daily?.currentRunFocusMet ?? false,
         officialFocusCompleted: daily?.officialFocusCompleted ?? false,

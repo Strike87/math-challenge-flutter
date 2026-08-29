@@ -176,12 +176,10 @@ class WeakSkillsPracticeModal extends StatelessWidget {
 
     return ModalShell(
       icon: plan.isFallback ? '🧠' : '🎯',
-      title: plan.isFallback
+      title: 'TRAINING ARENA',
+      subtitle: plan.isFallback
           ? 'Building Your Practice Profile'
           : 'Recommended Practice',
-      subtitle: plan.isFallback
-          ? 'Practice first, personalize next'
-          : 'Your personalized practice round',
       actions: [
         NeoButton(
           label: 'Cancel',
@@ -3754,6 +3752,23 @@ class _MentalMathResultReport extends StatelessWidget {
       children: [
         _ResultHeroMessage(icon: summary.avatarEmoji, message: summary.message),
         const SizedBox(height: 12),
+        if (summary.trainingArenaPracticeAreas != null) ...[
+          _ResultPanel(
+            title: 'Training Arena',
+            icon: '🎯',
+            child: _ReportBox(
+              rows: [
+                _ReportRow(
+                  'Practice Areas',
+                  summary.trainingArenaPracticeAreas!
+                      .map((operation) => operation.label)
+                      .join('\n'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         if (summary.dailyFocus != null) ...[
           _ResultPanel(
             title: 'Daily Focus',
