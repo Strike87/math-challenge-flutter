@@ -8,6 +8,8 @@ import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/features/family/domain/family_eligibility.dart';
 import 'package:math_challenge/features/game_brain/domain/game_brain_eligibility.dart';
 import 'package:math_challenge/features/game_brain/experience/p1_f01_integrity_store.dart';
+import 'package:math_challenge/features/game_brain/study/p1_f01_study_coordinator.dart';
+import 'package:math_challenge/features/game_brain/study/p1_f01_study_store.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/models/game_data.dart';
 import 'package:math_challenge/models/player.dart';
@@ -138,8 +140,13 @@ void main() {
 
   test('clear isolates preference and preserves the family age state',
       () async {
+    final integrityStore = await _testIntegrityStore();
     final state = await _makeState(
-      integrityStore: await _testIntegrityStore(),
+      integrityStore: integrityStore,
+      p1F01StudyCoordinator: P1F01StudyCoordinator.production(
+        integrityStore: integrityStore,
+        studyStore: await _testStudyStore(),
+      ),
     );
     state
       ..coins = 42
@@ -308,6 +315,7 @@ Future<GameState> _makeState({
   bool dark = false,
   QuestionGenerator? questionGenerator,
   P1F01IntegrityStore? integrityStore,
+  P1F01StudyCoordinator? p1F01StudyCoordinator,
 }) async {
   SharedPreferences.setMockInitialValues(values);
   await Storage.init();
@@ -315,6 +323,7 @@ Future<GameState> _makeState({
     dark: dark,
     questionGenerator: questionGenerator,
     integrityStore: integrityStore,
+    p1F01StudyCoordinator: p1F01StudyCoordinator,
   );
 }
 
@@ -327,6 +336,7 @@ Future<GameState> _newState({
   required bool dark,
   QuestionGenerator? questionGenerator,
   P1F01IntegrityStore? integrityStore,
+  P1F01StudyCoordinator? p1F01StudyCoordinator,
 }) async {
   final settings = SettingsService()
     ..load(
@@ -343,6 +353,7 @@ Future<GameState> _newState({
     audio: AudioService(settings),
     questionGenerator: questionGenerator,
     p1F01IntegrityStore: integrityStore,
+    p1F01StudyCoordinator: p1F01StudyCoordinator,
   );
   await state.load();
   addTearDown(state.dispose);
@@ -354,6 +365,19 @@ Future<P1F01IntegrityStore> _testIntegrityStore() async {
   final store = P1F01IntegrityStore(
     databaseFactory: databaseFactoryFfi,
     databasePath: '${dir.path}${Platform.pathSeparator}integrity.db',
+  );
+  addTearDown(() async {
+    await store.close();
+    if (await dir.exists()) await dir.delete(recursive: true);
+  });
+  return store;
+}
+
+Future<P1F01StudyStore> _testStudyStore() async {
+  final dir = await Directory.systemTemp.createTemp('gb_ux_p1_study_');
+  final store = P1F01StudyStore(
+    databaseFactory: databaseFactoryFfi,
+    databasePath: '${dir.path}${Platform.pathSeparator}study.db',
   );
   addTearDown(() async {
     await store.close();
