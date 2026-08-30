@@ -120,10 +120,8 @@ final class P1F01TransactionBoundaryController {
       'state': _state.value,
       'armed': _state == P1F01TransactionBoundaryState.armBeforeCommit ||
           _state == P1F01TransactionBoundaryState.armAfterCommitBeforeAck,
-      'reached':
-          _state == P1F01TransactionBoundaryState.reachedBeforeCommit ||
-              _state ==
-                  P1F01TransactionBoundaryState.reachedAfterCommitBeforeAck,
+      'reached': _state == P1F01TransactionBoundaryState.reachedBeforeCommit ||
+          _state == P1F01TransactionBoundaryState.reachedAfterCommitBeforeAck,
       'phase': identity?.phase.value,
       'windowSequence': identity?.windowSequence,
       'opportunityOrdinal': identity?.opportunityOrdinal,
@@ -311,6 +309,8 @@ final class P1F01IntegrityStore {
   P1F01TransactionBoundaryController get boundaryController =>
       _boundaryController;
 
+  bool get isOpen => _database != null;
+
   Future<P1F01IntegritySnapshot?> recoverOpenWindows() =>
       _guarded<P1F01IntegritySnapshot?>(
         P1F01IntegrityOperation.recoverOpenWindows,
@@ -359,6 +359,27 @@ final class P1F01IntegrityStore {
   Future<P1F01OpportunityAdmissionResult> admitOpportunity({
     required int opportunityOrdinalWithinRun,
     required P1F01LegalSetCode legalSetCode,
+  }) =>
+      _admitOpportunity(
+        opportunityOrdinalWithinRun: opportunityOrdinalWithinRun,
+        legalSetCode: legalSetCode,
+      );
+
+  Future<P1F01OpportunityAdmissionResult> admitOpportunityForSequence({
+    required int localWindowSequence,
+    required int opportunityOrdinalWithinRun,
+    required P1F01LegalSetCode legalSetCode,
+  }) =>
+      _admitOpportunity(
+        localWindowSequence: localWindowSequence,
+        opportunityOrdinalWithinRun: opportunityOrdinalWithinRun,
+        legalSetCode: legalSetCode,
+      );
+
+  Future<P1F01OpportunityAdmissionResult> _admitOpportunity({
+    int? localWindowSequence,
+    required int opportunityOrdinalWithinRun,
+    required P1F01LegalSetCode legalSetCode,
   }) async {
     final result = await _guarded(
       P1F01IntegrityOperation.admitOpportunity,
@@ -369,7 +390,9 @@ final class P1F01IntegrityStore {
         int? boundaryWindowSequence;
         final result = await db.transaction((txn) async {
           _fail(P1F01IntegrityOperation.admitOpportunity);
-          final window = await _latestOpenWindow(txn);
+          final window = localWindowSequence == null
+              ? await _latestOpenWindow(txn)
+              : await _openWindowBySequence(txn, localWindowSequence);
           if (window == null) {
             return P1F01OpportunityAdmissionResult.failedClosed;
           }
@@ -441,6 +464,27 @@ final class P1F01IntegrityStore {
   Future<bool> reconcileTerminal({
     required int opportunityOrdinalWithinRun,
     required bool terminalLinkAccepted,
+  }) =>
+      _reconcileTerminal(
+        opportunityOrdinalWithinRun: opportunityOrdinalWithinRun,
+        terminalLinkAccepted: terminalLinkAccepted,
+      );
+
+  Future<bool> reconcileTerminalForSequence({
+    required int localWindowSequence,
+    required int opportunityOrdinalWithinRun,
+    required bool terminalLinkAccepted,
+  }) =>
+      _reconcileTerminal(
+        localWindowSequence: localWindowSequence,
+        opportunityOrdinalWithinRun: opportunityOrdinalWithinRun,
+        terminalLinkAccepted: terminalLinkAccepted,
+      );
+
+  Future<bool> _reconcileTerminal({
+    int? localWindowSequence,
+    required int opportunityOrdinalWithinRun,
+    required bool terminalLinkAccepted,
   }) async {
     final result = await _guarded(
       P1F01IntegrityOperation.reconcileTerminal,
@@ -448,7 +492,9 @@ final class P1F01IntegrityStore {
         final db = await _db();
         return db.transaction((txn) async {
           _fail(P1F01IntegrityOperation.reconcileTerminal);
-          final window = await _latestOpenWindow(txn);
+          final window = localWindowSequence == null
+              ? await _latestOpenWindow(txn)
+              : await _openWindowBySequence(txn, localWindowSequence);
           if (window == null) return false;
           final sequence = window['local_window_sequence'] as int;
           final lastAdmitted =
@@ -518,6 +564,47 @@ final class P1F01IntegrityStore {
     return result ?? false;
   }
 
+  Future<P1F01IntegritySnapshot?> closeCleanAndSnapshot(
+    int localWindowSequence,
+  ) =>
+      _guarded<P1F01IntegritySnapshot?>(
+        P1F01IntegrityOperation.closeClean,
+        () => _serialize(() async {
+          final db = await _db();
+          final closed = await db.transaction((txn) async {
+            _fail(P1F01IntegrityOperation.closeClean);
+            final window =
+                await _openWindowBySequence(txn, localWindowSequence);
+            if (window == null) return false;
+            final lastAdmitted =
+                window['last_admitted_opportunity_ordinal'] as int?;
+            final lastReconciled = window['last_reconciled_ordinal'] as int?;
+            if (window['known_integrity_defect'] == 1 ||
+                lastAdmitted != lastReconciled) {
+              await _markWindowLeftUnclean(txn, localWindowSequence);
+              return false;
+            }
+            final count = await txn.update(
+              _windowTable,
+              {
+                'status': P1F01IntegrityWindowStatus.cleanlyClosed.storageValue,
+                'clean_closure_signal': 1,
+              },
+              where: 'local_window_sequence = ? AND status = ?',
+              whereArgs: [
+                localWindowSequence,
+                P1F01IntegrityWindowStatus.open.storageValue,
+              ],
+            );
+            return count == 1;
+          });
+          final snapshot = await _snapshot(localWindowSequence);
+          return closed && snapshot?.localWindowSequence == localWindowSequence
+              ? snapshot
+              : snapshot;
+        }),
+      );
+
   Future<bool> markLeftUnclean() async {
     final result = await _guarded(
       P1F01IntegrityOperation.markLeftUnclean,
@@ -539,6 +626,25 @@ final class P1F01IntegrityStore {
     return result ?? false;
   }
 
+  Future<P1F01IntegritySnapshot?> markLeftUncleanAndSnapshot(
+    int localWindowSequence,
+  ) =>
+      _guarded<P1F01IntegritySnapshot?>(
+        P1F01IntegrityOperation.markLeftUnclean,
+        () => _serialize(() async {
+          final db = await _db();
+          await db.transaction((txn) async {
+            _fail(P1F01IntegrityOperation.markLeftUnclean);
+            final window =
+                await _openWindowBySequence(txn, localWindowSequence);
+            if (window != null) {
+              await _markWindowLeftUnclean(txn, localWindowSequence);
+            }
+          });
+          return _snapshot(localWindowSequence);
+        }),
+      );
+
   Future<bool> deleteAll() async {
     final result = await _guarded(
       P1F01IntegrityOperation.deleteAll,
@@ -558,6 +664,24 @@ final class P1F01IntegrityStore {
   Future<P1F01IntegritySnapshot?> latestSnapshot() async {
     await debugDrain();
     return _latestSnapshot();
+  }
+
+  Future<P1F01IntegritySnapshot?> snapshotBySequence(
+    int localWindowSequence,
+  ) async {
+    await debugDrain();
+    return _snapshot(localWindowSequence);
+  }
+
+  Future<int> openWindowCount() async {
+    await debugDrain();
+    final db = await _db();
+    final value = Sqflite.firstIntValue(await db.rawQuery(
+          'SELECT COUNT(*) FROM $_windowTable WHERE status = ?',
+          [P1F01IntegrityWindowStatus.open.storageValue],
+        )) ??
+        0;
+    return value;
   }
 
   Future<List<P1F01IntegritySnapshot>> retainedSnapshots() async {
@@ -706,6 +830,22 @@ final class P1F01IntegrityStore {
       where: 'status = ?',
       whereArgs: [P1F01IntegrityWindowStatus.open.storageValue],
       orderBy: 'local_window_sequence DESC',
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.single;
+  }
+
+  Future<Map<String, Object?>?> _openWindowBySequence(
+    DatabaseExecutor txn,
+    int localWindowSequence,
+  ) async {
+    final rows = await txn.query(
+      _windowTable,
+      where: 'local_window_sequence = ? AND status = ?',
+      whereArgs: [
+        localWindowSequence,
+        P1F01IntegrityWindowStatus.open.storageValue,
+      ],
       limit: 1,
     );
     return rows.isEmpty ? null : rows.single;
