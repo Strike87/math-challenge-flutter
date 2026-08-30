@@ -18,6 +18,8 @@ import '../features/game_brain/experience/run_local_question_difficulty_measurem
 import '../features/game_brain/experience/run_local_question_experience_collector.dart';
 import '../features/game_brain/game_brain.dart';
 import '../features/game_brain/integration/adaptive_shadow_integration.dart';
+import '../features/game_brain/study/p1_f01_study_coordinator.dart';
+import '../features/game_brain/study/p1_f01_study_store.dart';
 import '../features/gameplay/domain/question_difficulty_legality.dart';
 import '../features/gameplay/domain/survival_progression_policy.dart';
 import '../features/gameplay/domain/question_mechanic.dart';
@@ -328,6 +330,8 @@ class GameRunSnapshot {
     this.weakSkillsPlan,
     this.mentalMathEntry,
     this.dailyMentalMathProfile,
+    this.p1ActivityRunContext = P1ActivityRunContext.unknown,
+    this.p1AgencyRoute = P1AgencyRoute.unknown,
   });
 
   final GameRunType runType;
@@ -347,6 +351,8 @@ class GameRunSnapshot {
   final WeakSkillsPlan? weakSkillsPlan;
   final MentalMathEntry? mentalMathEntry;
   final DailyMentalMathProfile? dailyMentalMathProfile;
+  final P1ActivityRunContext p1ActivityRunContext;
+  final P1AgencyRoute p1AgencyRoute;
 
   GameRunSnapshot withTimingStyle(TimingStyle value) => GameRunSnapshot(
         runType: runType,
@@ -366,6 +372,30 @@ class GameRunSnapshot {
         weakSkillsPlan: weakSkillsPlan,
         mentalMathEntry: mentalMathEntry,
         dailyMentalMathProfile: dailyMentalMathProfile,
+        p1ActivityRunContext: p1ActivityRunContext,
+        p1AgencyRoute: p1AgencyRoute,
+      );
+
+  GameRunSnapshot withP1AgencyRoute(P1AgencyRoute value) => GameRunSnapshot(
+        runType: runType,
+        mode: mode,
+        operation: operation,
+        difficulty: difficulty,
+        numberType: numberType,
+        answerStyle: answerStyle,
+        players: players,
+        questionTarget: questionTarget,
+        operationQuestStageId: operationQuestStageId,
+        questionMechanic: questionMechanic,
+        timingStyle: timingStyle,
+        operationPool: operationPool,
+        integerQuest: integerQuest,
+        decimalQuest: decimalQuest,
+        weakSkillsPlan: weakSkillsPlan,
+        mentalMathEntry: mentalMathEntry,
+        dailyMentalMathProfile: dailyMentalMathProfile,
+        p1ActivityRunContext: p1ActivityRunContext,
+        p1AgencyRoute: value,
       );
 }
 
@@ -414,6 +444,7 @@ class GameState extends ChangeNotifier {
     AdaptiveShadowEvaluator? adaptiveShadowEvaluator,
     QuestionGenerator? questionGenerator,
     P1F01IntegrityStore? p1F01IntegrityStore,
+    P1F01StudyCoordinator? p1F01StudyCoordinator,
   })  : iapAdapter = iapAdapter ?? const UnavailableIapPurchaseAdapter(),
         adService = adService ?? const UnavailableAdMobService(),
         playGamesService = playGamesService ?? NativePlayGamesService(),
@@ -426,6 +457,10 @@ class GameState extends ChangeNotifier {
         _p1F01IntegrityStore = p1F01IntegrityStore ?? P1F01IntegrityStore(),
         _adultGateFactory =
             adultGateFactory ?? (() => AdultGateChallenge.random()) {
+    _p1F01StudyCoordinator = p1F01StudyCoordinator ??
+        P1F01StudyCoordinator.production(
+          integrityStore: _p1F01IntegrityStore,
+        );
     _toastController = ToastController(onChanged: notifyListeners);
     _iapPurchaseSub = iapPurchaseStream?.listen((purchases) {
       for (final purchase in purchases) {
@@ -539,6 +574,7 @@ class GameState extends ChangeNotifier {
   final QuestionGenerator _qgen;
   final bool _ownsP1F01IntegrityStore;
   final P1F01IntegrityStore _p1F01IntegrityStore;
+  late final P1F01StudyCoordinator _p1F01StudyCoordinator;
   final Random _rng = Random();
   StreamSubscription<List<IapPurchase>>? _iapPurchaseSub;
 
@@ -655,10 +691,24 @@ class GameState extends ChangeNotifier {
       get debugQuestionDifficultyMeasurementOpportunities =>
           _questionDifficultyMeasurements.opportunities;
   @visibleForTesting
-  Future<P1F01IntegritySnapshot?> debugP1F01IntegritySnapshot() =>
-      _p1F01IntegrityStore.latestSnapshot();
+  Future<P1F01IntegritySnapshot?> debugP1F01IntegritySnapshot() async {
+    await _p1F01StudyCoordinator.drain();
+    return _p1F01IntegrityStore.latestSnapshot();
+  }
+
   @visibleForTesting
   bool get debugP1F01IntegrityRunEligible => _p1F01IntegrityRunEligible;
+  @visibleForTesting
+  P1StudyCoordinatorState get debugP1StudyCoordinatorState =>
+      _p1F01StudyCoordinator.state;
+  @visibleForTesting
+  P1IntegrityOwnershipRegime get debugP1IntegrityOwnershipRegime =>
+      _p1F01StudyCoordinator.ownershipRegime;
+  @visibleForTesting
+  Future<bool> debugActivateP1Study() =>
+      _p1F01StudyCoordinator.requestStudyActivation();
+  @visibleForTesting
+  Future<void> debugDrainP1Study() => _p1F01StudyCoordinator.drain();
   @visibleForTesting
   void debugStartGameFromSnapshot(GameRunSnapshot snapshot) {
     _startGame(replaySnapshot: snapshot, skipMentalMathCountdown: true);
@@ -829,6 +879,7 @@ class GameState extends ChangeNotifier {
   QuestionDifficultyLegality? _questionDifficultyLegality;
   bool _p1F01IntegrityRunEligible = false;
   bool _p1F01IntegrityMeasurementFailed = false;
+  bool _p1FollowUpScheduledForCurrentTerminal = false;
   bool _disposed = false;
 
   MasterLevel? get clearedMasterLevel {
@@ -909,15 +960,23 @@ class GameState extends ChangeNotifier {
     _cancelDelayedLossEnd();
     rt.timer?.cancel();
     rt.timeBankTimer?.cancel();
+    _p1F01StudyCoordinator.abandonPendingWork();
     if (_ownsP1F01IntegrityStore) {
-      unawaited(_p1F01IntegrityStore.close());
+      unawaited(() async {
+        await _p1F01StudyCoordinator.close();
+        await _p1F01IntegrityStore.close();
+      }());
     }
     super.dispose();
   }
 
   // ─── Load / save ────────────────────────────────────────────
   Future<void> load() async {
-    unawaited(_p1F01IntegrityStore.recoverOpenWindows());
+    if (_ownsP1F01IntegrityStore) {
+      unawaited(_p1F01StudyCoordinator.initialize());
+    } else {
+      await _p1F01StudyCoordinator.initialize();
+    }
     _loadFamilyEligibility();
     gameBrainPreference = Storage.getBool(gameBrainPreferenceStorageKey, false);
     final skipCloudOwnedLoad = await _recoverCloudResetIntent();
@@ -991,9 +1050,8 @@ class GameState extends ChangeNotifier {
   Future<bool> clearGameBrainData() async {
     try {
       await Storage.remove(gameBrainPreferenceStorageKey);
-      final integrityCleared = await _p1F01IntegrityStore.deleteAll();
-      if (!integrityCleared) {
-        throw Exception('Could not clear P1-F01 integrity state.');
+      if (!await _p1F01StudyCoordinator.reset()) {
+        throw Exception('Could not clear P1 Study state.');
       }
     } on Exception {
       showToast('Could not clear GameBrain data. Please try again.');
@@ -2655,7 +2713,9 @@ class GameState extends ChangeNotifier {
     final pendingQuestId = _pendingOperationQuestStageId;
     final previousSnapshot = replaySnapshot == null ? null : _runSnapshot;
     final snapshot = _normalizeSnapshotTimingStyle(
-        replaySnapshot ??
+        replaySnapshot?.withP1AgencyRoute(
+              P1AgencyRoute.replayCarriedConfiguration,
+            ) ??
             (pendingQuestId == null
                 ? GameRunSnapshot(
                     runType: GameRunType.normal,
@@ -2670,6 +2730,10 @@ class GameState extends ChangeNotifier {
                     timingStyle: setupTimingStyle,
                     weakSkillsPlan: _pendingWeakSkillsPlan,
                     mentalMathEntry: _pendingMentalMathEntry,
+                    p1ActivityRunContext:
+                        P1ActivityRunContext.quickPracticeTimingPractice,
+                    p1AgencyRoute:
+                        P1AgencyRoute.freshSetupAcceptedConfiguration,
                   )
                 : _operationQuestSnapshot(pendingQuestId)),
         previousSnapshot: previousSnapshot);
@@ -3087,6 +3151,9 @@ class GameState extends ChangeNotifier {
 
     // Follow-up reinforcement
     if (rt.isFollowUp && rt.followUpData != null) {
+      _leaveP1F01IntegrityUnclean(
+        cause: P1StudyNonCleanCause.followUpEnvelopeExit,
+      );
       type = rt.followUpData!.type;
       d = rt.followUpData!.diff;
       difficultyRoute = QuestionDifficultyRoute.followUp;
@@ -3431,6 +3498,11 @@ class GameState extends ChangeNotifier {
   }
 
   void handleAppLifecycleChange({required bool resumed}) {
+    if (!resumed && _p1F01StudyCoordinator.futureOpportunityAdmissionEnabled) {
+      _leaveP1F01IntegrityUnclean(
+        cause: P1StudyNonCleanCause.lifecycleInterruption,
+      );
+    }
     if (isTimeBankRun) {
       if (!resumed) {
         _pauseTimeBank();
@@ -3533,6 +3605,7 @@ class GameState extends ChangeNotifier {
             ? _QuestionTerminalClaim.skip
             : _QuestionTerminalClaim.answer;
     if (!_claimQuestionTerminal(questionToken, terminalClaim)) return;
+    _p1FollowUpScheduledForCurrentTerminal = false;
     if (activeMode != GameMode.blitz && activeMode != GameMode.combo) {
       _freezeQuestionTimer();
       rt.timer?.cancel();
@@ -3617,6 +3690,7 @@ class GameState extends ChangeNotifier {
           _questionDifficultyMeasurements.link(questionToken, observation);
       _reconcileP1F01TerminalIfSupported(questionToken, linked);
     }
+    _resolveP1FollowUpAfterCanonicalContinuation();
     _observeContextEvidence(
       q,
       (
@@ -3796,12 +3870,24 @@ class GameState extends ChangeNotifier {
       _supportsContextRunOperation(snapshot.operation);
 
   void _beginP1F01IntegrityWindowIfSupported(GameRunSnapshot snapshot) {
-    _p1F01IntegrityRunEligible = _supportsP1F01IntegrityRun(snapshot);
+    final supported = _supportsP1F01IntegrityRun(snapshot);
+    _p1F01IntegrityRunEligible = _p1F01StudyCoordinator.beginWindow(
+      runId: _activeRunId,
+      eligible: supported,
+      studyRecord: (epochSequence, integrityWindowSequence) =>
+          P1StudyWindowOpen(
+        epochSequence: epochSequence,
+        integrityWindowSequence: integrityWindowSequence,
+        activityRunContext: snapshot.p1ActivityRunContext,
+        agencyRoute: snapshot.p1AgencyRoute,
+        runType: snapshot.runType,
+        playerCount: snapshot.players,
+        gameMode: snapshot.mode,
+        questionMechanic: snapshot.questionMechanic,
+        answerStyle: snapshot.answerStyle,
+      ),
+    );
     _p1F01IntegrityMeasurementFailed = !_p1F01IntegrityRunEligible;
-    if (!_p1F01IntegrityRunEligible) return;
-    unawaited(_p1F01IntegrityStore.admitWindow().then((window) {
-      if (window == null) _p1F01IntegrityMeasurementFailed = true;
-    }));
   }
 
   void _admitP1F01DifficultyOpportunityIfSupported(
@@ -3814,16 +3900,26 @@ class GameState extends ChangeNotifier {
       return;
     }
     final legalSetCode = P1F01LegalSetCode.fromLegality(opportunity.legality);
-    unawaited(_p1F01IntegrityStore
-        .admitOpportunity(
-      opportunityOrdinalWithinRun: opportunity.opportunityOrdinalWithinRun,
-      legalSetCode: legalSetCode,
-    )
-        .then((result) {
-      if (result == P1F01OpportunityAdmissionResult.failedClosed) {
-        _p1F01IntegrityMeasurementFailed = true;
-      }
-    }));
+    final question = rt.q;
+    if (question?.diff == null || question?.numType == null) {
+      _p1F01IntegrityMeasurementFailed = true;
+      _p1F01StudyCoordinator.markMeasurementDefect(
+        _activeRunId,
+        P1StudyMeasurementDefect.unknownMeasurementFailure,
+      );
+      return;
+    }
+    _p1F01StudyCoordinator.admitOpportunity(
+      runId: _activeRunId,
+      studyRecord: (sequence) => P1StudyOpportunityOpen(
+        integrityWindowSequence: sequence,
+        opportunityOrdinalWithinRun: opportunity.opportunityOrdinalWithinRun,
+        exactLegalCandidateSetCode: legalSetCode,
+        executedDifficulty: question!.diff!,
+        effectiveQuestionOperation: question.type,
+        numberType: question.numType!,
+      ),
+    );
   }
 
   void _reconcileP1F01TerminalIfSupported(
@@ -3838,37 +3934,69 @@ class GameState extends ChangeNotifier {
     );
     if (opportunity == null) {
       _p1F01IntegrityMeasurementFailed = true;
-      unawaited(_p1F01IntegrityStore.markLeftUnclean());
+      _p1F01StudyCoordinator.markMeasurementDefect(
+        _activeRunId,
+        P1StudyMeasurementDefect.explicitUnlinkedTerminal,
+      );
       return;
     }
-    unawaited(_p1F01IntegrityStore
-        .reconcileTerminal(
-      opportunityOrdinalWithinRun: opportunity.opportunityOrdinalWithinRun,
+    final terminal = opportunity.terminalObservation?.terminal;
+    final outcome =
+        terminal == null ? null : _p1StudyCanonicalTerminalOutcome(terminal);
+    if (outcome == null) {
+      _p1F01StudyCoordinator.markMeasurementDefect(
+        _activeRunId,
+        P1StudyMeasurementDefect.explicitUnlinkedTerminal,
+      );
+      return;
+    }
+    _p1F01StudyCoordinator.recordTerminal(
+      runId: _activeRunId,
       terminalLinkAccepted: terminalLinkAccepted,
-    )
-        .then((clean) {
-      if (!clean) _p1F01IntegrityMeasurementFailed = true;
-    }));
-  }
-
-  void _closeP1F01IntegrityCleanly() {
-    if (!_p1F01IntegrityRunEligible) return;
-    final failed = _p1F01IntegrityMeasurementFailed;
-    _p1F01IntegrityRunEligible = false;
-    _p1F01IntegrityMeasurementFailed = false;
-    unawaited(
-      failed
-          ? _p1F01IntegrityStore.markLeftUnclean()
-          : _p1F01IntegrityStore.closeCleanIfConsistent(),
+      studyRecord: (sequence) => P1StudyOpportunityTerminal(
+        integrityWindowSequence: sequence,
+        opportunityOrdinalWithinRun: opportunity.opportunityOrdinalWithinRun,
+        canonicalTerminalOutcome: outcome,
+      ),
     );
   }
 
-  void _leaveP1F01IntegrityUnclean() {
-    if (!_p1F01IntegrityRunEligible) return;
+  void _closeP1F01IntegrityCleanly() {
+    if (!_p1F01IntegrityRunEligible &&
+        !_p1F01StudyCoordinator
+            .terminalFinalizationAllowedForCurrentAcceptedOpening) {
+      return;
+    }
     _p1F01IntegrityRunEligible = false;
     _p1F01IntegrityMeasurementFailed = false;
-    unawaited(_p1F01IntegrityStore.markLeftUnclean());
+    _p1F01StudyCoordinator.finishWindow(_activeRunId);
   }
+
+  void _leaveP1F01IntegrityUnclean({
+    P1StudyNonCleanCause cause = P1StudyNonCleanCause.unknownNonCleanCause,
+  }) {
+    if (!_p1F01IntegrityRunEligible &&
+        !_p1F01StudyCoordinator
+            .terminalFinalizationAllowedForCurrentAcceptedOpening) {
+      return;
+    }
+    _p1F01IntegrityRunEligible = false;
+    _p1F01IntegrityMeasurementFailed = true;
+    _p1F01StudyCoordinator.markNonClean(_activeRunId, cause);
+  }
+
+  P1StudyCanonicalTerminalOutcome? _p1StudyCanonicalTerminalOutcome(
+    QuestionTerminalObservation terminal,
+  ) =>
+      switch (terminal) {
+        AnsweredCorrect() => P1StudyCanonicalTerminalOutcome.answeredCorrect,
+        AnsweredIncorrect() =>
+          P1StudyCanonicalTerminalOutcome.answeredIncorrect,
+        QuestionTimedOut() => P1StudyCanonicalTerminalOutcome.questionTimedOut,
+        QuestionSkipped() => P1StudyCanonicalTerminalOutcome.questionSkipped,
+        QuestionReplaced() => P1StudyCanonicalTerminalOutcome.questionReplaced,
+        QuestionAbandoned() => null,
+      };
 
   void _freezeQuestionTimer() {
     if (rt.timerDurationMs <= 0 || rt.timerStart <= 0) return;
@@ -3913,7 +4041,9 @@ class GameState extends ChangeNotifier {
   }
 
   void _invalidateActiveRun() {
+    final runId = _activeRunId;
     _leaveP1F01IntegrityUnclean();
+    _p1F01StudyCoordinator.finishWindow(runId);
     _activeRunId = 0;
     _activeQuestionId = 0;
     rt.accepting = false;
@@ -4162,6 +4292,18 @@ class GameState extends ChangeNotifier {
     }
   }
 
+  void _resolveP1FollowUpAfterCanonicalContinuation() {
+    if (!_p1FollowUpScheduledForCurrentTerminal) return;
+    _p1FollowUpScheduledForCurrentTerminal = false;
+    // Canonical gameplay has already resolved the turn limit into rt.state.
+    // Study consumes that result; it does not recreate the turn-limit rule.
+    if (rt.gameActive && rt.state == 'playing') {
+      _leaveP1F01IntegrityUnclean(
+        cause: P1StudyNonCleanCause.followUpEnvelopeExit,
+      );
+    }
+  }
+
   String _correctAnswerText() {
     final question = rt.q;
     if (question == null) return '';
@@ -4274,6 +4416,7 @@ class GameState extends ChangeNotifier {
         rt.isFollowUp = true;
         rt.followUpData =
             _FollowUpData(rt.q!.type, rt.q!.diff ?? activeDifficulty);
+        _p1FollowUpScheduledForCurrentTerminal = true;
       }
     }
 
@@ -5199,7 +5342,9 @@ class GameState extends ChangeNotifier {
         // BEFORE the replacement question can open; durable LEFT_UNCLEAN
         // bookkeeping is queued asynchronously and never awaited here.
         // Gameplay (the replacement itself) proceeds unchanged.
-        _leaveP1F01IntegrityUnclean();
+        _leaveP1F01IntegrityUnclean(
+          cause: P1StudyNonCleanCause.switchOpEnvelopeExit,
+        );
         final question = rt.q;
         if (question != null) {
           final observation = _captureQuestionExperienceIfSupported(
@@ -5575,7 +5720,7 @@ class GameState extends ChangeNotifier {
     for (final key in _resetStorageKeys) {
       await Storage.remove(key);
     }
-    await _p1F01IntegrityStore.deleteAll();
+    await _p1F01StudyCoordinator.reset();
     _resetInMemoryData();
     cloudResetGeneration = nextCloudResetGeneration;
     cloudRevision = null;
