@@ -6,6 +6,8 @@ import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/engine/question_generator.dart';
 import 'package:math_challenge/features/family/domain/family_eligibility.dart';
 import 'package:math_challenge/features/game_brain/experience/p1_f01_integrity_store.dart';
+import 'package:math_challenge/features/game_brain/study/p1_f01_study_coordinator.dart';
+import 'package:math_challenge/features/game_brain/study/p1_f01_study_store.dart';
 import 'package:math_challenge/features/gameplay/domain/question_difficulty_legality.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/models/player.dart';
@@ -374,8 +376,13 @@ void main() {
 
     test('Clear GameBrain Data and reset delete local integrity rows',
         () async {
+      final clearIntegrity = await _newStore();
       final clearState = await _makeState(
-        integrityStore: await _newStore(),
+        integrityStore: clearIntegrity,
+        p1F01StudyCoordinator: P1F01StudyCoordinator.production(
+          integrityStore: clearIntegrity,
+          studyStore: await _newStudyStore(),
+        ),
       );
       await clearState.submitFamilyAgeRange(FamilyAgeRange.adult18plus);
       await clearState.setGameBrainPreference(true);
@@ -385,8 +392,13 @@ void main() {
       expect(await clearState.clearGameBrainData(), isTrue);
       expect(await clearState.debugP1F01IntegritySnapshot(), isNull);
 
+      final resetIntegrity = await _newStore();
       final resetState = await _makeState(
-        integrityStore: await _newStore(),
+        integrityStore: resetIntegrity,
+        p1F01StudyCoordinator: P1F01StudyCoordinator.production(
+          integrityStore: resetIntegrity,
+          studyStore: await _newStudyStore(),
+        ),
       );
       await resetState.submitFamilyAgeRange(FamilyAgeRange.adult18plus);
       await resetState.setGameBrainPreference(true);
@@ -427,6 +439,19 @@ P1F01IntegrityStore _store(
   return store;
 }
 
+Future<P1F01StudyStore> _newStudyStore() async {
+  final directory = await Directory.systemTemp.createTemp('p1_f01_study_');
+  final store = P1F01StudyStore(
+    databaseFactory: databaseFactoryFfi,
+    databasePath: '${directory.path}${Platform.pathSeparator}study.db',
+  );
+  addTearDown(() async {
+    await store.close();
+    if (await directory.exists()) await directory.delete(recursive: true);
+  });
+  return store;
+}
+
 Future<P1F01IntegritySnapshot?> _latestMatching(
   P1F01IntegrityStore store,
   P1F01IntegrityWindowStatus status,
@@ -447,6 +472,7 @@ Future<String> _tempDbPath() async {
 Future<GameState> _makeState({
   QuestionGenerator? questionGenerator,
   P1F01IntegrityStore? integrityStore,
+  P1F01StudyCoordinator? p1F01StudyCoordinator,
 }) async {
   SharedPreferences.setMockInitialValues({});
   await Storage.init();
@@ -465,6 +491,7 @@ Future<GameState> _makeState({
     audio: _NoOpAudioService(),
     questionGenerator: questionGenerator,
     p1F01IntegrityStore: integrityStore,
+    p1F01StudyCoordinator: p1F01StudyCoordinator,
   );
   await state.load();
   addTearDown(state.dispose);

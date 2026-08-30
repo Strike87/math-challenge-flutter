@@ -269,6 +269,7 @@ final class P1F01StudyStore {
           final db = await _db();
           return db.transaction((txn) async {
             _fail(P1StudyStoreOperation.createEpoch);
+            await _validateAllPersistedEpochs(txn);
             final active = await txn.query(
               epochTable,
               where: 'epoch_status IN (?, ?)',
@@ -280,10 +281,6 @@ final class P1F01StudyStore {
               limit: 1,
             );
             if (active.isNotEmpty) return _epochFromRow(active.single);
-            // Terminal epochs govern whether another epoch may be created;
-            // validate their persisted governance fields before relying on
-            // aggregate counts. A malformed typed role must fail closed rather
-            // than being silently skipped by the count query.
             final terminalRows = await txn.query(
               epochTable,
               where: 'epoch_status IN (?, ?)',
@@ -329,6 +326,7 @@ final class P1F01StudyStore {
         P1StudyStoreOperation.recover,
         () => _serialize(() async {
           final db = await _db();
+          await _validateAllPersistedEpochs(db);
           final rows = await db.query(
             epochTable,
             where: 'epoch_status IN (?, ?)',
@@ -348,6 +346,7 @@ final class P1F01StudyStore {
       P1StudyStoreOperation.recover,
       () => _serialize(() async {
         final db = await _db();
+        await _validateAllPersistedEpochs(db);
         final rows = await db.query(
           epochTable,
           where: 'epoch_status IN (?, ?)',
@@ -570,6 +569,13 @@ final class P1F01StudyStore {
       (await _guarded(
         P1StudyStoreOperation.abortEpoch,
         () => _serialize(() async {
+          if (!{
+            P1StudyEpochStopReason.userReset,
+            P1StudyEpochStopReason.measurementUnavailable,
+            P1StudyEpochStopReason.administrativeAbortIndependentOfResult,
+          }.contains(reason)) {
+            return false;
+          }
           final administrative = reason ==
               P1StudyEpochStopReason.administrativeAbortIndependentOfResult;
           if (administrative != (administrativeAbortActingRole != null) ||
@@ -720,8 +726,13 @@ final class P1F01StudyStore {
       });
 
   P1StudyEpoch _epochFromRow(Map<String, Object?> row) {
-    if (row['semantic_taxonomy_version'] != semanticTaxonomyVersion) {
-      throw const FormatException('Unsupported Study semantic taxonomy.');
+    if (row['study_schema_version'] != studySchemaVersion ||
+        row['p1_f00_protocol_version'] != p1F00ProtocolVersion ||
+        row['sample_protocol_id'] != sampleProtocolId ||
+        row['sample_protocol_version'] != sampleProtocolVersion ||
+        row['c_windows'] != capacityWindows ||
+        row['semantic_taxonomy_version'] != semanticTaxonomyVersion) {
+      throw const FormatException('Unsupported Study epoch binding.');
     }
     final status = P1StudyEpochStatus.parse(row['epoch_status'] as String);
     final reason =
@@ -732,11 +743,23 @@ final class P1F01StudyStore {
         : P1AdministrativeAbortActingRole.parse(roleValue);
     final metrics = row['administrative_abort_metrics_not_accessed'] as int?;
     final timestamp = row['epoch_terminal_timestamp_utc'] as String?;
-    final terminal = status == P1StudyEpochStatus.adjudicated ||
-        status == P1StudyEpochStatus.aborted;
+    final statusReasonTimestampValid = switch (status) {
+      P1StudyEpochStatus.active =>
+        reason == P1StudyEpochStopReason.none && timestamp == null,
+      P1StudyEpochStatus.frozenForAdjudication =>
+        reason == P1StudyEpochStopReason.capacityReached && timestamp == null,
+      P1StudyEpochStatus.aborted =>
+        {
+          P1StudyEpochStopReason.userReset,
+          P1StudyEpochStopReason.measurementUnavailable,
+          P1StudyEpochStopReason.administrativeAbortIndependentOfResult,
+        }.contains(reason) && timestamp != null,
+      P1StudyEpochStatus.adjudicated =>
+        reason == P1StudyEpochStopReason.capacityReached && timestamp != null,
+    };
     final administrative =
         reason == P1StudyEpochStopReason.administrativeAbortIndependentOfResult;
-    if (terminal != (timestamp != null) ||
+    if (!statusReasonTimestampValid ||
         administrative != (role != null) ||
         administrative != (metrics == 1)) {
       throw const FormatException('Invalid Study epoch governance fields.');
@@ -751,6 +774,13 @@ final class P1F01StudyStore {
       administrativeAbortMetricsNotAccessed:
           metrics == null ? null : metrics == 1,
     );
+  }
+
+  Future<void> _validateAllPersistedEpochs(DatabaseExecutor database) async {
+    final rows = await database.query(epochTable);
+    for (final row in rows) {
+      _epochFromRow(row);
+    }
   }
 
   Future<Database> _db() async {
@@ -780,10 +810,20 @@ final class P1F01StudyStore {
               administrative_abort_acting_role TEXT CHECK(administrative_abort_acting_role IN ('PRODUCT_GOVERNANCE','RELEASE_GOVERNANCE','DATA_GOVERNANCE','PROTOCOL_GOVERNANCE')),
               administrative_abort_metrics_not_accessed INTEGER CHECK(administrative_abort_metrics_not_accessed = 1),
               CHECK(
-                (epoch_status IN ('ACTIVE', 'FROZEN_FOR_ADJUDICATION')
+                (epoch_status = 'ACTIVE'
+                  AND epoch_stop_reason = 'none'
                   AND epoch_terminal_timestamp_utc IS NULL)
                 OR
-                (epoch_status IN ('ADJUDICATED', 'ABORTED')
+                (epoch_status = 'FROZEN_FOR_ADJUDICATION'
+                  AND epoch_stop_reason = 'capacityReached'
+                  AND epoch_terminal_timestamp_utc IS NULL)
+                OR
+                (epoch_status = 'ABORTED'
+                  AND epoch_stop_reason IN ('userReset','measurementUnavailable','administrativeAbortIndependentOfResult')
+                  AND epoch_terminal_timestamp_utc IS NOT NULL)
+                OR
+                (epoch_status = 'ADJUDICATED'
+                  AND epoch_stop_reason = 'capacityReached'
                   AND epoch_terminal_timestamp_utc IS NOT NULL)
               ),
               CHECK(

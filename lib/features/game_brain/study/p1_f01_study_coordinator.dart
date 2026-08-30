@@ -125,7 +125,7 @@ final class P1F01StudyCoordinator {
     _state = P1StudyCoordinatorState.recovering;
     return _enqueue(() async {
       if (resetJournal.read() == P1StudyResetJournal.resetPending) {
-        await _completeResetDeletion(mayOpenStudyStore: true);
+        await _completeResetDeletion();
       }
       await integrityStore.recoverOpenWindows();
       if (!confirmatoryWindowExplicitlyOpen) {
@@ -431,11 +431,11 @@ final class P1F01StudyCoordinator {
     return _enqueueResult(() async {
       try {
         await resetJournal.write(P1StudyResetJournal.resetPending);
-        if (confirmatoryWindowExplicitlyOpen || studyStore.isOpen) {
-          await studyStore.abortActiveEpoch(
-            reason: P1StudyEpochStopReason.userReset,
-            epochTerminalTimestampUtc: DateTime.now().toUtc(),
-          );
+        if (!await studyStore.abortActiveEpoch(
+          reason: P1StudyEpochStopReason.userReset,
+          epochTerminalTimestampUtc: DateTime.now().toUtc(),
+        )) {
+          throw StateError('P1 Study reset abort failed.');
         }
         await _completeResetDeletion();
         _clearWindow();
@@ -522,13 +522,11 @@ final class P1F01StudyCoordinator {
     ));
   }
 
-  Future<void> _completeResetDeletion({bool mayOpenStudyStore = false}) async {
-    final studyDeleted = mayOpenStudyStore || studyStore.isOpen
-        ? await studyStore.deleteAll()
-        : true;
-    final integrityDeleted = mayOpenStudyStore || integrityStore.isOpen
-        ? await integrityStore.deleteAll()
-        : true;
+  Future<void> _completeResetDeletion() async {
+    // A dark coordinator may hold closed stores with durable rows on disk.
+    // Deletion must open and process both stores before CLEAR is written.
+    final studyDeleted = await studyStore.deleteAll();
+    final integrityDeleted = await integrityStore.deleteAll();
     if (!studyDeleted || !integrityDeleted) {
       throw StateError('P1 Study reset deletion failed.');
     }

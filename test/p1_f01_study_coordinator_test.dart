@@ -616,6 +616,134 @@ void main() {
       );
     });
 
+    test('R1-RESET — dark reset processes closed stores before CLEAR',
+        () async {
+      Future<void> seedPersistedRows(_Harness harness) async {
+        final epoch = await harness.study.createOrLoadActiveEpoch();
+        final integrity = await harness.integrity.admitWindow();
+        expect(epoch, isNotNull);
+        expect(integrity, isNotNull);
+        expect(
+          await harness.study.openWindow(
+            _studyWindowOpen(
+              epoch!.epochSequence,
+              integrity!.localWindowSequence,
+            ),
+          ),
+          isTrue,
+        );
+      }
+
+      final closedStore = await _newHarness(production: true);
+      addTearDown(closedStore.dispose);
+      await seedPersistedRows(closedStore);
+      await closedStore.study.close();
+      await closedStore.integrity.close();
+      expect(await closedStore.coordinator.reset(), isTrue);
+      expect(closedStore._journal.value, P1StudyResetJournal.clear.name);
+      expect(
+        await closedStore.study.debugRowCount(P1F01StudyStore.epochTable),
+        0,
+      );
+      expect(await closedStore.integrity.latestSnapshot(), isNull);
+
+      var failAbort = false;
+      final abortFailure = await _newHarness(
+        production: true,
+        studyFailureHook: (operation) {
+          if (failAbort && operation == P1StudyStoreOperation.abortEpoch) {
+            throw StateError('injected abort persistence failure');
+          }
+        },
+      );
+      addTearDown(abortFailure.dispose);
+      await seedPersistedRows(abortFailure);
+      failAbort = true;
+      expect(await abortFailure.coordinator.reset(), isFalse);
+      expect(
+        abortFailure._journal.value,
+        P1StudyResetJournal.resetPending.name,
+      );
+      await abortFailure.coordinator.close();
+      await abortFailure.study.close();
+      await abortFailure.integrity.close();
+      final afterAbortRestart = await _reopenHarness(
+        abortFailure._directory,
+        production: true,
+        journal: abortFailure._journal,
+      );
+      addTearDown(afterAbortRestart.dispose);
+      await afterAbortRestart.coordinator.initialize();
+      expect(
+        afterAbortRestart._journal.value,
+        P1StudyResetJournal.clear.name,
+      );
+      expect(
+        await afterAbortRestart.study
+            .debugRowCount(P1F01StudyStore.windowOpenTable),
+        0,
+      );
+      expect(await afterAbortRestart.integrity.latestSnapshot(), isNull);
+
+      var failStudyDelete = false;
+      final studyDeleteFailure = await _newHarness(
+        production: true,
+        studyFailureHook: (operation) {
+          if (failStudyDelete && operation == P1StudyStoreOperation.deleteAll) {
+            throw StateError('injected closed-store Study delete failure');
+          }
+        },
+      );
+      addTearDown(studyDeleteFailure.dispose);
+      await seedPersistedRows(studyDeleteFailure);
+      await studyDeleteFailure.study.close();
+      failStudyDelete = true;
+      expect(await studyDeleteFailure.coordinator.reset(), isFalse);
+      expect(
+        studyDeleteFailure._journal.value,
+        P1StudyResetJournal.resetPending.name,
+      );
+
+      var failIntegrityDelete = false;
+      final integrityDeleteFailure = await _newHarness(
+        production: true,
+        integrityFailureHook: (operation) {
+          if (failIntegrityDelete &&
+              operation == P1F01IntegrityOperation.deleteAll) {
+            throw StateError('injected Integrity delete failure');
+          }
+        },
+      );
+      addTearDown(integrityDeleteFailure.dispose);
+      await seedPersistedRows(integrityDeleteFailure);
+      failIntegrityDelete = true;
+      expect(await integrityDeleteFailure.coordinator.reset(), isFalse);
+      expect(
+        integrityDeleteFailure._journal.value,
+        P1StudyResetJournal.resetPending.name,
+      );
+      await integrityDeleteFailure.coordinator.close();
+      await integrityDeleteFailure.study.close();
+      await integrityDeleteFailure.integrity.close();
+      final afterIntegrityRestart = await _reopenHarness(
+        integrityDeleteFailure._directory,
+        production: true,
+        journal: integrityDeleteFailure._journal,
+      );
+      addTearDown(afterIntegrityRestart.dispose);
+      await afterIntegrityRestart.coordinator.initialize();
+      expect(
+        afterIntegrityRestart._journal.value,
+        P1StudyResetJournal.clear.name,
+      );
+      expect(
+        await afterIntegrityRestart.study
+            .debugRowCount(P1F01StudyStore.windowOpenTable),
+        0,
+      );
+      expect(await afterIntegrityRestart.integrity.latestSnapshot(), isNull);
+    });
+
     test('R and S — taxonomy and terminal epoch timestamp are schema-frozen',
         () async {
       final harness = await _newHarness();
@@ -695,6 +823,155 @@ void main() {
         await expectInvalidRecovery(invalid);
       }
       await expectInvalidRecovery(1, omitVersion: true);
+    });
+
+    test('R1-BINDING — every frozen epoch binding recovers exactly or fails closed',
+        () async {
+      Future<void> expectInvalidRecovery({
+        Object? studySchemaVersion,
+        Object? p1F00ProtocolVersion,
+        Object? sampleProtocolId,
+        Object? sampleProtocolVersion,
+        Object? capacityWindows,
+        Object? semanticTaxonomyVersion,
+        Object? epochStatus,
+        Object? epochStopReason,
+      }) async {
+        final directory =
+            await Directory.systemTemp.createTemp('p1_f01_bad_binding_');
+        await _createCorruptStudyEpoch(
+          directory,
+          version: semanticTaxonomyVersion ??
+              P1F01StudyStore.semanticTaxonomyVersion,
+          omitVersion: false,
+          studySchemaVersion: studySchemaVersion,
+          p1F00ProtocolVersion: p1F00ProtocolVersion,
+          sampleProtocolId: sampleProtocolId,
+          sampleProtocolVersion: sampleProtocolVersion,
+          capacityWindows: capacityWindows,
+          epochStatus: epochStatus,
+          epochStopReason: epochStopReason,
+        );
+        final recovered = await _reopenHarness(directory);
+        addTearDown(recovered.dispose);
+        await recovered.coordinator.initialize();
+
+        expect(recovered.coordinator.state, P1StudyCoordinatorState.disabled);
+        expect(recovered.begin(1), isFalse);
+        expect(await recovered.study.activeEpoch(), isNull);
+        expect(await recovered.study.createOrLoadActiveEpoch(), isNull);
+        expect(await recovered.integrity.admitWindow(), isNotNull);
+      }
+
+      for (final invalid in [0, 2]) {
+        await expectInvalidRecovery(studySchemaVersion: invalid);
+        await expectInvalidRecovery(sampleProtocolVersion: invalid);
+        await expectInvalidRecovery(capacityWindows: invalid == 0 ? 48 : 50);
+      }
+      await expectInvalidRecovery(p1F00ProtocolVersion: '1.1');
+      await expectInvalidRecovery(sampleProtocolId: 'legacy-protocol');
+      await expectInvalidRecovery(semanticTaxonomyVersion: 0);
+      await expectInvalidRecovery(epochStatus: 'UNKNOWN');
+      await expectInvalidRecovery(epochStopReason: 'UNKNOWN');
+
+      final exact = await _newHarness();
+      addTearDown(exact.dispose);
+      await exact.coordinator.initialize();
+      expect(exact.coordinator.state, P1StudyCoordinatorState.readyIdle);
+      expect((await exact.study.activeEpoch())?.epochSequence, 1);
+    });
+
+    test('R1-ABORT — API and persisted status/reason combinations are frozen',
+        () async {
+      Future<void> expectRejected(P1StudyEpochStopReason reason) async {
+        final harness = await _newHarness();
+        addTearDown(harness.dispose);
+        await harness.study.createOrLoadActiveEpoch();
+        expect(
+          await harness.study.abortActiveEpoch(
+            reason: reason,
+            epochTerminalTimestampUtc: DateTime.utc(2026, 8, 30),
+          ),
+          isFalse,
+        );
+        expect((await harness.study.activeEpoch())?.status,
+            P1StudyEpochStatus.active);
+      }
+
+      await expectRejected(P1StudyEpochStopReason.none);
+      await expectRejected(P1StudyEpochStopReason.capacityReached);
+
+      for (final reason in [
+        P1StudyEpochStopReason.userReset,
+        P1StudyEpochStopReason.measurementUnavailable,
+      ]) {
+        final harness = await _newHarness();
+        addTearDown(harness.dispose);
+        await harness.study.createOrLoadActiveEpoch();
+        expect(
+          await harness.study.abortActiveEpoch(
+            reason: reason,
+            epochTerminalTimestampUtc: DateTime.utc(2026, 8, 30),
+          ),
+          isTrue,
+        );
+      }
+
+      Future<void> expectInvalidPersisted({
+        required P1StudyEpochStatus status,
+        required P1StudyEpochStopReason reason,
+      }) async {
+        final directory =
+            await Directory.systemTemp.createTemp('p1_f01_bad_abort_state_');
+        await _createCorruptStudyEpoch(
+          directory,
+          version: P1F01StudyStore.semanticTaxonomyVersion,
+          omitVersion: false,
+          status: status,
+          reason: reason,
+          terminalTimestampUtc:
+              status == P1StudyEpochStatus.aborted ? '2026-08-30T00:00:00.000Z' : null,
+        );
+        final recovered = await _reopenHarness(directory);
+        addTearDown(recovered.dispose);
+        await recovered.coordinator.initialize();
+        expect(recovered.coordinator.state, P1StudyCoordinatorState.disabled);
+        expect(recovered.begin(1), isFalse);
+        expect(await recovered.study.createOrLoadActiveEpoch(), isNull);
+      }
+
+      await expectInvalidPersisted(
+        status: P1StudyEpochStatus.aborted,
+        reason: P1StudyEpochStopReason.capacityReached,
+      );
+      await expectInvalidPersisted(
+        status: P1StudyEpochStatus.aborted,
+        reason: P1StudyEpochStopReason.none,
+      );
+      await expectInvalidPersisted(
+        status: P1StudyEpochStatus.active,
+        reason: P1StudyEpochStopReason.capacityReached,
+      );
+      await expectInvalidPersisted(
+        status: P1StudyEpochStatus.frozenForAdjudication,
+        reason: P1StudyEpochStopReason.none,
+      );
+
+      final frozenDirectory =
+          await Directory.systemTemp.createTemp('p1_f01_valid_frozen_');
+      await _createCorruptStudyEpoch(
+        frozenDirectory,
+        version: P1F01StudyStore.semanticTaxonomyVersion,
+        omitVersion: false,
+        status: P1StudyEpochStatus.frozenForAdjudication,
+        reason: P1StudyEpochStopReason.capacityReached,
+      );
+      final frozen = await _reopenHarness(frozenDirectory);
+      addTearDown(frozen.dispose);
+      await frozen.coordinator.initialize();
+      expect((await frozen.study.activeEpoch())?.status,
+          P1StudyEpochStatus.frozenForAdjudication);
+      expect(frozen.coordinator.state, P1StudyCoordinatorState.disabled);
     });
 
     test('T, U, and V — administrative abort accepts only typed roles',
@@ -993,6 +1270,7 @@ Future<_Harness> _newHarness({
 
 Future<_Harness> _reopenHarness(
   Directory directory, {
+  bool production = false,
   _JournalBox? journal,
 }) async {
   final integrity = P1F01IntegrityStore(
@@ -1004,14 +1282,21 @@ Future<_Harness> _reopenHarness(
     databasePath: '${directory.path}${Platform.pathSeparator}study.db',
   );
   final journalBox = journal ?? _JournalBox(P1StudyResetJournal.clear.name);
-  final coordinator = P1F01StudyCoordinator.test(
-    integrityStore: integrity,
-    studyStore: study,
-    resetJournal: P1StudyResetJournalStore(
-      read: () => journalBox.value,
-      write: (value) async => journalBox.value = value,
-    ),
+  final resetJournal = P1StudyResetJournalStore(
+    read: () => journalBox.value,
+    write: (value) async => journalBox.value = value,
   );
+  final coordinator = production
+      ? P1F01StudyCoordinator.production(
+          integrityStore: integrity,
+          studyStore: study,
+          resetJournal: resetJournal,
+        )
+      : P1F01StudyCoordinator.test(
+          integrityStore: integrity,
+          studyStore: study,
+          resetJournal: resetJournal,
+        );
   return _Harness(coordinator, integrity, study, directory, journalBox);
 }
 
@@ -1060,8 +1345,15 @@ Future<void> _createCorruptStudyEpoch(
   Directory directory, {
   required Object? version,
   required bool omitVersion,
+  Object? studySchemaVersion,
+  Object? p1F00ProtocolVersion,
+  Object? sampleProtocolId,
+  Object? sampleProtocolVersion,
+  Object? capacityWindows,
   P1StudyEpochStatus status = P1StudyEpochStatus.active,
   P1StudyEpochStopReason reason = P1StudyEpochStopReason.none,
+  Object? epochStatus,
+  Object? epochStopReason,
   String? terminalTimestampUtc,
   Object? administrativeRole,
   Object? administrativeMetricsNotAccessed,
@@ -1091,14 +1383,18 @@ Future<void> _createCorruptStudyEpoch(
       P1F01StudyStore.epochTable,
       {
         'epoch_sequence': 1,
-        'study_schema_version': 1,
-        'p1_f00_protocol_version': '1.2',
-        'sample_protocol_id': 'P1-SE-SAMPLE-00',
-        'sample_protocol_version': 1,
-        'c_windows': 49,
+        'study_schema_version': studySchemaVersion ??
+            P1F01StudyStore.studySchemaVersion,
+        'p1_f00_protocol_version': p1F00ProtocolVersion ??
+            P1F01StudyStore.p1F00ProtocolVersion,
+        'sample_protocol_id':
+            sampleProtocolId ?? P1F01StudyStore.sampleProtocolId,
+        'sample_protocol_version': sampleProtocolVersion ??
+            P1F01StudyStore.sampleProtocolVersion,
+        'c_windows': capacityWindows ?? P1F01StudyStore.capacityWindows,
         if (!omitVersion) 'semantic_taxonomy_version': version,
-        'epoch_status': status.storageValue,
-        'epoch_stop_reason': reason.storageValue,
+        'epoch_status': epochStatus ?? status.storageValue,
+        'epoch_stop_reason': epochStopReason ?? reason.storageValue,
         'admitted_study_window_count': 0,
         if (terminalTimestampUtc != null)
           'epoch_terminal_timestamp_utc': terminalTimestampUtc,
@@ -1122,3 +1418,16 @@ final _legalSetCode = P1F01LegalSetCode.fromLegality(
     legalDifficulties: playerConfigurableDifficultySet,
   ),
 );
+
+P1StudyWindowOpen _studyWindowOpen(int epochSequence, int windowSequence) =>
+    P1StudyWindowOpen(
+      epochSequence: epochSequence,
+      integrityWindowSequence: windowSequence,
+      activityRunContext: P1ActivityRunContext.quickPracticeTimingPractice,
+      agencyRoute: P1AgencyRoute.freshSetupAcceptedConfiguration,
+      runType: GameRunType.normal,
+      playerCount: 1,
+      gameMode: GameMode.standard,
+      questionMechanic: QuestionMechanic.standard,
+      answerStyle: AnswerStyle.choice4,
+    );
