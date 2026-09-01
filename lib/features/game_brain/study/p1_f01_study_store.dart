@@ -7,6 +7,20 @@ import 'package:sqflite/sqflite.dart';
 import '../../../models/enums.dart';
 import '../../gameplay/domain/question_mechanic.dart';
 import '../experience/p1_f01_integrity_store.dart';
+import 'p1_f01_study_evaluator.dart';
+
+enum _ScientificWindowFinalState {
+  clean,
+  nonClean,
+  structurallyUnavailable,
+}
+
+final class _ScientificWindowFinalValidation {
+  const _ScientificWindowFinalValidation(this.state, this.missingLegalSets);
+
+  final _ScientificWindowFinalState state;
+  final Map<String, int> missingLegalSets;
+}
 
 enum P1StudyEpochStatus {
   active('ACTIVE'),
@@ -246,6 +260,8 @@ final class P1F01StudyStore {
   static const String sampleProtocolId = 'P1-SE-SAMPLE-00';
   static const int sampleProtocolVersion = 1;
   static const int capacityWindows = 49;
+  // Frozen P1-F00 v1.2 per-window Phase-1 opening ceiling.
+  static const int _maxOpeningsPerWindow = 25;
   static const int maxOpportunityRows = 1225;
   static const int maxPriorTerminalEpochs = 16;
 
@@ -362,6 +378,162 @@ final class P1F01StudyStore {
     return epochs ?? const <P1StudyEpoch>[];
   }
 
+  /// Read-only projection over existing receipts; it neither writes nor adds
+  /// retained data. Unknown durable values become unavailable evaluator input.
+  Future<P1StudyScientificSnapshot?> scientificSnapshot(int epochSequence) =>
+      _guarded<P1StudyScientificSnapshot?>(
+        P1StudyStoreOperation.recover,
+        () => _serialize(() async {
+          final db = await _db();
+          await _validateAllPersistedEpochs(db);
+          final epoch = await db.query(epochTable,
+              where: 'epoch_sequence = ?',
+              whereArgs: [epochSequence],
+              limit: 1);
+          if (epoch.isEmpty) return null;
+          _epochFromRow(epoch.single);
+          final epochRow = epoch.single;
+          final terminalEpoch = {
+            P1StudyEpochStatus.frozenForAdjudication.storageValue,
+            P1StudyEpochStatus.adjudicated.storageValue,
+          }.contains(epochRow['epoch_status']);
+          final windows = await db.query(windowOpenTable,
+              where: 'epoch_sequence = ?',
+              whereArgs: [epochSequence],
+              orderBy: 'integrity_window_sequence ASC');
+          var available = true;
+          final projected = <P1StudyScientificWindow>[];
+          for (final window in windows) {
+            final sequence = window['integrity_window_sequence'] as int?;
+            if (sequence == null || sequence < 1) available = false;
+            final finals = sequence == null
+                ? const <Map<String, Object?>>[]
+                : await db.query(windowFinalTable,
+                    where: 'integrity_window_sequence = ?',
+                    whereArgs: [sequence],
+                    limit: 2);
+            if (finals.length > 1) available = false;
+            final openings = sequence == null
+                ? const <Map<String, Object?>>[]
+                : await db.query(opportunityOpenTable,
+                    where: 'integrity_window_sequence = ?',
+                    whereArgs: [sequence],
+                    orderBy: 'opportunity_ordinal_within_run ASC');
+            final terminals = sequence == null
+                ? const <Map<String, Object?>>[]
+                : await db.query(opportunityTerminalTable,
+                    where: 'integrity_window_sequence = ?',
+                    whereArgs: [sequence]);
+            final terminalByOrdinal = <int, Map<String, Object?>>{};
+            for (final terminal in terminals) {
+              final ordinal =
+                  terminal['opportunity_ordinal_within_run'] as int?;
+              if (ordinal == null || terminalByOrdinal.containsKey(ordinal)) {
+                available = false;
+              } else {
+                terminalByOrdinal[ordinal] = terminal;
+              }
+            }
+            final opportunities = <P1StudyScientificOpportunity>[];
+            for (final opening in openings) {
+              final ordinal = opening['opportunity_ordinal_within_run'] as int?;
+              final terminal =
+                  ordinal == null ? null : terminalByOrdinal[ordinal];
+              opportunities.add(P1StudyScientificOpportunity(
+                opportunityOrdinalWithinRun: ordinal,
+                decisionContext: _knownString(
+                    opening['decision_context'], const {'chooseDifficulty'}),
+                decisionLocus: _knownString(opening['decision_locus'],
+                    const {'questionOpeningDifficultyResolution'}),
+                decisionLocusReason: _knownString(
+                    opening['decision_locus_reason'],
+                    const {'difficultyRequiredForQuestionOpening'}),
+                legalCandidates: _legalCandidates(
+                    opening['exact_legal_candidate_set_code'] as String?),
+                executedCandidate:
+                    _candidate(opening['executed_difficulty'] as String?),
+                canonicalSelectionMechanism: _knownString(
+                    opening['canonical_selection_mechanism'],
+                    const {'playerConfigured'}),
+                operation: _knownString(opening['effective_question_operation'],
+                    Operation.values.map((value) => value.name).toSet()),
+                numberType: _knownString(opening['number_type'],
+                    NumberType.values.map((value) => value.name).toSet()),
+                terminal: _terminal(
+                    terminal?['canonical_terminal_outcome'] as String?),
+                acceptedQeoLink: terminal == null
+                    ? null
+                    : terminal['accepted_qeo_link'] == 1,
+              ));
+            }
+            final finalRow = finals.isEmpty ? null : finals.single;
+            final finalValidation = _scientificWindowFinalValidation(
+              finalRow,
+              window,
+              openings,
+              terminals,
+              terminalEpoch: terminalEpoch,
+            );
+            if (finalValidation.state ==
+                _ScientificWindowFinalState.structurallyUnavailable) {
+              available = false;
+            }
+            for (final entry in finalValidation.missingLegalSets.entries) {
+              final candidates = _legalCandidates(entry.key);
+              if (candidates == null) {
+                available = false;
+                continue;
+              }
+              for (var index = 0; index < entry.value; index++) {
+                opportunities.add(P1StudyScientificOpportunity(
+                  opportunityOrdinalWithinRun: null,
+                  decisionContext: null,
+                  decisionLocus: null,
+                  decisionLocusReason: null,
+                  legalCandidates: candidates,
+                  executedCandidate: null,
+                  canonicalSelectionMechanism: null,
+                  operation: null,
+                  numberType: null,
+                  terminal: null,
+                  acceptedQeoLink: null,
+                ));
+              }
+            }
+            projected.add(P1StudyScientificWindow(
+              runSegmentId: sequence,
+              activityRunContext: _knownString(window['activity_run_context'],
+                  const {'quickPracticeTimingPractice'}),
+              agencyRoute: _knownString(window['agency_route'], const {
+                'freshSetupAcceptedConfiguration',
+                'replayCarriedConfiguration'
+              }),
+              runType: _knownString(window['run_type'],
+                  GameRunType.values.map((value) => value.name).toSet()),
+              playerCount: window['player_count'] as int?,
+              gameMode: _knownString(window['game_mode'],
+                  GameMode.values.map((value) => value.name).toSet()),
+              questionMechanic: _knownString(window['question_mechanic'],
+                  QuestionMechanic.values.map((value) => value.name).toSet()),
+              answerStyle: _knownString(window['answer_style'],
+                  AnswerStyle.values.map((value) => value.name).toSet()),
+              cleanEligible:
+                  finalValidation.state == _ScientificWindowFinalState.clean,
+              opportunities: List.unmodifiable(opportunities),
+            ));
+          }
+          return P1StudyScientificSnapshot(
+              epochSequence: epochSequence,
+              measurementAvailable: available,
+              epochStatus: epochRow['epoch_status'] as String?,
+              epochStopReason: epochRow['epoch_stop_reason'] as String?,
+              admittedStudyWindowCount:
+                  epochRow['admitted_study_window_count'] as int?,
+              capacityWindows: epochRow['c_windows'] as int?,
+              windows: List.unmodifiable(projected));
+        }),
+      );
+
   Future<bool> openWindow(P1StudyWindowOpen record) async =>
       (await _guarded(
         P1StudyStoreOperation.openWindow,
@@ -417,7 +589,7 @@ final class P1F01StudyStore {
           return db.transaction((txn) async {
             _fail(P1StudyStoreOperation.openOpportunity);
             if (record.opportunityOrdinalWithinRun < 1 ||
-                record.opportunityOrdinalWithinRun > 25) {
+                record.opportunityOrdinalWithinRun > _maxOpeningsPerWindow) {
               return false;
             }
             final count = Sqflite.firstIntValue(await txn.rawQuery(
@@ -724,6 +896,265 @@ final class P1F01StudyStore {
             )) ??
             0;
       });
+
+  static String? _knownString(Object? value, Set<String> allowed) =>
+      value is String && allowed.contains(value) ? value : null;
+
+  static P1StudyCandidate? _candidate(String? value) => switch (value) {
+        'easy' => P1StudyCandidate.easy,
+        'medium' => P1StudyCandidate.medium,
+        'hard' => P1StudyCandidate.hard,
+        _ => null,
+      };
+
+  static Set<P1StudyCandidate>? _legalCandidates(String? value) {
+    final mask = switch (value) {
+      'V1_EMH_MASK_1' => 1,
+      'V1_EMH_MASK_2' => 2,
+      'V1_EMH_MASK_3' => 3,
+      'V1_EMH_MASK_4' => 4,
+      'V1_EMH_MASK_5' => 5,
+      'V1_EMH_MASK_6' => 6,
+      'V1_EMH_MASK_7' => 7,
+      _ => null,
+    };
+    if (mask == null) return null;
+    return {
+      if (mask & 1 != 0) P1StudyCandidate.easy,
+      if (mask & 2 != 0) P1StudyCandidate.medium,
+      if (mask & 4 != 0) P1StudyCandidate.hard,
+    };
+  }
+
+  static P1StudyTerminal? _terminal(String? value) => switch (value) {
+        'AnsweredCorrect' => P1StudyTerminal.answeredCorrect,
+        'AnsweredIncorrect' => P1StudyTerminal.answeredIncorrect,
+        'QuestionTimedOut' => P1StudyTerminal.questionTimedOut,
+        'QuestionSkipped' => P1StudyTerminal.questionSkipped,
+        'QuestionReplaced' => P1StudyTerminal.questionReplaced,
+        _ => null,
+      };
+
+  static _ScientificWindowFinalValidation _scientificWindowFinalValidation(
+    Map<String, Object?>? finalRow,
+    Map<String, Object?> window,
+    List<Map<String, Object?>> openings,
+    List<Map<String, Object?>> terminals, {
+    required bool terminalEpoch,
+  }) {
+    if (finalRow == null) {
+      return _ScientificWindowFinalValidation(
+        terminalEpoch
+            ? _ScientificWindowFinalState.structurallyUnavailable
+            : _ScientificWindowFinalState.nonClean,
+        const {},
+      );
+    }
+    final disposition = finalRow['study_disposition'];
+    if (disposition != P1StudyWindowDisposition.cleanEligible.storageValue) {
+      return _validateNonCleanScientificFinal(
+        finalRow,
+        window,
+        openings,
+        terminals,
+      );
+    }
+    if (finalRow['non_clean_cause'] != P1StudyNonCleanCause.none.storageValue ||
+        finalRow['measurement_defect'] !=
+            P1StudyMeasurementDefect.none.storageValue ||
+        finalRow['final_integrity_status'] !=
+            P1F01IntegrityWindowStatus.cleanlyClosed.storageValue ||
+        finalRow['has_integrity_defect'] != 0 ||
+        finalRow['has_clean_closure_signal'] != 1 ||
+        finalRow['integrity_version'] != P1F01IntegrityStore.integrityVersion ||
+        finalRow['integrity_window_sequence'] !=
+            window['integrity_window_sequence']) {
+      return const _ScientificWindowFinalValidation(
+          _ScientificWindowFinalState.structurallyUnavailable, {});
+    }
+
+    final openingOrdinals = <int>{};
+    final legalSetCounters = <String, int>{};
+    for (final opening in openings) {
+      final ordinal = opening['opportunity_ordinal_within_run'];
+      final legalSetCode = opening['exact_legal_candidate_set_code'];
+      if (ordinal is! int ||
+          !openingOrdinals.add(ordinal) ||
+          P1F01LegalSetCode.fromStoredValue(legalSetCode as String? ?? '') ==
+              null) {
+        return const _ScientificWindowFinalValidation(
+            _ScientificWindowFinalState.structurallyUnavailable, {});
+      }
+      legalSetCounters.update(legalSetCode as String, (count) => count + 1,
+          ifAbsent: () => 1);
+    }
+    final expectedOrdinals = {
+      for (var ordinal = 1; ordinal <= openings.length; ordinal++) ordinal,
+    };
+    final terminalOrdinals = <int>{};
+    for (final terminal in terminals) {
+      final ordinal = terminal['opportunity_ordinal_within_run'];
+      if (ordinal is! int || !terminalOrdinals.add(ordinal)) {
+        return const _ScientificWindowFinalValidation(
+            _ScientificWindowFinalState.structurallyUnavailable, {});
+      }
+    }
+    if (openingOrdinals.length != openings.length ||
+        openingOrdinals.length != expectedOrdinals.length ||
+        !openingOrdinals.containsAll(expectedOrdinals) ||
+        terminalOrdinals.length != terminals.length ||
+        terminalOrdinals.length != openingOrdinals.length ||
+        !terminalOrdinals.containsAll(openingOrdinals)) {
+      return const _ScientificWindowFinalValidation(
+          _ScientificWindowFinalState.structurallyUnavailable, {});
+    }
+    final expectedLastOrdinal = openings.isEmpty ? null : openings.length;
+    final expectedLastLegalSet = openings.isEmpty
+        ? null
+        : openings.singleWhere(
+            (opening) =>
+                opening['opportunity_ordinal_within_run'] ==
+                expectedLastOrdinal,
+          )['exact_legal_candidate_set_code'];
+    final counters = _decodeLegalSetCounters(finalRow['legal_set_counters']);
+    if (finalRow['final_admitted_o_raw_count'] != openings.length ||
+        finalRow['study_opening_receipt_count'] != openings.length ||
+        finalRow['study_terminal_receipt_count'] != terminals.length ||
+        finalRow['last_admitted_opportunity_ordinal'] != expectedLastOrdinal ||
+        finalRow['last_reconciled_ordinal'] != expectedLastOrdinal ||
+        finalRow['last_legal_set_code'] != expectedLastLegalSet ||
+        counters == null ||
+        !_sameCounters(counters, legalSetCounters)) {
+      return const _ScientificWindowFinalValidation(
+          _ScientificWindowFinalState.structurallyUnavailable, {});
+    }
+    return const _ScientificWindowFinalValidation(
+        _ScientificWindowFinalState.clean, {});
+  }
+
+  static _ScientificWindowFinalValidation _validateNonCleanScientificFinal(
+    Map<String, Object?> finalRow,
+    Map<String, Object?> window,
+    List<Map<String, Object?>> openings,
+    List<Map<String, Object?>> terminals,
+  ) {
+    const unavailable = _ScientificWindowFinalValidation(
+        _ScientificWindowFinalState.structurallyUnavailable, {});
+    final disposition = finalRow['study_disposition'];
+    final cause = finalRow['non_clean_cause'];
+    final defect = finalRow['measurement_defect'];
+    final knownCause = cause is String &&
+        P1StudyNonCleanCause.values.any((value) => value.storageValue == cause);
+    final knownDefect = defect is String &&
+        P1StudyMeasurementDefect.values
+            .any((value) => value.storageValue == defect);
+    final nonCleanCoherent = (disposition ==
+                P1StudyWindowDisposition
+                    .nonCleanMeasurementFailure.storageValue &&
+            knownCause &&
+            knownDefect &&
+            defect != P1StudyMeasurementDefect.none.storageValue) ||
+        (disposition ==
+                P1StudyWindowDisposition.nonCleanCensored.storageValue &&
+            knownCause &&
+            knownDefect &&
+            cause != P1StudyNonCleanCause.none.storageValue &&
+            defect == P1StudyMeasurementDefect.none.storageValue);
+    if (!nonCleanCoherent ||
+        finalRow['integrity_version'] != P1F01IntegrityStore.integrityVersion ||
+        finalRow['integrity_window_sequence'] !=
+            window['integrity_window_sequence']) {
+      return unavailable;
+    }
+    final admitted = finalRow['final_admitted_o_raw_count'];
+    final storedOpenings = finalRow['study_opening_receipt_count'];
+    final storedTerminals = finalRow['study_terminal_receipt_count'];
+    final counters = _decodeLegalSetCounters(finalRow['legal_set_counters']);
+    if (admitted is! int ||
+        admitted < 0 ||
+        admitted > _maxOpeningsPerWindow ||
+        storedOpenings != openings.length ||
+        storedTerminals != terminals.length ||
+        counters == null ||
+        counters.values.fold(0, (sum, value) => sum + value) != admitted ||
+        admitted < openings.length) {
+      return unavailable;
+    }
+    final observed = <String, int>{};
+    final openingOrdinals = <int>{};
+    for (final opening in openings) {
+      final ordinal = opening['opportunity_ordinal_within_run'];
+      final code = opening['exact_legal_candidate_set_code'];
+      if (ordinal is! int ||
+          !openingOrdinals.add(ordinal) ||
+          code is! String ||
+          P1F01LegalSetCode.fromStoredValue(code) == null) {
+        return unavailable;
+      }
+      observed.update(code, (value) => value + 1, ifAbsent: () => 1);
+    }
+    final terminalOrdinals = <int>{};
+    for (final terminal in terminals) {
+      final ordinal = terminal['opportunity_ordinal_within_run'];
+      if (ordinal is! int ||
+          !terminalOrdinals.add(ordinal) ||
+          !openingOrdinals.contains(ordinal)) {
+        return unavailable;
+      }
+    }
+    final missing = <String, int>{};
+    if (observed.entries.any(
+      (entry) => entry.value > (counters[entry.key] ?? 0),
+    )) {
+      return unavailable;
+    }
+    for (final entry in counters.entries) {
+      final count = entry.value - (observed[entry.key] ?? 0);
+      if (count < 0) return unavailable;
+      if (count > 0) missing[entry.key] = count;
+    }
+    if (missing.values.fold(0, (sum, value) => sum + value) !=
+        admitted - openings.length) {
+      return unavailable;
+    }
+    return _ScientificWindowFinalValidation(
+      _ScientificWindowFinalState.nonClean,
+      Map.unmodifiable(missing),
+    );
+  }
+
+  static Map<String, int>? _decodeLegalSetCounters(Object? value) {
+    if (value is! String) return null;
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is! Map) return null;
+      final encodedKeys = RegExp(r'"([^"\\]*)"\s*:')
+          .allMatches(value)
+          .map((match) => match.group(1))
+          .toList();
+      if (encodedKeys.length != decoded.length ||
+          encodedKeys.toSet().length != encodedKeys.length) {
+        return null;
+      }
+      final counters = <String, int>{};
+      for (final entry in decoded.entries) {
+        if (entry.key is! String ||
+            entry.value is! int ||
+            entry.value < 0 ||
+            P1F01LegalSetCode.fromStoredValue(entry.key as String) == null) {
+          return null;
+        }
+        counters[entry.key as String] = entry.value as int;
+      }
+      return counters;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  static bool _sameCounters(Map<String, int> left, Map<String, int> right) =>
+      left.length == right.length &&
+      left.entries.every((entry) => right[entry.key] == entry.value);
 
   P1StudyEpoch _epochFromRow(Map<String, Object?> row) {
     if (row['study_schema_version'] != studySchemaVersion ||
