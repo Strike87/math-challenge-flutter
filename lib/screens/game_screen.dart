@@ -188,6 +188,7 @@ class _MentalMathCountdown extends StatelessWidget {
               const SizedBox(height: 20),
               Text(
                 'Build your momentum',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: s.text,
                   fontSize: 24,
@@ -198,6 +199,7 @@ class _MentalMathCountdown extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 'Reach +10 to master',
+                textAlign: TextAlign.center,
                 style: TextStyle(color: s.muted, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 34),

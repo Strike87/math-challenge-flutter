@@ -1265,6 +1265,10 @@ void main() {
       await tester.pump();
 
       expect(find.text('Build your momentum'), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.text('Build your momentum')).textAlign,
+        TextAlign.center,
+      );
       expect(find.text('IQ SPARK'), findsOneWidget);
       expect(find.text('MENTAL MATH'), findsNothing);
       expect(

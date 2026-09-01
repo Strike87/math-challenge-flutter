@@ -813,7 +813,8 @@ class GameState extends ChangeNotifier {
         currentDailyMentalMathRecord,
       );
   bool get isMentalMathCountdown => _isMentalMathRun && rt.state == 'countdown';
-  bool get isMentalMathGameplay => _isMentalMathRun && rt.state == 'playing';
+  bool get isMentalMathGameplay =>
+      _isMentalMathRun && (rt.state == 'playing' || rt.state == 'ending');
   String get mentalMathCountdownLabel => switch (rt.mentalMathCountdownStep) {
         3 => '3',
         2 => '2',
