@@ -700,6 +700,407 @@ void main() {
     );
   });
 
+  test('R3 copied Integrity final coherence fails closed', () async {
+    const corruptions = <String>[
+      'last_admitted_opportunity_ordinal = 2',
+      "last_legal_set_code = 'V1_UNKNOWN'",
+      'last_reconciled_ordinal = 0',
+      'last_reconciled_ordinal = 2',
+      "last_legal_set_code = 'V1_EMH_MASK_3'",
+      "legal_set_counters = '{\"V1_EMH_MASK_7\":1,\"V1_EMH_MASK_3\":0}'",
+      "final_integrity_status = 'CLEANLY_CLOSED', has_integrity_defect = 1, has_clean_closure_signal = 1, last_reconciled_ordinal = 1",
+      "final_integrity_status = 'CLEANLY_CLOSED', has_integrity_defect = 0, has_clean_closure_signal = 0, last_reconciled_ordinal = 1",
+      "final_integrity_status = 'CLEANLY_CLOSED', has_integrity_defect = 0, has_clean_closure_signal = 1",
+      'has_clean_closure_signal = 1',
+    ];
+    for (final corruption in corruptions) {
+      await _withNonCleanWindow(
+        integrity: _nonCleanIntegrity(1, const {'V1_EMH_MASK_7': 1}),
+        openingCount: 0,
+        terminalCount: 0,
+        action: (store, epochSequence) async {
+          await store.debugExecute(
+            'UPDATE ${P1F01StudyStore.windowFinalTable} SET $corruption '
+            'WHERE integrity_window_sequence = 1',
+          );
+          expect(
+              (await store.scientificSnapshot(epochSequence))
+                  ?.measurementAvailable,
+              isFalse,
+              reason: corruption);
+        },
+      );
+    }
+    for (final status in ['OPEN', 'BOGUS']) {
+      await _withNonCleanWindow(
+        integrity: _nonCleanIntegrity(1, const {'V1_EMH_MASK_7': 1}),
+        openingCount: 0,
+        terminalCount: 0,
+        action: (store, epochSequence) async {
+          await store.debugExecute('PRAGMA ignore_check_constraints = ON');
+          await store.debugExecute(
+              'UPDATE ${P1F01StudyStore.windowFinalTable} SET '
+              "final_integrity_status = '$status' WHERE integrity_window_sequence = 1");
+          expect(
+              (await store.scientificSnapshot(epochSequence))
+                  ?.measurementAvailable,
+              isFalse,
+              reason: status);
+        },
+      );
+    }
+  });
+
+  test('R3 zero-admitted copied final requires empty metadata', () async {
+    for (final corruption in <String>[
+      'last_admitted_opportunity_ordinal = 1',
+      "last_legal_set_code = 'V1_EMH_MASK_7'",
+      'last_reconciled_ordinal = 1',
+      "legal_set_counters = '{\"V1_EMH_MASK_7\":1}'",
+    ]) {
+      await _withNonCleanWindow(
+        integrity: _nonCleanIntegrity(0, const {}),
+        openingCount: 0,
+        terminalCount: 0,
+        action: (store, epochSequence) async {
+          await store.debugExecute(
+            'UPDATE ${P1F01StudyStore.windowFinalTable} SET $corruption '
+            'WHERE integrity_window_sequence = 1',
+          );
+          expect(
+              (await store.scientificSnapshot(epochSequence))
+                  ?.measurementAvailable,
+              isFalse,
+              reason: corruption);
+        },
+      );
+    }
+  });
+
+  test('R3 accepts coherent non-clean copied Integrity finals', () async {
+    await _withNonCleanWindow(
+      integrity: _nonCleanIntegrity(1, const {'V1_EMH_MASK_7': 1}),
+      openingCount: 0,
+      terminalCount: 0,
+      action: (store, epochSequence) async {
+        await store.debugExecute('UPDATE ${P1F01StudyStore.windowFinalTable} '
+            'SET has_integrity_defect = 0 WHERE integrity_window_sequence = 1');
+        expect(
+            (await store.scientificSnapshot(epochSequence))
+                ?.measurementAvailable,
+            isTrue);
+      },
+    );
+    await _withNonCleanWindow(
+      integrity: _nonCleanIntegrity(1, const {'V1_EMH_MASK_7': 1}),
+      openingCount: 1,
+      terminalCount: 1,
+      action: (store, epochSequence) async {
+        await store.debugExecute(
+            'UPDATE ${P1F01StudyStore.windowFinalTable} SET '
+            "final_integrity_status = 'CLEANLY_CLOSED', has_integrity_defect = 0, has_clean_closure_signal = 1, last_reconciled_ordinal = 1 "
+            'WHERE integrity_window_sequence = 1');
+        expect(
+            (await store.scientificSnapshot(epochSequence))
+                ?.measurementAvailable,
+            isTrue);
+      },
+    );
+    await _withNonCleanWindow(
+      integrity: P1F01IntegritySnapshot(
+        integrityVersion: P1F01IntegrityStore.integrityVersion,
+        localWindowSequence: 1,
+        status: P1F01IntegrityWindowStatus.cleanlyClosed,
+        admittedORawCount: 0,
+        lastAdmittedOpportunityOrdinal: null,
+        lastLegalSetCode: null,
+        lastReconciledOrdinal: null,
+        hasIntegrityDefect: false,
+        hasCleanClosureSignal: true,
+        legalSetCounters: const {},
+      ),
+      openingCount: 0,
+      terminalCount: 0,
+      action: (store, epochSequence) async {
+        expect(
+            (await store.scientificSnapshot(epochSequence))
+                ?.measurementAvailable,
+            isTrue);
+      },
+    );
+  });
+
+  test('R3 CLEANLY_CLOSED requires complete Study receipts', () async {
+    for (final counts in [(0, 0), (1, 0)]) {
+      await _withNonCleanWindow(
+        integrity: _nonCleanIntegrity(1, const {'V1_EMH_MASK_7': 1}),
+        openingCount: counts.$1,
+        terminalCount: counts.$2,
+        action: (store, epochSequence) async {
+          await store.debugExecute(
+            'UPDATE ${P1F01StudyStore.windowFinalTable} SET '
+            "final_integrity_status = 'CLEANLY_CLOSED', "
+            'has_integrity_defect = 0, has_clean_closure_signal = 1, '
+            'last_reconciled_ordinal = 1 '
+            'WHERE integrity_window_sequence = 1',
+          );
+          expect(
+            (await store.scientificSnapshot(epochSequence))
+                ?.measurementAvailable,
+            isFalse,
+            reason: 'openings=${counts.$1}, terminals=${counts.$2}',
+          );
+        },
+      );
+    }
+  });
+
+  test('R3 claimed-clean validation rejects coherent 26th receipt', () async {
+    final directory = await Directory.systemTemp.createTemp('p1-eval-store-');
+    final store = P1F01StudyStore(
+      databaseFactory: databaseFactoryFfi,
+      databasePath: '${directory.path}/study.db',
+    );
+    addTearDown(() async {
+      await store.close();
+      await directory.delete(recursive: true);
+    });
+    final epoch = (await store.createOrLoadActiveEpoch())!;
+    await _admitCleanWindowWithCount(store, epoch.epochSequence, 1, 25);
+    await store.debugExecute('PRAGMA ignore_check_constraints = ON');
+    await store.debugExecute(
+      'INSERT INTO ${P1F01StudyStore.opportunityOpenTable} '
+      '(integrity_window_sequence, opportunity_ordinal_within_run, '
+      'decision_context, decision_locus, decision_locus_reason, '
+      'exact_legal_candidate_set_code, executed_difficulty, '
+      'canonical_selection_mechanism, effective_question_operation, number_type) '
+      "VALUES (1, 26, 'chooseDifficulty', 'questionOpeningDifficultyResolution', "
+      "'difficultyRequiredForQuestionOpening', 'V1_EMH_MASK_7', 'easy', "
+      "'playerConfigured', 'addition', 'natural')",
+    );
+    await store.debugExecute(
+      'INSERT INTO ${P1F01StudyStore.opportunityTerminalTable} '
+      '(integrity_window_sequence, opportunity_ordinal_within_run, '
+      'canonical_terminal_outcome, accepted_qeo_link) '
+      "VALUES (1, 26, 'AnsweredCorrect', 1)",
+    );
+    await store.debugExecute(
+      'UPDATE ${P1F01StudyStore.windowFinalTable} SET '
+      'final_admitted_o_raw_count = 26, '
+      'last_admitted_opportunity_ordinal = 26, '
+      "last_legal_set_code = 'V1_EMH_MASK_7', "
+      'last_reconciled_ordinal = 26, '
+      "legal_set_counters = '{\"V1_EMH_MASK_7\":26}', "
+      'study_opening_receipt_count = 26, study_terminal_receipt_count = 26 '
+      'WHERE integrity_window_sequence = 1',
+    );
+    expect(
+      (await store.scientificSnapshot(epoch.epochSequence))?.measurementAvailable,
+      isFalse,
+    );
+  });
+
+  test('R3 non-clean opening ordinals are ranged but not contiguous', () async {
+    await _withNonCleanWindow(
+      integrity: _nonCleanIntegrity(3, const {'V1_EMH_MASK_7': 3}),
+      openingCount: 2,
+      terminalCount: 1,
+      action: (store, epochSequence) async {
+        await store.debugExecute(
+          'UPDATE ${P1F01StudyStore.opportunityOpenTable} '
+          'SET opportunity_ordinal_within_run = 3 '
+          'WHERE integrity_window_sequence = 1 '
+          'AND opportunity_ordinal_within_run = 2',
+        );
+        expect(
+            (await store.scientificSnapshot(epochSequence))
+                ?.measurementAvailable,
+            isTrue);
+      },
+    );
+    await _withNonCleanWindow(
+      integrity: _nonCleanIntegrity(1, const {'V1_EMH_MASK_7': 1}),
+      openingCount: 1,
+      terminalCount: 0,
+      action: (store, epochSequence) async {
+        await store
+            .debugExecute('UPDATE ${P1F01StudyStore.opportunityOpenTable} '
+                'SET opportunity_ordinal_within_run = 2 '
+                'WHERE integrity_window_sequence = 1');
+        expect(
+            (await store.scientificSnapshot(epochSequence))
+                ?.measurementAvailable,
+            isFalse,
+            reason: 'ordinal above admitted');
+      },
+    );
+    await _withNonCleanWindow(
+      integrity: _nonCleanIntegrity(1, const {'V1_EMH_MASK_7': 1}),
+      openingCount: 1,
+      terminalCount: 0,
+      action: (store, epochSequence) async {
+        await store.debugExecute('PRAGMA ignore_check_constraints = ON');
+        await store
+            .debugExecute('UPDATE ${P1F01StudyStore.opportunityOpenTable} '
+                'SET opportunity_ordinal_within_run = 0 '
+                'WHERE integrity_window_sequence = 1');
+        expect(
+            (await store.scientificSnapshot(epochSequence))
+                ?.measurementAvailable,
+            isFalse,
+            reason: 'ordinal zero');
+      },
+    );
+  });
+
+  test('R3 receipt final legal coherence and unknown membership fail closed',
+      () async {
+    await _withNonCleanWindow(
+      integrity: _nonCleanIntegrity(
+          3, const {'V1_EMH_MASK_7': 2, 'V1_EMH_MASK_3': 1}),
+      openingCount: 3,
+      terminalCount: 3,
+      action: (store, epochSequence) async {
+        await store
+            .debugExecute('UPDATE ${P1F01StudyStore.opportunityOpenTable} SET '
+                "exact_legal_candidate_set_code = 'V1_EMH_MASK_3' "
+                'WHERE integrity_window_sequence = 1 '
+                'AND opportunity_ordinal_within_run = 1');
+        await store
+            .debugExecute('UPDATE ${P1F01StudyStore.windowFinalTable} SET '
+                "last_legal_set_code = 'V1_EMH_MASK_3' "
+                'WHERE integrity_window_sequence = 1');
+        expect(
+            (await store.scientificSnapshot(epochSequence))
+                ?.measurementAvailable,
+            isFalse);
+      },
+    );
+    for (final unknownIn in ['opening', 'counter']) {
+      await _withNonCleanWindow(
+        integrity: _nonCleanIntegrity(
+            unknownIn == 'counter' ? 2 : 1,
+            unknownIn == 'counter'
+                ? const {'V1_EMH_MASK_7': 1, 'V1_UNKNOWN': 1}
+                : const {'V1_EMH_MASK_7': 1}),
+        openingCount: unknownIn == 'opening' ? 1 : 0,
+        terminalCount: unknownIn == 'opening' ? 1 : 0,
+        action: (store, epochSequence) async {
+          if (unknownIn == 'opening') {
+            await store.debugExecute(
+                'UPDATE ${P1F01StudyStore.opportunityOpenTable} SET '
+                "exact_legal_candidate_set_code = 'V1_UNKNOWN' WHERE integrity_window_sequence = 1");
+          } else {
+            await store.debugExecute(
+                'UPDATE ${P1F01StudyStore.windowFinalTable} SET '
+                "last_legal_set_code = 'V1_EMH_MASK_7' WHERE integrity_window_sequence = 1");
+          }
+          expect(
+              (await store.scientificSnapshot(epochSequence))
+                  ?.measurementAvailable,
+              isFalse,
+              reason: unknownIn);
+        },
+      );
+    }
+  });
+
+  test('R3 missing final opening requires residual last legal set code',
+      () async {
+    for (final leavesLastLegal in [false, true]) {
+      await _withNonCleanWindow(
+        integrity: _nonCleanIntegrity(
+          2,
+          leavesLastLegal
+              ? const {'V1_EMH_MASK_3': 1, 'V1_EMH_MASK_7': 1}
+              : const {'V1_EMH_MASK_7': 1, 'V1_EMH_MASK_3': 1},
+        ),
+        openingCount: 1,
+        terminalCount: 1,
+        action: (store, epochSequence) async {
+          await store.debugExecute(
+              'UPDATE ${P1F01StudyStore.opportunityOpenTable} SET '
+              "exact_legal_candidate_set_code = 'V1_EMH_MASK_3' "
+              'WHERE integrity_window_sequence = 1');
+          expect(
+            (await store.scientificSnapshot(epochSequence))
+                ?.measurementAvailable,
+            leavesLastLegal,
+            reason: leavesLastLegal
+                ? 'R1D reconstruction retains the missing last legal receipt'
+                : 'missing final receipt cannot contradict last legal',
+          );
+        },
+      );
+    }
+  });
+
+  test('R3 clean final V1_UNKNOWN fails closed', () async {
+    await _withThreeOpportunityFixture((store, epochSequence) async {
+      await store.debugExecute('UPDATE ${P1F01StudyStore.opportunityOpenTable} SET '
+          "exact_legal_candidate_set_code = 'V1_UNKNOWN' "
+          'WHERE integrity_window_sequence = 1 '
+          'AND opportunity_ordinal_within_run = 3');
+      await store.debugExecute('UPDATE ${P1F01StudyStore.windowFinalTable} SET '
+          "last_legal_set_code = 'V1_UNKNOWN' "
+          'WHERE integrity_window_sequence = 1');
+      expect(
+          (await store.scientificSnapshot(epochSequence))?.measurementAvailable,
+          isFalse);
+    });
+  });
+
+  test('R3 terminal epoch requires 49 durable and actual Study windows',
+      () async {
+    await _withCleanFixture((store, epochSequence) async {
+      for (final status in ['FROZEN_FOR_ADJUDICATION', 'ADJUDICATED']) {
+        final terminalTimestamp = status == 'ADJUDICATED'
+            ? ", epoch_terminal_timestamp_utc = '2026-01-01T00:00:00.000Z'"
+            : '';
+        await store.debugExecute('UPDATE ${P1F01StudyStore.epochTable} SET '
+            "admitted_study_window_count = 49, epoch_status = '$status', "
+            "epoch_stop_reason = 'capacityReached'$terminalTimestamp "
+            'WHERE epoch_sequence = $epochSequence');
+        expect(
+            (await store.scientificSnapshot(epochSequence))
+                ?.measurementAvailable,
+            isFalse,
+            reason: status);
+      }
+    });
+  });
+
+  test('R3 terminal epoch durable count below 49 is unavailable', () async {
+    final directory = await Directory.systemTemp.createTemp('p1-eval-store-');
+    final store = P1F01StudyStore(
+      databaseFactory: databaseFactoryFfi,
+      databasePath: '${directory.path}/study.db',
+    );
+    try {
+      final epoch = await store.createOrLoadActiveEpoch();
+      final epochSequence = epoch!.epochSequence;
+      for (var sequence = 1; sequence <= 48; sequence++) {
+        await _admitCleanWindow(store, epochSequence, sequence);
+      }
+      for (final status in ['FROZEN_FOR_ADJUDICATION', 'ADJUDICATED']) {
+        final terminalTimestamp = status == 'ADJUDICATED'
+            ? ", epoch_terminal_timestamp_utc = '2026-01-01T00:00:00.000Z'"
+            : '';
+        await store.debugExecute('UPDATE ${P1F01StudyStore.epochTable} SET '
+            "admitted_study_window_count = 48, epoch_status = '$status', "
+            "epoch_stop_reason = 'capacityReached'$terminalTimestamp "
+            'WHERE epoch_sequence = $epochSequence');
+        expect(
+            (await store.scientificSnapshot(epochSequence))?.measurementAvailable,
+            isFalse,
+            reason: status);
+      }
+    } finally {
+      await store.close();
+      await directory.delete(recursive: true);
+    }
+  });
+
   test('non-clean complete and terminal-only receipt loss do not double count',
       () async {
     await _withNonCleanWindow(
