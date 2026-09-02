@@ -402,6 +402,12 @@ final class P1F01StudyStore {
               whereArgs: [epochSequence],
               orderBy: 'integrity_window_sequence ASC');
           var available = true;
+          final admittedWindows = epochRow['admitted_study_window_count'];
+          if (terminalEpoch &&
+              (admittedWindows != capacityWindows ||
+                  windows.length != admittedWindows)) {
+            available = false;
+          }
           final projected = <P1StudyScientificWindow>[];
           for (final window in windows) {
             final sequence = window['integrity_window_sequence'] as int?;
@@ -972,6 +978,10 @@ final class P1F01StudyStore {
       return const _ScientificWindowFinalValidation(
           _ScientificWindowFinalState.structurallyUnavailable, {});
     }
+    if (openings.length > _maxOpeningsPerWindow) {
+      return const _ScientificWindowFinalValidation(
+          _ScientificWindowFinalState.structurallyUnavailable, {});
+    }
 
     final openingOrdinals = <int>{};
     final legalSetCounters = <String, int>{};
@@ -980,6 +990,7 @@ final class P1F01StudyStore {
       final legalSetCode = opening['exact_legal_candidate_set_code'];
       if (ordinal is! int ||
           !openingOrdinals.add(ordinal) ||
+          legalSetCode == P1F01LegalSetCode.unknown.value ||
           P1F01LegalSetCode.fromStoredValue(legalSetCode as String? ?? '') ==
               null) {
         return const _ScientificWindowFinalValidation(
@@ -1080,14 +1091,51 @@ final class P1F01StudyStore {
         admitted < openings.length) {
       return unavailable;
     }
+    final lastAdmitted = finalRow['last_admitted_opportunity_ordinal'];
+    final lastLegal = finalRow['last_legal_set_code'];
+    final lastReconciled = finalRow['last_reconciled_ordinal'];
+    final integrityStatus = finalRow['final_integrity_status'];
+    final integrityDefect = finalRow['has_integrity_defect'];
+    final cleanClosure = finalRow['has_clean_closure_signal'];
+    final zeroAdmitted = admitted == 0 &&
+        lastAdmitted == null &&
+        lastLegal == null &&
+        lastReconciled == null &&
+        counters.isEmpty;
+    final positiveAdmitted = admitted > 0 &&
+        lastAdmitted == admitted &&
+        lastLegal is String &&
+        lastLegal != P1F01LegalSetCode.unknown.value &&
+        P1F01LegalSetCode.fromStoredValue(lastLegal) != null &&
+        counters.values.every((count) => count > 0) &&
+        (lastReconciled == null ||
+            (lastReconciled is int &&
+                lastReconciled >= 1 &&
+                lastReconciled <= admitted));
+    final integrityCoherent = switch (integrityStatus) {
+      'CLEANLY_CLOSED' => integrityDefect == 0 &&
+          cleanClosure == 1 &&
+          lastReconciled == lastAdmitted &&
+          openings.length == admitted &&
+          terminals.length == admitted,
+      'LEFT_UNCLEAN' =>
+        cleanClosure == 0 && (integrityDefect == 0 || integrityDefect == 1),
+      _ => false,
+    };
+    if ((!zeroAdmitted && !positiveAdmitted) || !integrityCoherent) {
+      return unavailable;
+    }
     final observed = <String, int>{};
     final openingOrdinals = <int>{};
     for (final opening in openings) {
       final ordinal = opening['opportunity_ordinal_within_run'];
       final code = opening['exact_legal_candidate_set_code'];
       if (ordinal is! int ||
+          ordinal < 1 ||
+          ordinal > admitted ||
           !openingOrdinals.add(ordinal) ||
           code is! String ||
+          code == P1F01LegalSetCode.unknown.value ||
           P1F01LegalSetCode.fromStoredValue(code) == null) {
         return unavailable;
       }
@@ -1104,8 +1152,15 @@ final class P1F01StudyStore {
     }
     final missing = <String, int>{};
     if (observed.entries.any(
-      (entry) => entry.value > (counters[entry.key] ?? 0),
-    )) {
+          (entry) => entry.value > (counters[entry.key] ?? 0),
+        ) ||
+        counters.containsKey(P1F01LegalSetCode.unknown.value)) {
+      return unavailable;
+    }
+    final finalOpening = openings.where(
+        (opening) => opening['opportunity_ordinal_within_run'] == admitted);
+    if (finalOpening.isNotEmpty &&
+        finalOpening.single['exact_legal_candidate_set_code'] != lastLegal) {
       return unavailable;
     }
     for (final entry in counters.entries) {
@@ -1115,6 +1170,11 @@ final class P1F01StudyStore {
     }
     if (missing.values.fold(0, (sum, value) => sum + value) !=
         admitted - openings.length) {
+      return unavailable;
+    }
+    if (finalOpening.isEmpty &&
+        admitted > 0 &&
+        (missing[lastLegal] ?? 0) <= 0) {
       return unavailable;
     }
     return _ScientificWindowFinalValidation(
