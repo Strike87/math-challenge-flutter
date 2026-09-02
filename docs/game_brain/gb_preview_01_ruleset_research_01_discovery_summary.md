@@ -2,11 +2,11 @@
 
 ## Scope executed
 
-DISCOVERY-01 executed reproducible, query-logged literature discovery and title/abstract screening for research questions A-H. R1 corrects two bibliographic identities, re-screens X02, conservatively re-tiers two scoping reviews, and adds a bounded countable repair pass. It did not define a ruleset, predicate, threshold, sample-size cutoff, timeout cutoff, accuracy/latency band, precedence, compatibility decision, fixture-based rationale, Dart, or tests.
+DISCOVERY-01 executed query-logged literature discovery and title/abstract screening for research questions A-H. R1 corrected two bibliographic identities, re-screened X02, conservatively re-tiered two scoping reviews, and added a bounded countable repair pass. R2 clarifies pending quality adjudication and the scope of reproducibility. It did not define a ruleset, predicate, threshold, sample-size cutoff, timeout cutoff, accuracy/latency band, precedence, compatibility decision, fixture-based rationale, Dart, or tests.
 
 ## Channels and screening counts
 
-S01-S09 remain historically incomplete: their channel did not retain an exportable record-level result list, and no missing first-run results were reconstructed. The R1 repair used four countable Crossref `works` queries (S10-R1-S13-R1), each with `rows=5`, yielding 20 individually logged records. The complete auditable set is 13 individually reconstructable historical records plus those 20 repair records: 33 discovered/retrieved; 33 deduplicated; 33 title/abstract or title/metadata screened; 6 full texts reviewed; 6 included; 18 retained as full-text candidates; 9 excluded with reasons. It is a bounded repair set, not exhaustive database coverage.
+S01-S09 are query-logged but historically record-level incomplete; R1 preserved that limitation and did not reconstruct missing first-run records. S10-R1 through S13-R1 are the bounded countable reproducibility repair: four Crossref `works` queries, each with `rows=5`, yielding 20 individually logged records. The 33-record set (13 individually reconstructable historical records plus 20 repair records) is the auditable reconstructed/repair corpus: 33 discovered/retrieved; 33 deduplicated; 33 title/abstract or title/metadata screened; 6 full texts reviewed; 6 included; 18 retained as full-text candidates; 9 excluded with reasons. No exhaustive database coverage is claimed.
 
 ## Coverage and strongest source families
 
@@ -35,7 +35,7 @@ S01-S09 remain historically incomplete: their channel did not retain an exportab
 No source is yet used to propose a rule, and this batch has not assessed rule admissibility. In particular, it has not produced an exact threshold; any subsequent threshold assessment must retain `NO DEFENSIBLE EXACT THRESHOLD IDENTIFIED` unless the protocol's admissibility criteria are met.
 
 ```text
-DISCOVERY-01 = CORRECTED / READY FOR INDEPENDENT RE-REVIEW
+DISCOVERY-01 = R2 CORRECTED / READY FOR INDEPENDENT RE-REVIEW
 
 Ruleset = NOT DEFINED
 Ruleset authorization = NOT AUTHORIZED
