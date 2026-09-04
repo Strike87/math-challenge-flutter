@@ -1,0 +1,36 @@
+{
+  "status": "GB_MEASURE_01F_EXEC_COMPLETE",
+  "execution_id": "20260904T172054Z",
+  "preflight": {
+    "branch": "research/gb-preview-01-full-text-extraction-02",
+    "head": "62e6dcfbe0d2eab51ec359b036b50bf7dd3d6e66",
+    "git_status_short": "?? docs/game_brain/gb_measure_01f_exec_manifest_v1.json\n?? docs/game_brain/gb_measure_01f_input_freeze_recovery.md\n?? research/\n",
+    "available_runtimes": {
+      "py -0p": "-V:3.14 *        C:\\Python314\\python.exe\n -V:Astral/CPython3.13.14 C:\\Users\\Strik\\AppData\\Roaming\\uv\\python\\cpython-3.13.14-windows-x86_64-none\\python.exe\n -V:Astral/CPython3.13.5 C:\\Users\\Strik\\AppData\\Roaming\\uv\\python\\cpython-3.13.5-windows-x86_64-none\\python.exe",
+      "D:\\FlutterProjects\\math_challenge_flutter_repo\\.venv-gb-measure-01f-3135\\Scripts\\python.exe --version": "Python 3.13.5"
+    },
+    "manifest_sha256": "918ba80bccadea4f45807c6c3329c54389a769e1f15c0d39d3e6672a5af5d79e",
+    "python_implementation": "cpython",
+    "python_version": "3.13.5",
+    "numpy_version": "2.3.5",
+    "prng": "<class 'numpy.random._pcg64.PCG64DXSM'>",
+    "failures": []
+  },
+  "seed_namespace": "GBM01F_EXEC_V1_20260904",
+  "code_hash": "12ae1e5c13f86c584837d16c15f8687617491900d86fba0a995d5aeda5557172",
+  "screen_survivor_count": 0,
+  "selected_minimum_design": "NO_ADMISSIBLE_DESIGN_IN_FROZEN_GRID",
+  "result_file_hashes": {
+    "confirmatory_metrics.csv": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "design_adjudication.csv": "2075c3fd58519e961c1789dba707e7bb8777c9a01269726196bb6856e15491c4",
+    "design_grid.csv": "587601ee020b1a3fb93e0a045f0fb267a5cf4ec1a6cc1955ec0c7b1b4c704542",
+    "oracle_by_scenario.csv": "76fdb1e13abfdc00e5fa44e9d1ad9ebe5abab66b09e8b398ca3adef732877bbe",
+    "s09_sentinel.csv": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "screening_exclusions.csv": "bdb8d8c164869596bbf5dbaedf21ef0c4524af86e4055d33aea5c2af2c683e48",
+    "screening_metrics.csv": "cc30854462480896091be649038484899042e9015588daf819004053a21894e5",
+    "sensitivity_power_fnr.csv": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "variance_diagnostics.csv": "55dfb4c87a5286834e6274a57073495c4313c6532b2e70543443e9059a546efa"
+  },
+  "completed_at_utc": "2026-09-04T18:01:32.638226+00:00",
+  "mayAffectGameplay": false
+}
