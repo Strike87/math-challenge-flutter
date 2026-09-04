@@ -1,0 +1,7 @@
+# GB-MEASURE-01F governed artifacts are byte-addressed by SHA-256.
+# Never perform line-ending conversion on checkout or commit.
+research/game_brain/gb_measure_01f/** -text
+
+# R5.2 reference artifacts also have recorded byte hashes.
+docs/game_brain/game_brain_gei_master_reference_2026-09-04_r5_2.md -text
+docs/game_brain/game_brain_gei_roadmap_2026-09-04_r5_2.md -text
