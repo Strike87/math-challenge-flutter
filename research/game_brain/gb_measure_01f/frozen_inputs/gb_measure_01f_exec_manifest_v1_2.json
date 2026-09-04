@@ -1,0 +1,478 @@
+{
+  "protocol_id": "GB-MEASURE-01F-INPUT-FREEZE-RECOVERY",
+  "protocol_version": "1.2",
+  "simulation_id": "GB-MEASURE-01F-EXEC",
+  "status": "FROZEN_BY_PROTOCOL_OWNER_PENDING_FRESH_R2_INDEPENDENT_APPROVAL",
+  "prospective_freeze": true,
+  "simulation_outputs_seen_before_freeze": false,
+  "authority": {
+    "ruleset_authorized": false,
+    "implementation_authorized": false,
+    "production_capture_authorized": false,
+    "mayAffectGameplay": false
+  },
+  "measurement_cell": {
+    "id": "GBM01-CELL-01",
+    "operation": "multiplication",
+    "number_type": "natural",
+    "executed_difficulty": "medium",
+    "difficulty_provenance": "playerConfigured",
+    "mode": "standard_1p",
+    "timing": "perQuestion",
+    "answer_style": "choice4",
+    "assistance": "none",
+    "exposure_origin": "natural",
+    "adaptive": false,
+    "targeted_repetition": "excluded",
+    "replay_derived": "excluded"
+  },
+  "candidate_forms": {
+    "form_ids": [
+      "GBM01-FORM-A-v1",
+      "GBM01-FORM-B-v1"
+    ],
+    "form_length_items": 18,
+    "representation_counts_per_form": {
+      "direct": 6,
+      "missingLeft": 6,
+      "missingRight": 6
+    },
+    "exact_item_identity_overlap_between_forms": 0,
+    "term": "candidate_alternate_measurement_forms",
+    "parallel_form_claim_authorized": false
+  },
+  "calibration_design": {
+    "stage1": {
+      "name": "randomized_form_equivalence",
+      "groups": [
+        "A",
+        "B"
+      ],
+      "n_per_form_grid": [
+        50,
+        75,
+        100,
+        150,
+        200,
+        300,
+        400
+      ],
+      "allocation": "1:1"
+    },
+    "stage2": {
+      "name": "counterbalanced_alternate_form_retest",
+      "orders": [
+        "AB",
+        "BA"
+      ],
+      "n_per_order_grid": [
+        25,
+        40,
+        50,
+        75,
+        100,
+        150,
+        200
+      ],
+      "allocation": "1:1",
+      "total_participants_formula": "2 * n_per_order"
+    },
+    "candidate_design_count": 49
+  },
+  "binary_response_model": {
+    "score_model": "Binomial(K, logistic(eta)) / K",
+    "K": 18,
+    "eta": "logit(p_ref) + theta_p + u_pf + v_po + form_shift_f + practice_shift*I(occasion=2) + form_second_interaction*I(form=B,occasion=2)",
+    "random_effects": {
+      "theta_p": "Normal(0, person_sd^2)",
+      "u_pf": "Normal(0, person_by_form_sd^2), independent by person and form",
+      "v_po": "Normal(0, person_by_occasion_sd^2), independent by person and occasion"
+    },
+    "conditional_item_exchangeability": true,
+    "note": "Simulation sensitivity model for calibration-design selection, not an empirical iid-Bernoulli claim about real Math Challenge responses."
+  },
+  "scenarios": [
+    {
+      "id": "S01",
+      "class": "core_valid_model",
+      "p_ref": 0.7,
+      "person_sd": 0.75,
+      "person_by_form_sd": 0.1,
+      "person_by_occasion_sd": 0.1,
+      "form_shift_B_minus_A_logit": 0.0,
+      "practice_shift_logit": 0.0,
+      "form_second_interaction_logit": 0.0
+    },
+    {
+      "id": "S02",
+      "class": "core_valid_model",
+      "p_ref": 0.7,
+      "person_sd": 0.75,
+      "person_by_form_sd": 0.1,
+      "person_by_occasion_sd": 0.1,
+      "form_shift_B_minus_A_logit": 0.0,
+      "practice_shift_logit": 0.15,
+      "form_second_interaction_logit": 0.0
+    },
+    {
+      "id": "S03",
+      "class": "core_valid_model",
+      "p_ref": 0.5,
+      "person_sd": 0.75,
+      "person_by_form_sd": 0.1,
+      "person_by_occasion_sd": 0.1,
+      "form_shift_B_minus_A_logit": 0.0,
+      "practice_shift_logit": 0.15,
+      "form_second_interaction_logit": 0.0
+    },
+    {
+      "id": "S04",
+      "class": "core_valid_model",
+      "p_ref": 0.85,
+      "person_sd": 0.75,
+      "person_by_form_sd": 0.1,
+      "person_by_occasion_sd": 0.1,
+      "form_shift_B_minus_A_logit": 0.0,
+      "practice_shift_logit": 0.15,
+      "form_second_interaction_logit": 0.0
+    },
+    {
+      "id": "S05",
+      "class": "core_valid_model",
+      "p_ref": 0.7,
+      "person_sd": 0.75,
+      "person_by_form_sd": 0.1,
+      "person_by_occasion_sd": 0.1,
+      "form_shift_B_minus_A_logit": 0.2,
+      "practice_shift_logit": 0.15,
+      "form_second_interaction_logit": 0.0
+    },
+    {
+      "id": "S06",
+      "class": "core_valid_model",
+      "p_ref": 0.7,
+      "person_sd": 0.75,
+      "person_by_form_sd": 0.3,
+      "person_by_occasion_sd": 0.1,
+      "form_shift_B_minus_A_logit": 0.2,
+      "practice_shift_logit": 0.15,
+      "form_second_interaction_logit": 0.0
+    },
+    {
+      "id": "S07",
+      "class": "core_valid_model",
+      "p_ref": 0.7,
+      "person_sd": 0.75,
+      "person_by_form_sd": 0.1,
+      "person_by_occasion_sd": 0.3,
+      "form_shift_B_minus_A_logit": 0.2,
+      "practice_shift_logit": 0.15,
+      "form_second_interaction_logit": 0.0
+    },
+    {
+      "id": "S08",
+      "class": "core_valid_model",
+      "p_ref": 0.7,
+      "person_sd": 0.75,
+      "person_by_form_sd": 0.3,
+      "person_by_occasion_sd": 0.3,
+      "form_shift_B_minus_A_logit": 0.2,
+      "practice_shift_logit": 0.2,
+      "form_second_interaction_logit": 0.0
+    },
+    {
+      "id": "S09",
+      "class": "model_misspecification_sentinel",
+      "p_ref": 0.7,
+      "person_sd": 0.75,
+      "person_by_form_sd": 0.2,
+      "person_by_occasion_sd": 0.2,
+      "form_shift_B_minus_A_logit": 0.2,
+      "practice_shift_logit": 0.15,
+      "form_second_interaction_logit": 0.25
+    }
+  ],
+  "estimators": {
+    "stage1_form_effect": "F1_hat = mean(score_B_stage1) - mean(score_A_stage1)",
+    "stage1_form_effect_variance": "V1_hat = var(score_A_stage1)/n1 + var(score_B_stage1)/n1",
+    "stage1_form_effect_se": "sqrt(V1_hat)",
+    "stage2_AB_difference": "d_AB = score_B_occ2 - score_A_occ1",
+    "stage2_BA_difference": "d_BA = score_A_occ2 - score_B_occ1",
+    "stage2_form_effect": "F2_hat = (mean(d_AB) - mean(d_BA)) / 2",
+    "stage2_practice_effect": "P_hat = (mean(d_AB) + mean(d_BA)) / 2",
+    "stage2_form_effect_variance": "V2_hat = 0.25 * (var(d_AB)/n2 + var(d_BA)/n2)",
+    "stage2_practice_effect_variance": "VP_hat = V2_hat",
+    "stage2_form_practice_covariance": "C2P_hat = 0.25 * (var(d_AB)/n2 - var(d_BA)/n2)",
+    "form_consistency_z": "(F1_hat - F2_hat) / sqrt(V1_hat + V2_hat)",
+    "form_consistency_cutoff_abs": 2.5758293035489004,
+    "inverse_variance_weights": "w1=1/V1_hat; w2=1/V2_hat; lambda1=w1/(w1+w2); lambda2=w2/(w1+w2)",
+    "combined_form_effect": "F_hat = lambda1*F1_hat + lambda2*F2_hat, only when consistency gate passes",
+    "combined_form_effect_variance": "VF_hat = lambda1^2*V1_hat + lambda2^2*V2_hat",
+    "combined_form_practice_covariance": "CFP_hat = lambda2*C2P_hat because Stage-1 is independent of Stage-2",
+    "independent_decision_pair_variance": "VD_hat = var(d_AB) for AB target; var(d_BA) for BA target",
+    "adjusted_change_variance": "Vadj_hat = VD_hat + VF_hat + VP_hat + 2*orientation_sign*CFP_hat; Cov(D_observed,F_hat)=Cov(D_observed,P_hat)=0 by independent decision-pair design",
+    "se_adjusted_change": "SE_adj_hat = sqrt(Vadj_hat)",
+    "invalid_variance_rule": "If any required variance/weight/covariance is non-finite, V1_hat<=0, V2_hat<=0, Vadj_hat<=0, or SE_adj_hat is non-finite, the replicate is INDETERMINATE/numeric failure and is never dropped."
+  },
+  "decision_criterion": {
+    "adjusted_change": "D_adj = D_observed - orientation_sign * F_hat - P_hat",
+    "D_observed": {
+      "AB": "score_B_occ2 - score_A_occ1",
+      "BA": "score_A_occ2 - score_B_occ1"
+    },
+    "orientation_sign": {
+      "AB": 1,
+      "BA": -1
+    },
+    "z": "Z_change = D_adj / SE_adj_hat",
+    "two_sided_alpha_reference": 0.05,
+    "z_cutoff": 1.959963984540054,
+    "alpha_interpretation": "Nominal two-sided normal-reference cutoff only. Actual operating false-positive control is adjudicated prospectively by the frozen Monte Carlo false-reliable-change gate; exact .05 finite-sample control is not assumed.",
+    "positive_rule": "z >= z_cutoff => RELIABLE_INCREASE_SUPPORTED",
+    "negative_rule": "z <= -z_cutoff => RELIABLE_DECREASE_SUPPORTED",
+    "otherwise": "NO_RELIABLE_CHANGE_ESTABLISHED",
+    "indeterminate_rule": "Any failed/missing calibration-integrity, model-eligibility, scope-binding, MeasurementSpec, or required finite positive variance gate => INDETERMINATE",
+    "durable_learning_claim_authorized": false
+  },
+  "oracle": {
+    "replications_per_scenario": 1000000,
+    "purpose": "Estimate scenario population moments needed for the frozen variance functional: Stage-1 form score variances, AB/BA contrast variances, and true form/practice corrections. For each candidate design and decision orientation, derive the design-reference SE_adj by substituting oracle population moments into the same frozen Vadj algebra.",
+    "reference_semantics": "SE_adj_reference is the population-moment reference for the frozen plug-in variance functional. Finite-sample randomness of estimated inverse-variance weights remains part of end-to-end Monte Carlo operating behavior and is controlled by the direct false-positive gate rather than assumed away."
+  },
+  "simulation_execution": {
+    "screen_replications_per_design_scenario": 3000,
+    "confirm_replications_per_design_scenario": 20000,
+    "screen_ci_level": 0.99,
+    "confirm_ci_level": 0.95,
+    "seed_namespace": "GBM01F_EXEC_V1_20260904",
+    "seed_derivation": "component_seed = int.from_bytes(SHA256(f'{namespace}|{phase}|{design_id}|{scenario_id}|{shift_token}|{replicate_index}|{component}').digest()[:8], 'big') & 0x7fffffffffffffff",
+    "screen_hard_fail_rule": "Exclude before confirm only when a 99% Monte Carlo interval for at least one gating metric lies wholly on the failing side.",
+    "confirm_rule": "Evaluate non-hard-failed designs in frozen minimum-design order; no early PASS before all 20,000 confirm replications complete.",
+    "rng_contract_ref": "randomness_contract"
+  },
+  "acceptance_thresholds": {
+    "core_scenarios": {
+      "ids": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08"
+      ],
+      "null_false_reliable_change_rate_upper_95_wilson_max": 0.06,
+      "calibration_indeterminate_or_numeric_failure_rate_upper_95_wilson_max": 0.05,
+      "se_adjusted_change_mean_signed_relative_bias_ci_must_be_within": [
+        -0.05,
+        0.05
+      ],
+      "se_adjusted_change_mean_absolute_relative_error_upper_95_ci_max": 0.1,
+      "form_effect_bias_normalized_by_true_se_adjusted_abs_upper_95_ci_max": 0.1,
+      "practice_effect_bias_normalized_by_true_se_adjusted_abs_upper_95_ci_max": 0.1
+    },
+    "model_misspecification_sentinel": {
+      "id": "S09",
+      "calibration_pass_rate_upper_95_wilson_max": 0.2,
+      "overall_false_reliable_change_rate_upper_95_wilson_max": 0.06
+    },
+    "non_gating_false_negative_reporting": {
+      "true_change_logit_shifts": [
+        -0.5,
+        -0.25,
+        0.25,
+        0.5
+      ],
+      "report": [
+        "false_negative_rate",
+        "directional_power",
+        "wrong_direction_rate",
+        "indeterminate_rate"
+      ],
+      "gating": false,
+      "reason": "No validated Math Challenge SESOI exists.",
+      "population": "independent decision pair as frozen in decision_population; true_change_logit is injected on occasion 2 only in the decision pair and never into calibration samples",
+      "replications_per_design_scenario_shift": 20000,
+      "denominator": "all attempted sensitivity replications for that design x scenario x shift; indeterminate/numeric failures remain in denominator",
+      "scenario_scope": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08"
+      ],
+      "sentinel_scope": "S09 excluded from sensitivity/power reporting; it remains governed only by its frozen misspecification-sentinel safety gates",
+      "execution_scope": "confirmatorily evaluated designs only; R_confirm per design x core scenario x shift"
+    }
+  },
+  "monte_carlo_intervals": {
+    "rates": "Wilson interval",
+    "continuous_mean_metrics": "MCSE = sample SD/sqrt(R); CI = mean +/- z*MCSE",
+    "invalid_replications": "count as indeterminate/numeric failure; never silently drop"
+  },
+  "minimum_design_ordering": [
+    "ascending total_response_burden = 36*n_stage1_per_form + 72*n_stage2_per_order",
+    "ascending total_participants = 2*n_stage1_per_form + 2*n_stage2_per_order",
+    "ascending repeated_measurement_participants = 2*n_stage2_per_order",
+    "ascending n_stage1_per_form",
+    "lexicographic design_id"
+  ],
+  "worst_case_rule": {
+    "core": "Pass only if every gating metric passes in every core scenario; no averaging.",
+    "sentinel": "S09 gates must also pass.",
+    "no_pass": "Return NO_ADMISSIBLE_DESIGN_IN_FROZEN_GRID; no interpolation, extrapolation, or tolerance changes."
+  },
+  "governance": {
+    "protocol_owner_freeze_complete": true,
+    "independent_protocol_approval_required_before_exec": true,
+    "executor_must_not_modify_manifest": true,
+    "outcome_review_must_be_independent_where_feasible": true,
+    "amendment_rule": "Any change after outputs are seen creates a new protocol version; seen results become development data.",
+    "r2_fresh_independent_review_required": true,
+    "r2_exec_status": "BLOCKED_PENDING_FRESH_R2_INDEPENDENT_APPROVAL"
+  },
+  "amendment": {
+    "id": "GB-MEASURE-01F-INPUT-FREEZE-RECOVERY-R2",
+    "prospective": true,
+    "simulation_outputs_seen_before_amendment": false,
+    "prior_amendment": "GB-MEASURE-01F-INPUT-FREEZE-RECOVERY-R1",
+    "scope": [
+      "RC3_freeze_complete_data_only_no_missingness_or_censoring_scope",
+      "RC4_freeze_rng_runtime_prng_distribution_implementation_and_component_substreams"
+    ],
+    "thresholds_changed": false,
+    "candidate_n_grid_changed": false,
+    "replication_counts_changed": false,
+    "seed_namespace_changed": false,
+    "seed_derivation_extended_for_component_substreams": true,
+    "scenario_numeric_values_changed": false
+  },
+  "decision_population": {
+    "decision_pairs_per_monte_carlo_replicate": 1,
+    "participant_relation_to_calibration": "independent participant; excluded from Stage-1 and Stage-2 calibration estimation",
+    "decision_pair_order_allocation": "exact 1:1 across each even-sized Monte Carlo phase by replicate parity",
+    "replicate_index_convention": "0-based within phase",
+    "order_rule": "AB when replicate_index % 2 == 0; BA when replicate_index % 2 == 1",
+    "AB_observed_change": "score_B_occ2 - score_A_occ1",
+    "BA_observed_change": "score_A_occ2 - score_B_occ1",
+    "null_true_change_logit": 0.0,
+    "sensitivity_true_change_application": "add true_change_logit * I(occasion=2) to the independent decision-pair eta only; retain the scenario practice shift, form shift, and form-second interaction unchanged",
+    "calibration_true_change_application": "none; calibration samples always use the frozen scenario model without sensitivity true-change injection",
+    "sensitivity_shifts": [
+      -0.5,
+      -0.25,
+      0.25,
+      0.5
+    ],
+    "sensitivity_replications": "R_confirm per confirmatorily evaluated design x core scenario S01-S08 x shift; descriptive/non-gating; S09 is excluded from sensitivity/power because it is the model-misspecification sentinel",
+    "false_positive_population": "one independent decision pair per replicate with true_change_logit=0",
+    "false_positive_denominator": "all attempted replications in the applicable phase for that design x scenario; indeterminate/numeric failures remain in the denominator and are not silently dropped",
+    "generation_model": "same frozen scenario binary-response DGM, with fresh target-participant random effects and binomial draws independent of all calibration draws",
+    "calibration_estimates_applied": "use F_hat, P_hat, and variance/covariance estimates from the same Monte Carlo replicate calibration sample",
+    "simulation_burden_status": "target decision pair is an operating-characteristic probe only; it is not added to candidate calibration participant counts or minimum-design response burden",
+    "sensitivity_scenario_scope": [
+      "S01",
+      "S02",
+      "S03",
+      "S04",
+      "S05",
+      "S06",
+      "S07",
+      "S08"
+    ]
+  },
+  "data_completeness": {
+    "simulation_scope": "COMPLETE_DATA_ONLY",
+    "missingness_model_in_scope": false,
+    "censoring_model_in_scope": false,
+    "generated_score_requirement": "Every Stage-1 score, both scores in every Stage-2 repeated-measure pair, and both scores in the independent decision pair must be generated as finite complete bounded scores from the frozen DGM.",
+    "no_partial_pair_rule": "No partial Stage-2 or decision pair is admissible. No dropout, item nonresponse, administrative censoring, timeout censoring, truncation, imputation, pairwise deletion, or complete-case subsampling is simulated in GB-MEASURE-01F-EXEC v1.2.",
+    "generation_failure_rule": "If the executor cannot generate every required complete finite score for a Monte Carlo replicate, the entire replicate is INDETERMINATE/NUMERICAL_FAILURE; it remains in every applicable all-attempted-replications denominator and is never repaired or dropped.",
+    "future_extension_rule": "Any missingness/censoring sensitivity analysis requires a new prospective protocol version with a frozen mechanism, rates, handling, and acceptance/reporting rules."
+  },
+  "randomness_contract": {
+    "required_runtime": {
+      "python_implementation": "CPython",
+      "python_version": "3.13.5",
+      "numpy_version": "2.3.5",
+      "version_mismatch_rule": "Exact 01F-EXEC parity requires these versions. A different Python or NumPy version must not be used for the governed execution without a prospective amendment and fresh review."
+    },
+    "prng": {
+      "family": "PCG64DXSM",
+      "constructor": "numpy.random.Generator(numpy.random.PCG64DXSM(seed))",
+      "normal_implementation": "numpy.random.Generator.normal",
+      "binomial_implementation": "numpy.random.Generator.binomial",
+      "binomial_K": 18
+    },
+    "namespace": "GBM01F_EXEC_V1_20260904",
+    "hash_function": "SHA-256",
+    "seed_integer_rule": "int.from_bytes(SHA256(key.encode('utf-8')).digest()[:8], 'big') & 0x7fffffffffffffff",
+    "canonical_design_id": "GBM01-N1-{n_stage1_per_form:03d}-N2-{n_stage2_per_order:03d}",
+    "oracle_design_id": "ORACLE",
+    "replicate_index_convention": "0-based for screen, confirm, and sensitivity_false_negative. Oracle uses replicate_index 0..R_oracle-1.",
+    "shift_token": {
+      "oracle_screen_confirm": "TC_NULL",
+      "sensitivity_format": "TC_{true_change_logit:+0.6f}",
+      "examples": [
+        "TC_-0.500000",
+        "TC_-0.250000",
+        "TC_+0.250000",
+        "TC_+0.500000"
+      ],
+      "common_random_numbers_across_sensitivity_shifts": false
+    },
+    "replicate_key": "{namespace}|{phase}|{design_id}|{scenario_id}|{shift_token}|{replicate_index}",
+    "component_seed_key": "{namespace}|{phase}|{design_id}|{scenario_id}|{shift_token}|{replicate_index}|{component}",
+    "components": [
+      "stage1_A",
+      "stage1_B",
+      "stage2_AB",
+      "stage2_BA",
+      "decision_AB",
+      "decision_BA"
+    ],
+    "component_usage": "Every component has an independently hashed seed and its own Generator. Only decision_AB or decision_BA is used in a replicate according to the frozen parity rule. Because component streams are separately keyed, component execution order and parallel scheduling cannot change another component's random stream.",
+    "frozen_draw_sequence": {
+      "stage1_A_or_B": [
+        "theta = rng.normal(0, person_sd, size=n1)",
+        "u_form = rng.normal(0, person_by_form_sd, size=n1)",
+        "v_occ1 = rng.normal(0, person_by_occasion_sd, size=n1)",
+        "p = logistic(frozen eta for the assigned form/occasion)",
+        "score_count = rng.binomial(K=18, p=p, size=n1)",
+        "score = score_count / 18"
+      ],
+      "stage2_AB": [
+        "theta = rng.normal(0, person_sd, size=n2)",
+        "u_A = rng.normal(0, person_by_form_sd, size=n2)",
+        "u_B = rng.normal(0, person_by_form_sd, size=n2)",
+        "v_occ1 = rng.normal(0, person_by_occasion_sd, size=n2)",
+        "v_occ2 = rng.normal(0, person_by_occasion_sd, size=n2)",
+        "score_A_occ1_count = rng.binomial(18, p_A_occ1, size=n2)",
+        "score_B_occ2_count = rng.binomial(18, p_B_occ2, size=n2)"
+      ],
+      "stage2_BA": [
+        "theta = rng.normal(0, person_sd, size=n2)",
+        "u_A = rng.normal(0, person_by_form_sd, size=n2)",
+        "u_B = rng.normal(0, person_by_form_sd, size=n2)",
+        "v_occ1 = rng.normal(0, person_by_occasion_sd, size=n2)",
+        "v_occ2 = rng.normal(0, person_by_occasion_sd, size=n2)",
+        "score_B_occ1_count = rng.binomial(18, p_B_occ1, size=n2)",
+        "score_A_occ2_count = rng.binomial(18, p_A_occ2, size=n2)"
+      ],
+      "decision_AB_or_BA": [
+        "theta = rng.normal(0, person_sd)",
+        "u_A = rng.normal(0, person_by_form_sd)",
+        "u_B = rng.normal(0, person_by_form_sd)",
+        "v_occ1 = rng.normal(0, person_by_occasion_sd)",
+        "v_occ2 = rng.normal(0, person_by_occasion_sd)",
+        "draw occasion-1 binomial count for the first form in the frozen order",
+        "draw occasion-2 binomial count for the second form in the frozen order"
+      ]
+    },
+    "no_unfrozen_randomness_rule": "No global RNG, OS entropy, wall-clock seed, implicit library default RNG, hand-edited seed list, or executor-selected stream partition is permitted."
+  }
+}
