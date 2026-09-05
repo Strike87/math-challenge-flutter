@@ -293,6 +293,34 @@ void main() {
       expect(episode.mayAffectGameplay, isFalse);
     }
   });
+
+  test('G: equivalent runtime sequences produce equivalent shadow episodes',
+      () async {
+    final firstRecorder = BoundedContextShadowEpisodeRecorder(capacity: 4);
+    final first = await _state(observer: firstRecorder.record);
+    await _answer(first, correct: true);
+    await _answer(first, correct: false);
+    first.debugTimeoutForTest();
+    await Future<void>.delayed(Duration.zero);
+
+    final secondRecorder = BoundedContextShadowEpisodeRecorder(capacity: 4);
+    final second = await _state(observer: secondRecorder.record);
+    await _answer(second, correct: true);
+    await _answer(second, correct: false);
+    second.debugTimeoutForTest();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(
+        firstRecorder.episodes.map((episode) => episode.sequence), [1, 2, 3]);
+    expect(
+        secondRecorder.episodes.map((episode) => episode.sequence), [1, 2, 3]);
+    for (var index = 0; index < firstRecorder.episodes.length; index++) {
+      _expectSameProductionInterpretation(
+        firstRecorder.episodes[index].interpretation,
+        secondRecorder.episodes[index].interpretation,
+      );
+    }
+  });
 }
 
 Future<GameState> _state({ContextEvidenceShadowObserver? observer}) async {
@@ -350,6 +378,22 @@ Future<void> _skip(GameState state) async {
 void _expectNoAuthority(PreviewInterpretationResult result) {
   expect(result.authority, PreviewAuthority.none);
   expect(result.mayAffectGameplay, isFalse);
+}
+
+void _expectSameProductionInterpretation(
+  BoundedContextShadowInterpretation first,
+  BoundedContextShadowInterpretation second,
+) {
+  expect(first.state, second.state);
+  expect(first.aggregate?.evidenceCount, second.aggregate?.evidenceCount);
+  expect(first.aggregate?.correctCount, second.aggregate?.correctCount);
+  expect(first.aggregate?.incorrectCount, second.aggregate?.incorrectCount);
+  expect(first.aggregate?.timeoutCount, second.aggregate?.timeoutCount);
+  expect(first.aggregate?.accuracy, second.aggregate?.accuracy);
+  expect(first.factualContextId, second.factualContextId);
+  expect(first.explanation, second.explanation);
+  expect(first.authority, second.authority);
+  expect(first.mayAffectGameplay, second.mayAffectGameplay);
 }
 
 final class _NoOpAudioService implements AudioService {
