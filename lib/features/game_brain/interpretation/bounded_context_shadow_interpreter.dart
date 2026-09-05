@@ -1,5 +1,6 @@
 import '../../../models/enums.dart';
 import '../domain/context_evidence.dart';
+import '../est/bounded_outcome_descriptive_summary.dart';
 
 class BoundedContextAggregate {
   BoundedContextAggregate({
@@ -54,8 +55,7 @@ class BoundedContextShadowInterpreter {
   BoundedContextShadowInterpretation interpret(
     List<ContextEvidenceObservation> observations,
   ) {
-    final facts = _validateHomogeneous(observations);
-    if (facts == null) {
+    if (observations.isEmpty) {
       return const BoundedContextShadowInterpretation(
         state: BoundedContextShadowInterpretationState.insufficient,
         aggregate: null,
@@ -64,8 +64,16 @@ class BoundedContextShadowInterpreter {
       );
     }
 
-    final aggregate = _aggregate(observations);
-    final contextId = _contextId(facts);
+    final summary = const BoundedOutcomeDescriptiveSummarizer().summarize(
+      observations,
+    );
+    final aggregate = BoundedContextAggregate(
+      evidenceCount: summary.evidenceCount,
+      correctCount: summary.correctCount,
+      incorrectCount: summary.incorrectCount,
+      timeoutCount: summary.timeoutCount,
+    );
+    final contextId = _contextId(summary.context!, summary.difficulty!);
     return BoundedContextShadowInterpretation(
       state: BoundedContextShadowInterpretationState.observational,
       aggregate: aggregate,
@@ -77,57 +85,9 @@ class BoundedContextShadowInterpreter {
     );
   }
 
-  ({ContextEvidenceKey context, Difficulty difficulty})? _validateHomogeneous(
-    List<ContextEvidenceObservation> observations,
-  ) {
-    if (observations.isEmpty) return null;
-
-    final context = observations.first.context;
-    if (context == null) {
-      throw ArgumentError('Each observation must have a context.');
-    }
-    final difficulty = observations.first.difficulty;
-    for (final observation in observations) {
-      if (observation.context == null) {
-        throw ArgumentError('Each observation must have a context.');
-      }
-      if (observation.context != context) {
-        throw ArgumentError('Observations must have the same context.');
-      }
-      if (observation.difficulty != difficulty) {
-        throw ArgumentError('Observations must have the same difficulty.');
-      }
-    }
-    return (context: context, difficulty: difficulty);
-  }
-
-  BoundedContextAggregate _aggregate(
-    List<ContextEvidenceObservation> observations,
-  ) {
-    var correctCount = 0;
-    var incorrectCount = 0;
-    var timeoutCount = 0;
-    for (final observation in observations) {
-      if (observation.timedOut) {
-        timeoutCount++;
-      } else if (observation.correct) {
-        correctCount++;
-      } else {
-        incorrectCount++;
-      }
-    }
-    return BoundedContextAggregate(
-      evidenceCount: observations.length,
-      correctCount: correctCount,
-      incorrectCount: incorrectCount,
-      timeoutCount: timeoutCount,
-    );
-  }
-
-  String _contextId(
-          ({ContextEvidenceKey context, Difficulty difficulty}) facts) =>
-      'operation=${facts.context.operation.name};'
-      'numberType=${facts.context.numberType.name};'
-      'representation=${facts.context.representation.name};'
-      'difficulty=${facts.difficulty.name}';
+  String _contextId(ContextEvidenceKey context, Difficulty difficulty) =>
+      'operation=${context.operation.name};'
+      'numberType=${context.numberType.name};'
+      'representation=${context.representation.name};'
+      'difficulty=${difficulty.name}';
 }
