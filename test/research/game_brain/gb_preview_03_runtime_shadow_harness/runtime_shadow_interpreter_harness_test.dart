@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
+import 'package:math_challenge/features/game_brain/game_brain.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
@@ -226,6 +227,45 @@ void main() {
     expect(state.p[1].total, 1);
     expect(state.skillMap[Operation.addition.name]!.count, 1);
     expect(state.rt.q, isNot(same(question)));
+  });
+
+  test('E: the passive hook can drive the production bounded interpreter',
+      () async {
+    final control = await _state();
+    final controlConfiguredDifficulty = control.diff;
+    await _answer(control, correct: true);
+    final controlAdaptiveLevel = control.adaptLvlRaw;
+    final controlDifficulty = control.diff;
+    final controlScore = control.p[1].score;
+    final controlSkillCount = control.skillMap[Operation.addition.name]!.count;
+
+    const productionInterpreter = BoundedContextShadowInterpreter();
+    var calls = 0;
+    BoundedContextShadowInterpretation? result;
+    final state = await _state(observer: (observations) {
+      calls++;
+      result = productionInterpreter.interpret(observations);
+    });
+    final scoreBefore = state.p[1].score;
+
+    await _answer(state, correct: true);
+
+    expect(calls, 1);
+    expect(
+        result?.state, BoundedContextShadowInterpretationState.observational);
+    expect(result?.aggregate?.evidenceCount, 1);
+    expect(result?.aggregate?.correctCount, 1);
+    expect(result?.authority, BoundedContextShadowAuthority.none);
+    expect(result?.mayAffectGameplay, isFalse);
+    expect(state.p[1].score, greaterThan(scoreBefore));
+    expect(controlScore, greaterThan(0));
+    expect(state.adaptLvlRaw, controlAdaptiveLevel);
+    expect(state.diff, controlDifficulty);
+    expect(controlDifficulty, controlConfiguredDifficulty);
+    expect(
+      state.skillMap[Operation.addition.name]!.count,
+      controlSkillCount,
+    );
   });
 }
 
