@@ -79,6 +79,10 @@ enum MentalMathTerminalReason {
   trainingComplete,
 }
 
+typedef ContextEvidenceShadowObserver = void Function(
+  List<ContextEvidenceObservation> observations,
+);
+
 @immutable
 class MentalMathResultSummary {
   const MentalMathResultSummary({
@@ -445,6 +449,7 @@ class GameState extends ChangeNotifier {
     QuestionGenerator? questionGenerator,
     P1F01IntegrityStore? p1F01IntegrityStore,
     P1F01StudyCoordinator? p1F01StudyCoordinator,
+    ContextEvidenceShadowObserver? contextEvidenceShadowObserver,
   })  : iapAdapter = iapAdapter ?? const UnavailableIapPurchaseAdapter(),
         adService = adService ?? const UnavailableAdMobService(),
         playGamesService = playGamesService ?? NativePlayGamesService(),
@@ -453,6 +458,7 @@ class GameState extends ChangeNotifier {
         _adaptiveShadowEvaluator =
             adaptiveShadowEvaluator ?? evaluateAdaptiveShadow,
         _qgen = questionGenerator ?? QuestionGenerator(),
+        _contextEvidenceShadowObserver = contextEvidenceShadowObserver,
         _ownsP1F01IntegrityStore = p1F01IntegrityStore == null,
         _p1F01IntegrityStore = p1F01IntegrityStore ?? P1F01IntegrityStore(),
         _adultGateFactory =
@@ -665,6 +671,7 @@ class GameState extends ChangeNotifier {
   FamilyAgeRange? familyAgeRange;
   String familyGateError = '';
   final Stopwatch _diagnosticClock = Stopwatch()..start();
+  final ContextEvidenceShadowObserver? _contextEvidenceShadowObserver;
 
   GameRunSnapshot? get activeRunSnapshot => _runSnapshot;
   @visibleForTesting
@@ -3785,19 +3792,29 @@ class GameState extends ChangeNotifier {
   ) {
     final snapshot = _runSnapshot!;
     if (snapshot.mentalMathEntry != null) return;
-    final advisory = _gameBrain!.observeContextEvidence(
-      ContextEvidenceObservation(
-        context: _contextEvidenceKey(snapshot, question),
-        difficulty: question.diff ?? snapshot.difficulty,
-        correctAnswer: question.ans,
-        submittedAnswer: outcome.submittedAnswer,
-        correct: outcome.correct,
-        timedOut: outcome.timedOut,
-        responseTimeMs: outcome.responseTimeMs,
-      ),
+    final observation = ContextEvidenceObservation(
+      context: _contextEvidenceKey(snapshot, question),
+      difficulty: question.diff ?? snapshot.difficulty,
+      correctAnswer: question.ans,
+      submittedAnswer: outcome.submittedAnswer,
+      correct: outcome.correct,
+      timedOut: outcome.timedOut,
+      responseTimeMs: outcome.responseTimeMs,
     );
+    final advisory = _gameBrain!.observeContextEvidence(observation);
     _lastContextEvidenceResult = advisory;
     _adaptiveShadowEvaluator(advisory, const AdaptiveAuthority.shadow());
+    final observer = _contextEvidenceShadowObserver;
+    if (observer != null && observation.context != null) {
+      final observations = _gameBrain!.contextEvidenceMemory.observations;
+      scheduleMicrotask(() {
+        try {
+          observer(observations);
+        } catch (_) {
+          return;
+        }
+      });
+    }
   }
 
   QuestionExperienceObservation? _captureQuestionExperienceIfSupported(
