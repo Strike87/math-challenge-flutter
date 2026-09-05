@@ -267,6 +267,32 @@ void main() {
       controlSkillCount,
     );
   });
+
+  test('F: the passive hook can build bounded production shadow episodes',
+      () async {
+    final recorder = BoundedContextShadowEpisodeRecorder(capacity: 4);
+    final state = await _state(observer: recorder.record);
+
+    await _answer(state, correct: true);
+    await _answer(state, correct: false);
+    await _skip(state);
+    state.debugTimeoutForTest();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(recorder.episodes, hasLength(3));
+    expect(recorder.episodes.map((episode) => episode.sequence), [1, 2, 3]);
+    expect(recorder.episodes[0].interpretation.aggregate?.evidenceCount, 1);
+    expect(recorder.episodes[1].interpretation.aggregate?.evidenceCount, 2);
+    final aggregate = recorder.episodes[2].interpretation.aggregate!;
+    expect(aggregate.evidenceCount, 3);
+    expect(aggregate.correctCount, 1);
+    expect(aggregate.incorrectCount, 1);
+    expect(aggregate.timeoutCount, 1);
+    for (final episode in recorder.episodes) {
+      expect(episode.authority, BoundedContextShadowAuthority.none);
+      expect(episode.mayAffectGameplay, isFalse);
+    }
+  });
 }
 
 Future<GameState> _state({ContextEvidenceShadowObserver? observer}) async {
