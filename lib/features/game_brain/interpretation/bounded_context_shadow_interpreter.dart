@@ -38,12 +38,16 @@ class BoundedContextShadowInterpretation {
     required this.aggregate,
     required this.factualContextId,
     required this.explanation,
+    this.context,
+    this.difficulty,
   });
 
   final BoundedContextShadowInterpretationState state;
   final BoundedContextAggregate? aggregate;
   final String? factualContextId;
   final String explanation;
+  final ContextEvidenceKey? context;
+  final Difficulty? difficulty;
   BoundedContextShadowAuthority get authority =>
       BoundedContextShadowAuthority.none;
   bool get mayAffectGameplay => false;
@@ -82,6 +86,8 @@ class BoundedContextShadowInterpreter {
           '${aggregate.correctCount} correct, ${aggregate.incorrectCount} incorrect, '
           '${aggregate.timeoutCount} timeout; derived accuracy '
           '${aggregate.accuracy.toStringAsFixed(2)}. Factual context: $contextId.',
+      context: summary.context,
+      difficulty: summary.difficulty,
     );
   }
 

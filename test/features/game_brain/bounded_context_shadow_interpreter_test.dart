@@ -21,6 +21,8 @@ void main() {
     expect(result.state, BoundedContextShadowInterpretationState.insufficient);
     expect(result.aggregate, isNull);
     expect(result.factualContextId, isNull);
+    expect(result.context, isNull);
+    expect(result.difficulty, isNull);
     expect(result.authority, BoundedContextShadowAuthority.none);
     expect(result.mayAffectGameplay, isFalse);
   });
@@ -46,6 +48,8 @@ void main() {
     expect(result.aggregate?.correctCount, 1);
     expect(result.aggregate?.incorrectCount, 0);
     expect(result.aggregate?.timeoutCount, 0);
+    expect(result.context, context);
+    expect(result.difficulty, Difficulty.easy);
   });
 
   test('3: correct, wrong, and timeout remain exclusive', () {
@@ -134,6 +138,8 @@ void main() {
     expect(delayed.aggregate?.accuracy, ordinary.aggregate?.accuracy);
     expect(delayed.factualContextId, ordinary.factualContextId);
     expect(delayed.explanation, ordinary.explanation);
+    expect(delayed.context, ordinary.context);
+    expect(delayed.difficulty, ordinary.difficulty);
   });
 
   test('9: explanations remain observational', () {
