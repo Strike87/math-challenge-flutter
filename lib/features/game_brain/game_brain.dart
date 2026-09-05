@@ -5,6 +5,7 @@ export 'domain/brain_recommendation.dart';
 export 'domain/context_evidence.dart';
 export 'interpretation/bounded_context_shadow_episode_recorder.dart';
 export 'interpretation/bounded_context_shadow_interpreter.dart';
+export 'interpretation/bounded_context_shadow_partitioned_snapshot.dart';
 export 'domain/learner_hypothesis.dart';
 export 'domain/learner_snapshot.dart';
 export 'domain/misconception_evidence.dart';
