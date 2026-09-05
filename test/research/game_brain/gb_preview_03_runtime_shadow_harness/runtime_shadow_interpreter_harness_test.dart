@@ -321,9 +321,109 @@ void main() {
       );
     }
   });
+
+  test('H: an admitted answer emits one partitioned snapshot', () async {
+    var calls = 0;
+    BoundedContextShadowPartitionedSnapshot? snapshot;
+    final state = await _state(partitionedObserver: (value) {
+      calls++;
+      snapshot = value;
+    });
+
+    expect(calls, 0);
+    await _answer(state, correct: true);
+
+    final interpretation = snapshot!.partitions.single;
+    expect(calls, 1);
+    expect(snapshot!.partitions, hasLength(1));
+    expect(interpretation.aggregate?.evidenceCount, 1);
+    expect(snapshot!.authority, BoundedContextShadowAuthority.none);
+    expect(snapshot!.mayAffectGameplay, isFalse);
+  });
+
+  test('I: partitioned callbacks follow canonical admission semantics',
+      () async {
+    final evidenceCounts = <int>[];
+    BoundedContextAggregate? aggregate;
+    final state = await _state(partitionedObserver: (snapshot) {
+      aggregate = snapshot.partitions.single.aggregate;
+      evidenceCounts.add(aggregate!.evidenceCount);
+    });
+
+    await _answer(state, correct: true);
+    await _answer(state, correct: false);
+    await _skip(state);
+    state.debugTimeoutForTest();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(evidenceCounts, [1, 2, 3]);
+    expect(aggregate?.correctCount, 1);
+    expect(aggregate?.incorrectCount, 1);
+    expect(aggregate?.timeoutCount, 1);
+  });
+
+  test('J: partitioned output matches the same raw observer payload', () async {
+    List<ContextEvidenceObservation>? rawObservations;
+    BoundedContextShadowPartitionedSnapshot? snapshot;
+    final state = await _state(
+      observer: (observations) => rawObservations = observations,
+      partitionedObserver: (value) => snapshot = value,
+    );
+
+    await _answer(state, correct: true);
+
+    final expected = const BoundedContextShadowPartitionedInterpreter()
+        .interpret(rawObservations!);
+    _expectSamePartitionedSnapshot(snapshot!, expected);
+  });
+
+  test('K: partitioned observer failures do not interrupt gameplay', () async {
+    final state = await _state(
+      partitionedObserver: (_) => throw StateError('partitioned shadow'),
+    );
+    final question = state.rt.q;
+
+    await _answer(state, correct: true);
+
+    expect(state.p[1].score, greaterThan(0));
+    expect(state.p[1].total, 1);
+    expect(state.skillMap[Operation.addition.name]!.count, 1);
+    expect(state.rt.q, isNot(same(question)));
+  });
+
+  test('L: raw observer failure does not suppress partitioned delivery',
+      () async {
+    var partitionedCalls = 0;
+    final state = await _state(
+      observer: (_) => throw StateError('raw shadow'),
+      partitionedObserver: (_) => partitionedCalls++,
+    );
+
+    await _answer(state, correct: true);
+
+    expect(partitionedCalls, 1);
+  });
+
+  test('M: new and unsupported runs do not emit empty partitioned snapshots',
+      () async {
+    var calls = 0;
+    final state = await _state(partitionedObserver: (_) => calls++);
+
+    expect(calls, 0);
+    state.startMasterMode();
+    state.startGame();
+    state.rt.timer?.cancel();
+    expect(calls, 0);
+    await _answer(state, correct: true);
+
+    expect(calls, 0);
+  });
 }
 
-Future<GameState> _state({ContextEvidenceShadowObserver? observer}) async {
+Future<GameState> _state({
+  ContextEvidenceShadowObserver? observer,
+  ContextEvidencePartitionedShadowObserver? partitionedObserver,
+}) async {
   SharedPreferences.setMockInitialValues({});
   await Storage.init();
   final settings = SettingsService()
@@ -341,6 +441,7 @@ Future<GameState> _state({ContextEvidenceShadowObserver? observer}) async {
     settings: settings,
     audio: _NoOpAudioService(),
     contextEvidenceShadowObserver: observer,
+    contextEvidencePartitionedShadowObserver: partitionedObserver,
   );
   await state.load();
   state
@@ -394,6 +495,21 @@ void _expectSameProductionInterpretation(
   expect(first.explanation, second.explanation);
   expect(first.authority, second.authority);
   expect(first.mayAffectGameplay, second.mayAffectGameplay);
+}
+
+void _expectSamePartitionedSnapshot(
+  BoundedContextShadowPartitionedSnapshot first,
+  BoundedContextShadowPartitionedSnapshot second,
+) {
+  expect(first.partitions, hasLength(second.partitions.length));
+  expect(first.authority, second.authority);
+  expect(first.mayAffectGameplay, second.mayAffectGameplay);
+  for (var index = 0; index < first.partitions.length; index++) {
+    _expectSameProductionInterpretation(
+      first.partitions[index],
+      second.partitions[index],
+    );
+  }
 }
 
 final class _NoOpAudioService implements AudioService {

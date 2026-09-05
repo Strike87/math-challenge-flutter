@@ -83,6 +83,10 @@ typedef ContextEvidenceShadowObserver = void Function(
   List<ContextEvidenceObservation> observations,
 );
 
+typedef ContextEvidencePartitionedShadowObserver = void Function(
+  BoundedContextShadowPartitionedSnapshot snapshot,
+);
+
 @immutable
 class MentalMathResultSummary {
   const MentalMathResultSummary({
@@ -450,6 +454,8 @@ class GameState extends ChangeNotifier {
     P1F01IntegrityStore? p1F01IntegrityStore,
     P1F01StudyCoordinator? p1F01StudyCoordinator,
     ContextEvidenceShadowObserver? contextEvidenceShadowObserver,
+    ContextEvidencePartitionedShadowObserver?
+        contextEvidencePartitionedShadowObserver,
   })  : iapAdapter = iapAdapter ?? const UnavailableIapPurchaseAdapter(),
         adService = adService ?? const UnavailableAdMobService(),
         playGamesService = playGamesService ?? NativePlayGamesService(),
@@ -459,6 +465,8 @@ class GameState extends ChangeNotifier {
             adaptiveShadowEvaluator ?? evaluateAdaptiveShadow,
         _qgen = questionGenerator ?? QuestionGenerator(),
         _contextEvidenceShadowObserver = contextEvidenceShadowObserver,
+        _contextEvidencePartitionedShadowObserver =
+            contextEvidencePartitionedShadowObserver,
         _ownsP1F01IntegrityStore = p1F01IntegrityStore == null,
         _p1F01IntegrityStore = p1F01IntegrityStore ?? P1F01IntegrityStore(),
         _adultGateFactory =
@@ -672,6 +680,8 @@ class GameState extends ChangeNotifier {
   String familyGateError = '';
   final Stopwatch _diagnosticClock = Stopwatch()..start();
   final ContextEvidenceShadowObserver? _contextEvidenceShadowObserver;
+  final ContextEvidencePartitionedShadowObserver?
+      _contextEvidencePartitionedShadowObserver;
 
   GameRunSnapshot? get activeRunSnapshot => _runSnapshot;
   @visibleForTesting
@@ -3810,6 +3820,20 @@ class GameState extends ChangeNotifier {
       scheduleMicrotask(() {
         try {
           observer(observations);
+        } catch (_) {
+          return;
+        }
+      });
+    }
+    final partitionedObserver = _contextEvidencePartitionedShadowObserver;
+    if (partitionedObserver != null && observation.context != null) {
+      final observations = _gameBrain!.contextEvidenceMemory.observations;
+      scheduleMicrotask(() {
+        try {
+          partitionedObserver(
+            const BoundedContextShadowPartitionedInterpreter()
+                .interpret(observations),
+          );
         } catch (_) {
           return;
         }
