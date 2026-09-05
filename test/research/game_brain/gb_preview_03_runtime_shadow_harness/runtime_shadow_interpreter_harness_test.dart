@@ -158,9 +158,78 @@ void main() {
 
     expect(state.debugContextEvidenceObservations, isEmpty);
   });
+
+  test('A: the passive hook automatically drives preview interpretation',
+      () async {
+    var calls = 0;
+    PreviewInterpretationResult? result;
+    final state = await _state(observer: (observations) {
+      calls++;
+      result = interpreter.interpret(
+        bridge.fromObservations(observations),
+        PreviewInterpretationRequest.boundedObservationSummary,
+      );
+    });
+
+    await _answer(state, correct: true);
+
+    expect(calls, 1);
+    expect(
+        result?.interpretationState, PreviewInterpretationState.observational);
+    _expectNoAuthority(result!);
+  });
+
+  test('B: the passive hook follows ContextEvidence admission semantics',
+      () async {
+    var calls = 0;
+    BoundedAggregateObservation? aggregate;
+    final state = await _state(observer: (observations) {
+      calls++;
+      aggregate = bridge.fromObservations(observations).aggregate.value;
+    });
+
+    await _answer(state, correct: true);
+    await _answer(state, correct: false);
+    await _skip(state);
+    state.debugTimeoutForTest();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(calls, 3);
+    expect(aggregate?.evidenceCount, 3);
+    expect(aggregate?.correctCount, 1);
+    expect(aggregate?.incorrectCount, 1);
+    expect(aggregate?.timeoutCount, 1);
+  });
+
+  test('C: passive hook payloads are immutable', () async {
+    Object? mutationError;
+    final state = await _state(observer: (observations) {
+      try {
+        observations.clear();
+      } catch (error) {
+        mutationError = error;
+      }
+    });
+
+    await _answer(state, correct: true);
+
+    expect(mutationError, isA<UnsupportedError>());
+  });
+
+  test('D: observer failures do not interrupt canonical gameplay', () async {
+    final state = await _state(observer: (_) => throw StateError('shadow'));
+    final question = state.rt.q;
+
+    await _answer(state, correct: true);
+
+    expect(state.p[1].score, greaterThan(0));
+    expect(state.p[1].total, 1);
+    expect(state.skillMap[Operation.addition.name]!.count, 1);
+    expect(state.rt.q, isNot(same(question)));
+  });
 }
 
-Future<GameState> _state() async {
+Future<GameState> _state({ContextEvidenceShadowObserver? observer}) async {
   SharedPreferences.setMockInitialValues({});
   await Storage.init();
   final settings = SettingsService()
@@ -174,7 +243,11 @@ Future<GameState> _state() async {
       reduceMotion: true,
       animSpeed: 1,
     );
-  final state = GameState(settings: settings, audio: _NoOpAudioService());
+  final state = GameState(
+    settings: settings,
+    audio: _NoOpAudioService(),
+    contextEvidenceShadowObserver: observer,
+  );
   await state.load();
   state
     ..rt.challenge = Operation.addition
