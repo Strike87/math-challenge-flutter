@@ -49,16 +49,20 @@ void main() {
   });
 
   test('3: correct, wrong, and timeout remain exclusive', () {
-    final result = interpreter.interpret([
+    final observations = [
       _observation(context: context),
       _observation(context: context, correct: false),
       _observation(context: context, timedOut: true),
-    ]);
+    ];
+    final result = interpreter.interpret(observations);
+    final summary =
+        const BoundedOutcomeDescriptiveSummarizer().summarize(observations);
 
-    expect(result.aggregate?.evidenceCount, 3);
-    expect(result.aggregate?.correctCount, 1);
-    expect(result.aggregate?.incorrectCount, 1);
-    expect(result.aggregate?.timeoutCount, 1);
+    expect(result.aggregate?.evidenceCount, summary.evidenceCount);
+    expect(result.aggregate?.correctCount, summary.correctCount);
+    expect(result.aggregate?.incorrectCount, summary.incorrectCount);
+    expect(result.aggregate?.timeoutCount, summary.timeoutCount);
+    expect(result.aggregate?.accuracy, closeTo(1 / 3, 1e-12));
   });
 
   test('4: factual context IDs are deterministic', () {
@@ -111,6 +115,25 @@ void main() {
 
     expect(result.authority, BoundedContextShadowAuthority.none);
     expect(result.mayAffectGameplay, isFalse);
+  });
+
+  test('response time does not alter PREVIEW interpretation', () {
+    final ordinary = interpreter.interpret([
+      _observation(context: context, responseTimeMs: 1),
+    ]);
+    final delayed = interpreter.interpret([
+      _observation(context: context, responseTimeMs: 999999),
+    ]);
+
+    expect(delayed.state, ordinary.state);
+    expect(delayed.aggregate?.evidenceCount, ordinary.aggregate?.evidenceCount);
+    expect(delayed.aggregate?.correctCount, ordinary.aggregate?.correctCount);
+    expect(
+        delayed.aggregate?.incorrectCount, ordinary.aggregate?.incorrectCount);
+    expect(delayed.aggregate?.timeoutCount, ordinary.aggregate?.timeoutCount);
+    expect(delayed.aggregate?.accuracy, ordinary.aggregate?.accuracy);
+    expect(delayed.factualContextId, ordinary.factualContextId);
+    expect(delayed.explanation, ordinary.explanation);
   });
 
   test('9: explanations remain observational', () {
@@ -171,6 +194,7 @@ ContextEvidenceObservation _observation({
   Difficulty difficulty = Difficulty.easy,
   bool correct = true,
   bool timedOut = false,
+  int responseTimeMs = 1000,
 }) =>
     ContextEvidenceObservation(
       context: context,
@@ -179,5 +203,5 @@ ContextEvidenceObservation _observation({
       submittedAnswer: timedOut ? null : (correct ? 4 : 3),
       correct: timedOut ? false : correct,
       timedOut: timedOut,
-      responseTimeMs: 1000,
+      responseTimeMs: responseTimeMs,
     );
