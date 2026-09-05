@@ -674,6 +674,12 @@ class GameState extends ChangeNotifier {
   int get debugContextEvidenceObservationCount =>
       _gameBrain?.contextEvidenceMemory.observations.length ?? 0;
   @visibleForTesting
+  List<ContextEvidenceObservation> get debugContextEvidenceObservations =>
+      List<ContextEvidenceObservation>.unmodifiable(
+        _gameBrain?.contextEvidenceMemory.observations ??
+            const <ContextEvidenceObservation>[],
+      );
+  @visibleForTesting
   bool get debugHasContextEvidenceObserver => _gameBrain != null;
   @visibleForTesting
   int get debugQuestionExperienceObservationCount => _questionExperience.count;
