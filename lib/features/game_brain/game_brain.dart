@@ -3,6 +3,7 @@ export 'domain/brain_memory_entry.dart';
 export 'domain/brain_observation.dart';
 export 'domain/brain_recommendation.dart';
 export 'domain/context_evidence.dart';
+export 'decision/choose_difficulty_evidence_snapshot.dart';
 export 'est/bounded_outcome_descriptive_summary.dart';
 export 'interpretation/bounded_context_shadow_episode_recorder.dart';
 export 'interpretation/bounded_context_shadow_interpreter.dart';
