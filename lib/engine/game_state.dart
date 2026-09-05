@@ -3697,15 +3697,17 @@ class GameState extends ChangeNotifier {
       _reconcileP1F01TerminalIfSupported(questionToken, linked);
     }
     _resolveP1FollowUpAfterCanonicalContinuation();
-    _observeContextEvidence(
-      q,
-      (
-        submittedAnswer: val,
-        correct: isCorrect,
-        timedOut: isTimeout,
-        responseTimeMs: timeTaken,
-      ),
-    );
+    if (!isSkip) {
+      _observeContextEvidence(
+        q,
+        (
+          submittedAnswer: val,
+          correct: isCorrect,
+          timedOut: isTimeout,
+          responseTimeMs: timeTaken,
+        ),
+      );
+    }
     if (mentalMathTerminal || exhaustedTimeBank) {
       _endGameAfterFeedback(false, false);
     } else if (_delayedLossTimer == null) {

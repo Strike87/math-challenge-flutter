@@ -35,12 +35,17 @@ void main() {
     _expectNoAuthority(result);
   });
 
-  test('3: runtime outcomes bridge to exclusive aggregate counts', () async {
+  test('3: skips are excluded from exclusive runtime aggregate counts',
+      () async {
     final state = await _state();
     await _answer(state, correct: true);
     await _answer(state, correct: false);
+    final countBeforeSkip = state.debugContextEvidenceObservationCount;
+    await _skip(state);
+    expect(state.debugContextEvidenceObservationCount, countBeforeSkip);
     state.debugTimeoutForTest();
 
+    expect(state.debugContextEvidenceObservations, hasLength(3));
     final aggregate = bridge
         .fromObservations(state.debugContextEvidenceObservations)
         .aggregate
@@ -193,6 +198,12 @@ Future<void> _answer(GameState state, {required bool correct}) async {
           (choice) => (choice - question.ans).abs() >= 1e-9,
         );
   state.onAnswer(answer);
+  await Future<void>.delayed(const Duration(milliseconds: 1350));
+  state.rt.timer?.cancel();
+}
+
+Future<void> _skip(GameState state) async {
+  state.skip();
   await Future<void>.delayed(const Duration(milliseconds: 1350));
   state.rt.timer?.cancel();
 }
