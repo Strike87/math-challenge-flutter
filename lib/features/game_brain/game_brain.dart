@@ -4,6 +4,7 @@ export 'domain/brain_observation.dart';
 export 'domain/brain_recommendation.dart';
 export 'domain/context_evidence.dart';
 export 'decision/choose_difficulty_evidence_snapshot.dart';
+export 'decision/difficulty_candidate_topology_handoff.dart';
 export 'est/bounded_evidence_coverage.dart';
 export 'est/bounded_outcome_comparison.dart';
 export 'est/bounded_outcome_comparability.dart';
