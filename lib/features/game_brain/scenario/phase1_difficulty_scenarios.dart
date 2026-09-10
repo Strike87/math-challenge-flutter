@@ -3,7 +3,7 @@ import 'scenario_knowledge_library.dart';
 
 final ScenarioKnowledgeLibrary phase1DifficultyScenarioLibrary =
     ScenarioKnowledgeLibrary([
-  _proposed('StableAtCurrentDifficulty', requiredObservations: const [
+  _scenario('StableAtCurrentDifficulty', requiredObservations: const [
     'Bounded outcome evidence for the same factual context and executed difficulty across non-overlapping, provenance-preserving evidence partitions defined by the governing stability protocol.',
     'Partition identity sufficient to prevent cumulative or overlapping snapshots from being treated as separate evidence partitions.',
   ], comparableConditions: const [
@@ -26,7 +26,7 @@ final ScenarioKnowledgeLibrary phase1DifficultyScenarioLibrary =
   ], attributionLimitations: const [
     'Observed stability does not establish optimal difficulty, ability, mastery, learning, preference, recommendation, or policy suitability.',
   ]),
-  _proposed('ProductiveChallengeCandidate', requiredObservations: const [
+  _scenario('ProductiveChallengeCandidate', requiredObservations: const [
     'Bounded observable evidence required by a separately governed ProductiveChallenge measurement specification.',
     'Comparator evidence required by that specification.',
     'Every component required by that specification must originate from separately admissible observable facts with preserved provenance.',
@@ -50,7 +50,7 @@ final ScenarioKnowledgeLibrary phase1DifficultyScenarioLibrary =
   ], attributionLimitations: const [
     'Compatibility with ProductiveChallengeCandidate does not establish learning, productive struggle, desirable difficulty, motivation, mastery, preference, recommendation, or gameplay authority.',
   ]),
-  _proposed('OverchallengeCandidate', requiredObservations: const [
+  _scenario('OverchallengeCandidate', requiredObservations: const [
     'Bounded target-difficulty outcome evidence.',
     'Comparator-difficulty evidence explicitly supplied through the governed Decision Context or scenario protocol.',
     'Canonical candidate relationship or topology supplied by the canonical Decision Owner when the comparison depends on candidate structure.',
@@ -73,7 +73,7 @@ final ScenarioKnowledgeLibrary phase1DifficultyScenarioLibrary =
   ], attributionLimitations: const [
     'Compatibility with OverchallengeCandidate does not establish inability, frustration, cognitive overload, fixed capability, need to reduce difficulty, recommendation, or authority.',
   ]),
-  _proposed('UnderchallengeCandidate', requiredObservations: const [
+  _scenario('UnderchallengeCandidate', requiredObservations: const [
     'Bounded target-difficulty outcome evidence.',
     'Comparator evidence capable of testing the Underchallenge construct under a separately accepted measurement specification.',
     'Any structural relationship between candidate difficulties must be supplied by the canonical Decision Owner.',
@@ -97,7 +97,7 @@ final ScenarioKnowledgeLibrary phase1DifficultyScenarioLibrary =
   ], attributionLimitations: const [
     'Compatibility with UnderchallengeCandidate does not establish mastery, boredom, preference for harder content, readiness for a higher difficulty, recommendation, or gameplay authority.',
   ]),
-  _proposed('SparseHigherDifficultyEvidence', requiredObservations: const [
+  _scenario('SparseHigherDifficultyEvidence', requiredObservations: const [
     'Evidence-coverage information for the reference difficulty and for the candidate identified by the canonical Decision Owner as the relevant higher-difficulty comparator.',
     'Provenance sufficient to distinguish absent exposure, missing evidence, filtered evidence, evicted evidence, and admissible observed evidence.',
   ], comparableConditions: const [
@@ -118,7 +118,7 @@ final ScenarioKnowledgeLibrary phase1DifficultyScenarioLibrary =
   ], attributionLimitations: const [
     'Sparse higher-difficulty evidence does not establish poor fit, inability, overchallenge, preference, need for exploration, recommendation, or authority.',
   ]),
-  _proposed('RecentImprovementCandidate', requiredObservations: const [
+  _scenario('RecentImprovementCandidate', requiredObservations: const [
     'Temporally ordered recent and reference evidence contained in non-overlapping, provenance-preserving evidence partitions defined by the governing change protocol.',
     'Partition boundaries sufficient to prevent overlapping or cumulative snapshots from being treated as separate temporal evidence partitions.',
     'A separately validated change criterion appropriate to the evidence type and intended claim.',
@@ -143,7 +143,7 @@ final ScenarioKnowledgeLibrary phase1DifficultyScenarioLibrary =
   ], attributionLimitations: const [
     'Supported change in bounded measured performance would not by itself establish durable learning, mastery, generalized ability improvement, causal intervention effect, recommendation, or authority.',
   ]),
-  _proposed('RecentDeclineCandidate', requiredObservations: const [
+  _scenario('RecentDeclineCandidate', requiredObservations: const [
     'Temporally ordered recent and reference evidence contained in non-overlapping, provenance-preserving evidence partitions defined by the governing change protocol.',
     'Partition boundaries sufficient to prevent overlapping or cumulative snapshots from being treated as separate temporal evidence partitions.',
     'A separately validated change criterion appropriate to the evidence type and intended claim.',
@@ -168,7 +168,7 @@ final ScenarioKnowledgeLibrary phase1DifficultyScenarioLibrary =
   ], attributionLimitations: const [
     'Supported negative change in bounded measured performance would not establish loss of ability, loss of mastery, forgetting, motivation change, cognitive decline, recommendation, or authority.',
   ]),
-  _proposed('RecoveryCandidate', requiredObservations: const [
+  _scenario('RecoveryCandidate', requiredObservations: const [
     'Temporally ordered evidence capable of representing an earlier adverse pattern and a later positive change or return under the governing Recovery specification.',
     'Non-overlapping, provenance-preserving evidence partitions for every temporal phase required by that specification.',
     'Separately validated change criteria sufficient for every change claim required by the Recovery construct.',
@@ -192,31 +192,40 @@ final ScenarioKnowledgeLibrary phase1DifficultyScenarioLibrary =
   ], attributionLimitations: const [
     'Recovery does not establish relearning, resilience, restored mastery, psychological recovery, causal treatment effect, recommendation, or authority.',
   ]),
-  _proposed('TimeoutConcentrationAtDifficulty', requiredObservations: const [
-    'Valid timeout counts and exposure denominators at the target difficulty.',
-    'Valid comparator-difficulty timeout evidence under comparable timing conditions.',
-    'Canonically supplied candidate identity or topology when the comparison depends on difficulty structure.',
-  ], comparableConditions: const [
-    'Timing style, timer rules, factual context, and validity envelope must be comparable across target and comparator evidence.',
-    'Different timing regimes must not be silently pooled.',
-  ], supportingEvidence: const [
-    'A separately governed comparative analysis affirmatively identifies timeout occurrence as concentrated at the target difficulty according to its accepted comparison criterion.',
-  ], contradictingEvidence: const [
-    'A separately governed comparative analysis affirmatively identifies concentration elsewhere or another governed result explicitly incompatible with target-difficulty timeout concentration.',
-  ], alternativeExplanations: const [
-    'Different timing regimes, timer limits, mode rules, sparse exposure, context differences, assistance, or exposure selection may explain the observed timeout distribution.',
-  ], missingEvidence: const [
-    'Comparator timeout evidence or exposure denominators are unavailable.',
-    'Timing conditions required for comparability are missing or unresolved.',
-    'Failure to demonstrate target-specific concentration alone is insufficient or not evaluable rather than contradicting evidence.',
-  ], epistemicRequirements: const [
-    'Timeout events may be analyzed only as observed terminal outcomes under their valid timing context.',
-    'Recorded wall-clock responseTimeMs must not be used as clean cognitive-latency evidence.',
-    'Concentration requires a governed comparative method rather than a raw timeout count alone.',
-  ], attributionLimitations: const [
-    'Timeout concentration does not establish slowness, processing speed, cognitive load, ability, overchallenge, preference, recommendation, or authority.',
-  ]),
-  _proposed('AssistanceConditionedDifficulty', requiredObservations: const [
+  _scenario('TimeoutConcentrationAtDifficulty',
+      acceptanceState: ScenarioAcceptanceState.accepted,
+      requiredObservations: const [
+        'Valid timeout counts and exposure denominators at the target difficulty.',
+        'Valid comparator-difficulty timeout evidence under comparable timing conditions.',
+        'Canonically supplied candidate identity or topology when the comparison depends on difficulty structure.',
+      ],
+      comparableConditions: const [
+        'Timing style, timer rules, factual context, and validity envelope must be comparable across target and comparator evidence.',
+        'Different timing regimes must not be silently pooled.',
+      ],
+      supportingEvidence: const [
+        'A separately governed comparative analysis affirmatively identifies timeout occurrence as concentrated at the target difficulty according to its accepted comparison criterion.',
+      ],
+      contradictingEvidence: const [
+        'A separately governed comparative analysis affirmatively identifies concentration elsewhere or another governed result explicitly incompatible with target-difficulty timeout concentration.',
+      ],
+      alternativeExplanations: const [
+        'Different timing regimes, timer limits, mode rules, sparse exposure, context differences, assistance, or exposure selection may explain the observed timeout distribution.',
+      ],
+      missingEvidence: const [
+        'Comparator timeout evidence or exposure denominators are unavailable.',
+        'Timing conditions required for comparability are missing or unresolved.',
+        'Failure to demonstrate target-specific concentration alone is insufficient or not evaluable rather than contradicting evidence.',
+      ],
+      epistemicRequirements: const [
+        'Timeout events may be analyzed only as observed terminal outcomes under their valid timing context.',
+        'Recorded wall-clock responseTimeMs must not be used as clean cognitive-latency evidence.',
+        'Concentration requires a governed comparative method rather than a raw timeout count alone.',
+      ],
+      attributionLimitations: const [
+        'Timeout concentration does not establish slowness, processing speed, cognitive load, ability, overchallenge, preference, recommendation, or authority.',
+      ]),
+  _scenario('AssistanceConditionedDifficulty', requiredObservations: const [
     'Question-level evidence distinguishing assisted from unassisted exposure at the same executed difficulty.',
     'Assistance provenance sufficient to identify the assistance condition actually applicable to each observed question outcome.',
     'Comparable outcome evidence across the assistance conditions required by the governing specification.',
@@ -242,8 +251,9 @@ final ScenarioKnowledgeLibrary phase1DifficultyScenarioLibrary =
   ]),
 ]);
 
-GovernedScenarioDefinition _proposed(
+GovernedScenarioDefinition _scenario(
   String id, {
+  ScenarioAcceptanceState acceptanceState = ScenarioAcceptanceState.proposed,
   required List<String> requiredObservations,
   required List<String> comparableConditions,
   required List<String> supportingEvidence,
@@ -268,5 +278,5 @@ GovernedScenarioDefinition _proposed(
         epistemicRequirements: epistemicRequirements,
         attributionLimitations: attributionLimitations,
       ),
-      acceptanceState: ScenarioAcceptanceState.proposed,
+      acceptanceState: acceptanceState,
     );
