@@ -67,7 +67,7 @@ void main() {
         for (var i = 0; i < answered; i++) _observation(context, difficulty),
       ];
 
-  test('positive, zero, and negative differences retain EST orientation', () {
+  test('evaluable states retain the exact EST context and orientation', () {
     final positive = evaluate(
       comparability: assessment(
         first: observations(Difficulty.easy),
@@ -89,11 +89,19 @@ void main() {
 
     expect(positive.state,
         TimeoutConcentrationEvaluationState.descriptivelyCompatible);
+    expect(positive.context, same(context));
     expect(positive.observedTimeoutRateDifference, 0.5);
     expect(zero.state,
         TimeoutConcentrationEvaluationState.noDirectionalConcentration);
+    expect(zero.context, same(context));
     expect(negative.state,
         TimeoutConcentrationEvaluationState.descriptivelyIncompatible);
+    expect(negative.context, same(context));
+    expect(positive.targetDifficulty, Difficulty.hard);
+    expect(positive.comparatorDifficulty, Difficulty.easy);
+    expect(positive.timingComparability, TimeoutTimingComparability.comparable);
+    expect(positive.authority, TimeoutConcentrationEvaluationAuthority.none);
+    expect(positive.mayAffectGameplay, isFalse);
   });
 
   test('fails closed for incomplete and not comparable EST', () {
@@ -118,8 +126,41 @@ void main() {
 
     expect(incomplete.notEvaluableReason,
         TimeoutConcentrationNotEvaluableReason.incompleteEvidence);
+    expect(incomplete.context, isNull);
     expect(notComparable.notEvaluableReason,
         TimeoutConcentrationNotEvaluableReason.observedComparisonNotComparable);
+    expect(notComparable.context, isNull);
+  });
+
+  test('preserves not-evaluable reason precedence without context', () {
+    final incomplete = assessment();
+    final contextMismatch = assessment(
+      first: observations(Difficulty.easy),
+      second: [
+        _observation(_context(Operation.multiplication), Difficulty.hard),
+      ],
+    );
+
+    final topologyFirst = evaluate(
+      comparability: incomplete,
+      handoff:
+          topology(reference: Difficulty.medium, candidate: Difficulty.hard),
+    );
+    final observedComparisonFirst = evaluate(
+      comparability: contextMismatch,
+      timing: TimeoutTimingComparability.unknown,
+    );
+
+    expect(
+      topologyFirst.notEvaluableReason,
+      TimeoutConcentrationNotEvaluableReason.topologyPairMismatch,
+    );
+    expect(topologyFirst.context, isNull);
+    expect(
+      observedComparisonFirst.notEvaluableReason,
+      TimeoutConcentrationNotEvaluableReason.observedComparisonNotComparable,
+    );
+    expect(observedComparisonFirst.context, isNull);
   });
 
   test('requires supplied timing handoff', () {

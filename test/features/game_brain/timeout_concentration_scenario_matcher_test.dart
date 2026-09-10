@@ -6,16 +6,16 @@ import 'package:math_challenge/models/enums.dart';
 
 void main() {
   const matcher = TimeoutConcentrationScenarioMatcher();
+  final context = ContextEvidenceKey(
+    operation: Operation.addition,
+    numberType: NumberType.natural,
+  );
 
   TimeoutConcentrationEvaluation evaluation({
     int firstTimeouts = 0,
     int secondTimeouts = 0,
     bool incomplete = false,
   }) {
-    final context = ContextEvidenceKey(
-      operation: Operation.addition,
-      numberType: NumberType.natural,
-    );
     List<ContextEvidenceObservation> observations(
       Difficulty difficulty,
       int timeouts,
@@ -200,6 +200,7 @@ void main() {
       isTrue,
     );
     expect(identical(result.evaluation, evaluatorResult), isTrue);
+    expect(result.evaluation.context, same(context));
     expect(result.notEvaluableReason, isNull);
   });
 
@@ -249,6 +250,7 @@ void main() {
 
     for (final pattern in [
       'ContextEvidenceObservation',
+      'ContextEvidenceKey',
       'BoundedOutcomeDescriptiveSummarizer',
       'BoundedOutcomeComparator',
       'BoundedComparabilityAssessor',

@@ -1,5 +1,6 @@
 import '../../../models/enums.dart';
 import '../decision/difficulty_candidate_topology_handoff.dart';
+import '../domain/context_evidence.dart';
 import '../est/bounded_outcome_comparability.dart';
 import '../est/bounded_outcome_comparison.dart';
 
@@ -30,6 +31,7 @@ final class TimeoutConcentrationEvaluation {
   const TimeoutConcentrationEvaluation._({
     required this.state,
     required this.notEvaluableReason,
+    required this.context,
     required this.targetDifficulty,
     required this.comparatorDifficulty,
     required this.observedTimeoutRateDifference,
@@ -38,6 +40,7 @@ final class TimeoutConcentrationEvaluation {
 
   final TimeoutConcentrationEvaluationState state;
   final TimeoutConcentrationNotEvaluableReason? notEvaluableReason;
+  final ContextEvidenceKey? context;
   final Difficulty targetDifficulty;
   final Difficulty comparatorDifficulty;
   final double? observedTimeoutRateDifference;
@@ -145,6 +148,7 @@ final class TimeoutConcentrationEvaluator {
               ? TimeoutConcentrationEvaluationState.noDirectionalConcentration
               : TimeoutConcentrationEvaluationState.descriptivelyIncompatible,
       notEvaluableReason: null,
+      context: comparison.first.context,
       targetDifficulty: targetDifficulty,
       comparatorDifficulty: comparatorDifficulty,
       observedTimeoutRateDifference: difference,
@@ -161,6 +165,7 @@ final class TimeoutConcentrationEvaluator {
       TimeoutConcentrationEvaluation._(
         state: TimeoutConcentrationEvaluationState.notEvaluable,
         notEvaluableReason: reason,
+        context: null,
         targetDifficulty: targetDifficulty,
         comparatorDifficulty: comparatorDifficulty,
         observedTimeoutRateDifference: null,
