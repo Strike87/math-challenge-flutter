@@ -356,11 +356,16 @@ void main() {
     expect(entries.map((entry) => entry.definition.id).toSet(), hasLength(10));
   });
 
-  test('keeps definitions proposed, versioned, and contract-frozen', () {
+  test('keeps definitions dispositioned, versioned, and contract-frozen', () {
     for (final entry in entries) {
       final definition = entry.definition;
       expect(definition.version, 1);
-      expect(entry.acceptanceState, ScenarioAcceptanceState.proposed);
+      expect(
+        entry.acceptanceState,
+        definition.id == 'TimeoutConcentrationAtDifficulty'
+            ? ScenarioAcceptanceState.accepted
+            : ScenarioAcceptanceState.proposed,
+      );
       expect(
         definition.questionBeingTested,
         'Is bounded evidence consistent with ${definition.name}?',
@@ -400,13 +405,40 @@ void main() {
     }
   });
 
-  test('exposes no accepted or gameplay-authoritative scenario', () {
-    expect(phase1DifficultyScenarioLibrary.acceptedDefinitions, isEmpty);
+  test('exposes one accepted but no gameplay-authoritative scenario', () {
+    final acceptedDefinitions =
+        phase1DifficultyScenarioLibrary.acceptedDefinitions;
+    expect(acceptedDefinitions, hasLength(1));
+    expect(acceptedDefinitions.single.id, 'TimeoutConcentrationAtDifficulty');
     for (final id in expectedIds) {
-      expect(phase1DifficultyScenarioLibrary.acceptedById(id), isNull);
+      final accepted = phase1DifficultyScenarioLibrary.acceptedById(id);
+      if (id == 'TimeoutConcentrationAtDifficulty') {
+        final acceptedEntry =
+            entries.singleWhere((entry) => entry.definition.id == id);
+        expect(accepted, acceptedDefinitions.single);
+        expect(accepted, acceptedEntry.definition);
+        expect(
+          acceptedEntry.acceptanceState,
+          ScenarioAcceptanceState.accepted,
+        );
+        expect(acceptedEntry.authority, ScenarioKnowledgeAuthority.none);
+        expect(acceptedEntry.mayAffectGameplay, isFalse);
+      } else {
+        expect(accepted, isNull);
+      }
       expect(phase1DifficultyScenarioLibrary.acceptedById(id.toLowerCase()),
           isNull);
     }
+    expect(
+      entries.where(
+          (entry) => entry.acceptanceState == ScenarioAcceptanceState.proposed),
+      hasLength(9),
+    );
+    expect(
+      entries.where(
+          (entry) => entry.acceptanceState == ScenarioAcceptanceState.rejected),
+      isEmpty,
+    );
     for (final entry in entries) {
       expect(entry.authority, ScenarioKnowledgeAuthority.none);
       expect(entry.mayAffectGameplay, isFalse);
