@@ -20,6 +20,7 @@ export 'domain/session_evidence.dart';
 export 'domain/tentative_misconception_hypothesis.dart';
 export 'memory/brain_session_memory.dart';
 export 'memory/context_evidence_memory.dart';
+export 'memory/timeout_concentration_scenario_evidence_memory.dart';
 export 'reasoning/brain_decision_policy.dart';
 export 'reasoning/recommendations/default_recommendation_policy.dart';
 export 'reasoning/recommendations/recommendation_policy.dart';
