@@ -28,6 +28,7 @@ export 'reasoning/session/learner_reasoner.dart';
 export 'scenario/scenario_definition.dart';
 export 'scenario/scenario_knowledge_library.dart';
 export 'scenario/phase1_difficulty_scenarios.dart';
+export 'scenario/timeout_concentration_evaluator.dart';
 
 import 'domain/brain_decision.dart';
 import 'domain/brain_observation.dart';
