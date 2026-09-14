@@ -12,6 +12,7 @@ export 'est/bounded_outcome_comparability.dart';
 export 'est/bounded_outcome_descriptive_summary.dart';
 export 'evaluation/timeout_scenario_candidate_evidence_contribution.dart';
 export 'evaluation/choose_difficulty_candidate_evaluation.dart';
+export 'evaluation/choose_difficulty_candidate_epistemic_preservation.dart';
 export 'interpretation/bounded_context_shadow_episode_recorder.dart';
 export 'interpretation/bounded_context_shadow_interpreter.dart';
 export 'interpretation/bounded_context_shadow_partitioned_snapshot.dart';
