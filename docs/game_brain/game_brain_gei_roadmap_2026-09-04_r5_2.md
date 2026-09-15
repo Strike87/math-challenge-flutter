@@ -522,4 +522,120 @@ Daily Mental Math v1 is a short ready-to-play daily session. Persistent daily-st
 
 Mental Math v1 does not authorize GameBrain personalization, Player Model inference, cognitive/psychological profiling, or use of Mental Math outcomes inside P1-F01. Future GameBrain practice recommendations require a later bounded Decision Context / evidence contract.
 
+### 62.3 Target Clash — concept frozen / planned
+
+**Status:** CONCEPT FROZEN · PLANNED · NOT YET IMPLEMENTED. This roadmap edit does **not** authorize implementation.
+
+#### Core gameplay
+
+Target Clash compares one mathematical expression with one numeric Target. The player always compares `Expression ? Target` and chooses `<`, `=`, or `>`. Button semantics remain fixed throughout the mode. V1 has no Expression-vs-Expression interaction, no prompt-cluttering mechanics, and keeps the mathematical prompt visually simple.
+
+```text
+TARGET 15
+
+8 + 9
+
+<   =   >
+```
+
+The three fields remain semantically distinct even when the two numeric values are equal:
+
+```text
+ExpressionValue = evaluated numeric result
+TargetValue = numeric comparison target
+PresentationAnswer = one of <, =, >
+```
+
+```text
+ExpressionValue = 17
+TargetValue = 15
+PresentationAnswer = >
+```
+
+The player does not enter the calculated numeric result.
+
+#### Visual and flow contract
+
+Preserve the existing Math Challenge visual identity and navigation:
+
+```text
+Number Type → Config → Player Setup → Gameplay → Results
+```
+
+Reuse existing cards, colors, spacing, typography, animations, button language, and navigation conventions.
+
+> The math prompt stays simple. The excitement happens around it.
+
+#### Frozen gameplay systems
+
+1. **Target Streak:** multiple consecutive questions may use the same Target to create familiarity; the Target changes after a bounded streak. Exact streak length is not frozen here.
+2. **Combo Meter:** consecutive correct answers build a visible combo that affects scoring and feedback only; it must not change mathematical correctness.
+3. **Target Zones:** conceptual zones are Normal Zone, Close Call, Danger Zone, and Bullseye. They describe the closeness of `ExpressionValue` to `TargetValue`; numeric distance thresholds remain for a later implementation contract.
+4. **Bullseye:** `ExpressionValue == TargetValue`; equality event only.
+5. **Perfect Hit:** correctly selecting `=` on a Bullseye triggers special visual/audio feedback and may award bonus score or Clash Power. Exact bonus values are not frozen here.
+6. **Clash Power:** correct play charges a visible power meter; when sufficiently charged, Power Shot becomes available. Exact charge counts are not frozen here.
+7. **Power Shot:** a special higher-value challenge that retains the same Expression-vs-Target interaction and can preferentially use Close Call or Danger Zone. Exact scoring and tuning are not frozen here.
+8. **Triple Clash:** a bounded mini-sequence designed to include all three relations (`<`, `=`, `>`), with `TRIPLE CLASH COMPLETE` completion feedback. This is gameplay completion feedback only; it must not claim scientific or learner-state “mastery.”
+9. **Fever Mode:** a short temporary high-energy sequence that may increase visual pacing, score multiplier, or close-target frequency. It must not change the meaning of `<`, `=`, or `>`; exact trigger, duration, and multiplier are not frozen here.
+10. **Boss Target:** a progression encounter using the same core comparison mechanic; correct answers damage the boss. No new mathematical input format. Boss health and frequency are not frozen here.
+11. **Bullseye Critical Hit:** a correct Perfect Hit during Boss Target may produce enhanced damage or feedback. Exact damage values are not frozen here.
+12. **Target Ladder:** visible progression through a sequence of Targets that may culminate in Final Target.
+13. **Final Target:** final progression encounter using the same core Expression-vs-Target mechanic; no new answer format.
+14. **Clash Reveal:** immediately after an answer, briefly reveal the mathematical relationship. It occurs after answering, must not clutter the unanswered prompt, is brief, gives educational feedback, and has no frozen duration. Wrong answers also reveal the correct relationship.
+
+```text
+Correct:
+8 + 9 = 17
+17 > 15
+
+Perfect Hit:
+7 × 5 = 35
+35 = 35
+PERFECT HIT
+```
+
+#### Difficulty direction
+
+This is conceptual direction only.
+
+- **Easy:** Normal Zones, Target Streak, Combo Meter, occasional Bullseye / Perfect Hit, and gentle progression.
+- **Medium:** closer comparisons, Close Calls, Clash Power, Power Shot, Triple Clash, and Boss Target.
+- **Hard:** tighter comparisons, Danger Zones, Fever Mode, stronger Boss sequences, and Final Target.
+
+Numeric ranges, probability distributions, exact zone distances, streak lengths, boss health, scoring, multipliers, charge counts, and question counts require a later implementation contract.
+
+#### V1 firewalls
+
+- No Expression vs Expression.
+- No changing relation semantics.
+- No cluttering the mathematical prompt.
+- No GameBrain gameplay authority.
+- No GameBrain recommendation from Target Clash data.
+- No automatic use of Target Clash data as Phase-1 `chooseDifficulty` evidence.
+- No learner-model or mastery inference from Target Clash.
+- No implementation authorization from this documentation task.
+
+Target Clash remains a player-facing product feature unless separately governed for GameBrain evidence later:
+
+```text
+product feature != GameBrain evidence
+GameBrain evidence != gameplay authority
+```
+
+#### Scope-creep rule
+
+Any Target Clash mechanic proposed after this concept freeze goes to the **FUTURE BACKLOG** and does not automatically enter V1.
+
+#### Roadmap status
+
+```text
+TARGET CLASH
+Concept = APPROVED / FROZEN
+Roadmap = PLANNED
+Implementation = NOT STARTED
+GameBrain authority = NONE
+V1 prompt = Expression vs numeric Target only
+Answer interface = < / = / >
+```
+
 ---
