@@ -25,6 +25,7 @@ export 'memory/brain_session_memory.dart';
 export 'memory/context_evidence_memory.dart';
 export 'memory/timeout_concentration_scenario_evidence_memory.dart';
 export 'model/timeout_player_difficulty_evidence_synthesis.dart';
+export 'policy/choose_difficulty_policy_contract.dart';
 export 'reasoning/brain_decision_policy.dart';
 export 'reasoning/recommendations/default_recommendation_policy.dart';
 export 'reasoning/recommendations/recommendation_policy.dart';
