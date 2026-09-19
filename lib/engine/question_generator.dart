@@ -46,6 +46,222 @@ class QuestionGenerator {
     );
   }
 
+  /// Builds a canonical direct question for an exact reachable result.
+  Question? buildDirectForResult({
+    required Operation type,
+    required Difficulty diff,
+    required NumberType numType,
+    required num result,
+  }) {
+    if (!result.isFinite ||
+        numType == NumberType.mixed ||
+        !_isBasicOperation(type)) {
+      return null;
+    }
+
+    final candidates = _directFactsForResult(type, diff, numType, result);
+    if (candidates.isEmpty) return null;
+    return _renderFact(candidates[_rng.nextInt(candidates.length)]);
+  }
+
+  List<MathFact> _directFactsForResult(
+    Operation type,
+    Difficulty diff,
+    NumberType numType,
+    num result,
+  ) {
+    final candidates = <MathFact>[];
+    void add(num left, num right, num normalizedResult, {int? decimalPlaces}) {
+      final fact = MathFact(
+        operation: type,
+        left: left,
+        right: right,
+        result: normalizedResult,
+        representation: FactRepresentation.direct,
+        difficulty: diff,
+        numberType: numType,
+        rationalDecimalPlaces: decimalPlaces,
+        allowsRelatedMissingRepresentations: numType == NumberType.natural,
+      );
+      if (fact.isMathematicallyValid) candidates.add(fact);
+    }
+
+    if (numType == NumberType.rationals) {
+      final decimalPlaces = _rationalDecimalPlaces(diff);
+      final factor = pow(10, decimalPlaces).toInt();
+      final scaled = result.toDouble() * factor;
+      final resultTick = scaled.round();
+      final normalizedResult = resultTick / factor;
+      final difference = (result.toDouble() - normalizedResult).abs();
+      const machineEpsilon = 2.220446049250313e-16;
+      if (normalizedResult == 0
+          ? result.toDouble() != 0
+          : difference > normalizedResult.abs() * machineEpsilon) {
+        return candidates;
+      }
+      final minOperandTick = factor + 1;
+      final maxOperandTick = 16 * factor - 1;
+      bool isDecimalOperand(int tick) =>
+          tick >= minOperandTick &&
+          tick <= maxOperandTick &&
+          tick % factor != 0;
+      switch (type) {
+        case Operation.addition:
+          for (var left = minOperandTick; left <= maxOperandTick; left++) {
+            final right = resultTick - left;
+            if (isDecimalOperand(right))
+              add(
+                left / factor,
+                right / factor,
+                normalizedResult,
+                decimalPlaces: decimalPlaces,
+              );
+          }
+        case Operation.subtraction:
+          if (resultTick < factor + 1 ||
+              resultTick > 9 * factor - 1 ||
+              resultTick % factor == 0) {
+            break;
+          }
+          for (var right = minOperandTick; right <= maxOperandTick; right++) {
+            final left = right + resultTick;
+            if (left < 25 * factor)
+              add(
+                left / factor,
+                right / factor,
+                normalizedResult,
+                decimalPlaces: decimalPlaces,
+              );
+          }
+        case Operation.multiplication:
+          for (var right = 2; right <= 9; right++) {
+            if (resultTick % right == 0) {
+              final left = resultTick ~/ right;
+              if (isDecimalOperand(left))
+                add(
+                  left / factor,
+                  right,
+                  normalizedResult,
+                  decimalPlaces: decimalPlaces,
+                );
+            }
+          }
+        case Operation.division:
+          if (!isDecimalOperand(resultTick)) break;
+          for (var right = 2; right <= 9; right++) {
+            add(
+              right * normalizedResult,
+              right,
+              normalizedResult,
+              decimalPlaces: decimalPlaces,
+            );
+          }
+        default:
+          break;
+      }
+      return candidates;
+    }
+
+    if (result != result.roundToDouble()) return candidates;
+    final target = result.toInt();
+    final range = _operandRange(type, diff);
+    final min = range.$1;
+    final max = range.$2;
+    if (numType == NumberType.natural) {
+      switch (type) {
+        case Operation.addition:
+          for (var left = min; left <= max; left++) {
+            final right = target - left;
+            if (right >= min && right <= max) add(left, right, target);
+          }
+        case Operation.subtraction:
+          if (target >= min && target <= max) {
+            for (var right = min; right <= max; right++) {
+              add(right + target, right, target);
+            }
+          }
+        case Operation.multiplication:
+          for (var left = min; left <= max; left++) {
+            if (target % left == 0) {
+              final right = target ~/ left;
+              if (right >= min && right <= max) add(left, right, target);
+            }
+          }
+        case Operation.division:
+          if (target >= min && target <= max) {
+            for (var right = min; right <= max; right++) {
+              add(right * target, right, target);
+            }
+          }
+        default:
+          break;
+      }
+      return candidates;
+    }
+
+    if (numType != NumberType.integers) return candidates;
+    switch (type) {
+      case Operation.addition:
+        for (var leftMagnitude = min; leftMagnitude <= max; leftMagnitude++) {
+          for (final leftSign in [-1, 1]) {
+            final left = leftMagnitude * leftSign;
+            final right = target - left;
+            if (right.abs() >= min && right.abs() <= max) {
+              add(left, right, target);
+            }
+          }
+        }
+      case Operation.subtraction:
+        if (target >= min && target <= max) {
+          for (var rawRight = min; rawRight <= max; rawRight++) {
+            add(rawRight + target, rawRight, target);
+          }
+        }
+        for (var rightMagnitude = min;
+            rightMagnitude <= max;
+            rightMagnitude++) {
+          final rawResult = target - 2 * rightMagnitude;
+          if (rawResult >= min && rawResult <= max) {
+            add(rightMagnitude + rawResult, -rightMagnitude, target);
+          }
+        }
+      case Operation.multiplication:
+        for (var leftMagnitude = min; leftMagnitude <= max; leftMagnitude++) {
+          if (target % leftMagnitude != 0) continue;
+          final rightMagnitude = (target ~/ leftMagnitude).abs();
+          if (rightMagnitude < min || rightMagnitude > max) continue;
+          for (final leftSign in [-1, 1]) {
+            for (final rightSign in [-1, 1]) {
+              final left = leftMagnitude * leftSign;
+              final right = rightMagnitude * rightSign;
+              if (left * right == target) add(left, right, target);
+            }
+          }
+        }
+      case Operation.division:
+        if (target.abs() >= min && target.abs() <= max) {
+          for (var right = min; right <= max; right++) {
+            add(right * target, right, target);
+          }
+        }
+      default:
+        break;
+    }
+    return candidates;
+  }
+
+  bool _isBasicOperation(Operation operation) =>
+      operation == Operation.addition ||
+      operation == Operation.subtraction ||
+      operation == Operation.multiplication ||
+      operation == Operation.division;
+
+  int _rationalDecimalPlaces(Difficulty difficulty) => switch (difficulty) {
+        Difficulty.easy || Difficulty.medium => 1,
+        Difficulty.hard || Difficulty.expert => 2,
+        Difficulty.insane => 3,
+      };
+
   /// Builds a different, legal representation of a generator-created fact.
   ///
   /// [allowedOperations] contains effective basic operations. Supplying both
