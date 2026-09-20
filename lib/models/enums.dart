@@ -174,7 +174,7 @@ enum GameMode {
 }
 
 /// Identifies whether a run came from normal setup or Operation Quest.
-enum GameRunType { normal, operationQuest }
+enum GameRunType { normal, operationQuest, targetClash }
 
 /// Identifies the Mental Math entry that owns a run, when applicable.
 enum MentalMathEntry { freePractice, daily, weakSkills }

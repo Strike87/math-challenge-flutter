@@ -23,6 +23,7 @@ import '../features/game_brain/study/p1_f01_study_store.dart';
 import '../features/gameplay/domain/question_difficulty_legality.dart';
 import '../features/gameplay/domain/survival_progression_policy.dart';
 import '../features/gameplay/domain/question_mechanic.dart';
+import '../features/target_clash/domain/target_clash_run_config.dart';
 import '../features/modals/presentation/toast_controller.dart';
 import '../features/operation_quest/domain/operation_quest.dart';
 import '../features/weak_skills/domain/weak_skills_policy.dart';
@@ -338,6 +339,7 @@ class GameRunSnapshot {
     this.weakSkillsPlan,
     this.mentalMathEntry,
     this.dailyMentalMathProfile,
+    this.targetClashConfig,
     this.p1ActivityRunContext = P1ActivityRunContext.unknown,
     this.p1AgencyRoute = P1AgencyRoute.unknown,
   });
@@ -359,8 +361,44 @@ class GameRunSnapshot {
   final WeakSkillsPlan? weakSkillsPlan;
   final MentalMathEntry? mentalMathEntry;
   final DailyMentalMathProfile? dailyMentalMathProfile;
+  final TargetClashRunConfig? targetClashConfig;
   final P1ActivityRunContext p1ActivityRunContext;
   final P1AgencyRoute p1AgencyRoute;
+
+  factory GameRunSnapshot.targetClash(TargetClashRunConfig config) =>
+      GameRunSnapshot(
+        runType: GameRunType.targetClash,
+        mode: GameMode.standard,
+        operation: config.operation,
+        difficulty: config.difficulty,
+        numberType: config.numberType,
+        answerStyle: AnswerStyle.choice4,
+        players: 1,
+        questionTarget: config.questionTarget,
+        targetClashConfig: config,
+      );
+
+  bool get hasValidTargetClashEnvelope {
+    final config = targetClashConfig;
+    if (runType != GameRunType.targetClash) return config == null;
+    return config != null &&
+        operation == config.operation &&
+        difficulty == config.difficulty &&
+        numberType == config.numberType &&
+        mode == GameMode.standard &&
+        players == 1 &&
+        timingStyle == TimingStyle.perQuestion &&
+        questionMechanic == QuestionMechanic.standard &&
+        answerStyle == AnswerStyle.choice4 &&
+        questionTarget == config.questionTarget &&
+        operationQuestStageId == null &&
+        operationPool == null &&
+        !integerQuest &&
+        !decimalQuest &&
+        weakSkillsPlan == null &&
+        mentalMathEntry == null &&
+        dailyMentalMathProfile == null;
+  }
 
   GameRunSnapshot withTimingStyle(TimingStyle value) => GameRunSnapshot(
         runType: runType,
@@ -373,13 +411,16 @@ class GameRunSnapshot {
         questionTarget: questionTarget,
         operationQuestStageId: operationQuestStageId,
         questionMechanic: questionMechanic,
-        timingStyle: value,
+        timingStyle: runType == GameRunType.targetClash
+            ? TimingStyle.perQuestion
+            : value,
         operationPool: operationPool,
         integerQuest: integerQuest,
         decimalQuest: decimalQuest,
         weakSkillsPlan: weakSkillsPlan,
         mentalMathEntry: mentalMathEntry,
         dailyMentalMathProfile: dailyMentalMathProfile,
+        targetClashConfig: targetClashConfig,
         p1ActivityRunContext: p1ActivityRunContext,
         p1AgencyRoute: p1AgencyRoute,
       );
@@ -402,6 +443,7 @@ class GameRunSnapshot {
         weakSkillsPlan: weakSkillsPlan,
         mentalMathEntry: mentalMathEntry,
         dailyMentalMathProfile: dailyMentalMathProfile,
+        targetClashConfig: targetClashConfig,
         p1ActivityRunContext: p1ActivityRunContext,
         p1AgencyRoute: value,
       );
@@ -746,6 +788,7 @@ class GameState extends ChangeNotifier {
       familyEligibility == FamilyEligibility.eligible;
   bool get isOperationQuest =>
       _runSnapshot?.runType == GameRunType.operationQuest;
+  bool get isTargetClash => _runSnapshot?.runType == GameRunType.targetClash;
   bool get isMissingOperation =>
       _runSnapshot?.questionMechanic == QuestionMechanic.missingOperation;
   bool get isMissingOperationQuest => isOperationQuest && isMissingOperation;
@@ -846,10 +889,12 @@ class GameState extends ChangeNotifier {
         _ => '',
       };
   int get activeQuestionTarget => _runSnapshot?.questionTarget ?? questionCount;
-  bool get activeAdaptive =>
-      isOperationQuest || isTimeBankRun || _runSnapshot?.mentalMathEntry != null
-          ? false
-          : adaptive;
+  bool get activeAdaptive => isOperationQuest ||
+          isTargetClash ||
+          isTimeBankRun ||
+          _runSnapshot?.mentalMathEntry != null
+      ? false
+      : adaptive;
   bool get effectiveGameBrainEnabled =>
       gameBrainPreference &&
       gameBrainEligibility == GameBrainEligibility.eligible;
@@ -2705,6 +2750,14 @@ class GameState extends ChangeNotifier {
     GameRunSnapshot? replaySnapshot,
     bool skipMentalMathCountdown = false,
   }) {
+    if (replaySnapshot != null && !replaySnapshot.hasValidTargetClashEnvelope) {
+      notifyListeners();
+      return;
+    }
+    if (replaySnapshot?.runType == GameRunType.targetClash) {
+      notifyListeners();
+      return;
+    }
     _postFeedbackTimer?.cancel();
     _delayedResultModalTimer?.cancel();
 
@@ -3801,6 +3854,7 @@ class GameState extends ChangeNotifier {
     }) outcome,
   ) {
     final snapshot = _runSnapshot!;
+    if (snapshot.runType == GameRunType.targetClash) return;
     if (snapshot.mentalMathEntry != null) return;
     final observation = ContextEvidenceObservation(
       context: _contextEvidenceKey(snapshot, question),
@@ -5428,6 +5482,7 @@ class GameState extends ChangeNotifier {
   }
 
   bool _isPowerUpBlocked(PowerUp pu) {
+    if (isTargetClash) return true;
     if (_isMentalMathRun) return true;
     if (pu == PowerUp.fifty && rt.answerStyle == AnswerStyle.trueFalse) {
       return true;
