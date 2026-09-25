@@ -23,6 +23,11 @@ import '../features/game_brain/study/p1_f01_study_store.dart';
 import '../features/gameplay/domain/question_difficulty_legality.dart';
 import '../features/gameplay/domain/survival_progression_policy.dart';
 import '../features/gameplay/domain/question_mechanic.dart';
+import '../features/target_clash/domain/target_clash_run_config.dart';
+import '../features/target_clash/domain/presentation_answer.dart';
+import '../features/target_clash/domain/target_clash_question.dart';
+import '../features/target_clash/domain/target_clash_question_generator.dart';
+import '../features/target_clash/domain/target_clash_runtime_state.dart';
 import '../features/modals/presentation/toast_controller.dart';
 import '../features/operation_quest/domain/operation_quest.dart';
 import '../features/weak_skills/domain/weak_skills_policy.dart';
@@ -338,6 +343,7 @@ class GameRunSnapshot {
     this.weakSkillsPlan,
     this.mentalMathEntry,
     this.dailyMentalMathProfile,
+    this.targetClashConfig,
     this.p1ActivityRunContext = P1ActivityRunContext.unknown,
     this.p1AgencyRoute = P1AgencyRoute.unknown,
   });
@@ -359,8 +365,44 @@ class GameRunSnapshot {
   final WeakSkillsPlan? weakSkillsPlan;
   final MentalMathEntry? mentalMathEntry;
   final DailyMentalMathProfile? dailyMentalMathProfile;
+  final TargetClashRunConfig? targetClashConfig;
   final P1ActivityRunContext p1ActivityRunContext;
   final P1AgencyRoute p1AgencyRoute;
+
+  factory GameRunSnapshot.targetClash(TargetClashRunConfig config) =>
+      GameRunSnapshot(
+        runType: GameRunType.targetClash,
+        mode: GameMode.standard,
+        operation: config.operation,
+        difficulty: config.difficulty,
+        numberType: config.numberType,
+        answerStyle: AnswerStyle.choice4,
+        players: 1,
+        questionTarget: config.questionTarget,
+        targetClashConfig: config,
+      );
+
+  bool get hasValidTargetClashEnvelope {
+    final config = targetClashConfig;
+    if (runType != GameRunType.targetClash) return config == null;
+    return config != null &&
+        operation == config.operation &&
+        difficulty == config.difficulty &&
+        numberType == config.numberType &&
+        mode == GameMode.standard &&
+        players == 1 &&
+        timingStyle == TimingStyle.perQuestion &&
+        questionMechanic == QuestionMechanic.standard &&
+        answerStyle == AnswerStyle.choice4 &&
+        questionTarget == config.questionTarget &&
+        operationQuestStageId == null &&
+        operationPool == null &&
+        !integerQuest &&
+        !decimalQuest &&
+        weakSkillsPlan == null &&
+        mentalMathEntry == null &&
+        dailyMentalMathProfile == null;
+  }
 
   GameRunSnapshot withTimingStyle(TimingStyle value) => GameRunSnapshot(
         runType: runType,
@@ -373,13 +415,16 @@ class GameRunSnapshot {
         questionTarget: questionTarget,
         operationQuestStageId: operationQuestStageId,
         questionMechanic: questionMechanic,
-        timingStyle: value,
+        timingStyle: runType == GameRunType.targetClash
+            ? TimingStyle.perQuestion
+            : value,
         operationPool: operationPool,
         integerQuest: integerQuest,
         decimalQuest: decimalQuest,
         weakSkillsPlan: weakSkillsPlan,
         mentalMathEntry: mentalMathEntry,
         dailyMentalMathProfile: dailyMentalMathProfile,
+        targetClashConfig: targetClashConfig,
         p1ActivityRunContext: p1ActivityRunContext,
         p1AgencyRoute: p1AgencyRoute,
       );
@@ -402,6 +447,7 @@ class GameRunSnapshot {
         weakSkillsPlan: weakSkillsPlan,
         mentalMathEntry: mentalMathEntry,
         dailyMentalMathProfile: dailyMentalMathProfile,
+        targetClashConfig: targetClashConfig,
         p1ActivityRunContext: p1ActivityRunContext,
         p1AgencyRoute: value,
       );
@@ -451,6 +497,7 @@ class GameState extends ChangeNotifier {
     int Function()? nowMillisProvider,
     AdaptiveShadowEvaluator? adaptiveShadowEvaluator,
     QuestionGenerator? questionGenerator,
+    Random? runRandom,
     P1F01IntegrityStore? p1F01IntegrityStore,
     P1F01StudyCoordinator? p1F01StudyCoordinator,
     ContextEvidenceShadowObserver? contextEvidenceShadowObserver,
@@ -464,6 +511,7 @@ class GameState extends ChangeNotifier {
         _adaptiveShadowEvaluator =
             adaptiveShadowEvaluator ?? evaluateAdaptiveShadow,
         _qgen = questionGenerator ?? QuestionGenerator(),
+        _rng = runRandom ?? Random(),
         _contextEvidenceShadowObserver = contextEvidenceShadowObserver,
         _contextEvidencePartitionedShadowObserver =
             contextEvidencePartitionedShadowObserver,
@@ -589,7 +637,9 @@ class GameState extends ChangeNotifier {
   final bool _ownsP1F01IntegrityStore;
   final P1F01IntegrityStore _p1F01IntegrityStore;
   late final P1F01StudyCoordinator _p1F01StudyCoordinator;
-  final Random _rng = Random();
+  final Random _rng;
+  int _debugP1BeginWindowCallCount = 0;
+  int _debugP1FinishWindowCallCount = 0;
   StreamSubscription<List<IapPurchase>>? _iapPurchaseSub;
 
   // Master-mode progression state (kept outside `rt` because it survives
@@ -598,6 +648,7 @@ class GameState extends ChangeNotifier {
   int _masterLives = 3;
   int _masterProgress = 0;
   GameRunSnapshot? _runSnapshot;
+  TargetClashRuntimeState? _targetClashRuntime;
   GameBrain? _gameBrain;
   ContextEvidenceResult? _lastContextEvidenceResult;
   OperationQuestStageId? _pendingOperationQuestStageId;
@@ -684,6 +735,10 @@ class GameState extends ChangeNotifier {
       _contextEvidencePartitionedShadowObserver;
 
   GameRunSnapshot? get activeRunSnapshot => _runSnapshot;
+  TargetClashRuntimeState? get targetClashRuntime => _targetClashRuntime;
+  TargetClashQuestion? get targetClashQuestion =>
+      _targetClashRuntime?.currentQuestion;
+  num? get targetClashTarget => _targetClashRuntime?.currentTarget;
   @visibleForTesting
   ContextEvidenceResult? get debugLastContextEvidenceResult =>
       _lastContextEvidenceResult;
@@ -722,6 +777,10 @@ class GameState extends ChangeNotifier {
   @visibleForTesting
   bool get debugP1F01IntegrityRunEligible => _p1F01IntegrityRunEligible;
   @visibleForTesting
+  int get debugP1BeginWindowCallCount => _debugP1BeginWindowCallCount;
+  @visibleForTesting
+  int get debugP1FinishWindowCallCount => _debugP1FinishWindowCallCount;
+  @visibleForTesting
   P1StudyCoordinatorState get debugP1StudyCoordinatorState =>
       _p1F01StudyCoordinator.state;
   @visibleForTesting
@@ -737,6 +796,18 @@ class GameState extends ChangeNotifier {
     _startGame(replaySnapshot: snapshot, skipMentalMathCountdown: true);
   }
 
+  @visibleForTesting
+  void debugStartTargetClashForTest(TargetClashRunConfig config) =>
+      _startGame(replaySnapshot: GameRunSnapshot.targetClash(config));
+
+  @visibleForTesting
+  void debugInstallTargetClashRuntimeForTest(TargetClashRuntimeState runtime) {
+    assert(isTargetClash);
+    rt.timer?.cancel();
+    _targetClashRuntime = runtime;
+    _openTargetClashQuestion();
+  }
+
   QuestionDifficultyLegality? get currentQuestionDifficultyLegality =>
       _questionDifficultyLegality;
   @visibleForTesting
@@ -746,6 +817,7 @@ class GameState extends ChangeNotifier {
       familyEligibility == FamilyEligibility.eligible;
   bool get isOperationQuest =>
       _runSnapshot?.runType == GameRunType.operationQuest;
+  bool get isTargetClash => _runSnapshot?.runType == GameRunType.targetClash;
   bool get isMissingOperation =>
       _runSnapshot?.questionMechanic == QuestionMechanic.missingOperation;
   bool get isMissingOperationQuest => isOperationQuest && isMissingOperation;
@@ -846,10 +918,12 @@ class GameState extends ChangeNotifier {
         _ => '',
       };
   int get activeQuestionTarget => _runSnapshot?.questionTarget ?? questionCount;
-  bool get activeAdaptive =>
-      isOperationQuest || isTimeBankRun || _runSnapshot?.mentalMathEntry != null
-          ? false
-          : adaptive;
+  bool get activeAdaptive => isOperationQuest ||
+          isTargetClash ||
+          isTimeBankRun ||
+          _runSnapshot?.mentalMathEntry != null
+      ? false
+      : adaptive;
   bool get effectiveGameBrainEnabled =>
       gameBrainPreference &&
       gameBrainEligibility == GameBrainEligibility.eligible;
@@ -2705,6 +2779,10 @@ class GameState extends ChangeNotifier {
     GameRunSnapshot? replaySnapshot,
     bool skipMentalMathCountdown = false,
   }) {
+    if (replaySnapshot != null && !replaySnapshot.hasValidTargetClashEnvelope) {
+      notifyListeners();
+      return;
+    }
     _postFeedbackTimer?.cancel();
     _delayedResultModalTimer?.cancel();
 
@@ -2765,10 +2843,16 @@ class GameState extends ChangeNotifier {
     _pendingWeakSkillsPlan = null;
     _clearPendingMentalMathEntry();
     _pendingPracticeStyle = false;
+    _targetClashRuntime = null;
     _runSnapshot = snapshot;
-    _gameBrain = GameBrain();
+    _gameBrain =
+        snapshot.runType == GameRunType.targetClash ? null : GameBrain();
     _lastContextEvidenceResult = null;
-    _beginP1F01IntegrityWindowIfSupported(snapshot);
+    if (snapshot.runType == GameRunType.targetClash) {
+      _resetTargetClashP1LocalState();
+    } else {
+      _beginP1F01IntegrityWindowIfSupported(snapshot);
+    }
     final isMaster = snapshot.operation == Operation.master;
     final isBoss = snapshot.operation == Operation.dailyBoss;
     for (var i = 1; i <= 2; i++) {
@@ -2777,7 +2861,8 @@ class GameState extends ChangeNotifier {
         isMasterOrBoss: isMaster || isBoss,
       );
     }
-    if (snapshot.mentalMathEntry == null) {
+    if (snapshot.mentalMathEntry == null &&
+        snapshot.runType != GameRunType.targetClash) {
       _applyPowerUpBonusIfEligible(
         players: snapshot.players,
         isMaster: isMaster,
@@ -2800,6 +2885,7 @@ class GameState extends ChangeNotifier {
           ? 'playing'
           : 'countdown'
       ..isWarmUp = (snapshot.mode == GameMode.standard &&
+          snapshot.runType != GameRunType.targetClash &&
           !isMaster &&
           !isBoss &&
           snapshot.mentalMathEntry == null);
@@ -2835,6 +2921,21 @@ class GameState extends ChangeNotifier {
     }
 
     audio.playStart();
+
+    if (snapshot.runType == GameRunType.targetClash) {
+      final config = snapshot.targetClashConfig!;
+      final generator = TargetClashQuestionGenerator(questionGenerator: _qgen);
+      _targetClashRuntime =
+          TargetClashRuntimeState.start(generator.prepareStage(
+        operation: config.operation,
+        difficulty: config.difficulty,
+        numberType: config.numberType,
+        requests:
+            TargetClashRuntimeState.ordinaryRequests(config.difficulty, 1),
+      ));
+      _openTargetClashQuestion();
+      return;
+    }
 
     if (snapshot.mode == GameMode.blitz) {
       rt.blitzTotalMs = GameConfig.blitzTimerDefault;
@@ -2988,6 +3089,146 @@ class GameState extends ChangeNotifier {
     }
 
     _generateQ();
+    notifyListeners();
+  }
+
+  TargetClashStageResult? _targetClashNextStage() {
+    final runtime = _targetClashRuntime!;
+    final config = _runSnapshot!.targetClashConfig!;
+    final generator = TargetClashQuestionGenerator(questionGenerator: _qgen);
+    switch (runtime.phase) {
+      case TargetClashPhase.ordinaryStage1:
+        return generator.prepareStage(
+          operation: config.operation,
+          difficulty: config.difficulty,
+          numberType: config.numberType,
+          requests:
+              TargetClashRuntimeState.ordinaryRequests(config.difficulty, 2),
+        );
+      case TargetClashPhase.ordinaryStage2:
+        if (config.difficulty == Difficulty.easy) {
+          return generator.prepareStage(
+            operation: config.operation,
+            difficulty: config.difficulty,
+            numberType: config.numberType,
+            requests: TargetClashRuntimeState.bossRequests(config.difficulty),
+          );
+        }
+        return generator.prepareStageForTarget(
+          operation: config.operation,
+          difficulty: config.difficulty,
+          numberType: config.numberType,
+          targetValue: runtime.currentTarget!,
+          requests: TargetClashRuntimeState.tripleRequests(_rng.nextInt(6))!,
+        );
+      case TargetClashPhase.triple:
+        return generator.prepareStage(
+          operation: config.operation,
+          difficulty: config.difficulty,
+          numberType: config.numberType,
+          requests: TargetClashRuntimeState.bossRequests(config.difficulty),
+        );
+      case TargetClashPhase.boss:
+        return generator.prepareStage(
+          operation: config.operation,
+          difficulty: config.difficulty,
+          numberType: config.numberType,
+          requests: TargetClashRuntimeState.finalRequests(config.difficulty),
+        );
+      default:
+        return null;
+    }
+  }
+
+  TargetClashStageResult? _targetClashNextStageForResolution({
+    required bool isLastQuestion,
+    required bool bossWillBeDefeated,
+  }) =>
+      isLastQuestion || bossWillBeDefeated ? _targetClashNextStage() : null;
+
+  @visibleForTesting
+  TargetClashStageResult? debugTargetClashNextStageForSyntheticBossDefeat({
+    required int bossHealth,
+    required int correctDamage,
+    required bool isLastQuestion,
+  }) =>
+      _targetClashNextStageForResolution(
+        isLastQuestion: isLastQuestion,
+        bossWillBeDefeated: bossHealth - correctDamage <= 0,
+      );
+
+  void _openTargetClashQuestion() {
+    final runtime = _targetClashRuntime;
+    if (runtime == null || runtime.currentQuestion == null) {
+      _endTargetClash();
+      return;
+    }
+    final config = _runSnapshot!.targetClashConfig!;
+    _targetClashRuntime = runtime.hardenForFever(
+      config: config,
+      generator: TargetClashQuestionGenerator(questionGenerator: _qgen),
+    );
+    _activeQuestionId = ++_lastQuestionId;
+    _questionTerminalClaim = null;
+    rt
+      ..q = null
+      ..selectedAnswer = null
+      ..lastAnswerCorrect = false
+      ..qStartTs = DateTime.now().millisecondsSinceEpoch
+      ..qTimerLimit = 0
+      ..accepting = true;
+    _startQuestionTimer();
+    notifyListeners();
+  }
+
+  void _resolveTargetClashAnswer(
+      PresentationAnswer? answer, ({int runId, int questionId}) questionToken) {
+    if (!_claimQuestionTerminal(
+      questionToken,
+      answer == null
+          ? _QuestionTerminalClaim.timeout
+          : _QuestionTerminalClaim.answer,
+    )) return;
+    _freezeQuestionTimer();
+    rt.timer?.cancel();
+    final runtime = _targetClashRuntime!;
+    final isLastQuestion = runtime.stageQuestionIndex + 1 >=
+        runtime.preparedStage!.questions.length;
+    final question = runtime.currentQuestion!;
+    final correctBossDamage = runtime.phase == TargetClashPhase.boss &&
+            answer == question.correctAnswer
+        ? question.zone == TargetZone.bullseye &&
+                answer == PresentationAnswer.equalTo
+            ? 2
+            : 1
+        : 0;
+    final bossWillBeDefeated =
+        correctBossDamage > 0 && runtime.bossHealth - correctBossDamage <= 0;
+    _targetClashRuntime = runtime.resolve(
+      answer: answer,
+      difficulty: _runSnapshot!.targetClashConfig!.difficulty,
+      nextStage: _targetClashNextStageForResolution(
+        isLastQuestion: isLastQuestion,
+        bossWillBeDefeated: bossWillBeDefeated,
+      ),
+    );
+    if (_targetClashRuntime!.finished ||
+        _targetClashRuntime!.phase == TargetClashPhase.technicalFailure) {
+      _endTargetClash();
+      return;
+    }
+    _openTargetClashQuestion();
+  }
+
+  void _endTargetClash() {
+    rt.timer?.cancel();
+    _closeActiveQuestionNeutrally();
+    final completed = _targetClashRuntime?.finished == true;
+    _invalidateActiveRun();
+    rt
+      ..gameActive = false
+      ..state = 'ended';
+    if (completed) unawaited(_recordCompletedGameForAds());
     notifyListeners();
   }
 
@@ -3576,6 +3817,10 @@ class GameState extends ChangeNotifier {
   }
 
   void _onTimeout(({int runId, int questionId}) questionToken) {
+    if (isTargetClash) {
+      _resolveTargetClashAnswer(null, questionToken);
+      return;
+    }
     if (_isDeepThinkingRun || isTimeBankRun) return;
     if (isMentalMathCountdown) return;
     _onAnswer(null, false, true, questionToken);
@@ -3584,9 +3829,25 @@ class GameState extends ChangeNotifier {
   @visibleForTesting
   void debugTimeoutForTest() => _onTimeout(_currentQuestionToken);
 
+  @visibleForTesting
+  ({int runId, int questionId}) get debugCurrentQuestionToken =>
+      _currentQuestionToken;
+
+  @visibleForTesting
+  void debugTimeoutForTokenForTest(
+    ({int runId, int questionId}) questionToken,
+  ) =>
+      _onTimeout(questionToken);
+
   // ─── Answer handler ─────────────────────────────────────────
   void onAnswer(num val) {
+    if (isTargetClash) return;
     _onAnswer(val, false, false, _currentQuestionToken);
+  }
+
+  void onTargetClashAnswer(PresentationAnswer answer) {
+    if (!isTargetClash) return;
+    _resolveTargetClashAnswer(answer, _currentQuestionToken);
   }
 
   void onTrueFalseAnswer(bool response) {
@@ -3603,6 +3864,7 @@ class GameState extends ChangeNotifier {
   }
 
   void skip() {
+    if (isTargetClash) return;
     if (_isMentalMathRun) return;
     if (!rt.accepting) return;
     _onAnswer(null, true, false, _currentQuestionToken);
@@ -3801,6 +4063,7 @@ class GameState extends ChangeNotifier {
     }) outcome,
   ) {
     final snapshot = _runSnapshot!;
+    if (snapshot.runType == GameRunType.targetClash) return;
     if (snapshot.mentalMathEntry != null) return;
     final observation = ContextEvidenceObservation(
       context: _contextEvidenceKey(snapshot, question),
@@ -3920,6 +4183,7 @@ class GameState extends ChangeNotifier {
 
   void _beginP1F01IntegrityWindowIfSupported(GameRunSnapshot snapshot) {
     final supported = _supportsP1F01IntegrityRun(snapshot);
+    _debugP1BeginWindowCallCount++;
     _p1F01IntegrityRunEligible = _p1F01StudyCoordinator.beginWindow(
       runId: _activeRunId,
       eligible: supported,
@@ -4018,6 +4282,7 @@ class GameState extends ChangeNotifier {
     }
     _p1F01IntegrityRunEligible = false;
     _p1F01IntegrityMeasurementFailed = false;
+    _debugP1FinishWindowCallCount++;
     _p1F01StudyCoordinator.finishWindow(_activeRunId);
   }
 
@@ -4032,6 +4297,12 @@ class GameState extends ChangeNotifier {
     _p1F01IntegrityRunEligible = false;
     _p1F01IntegrityMeasurementFailed = true;
     _p1F01StudyCoordinator.markNonClean(_activeRunId, cause);
+  }
+
+  void _resetTargetClashP1LocalState() {
+    _p1F01IntegrityRunEligible = false;
+    _p1F01IntegrityMeasurementFailed = false;
+    _p1FollowUpScheduledForCurrentTerminal = false;
   }
 
   P1StudyCanonicalTerminalOutcome? _p1StudyCanonicalTerminalOutcome(
@@ -4091,8 +4362,15 @@ class GameState extends ChangeNotifier {
 
   void _invalidateActiveRun() {
     final runId = _activeRunId;
-    _leaveP1F01IntegrityUnclean();
-    _p1F01StudyCoordinator.finishWindow(runId);
+    if (_runSnapshot?.runType == GameRunType.targetClash) {
+      _resetTargetClashP1LocalState();
+    } else {
+      _leaveP1F01IntegrityUnclean();
+      if (runId > 0) {
+        _debugP1FinishWindowCallCount++;
+        _p1F01StudyCoordinator.finishWindow(runId);
+      }
+    }
     _activeRunId = 0;
     _activeQuestionId = 0;
     rt.accepting = false;
@@ -5085,6 +5363,7 @@ class GameState extends ChangeNotifier {
     _masterProgress = 0;
     final wasMentalMathRun = _isMentalMathRun;
     _runSnapshot = null;
+    _targetClashRuntime = null;
     if (wasMentalMathRun) _clearMentalMathRuntimeState();
     _gameBrain = null;
     _lastContextEvidenceResult = null;
@@ -5428,6 +5707,7 @@ class GameState extends ChangeNotifier {
   }
 
   bool _isPowerUpBlocked(PowerUp pu) {
+    if (isTargetClash) return true;
     if (_isMentalMathRun) return true;
     if (pu == PowerUp.fifty && rt.answerStyle == AnswerStyle.trueFalse) {
       return true;
