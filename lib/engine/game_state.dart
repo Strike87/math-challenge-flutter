@@ -679,6 +679,10 @@ class GameState extends ChangeNotifier {
   MentalMathEntry? _pendingMentalMathEntry;
   bool? _adaptiveBeforeMentalMath;
   bool _pendingPracticeStyle = false;
+  bool _pendingTargetClashSetup = false;
+  Operation _targetClashOperation = Operation.addition;
+  Difficulty _targetClashDifficulty = Difficulty.easy;
+  NumberType _targetClashNumberType = NumberType.natural;
 
   // ─── Options ────────────────────────────────────────────────
   int players = 1;
@@ -854,15 +858,31 @@ class GameState extends ChangeNotifier {
   WeakSkillsPlan? get setupWeakSkillsPlan => _pendingWeakSkillsPlan;
   MentalMathEntry? get setupMentalMathEntry => _pendingMentalMathEntry;
   bool get isMentalMathSetup => _pendingMentalMathEntry != null;
+  bool get isTargetClashSetup => _pendingTargetClashSetup;
+  Operation get targetClashSetupOperation => _targetClashOperation;
+  Difficulty get targetClashSetupDifficulty => _targetClashDifficulty;
+  NumberType get targetClashSetupNumberType => _targetClashNumberType;
+  TargetClashRunConfig? get pendingTargetClashConfig =>
+      !_pendingTargetClashSetup
+          ? null
+          : TargetClashRunConfig.tryCreate(
+              operation: _targetClashOperation,
+              difficulty: _targetClashDifficulty,
+              numberType: _targetClashNumberType,
+            );
   int get setupPlayers => _pendingOperationQuestStageId == null &&
           _pendingWeakSkillsPlan == null &&
-          !isMentalMathSetup
+          !isMentalMathSetup &&
+          !isTargetClashSetup
       ? players
       : 1;
+  GameMode get setupMode => isTargetClashSetup ? GameMode.standard : mode;
+  bool get setupAdaptive => isTargetClashSetup ? false : adaptive;
   bool get canSelectDeepThinking =>
       _pendingOperationQuestStageId == null &&
       _pendingWeakSkillsPlan == null &&
       !isMentalMathSetup &&
+      !isTargetClashSetup &&
       _pendingQuestionMechanic == QuestionMechanic.standard &&
       mode == GameMode.standard &&
       setupPlayers == 1 &&
@@ -872,6 +892,7 @@ class GameState extends ChangeNotifier {
   bool get canSelectTimeBank =>
       canSelectDeepThinking && playerConfigurableDifficultySet.contains(diff);
   TimingStyle get setupTimingStyle => switch (timingStyle) {
+        _ when isTargetClashSetup => TimingStyle.perQuestion,
         TimingStyle.untimed when canSelectDeepThinking => TimingStyle.untimed,
         TimingStyle.timeBank when canSelectTimeBank => TimingStyle.timeBank,
         _ => TimingStyle.perQuestion,
@@ -2442,6 +2463,7 @@ class GameState extends ChangeNotifier {
   void showScreen(GameScreen s) {
     if (s == GameScreen.menu) {
       _clearPendingMentalMathEntry();
+      _clearPendingTargetClashSetup();
       _pendingPracticeStyle = false;
       _pendingWeakSkillsPlan = null;
       _normalizeSetupTimingStyle();
@@ -2494,6 +2516,7 @@ class GameState extends ChangeNotifier {
 
   // ─── Configuration actions ──────────────────────────────────
   void goToConfig(String operationName) {
+    _clearPendingTargetClashSetup();
     _clearPendingMentalMathEntry();
     _pendingPracticeStyle = false;
     final missingOperation = operationName == 'missingOperation';
@@ -2518,6 +2541,7 @@ class GameState extends ChangeNotifier {
   }
 
   void goToPracticeStyle(String operationName) {
+    _clearPendingTargetClashSetup();
     _clearPendingMentalMathEntry();
     _pendingPracticeStyle = true;
     _pendingWeakSkillsPlan = null;
@@ -2532,6 +2556,7 @@ class GameState extends ChangeNotifier {
   }
 
   void startTimingPractice() {
+    _clearPendingTargetClashSetup();
     _clearPendingMentalMathEntry();
     showScreen(GameScreen.numType);
   }
@@ -2546,6 +2571,7 @@ class GameState extends ChangeNotifier {
   }
 
   void _startMentalMathPractice(MentalMathEntry entry) {
+    _clearPendingTargetClashSetup();
     _pendingMentalMathEntry = entry;
     _adaptiveBeforeMentalMath ??= adaptive;
     adaptive = false;
@@ -2577,6 +2603,23 @@ class GameState extends ChangeNotifier {
     if (previousAdaptive != null) adaptive = previousAdaptive;
   }
 
+  void startTargetClashSetup() {
+    _clearPendingMentalMathEntry();
+    _pendingPracticeStyle = false;
+    _pendingWeakSkillsPlan = null;
+    _pendingOperationQuestStageId = null;
+    _pendingQuestionMechanic = QuestionMechanic.standard;
+    _pendingTargetClashSetup = true;
+    _targetClashOperation = Operation.addition;
+    _targetClashDifficulty = Difficulty.easy;
+    _targetClashNumberType = NumberType.natural;
+    showScreen(GameScreen.numType);
+  }
+
+  void _clearPendingTargetClashSetup() {
+    _pendingTargetClashSetup = false;
+  }
+
   void continueWeakSkillsSetup() {
     if (currentModal != GameModal.weakSkillsPractice ||
         _pendingWeakSkillsPlan == null) {
@@ -2593,7 +2636,21 @@ class GameState extends ChangeNotifier {
   void cancelWeakSkillsSetup() => closeModal();
 
   Future<void> selectNumType(String numTypeName) async {
+    if (isTargetClashSetup &&
+        !const {'natural', 'integers', 'rationals'}.contains(numTypeName)) {
+      notifyListeners();
+      return;
+    }
     final nt = NumberType.fromString(numTypeName);
+    if (isTargetClashSetup &&
+        !const {
+          NumberType.natural,
+          NumberType.integers,
+          NumberType.rationals,
+        }.contains(nt)) {
+      notifyListeners();
+      return;
+    }
     if (_numberTypeUnlockPolicy.requiresPurchase(nt, numTypeUnlocked)) {
       final price = _numberTypeUnlockPolicy.priceFor(nt);
       if (!_numberTypeUnlockPolicy.canAfford(nt, coins)) {
@@ -2605,7 +2662,11 @@ class GameState extends ChangeNotifier {
       numTypeUnlocked[nt.name] = 1;
     }
     numTypeUnlockFeedback = '';
-    numType = nt;
+    if (isTargetClashSetup) {
+      _targetClashNumberType = nt;
+    } else {
+      numType = nt;
+    }
     await save();
     if (isMentalMathSetup) {
       startGame();
@@ -2615,6 +2676,10 @@ class GameState extends ChangeNotifier {
   }
 
   void backFromNumType() {
+    if (isTargetClashSetup) {
+      showScreen(GameScreen.menu);
+      return;
+    }
     if (_pendingPracticeStyle) {
       _clearPendingMentalMathEntry();
       showScreen(GameScreen.practiceStyle);
@@ -2624,6 +2689,29 @@ class GameState extends ChangeNotifier {
   }
 
   void setOption(String key, dynamic value) {
+    if (isTargetClashSetup) {
+      switch (key) {
+        case 'diff':
+          final next = Difficulty.values.firstWhere(
+            (candidate) => candidate.name == value,
+            orElse: () => Difficulty.expert,
+          );
+          if (const {
+            Difficulty.easy,
+            Difficulty.medium,
+            Difficulty.hard,
+          }.contains(next)) {
+            _targetClashDifficulty = next;
+          }
+          break;
+        case 'players':
+        case 'mode':
+        case 'q':
+          break;
+      }
+      notifyListeners();
+      return;
+    }
     switch (key) {
       case 'players':
         if (isMentalMathSetup && value != 1) return;
@@ -2653,13 +2741,17 @@ class GameState extends ChangeNotifier {
   }
 
   void setAdaptive(bool v) {
-    if (isMentalMathSetup) return;
+    if (isMentalMathSetup || isTargetClashSetup) return;
     adaptive = v;
     _normalizeSetupTimingStyle();
     notifyListeners();
   }
 
   void setTimingStyle(TimingStyle style) {
+    if (isTargetClashSetup) {
+      notifyListeners();
+      return;
+    }
     timingStyle = switch (style) {
       TimingStyle.untimed when canSelectDeepThinking => style,
       TimingStyle.timeBank when canSelectTimeBank => style,
@@ -2669,21 +2761,28 @@ class GameState extends ChangeNotifier {
   }
 
   void setAnswerStyle(AnswerStyle style) {
+    if (isTargetClashSetup) return;
     selectedAnswerStyle = style;
     unawaited(Storage.setString('mc_selectedAnswerStyle', style.name));
     notifyListeners();
   }
 
-  AnswerStyle get effectiveAnswerStyle => mode == GameMode.standard &&
-          setupPlayers == 1 &&
-          rt.challenge != Operation.master &&
-          rt.challenge != Operation.dailyBoss
-      ? (_pendingQuestionMechanic == QuestionMechanic.missingOperation
-          ? AnswerStyle.choice4
-          : selectedAnswerStyle)
-      : AnswerStyle.choice4;
+  AnswerStyle get effectiveAnswerStyle => isTargetClashSetup
+      ? AnswerStyle.choice4
+      : mode == GameMode.standard &&
+              setupPlayers == 1 &&
+              rt.challenge != Operation.master &&
+              rt.challenge != Operation.dailyBoss
+          ? (_pendingQuestionMechanic == QuestionMechanic.missingOperation
+              ? AnswerStyle.choice4
+              : selectedAnswerStyle)
+          : AnswerStyle.choice4;
 
   void goToPlayerSetup() {
+    if (isTargetClashSetup && pendingTargetClashConfig == null) {
+      notifyListeners();
+      return;
+    }
     _normalizeSetupTimingStyle();
     showScreen(GameScreen.player);
   }
@@ -2693,6 +2792,7 @@ class GameState extends ChangeNotifier {
   }
 
   void showOperationQuest() {
+    _clearPendingTargetClashSetup();
     _clearPendingMentalMathEntry();
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
@@ -2701,6 +2801,7 @@ class GameState extends ChangeNotifier {
   }
 
   void startOperationQuestStage(OperationQuestStageId id) {
+    _clearPendingTargetClashSetup();
     _clearPendingMentalMathEntry();
     if (!operationQuestProgress.isUnlocked(id)) return;
     _pendingWeakSkillsPlan = null;
@@ -2711,6 +2812,10 @@ class GameState extends ChangeNotifier {
   }
 
   void backFromPlayers() {
+    if (isTargetClashSetup) {
+      showScreen(GameScreen.config);
+      return;
+    }
     if (_pendingOperationQuestStageId != null) {
       _pendingOperationQuestStageId = null;
       showScreen(GameScreen.menu);
@@ -2726,6 +2831,7 @@ class GameState extends ChangeNotifier {
   }
 
   void startMasterMode() {
+    _clearPendingTargetClashSetup();
     _clearPendingMentalMathEntry();
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
@@ -2743,6 +2849,7 @@ class GameState extends ChangeNotifier {
   }
 
   void showDailyBoss() {
+    _clearPendingTargetClashSetup();
     _clearPendingMentalMathEntry();
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
@@ -2750,6 +2857,7 @@ class GameState extends ChangeNotifier {
   }
 
   void showDailyMentalMath() {
+    _clearPendingTargetClashSetup();
     _clearPendingMentalMathEntry();
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
@@ -2757,6 +2865,7 @@ class GameState extends ChangeNotifier {
   }
 
   void startDailyMentalMath() {
+    _clearPendingTargetClashSetup();
     final profile = dailyMentalMathProfile;
     closeModal();
     _startGame(
@@ -2778,6 +2887,7 @@ class GameState extends ChangeNotifier {
   }
 
   void startDailyBoss() {
+    _clearPendingTargetClashSetup();
     _clearPendingMentalMathEntry();
     _pendingWeakSkillsPlan = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
@@ -2797,7 +2907,32 @@ class GameState extends ChangeNotifier {
   }
 
   // ─── Game lifecycle ─────────────────────────────────────────
-  void startGame() => _startGame();
+  void setTargetClashOperation(Operation operation) {
+    if (!isTargetClashSetup ||
+        !const {
+          Operation.addition,
+          Operation.subtraction,
+          Operation.multiplication,
+          Operation.division,
+        }.contains(operation)) {
+      return;
+    }
+    _targetClashOperation = operation;
+    notifyListeners();
+  }
+
+  void startGame() {
+    final config = pendingTargetClashConfig;
+    if (isTargetClashSetup) {
+      if (config == null) {
+        notifyListeners();
+        return;
+      }
+      _startGame(replaySnapshot: GameRunSnapshot.targetClash(config));
+      return;
+    }
+    _startGame();
+  }
 
   void _startGame({
     GameRunSnapshot? replaySnapshot,
@@ -2867,6 +3002,7 @@ class GameState extends ChangeNotifier {
     _pendingWeakSkillsPlan = null;
     _clearPendingMentalMathEntry();
     _pendingPracticeStyle = false;
+    _clearPendingTargetClashSetup();
     _targetClashRuntime = null;
     _runSnapshot = snapshot;
     _gameBrain =
@@ -5470,6 +5606,7 @@ class GameState extends ChangeNotifier {
     _pendingOperationQuestStageId = null;
     _pendingQuestionMechanic = QuestionMechanic.standard;
     _pendingWeakSkillsPlan = null;
+    _clearPendingTargetClashSetup();
     showScreen(GameScreen.menu);
     _logPerformance('main menu navigation completed');
   }

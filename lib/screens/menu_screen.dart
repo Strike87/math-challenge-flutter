@@ -55,6 +55,19 @@ class MenuScreen extends StatelessWidget {
                   trailing: _streakBadge(gs, s),
                 ),
                 _CampaignCard(
+                  key: const Key('target-clash-challenge-entry'),
+                  icon: '🎯',
+                  title: 'Target Clash',
+                  subtitle: 'Compare • Aim • Strike',
+                  color: s.accent(GameConfig.sky),
+                  gradientColors: const [
+                    Color(GameConfig.sky),
+                    Color(GameConfig.mint),
+                  ],
+                  onTap: gs.startTargetClashSetup,
+                ),
+                const SizedBox(height: 10),
+                _CampaignCard(
                   icon: '🏆',
                   title: 'Master Challenge',
                   subtitle: 'BOSS BATTLES • 5 STAGES',

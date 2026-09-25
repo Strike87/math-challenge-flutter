@@ -58,7 +58,8 @@ class ConfigScreen extends StatelessWidget {
                                 '👥 2 Players',
                                 2,
                                 s.accent(GameConfig.punch),
-                                enabled: !gs.isMentalMathSetup &&
+                                enabled: !gs.isTargetClashSetup &&
+                                    !gs.isMentalMathSetup &&
                                     weakSkillsPlan == null &&
                                     gs.setupTimingStyle ==
                                         TimingStyle.perQuestion,
@@ -70,13 +71,14 @@ class ConfigScreen extends StatelessWidget {
                           const SizedBox(height: 18),
                           _SectionTitle('Game Mode', s),
                           _ModeTabs(
-                            active: gs.mode,
+                            active: gs.setupMode,
                             players: gs.setupPlayers,
-                            standardOnly: gs.isMentalMathSetup,
+                            standardOnly:
+                                gs.isMentalMathSetup || gs.isTargetClashSetup,
                             onPick: (m) => gs.setOption('mode', m.name),
                           ),
                           const SizedBox(height: 10),
-                          _ModeInfoCard(mode: gs.mode, s: s),
+                          _ModeInfoCard(mode: gs.setupMode, s: s),
                         ],
                       ),
                     ),
@@ -92,7 +94,37 @@ class ConfigScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (gs.mode == GameMode.standard &&
+                          if (gs.isTargetClashSetup) ...[
+                            _SectionTitle('Answer', s),
+                            Text(
+                              '<   =   >',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: s.accent(GameConfig.sky),
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            _SectionTitle('Operation', s),
+                            _ToggleRow(
+                              options: [
+                                _ToggleOpt('Addition', Operation.addition,
+                                    s.accent(GameConfig.sky)),
+                                _ToggleOpt('Subtraction', Operation.subtraction,
+                                    s.accent(GameConfig.mint)),
+                                _ToggleOpt(
+                                    'Multiplication',
+                                    Operation.multiplication,
+                                    s.accent(GameConfig.mango)),
+                                _ToggleOpt('Division', Operation.division,
+                                    s.accent(GameConfig.punch)),
+                              ],
+                              active: gs.targetClashSetupOperation,
+                              onPick: gs.setTargetClashOperation,
+                            ),
+                            const SizedBox(height: 18),
+                          ] else if (gs.mode == GameMode.standard &&
                               gs.setupPlayers == 1) ...[
                             _SectionTitle('Answer Style', s),
                             _ToggleRow(
@@ -124,12 +156,17 @@ class ConfigScreen extends StatelessWidget {
                                 .map((difficulty) =>
                                     _difficultyOption(difficulty, s))
                                 .toList(growable: false),
-                            active: gs.diff.name,
+                            active: (gs.isTargetClashSetup
+                                    ? gs.targetClashSetupDifficulty
+                                    : gs.diff)
+                                .name,
                             onPick: (v) => gs.setOption('diff', v),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            _diffDesc(gs.diff),
+                            _diffDesc(gs.isTargetClashSetup
+                                ? gs.targetClashSetupDifficulty
+                                : gs.diff),
                             style: TextStyle(
                               color: s.muted,
                               fontSize: 12,
@@ -137,33 +174,31 @@ class ConfigScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 18),
-                          _SectionTitle('Number of Questions', s),
-                          _ToggleRow(
-                            options: [
-                              _ToggleOpt(
-                                '10',
-                                10,
-                                s.accent(GameConfig.sky),
-                              ),
-                              _ToggleOpt(
-                                '15',
-                                15,
-                                s.accent(GameConfig.sky),
-                              ),
-                              _ToggleOpt(
-                                '20',
-                                20,
-                                s.accent(GameConfig.sky),
-                              ),
-                              _ToggleOpt(
-                                '25',
-                                25,
-                                s.accent(GameConfig.sky),
-                              ),
-                            ],
-                            active: gs.questionCount,
-                            onPick: (v) => gs.setOption('q', v),
+                          _SectionTitle(
+                            gs.isTargetClashSetup
+                                ? 'Target Clash Questions'
+                                : 'Number of Questions',
+                            s,
                           ),
+                          if (gs.isTargetClashSetup)
+                            Text(
+                              '${gs.pendingTargetClashConfig?.questionTarget ?? 0} derived from difficulty',
+                              style: TextStyle(
+                                color: s.muted,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            )
+                          else
+                            _ToggleRow(
+                              options: [
+                                _ToggleOpt('10', 10, s.accent(GameConfig.sky)),
+                                _ToggleOpt('15', 15, s.accent(GameConfig.sky)),
+                                _ToggleOpt('20', 20, s.accent(GameConfig.sky)),
+                                _ToggleOpt('25', 25, s.accent(GameConfig.sky)),
+                              ],
+                              active: gs.questionCount,
+                              onPick: (v) => gs.setOption('q', v),
+                            ),
                           const SizedBox(height: 18),
                           _SectionTitle('Timing', s),
                           _ToggleRow(
@@ -264,10 +299,11 @@ class ConfigScreen extends StatelessWidget {
                                     Switch.adaptive(
                                       value: gs.isMentalMathSetup
                                           ? false
-                                          : gs.adaptive,
+                                          : gs.setupAdaptive,
                                       activeThumbColor:
                                           s.accent(GameConfig.coral),
                                       onChanged: gs.isMentalMathSetup ||
+                                              gs.isTargetClashSetup ||
                                               gs.setupTimingStyle !=
                                                   TimingStyle.perQuestion
                                           ? null
