@@ -249,7 +249,8 @@ void main() {
         isFalse);
   });
 
-  test('Target Clash snapshots never enter the ordinary runtime', () async {
+  test('controlled Target Clash snapshots bypass the ordinary runtime',
+      () async {
     SharedPreferences.setMockInitialValues({});
     await Storage.init();
     final state = GameState(
@@ -271,14 +272,17 @@ void main() {
     await state.load();
     state.debugStartGameFromSnapshot(
         GameRunSnapshot.targetClash(config(Difficulty.easy)));
-    expect(state.activeRunSnapshot, isNull);
-    expect(state.rt.gameActive, isFalse);
+    expect(state.activeRunSnapshot, isNotNull);
+    expect(state.rt.gameActive, isTrue);
     expect(state.rt.q, isNull);
-    expect(state.isTargetClash, isFalse);
+    expect(state.isTargetClash, isTrue);
     expect(state.activeAdaptive, isFalse);
     expect(state.debugP1F01IntegrityRunEligible, isFalse);
     expect(state.debugQuestionExperienceObservationCount, 0);
     expect(state.debugContextEvidenceObservationCount, 0);
+    await state.quitToMenu();
+    expect(state.targetClashRuntime, isNull);
+    expect(state.targetClashQuestion, isNull);
     state.debugStartGameFromSnapshot(GameRunSnapshot(
       runType: GameRunType.targetClash,
       mode: GameMode.standard,

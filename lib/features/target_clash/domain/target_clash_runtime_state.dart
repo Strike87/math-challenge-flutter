@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import '../../../models/enums.dart';
 import 'presentation_answer.dart';
 import 'target_clash_question.dart';
@@ -70,6 +72,39 @@ final class TargetClashRuntimeState {
       tripleClashesCompleted: 0,
       bossHealth: 0,
       bossQuestionsResolved: 0,
+      bossesDefeated: 0,
+      finalCorrect: 0,
+      finalResolved: 0,
+      generationFailure: null,
+    );
+  }
+
+  @visibleForTesting
+  factory TargetClashRuntimeState.debugBossStateForTest(
+    TargetClashStageResult result, {
+    required int bossHealth,
+    int stageQuestionIndex = 0,
+  }) {
+    final stage = result.stage;
+    assert(stage != null && stage.questions.length > stageQuestionIndex + 1);
+    assert(bossHealth > 0);
+    return TargetClashRuntimeState._(
+      phase: TargetClashPhase.boss,
+      preparedStage: stage,
+      stageQuestionIndex: stageQuestionIndex,
+      score: 0,
+      correctCount: 0,
+      resolvedCount: 0,
+      combo: 0,
+      bestCombo: 0,
+      perfectHits: 0,
+      clashPower: 0,
+      powerShotAppliedQuestionIndex: null,
+      feverRemaining: 0,
+      tripleCorrectCount: 0,
+      tripleClashesCompleted: 0,
+      bossHealth: bossHealth,
+      bossQuestionsResolved: stageQuestionIndex,
       bossesDefeated: 0,
       finalCorrect: 0,
       finalResolved: 0,
