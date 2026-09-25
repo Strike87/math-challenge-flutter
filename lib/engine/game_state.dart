@@ -78,6 +78,25 @@ enum _QuestionTerminalClaim {
   neutral,
 }
 
+/// Immutable presentation facts for the just-resolved Target Clash question.
+final class TargetClashRevealState {
+  const TargetClashRevealState({
+    required this.question,
+    required this.playerAnswer,
+    required this.wasCorrect,
+    required this.wasPerfectHit,
+    required this.wasPowerShot,
+    required this.phase,
+  });
+
+  final TargetClashQuestion question;
+  final PresentationAnswer? playerAnswer;
+  final bool wasCorrect;
+  final bool wasPerfectHit;
+  final bool wasPowerShot;
+  final TargetClashPhase phase;
+}
+
 enum MentalMathTerminalReason {
   masteryReached,
   practiceComplete,
@@ -649,6 +668,9 @@ class GameState extends ChangeNotifier {
   int _masterProgress = 0;
   GameRunSnapshot? _runSnapshot;
   TargetClashRuntimeState? _targetClashRuntime;
+  Timer? _targetClashRevealTimer;
+  int _targetClashRevealId = 0;
+  TargetClashRevealState? _targetClashReveal;
   GameBrain? _gameBrain;
   ContextEvidenceResult? _lastContextEvidenceResult;
   OperationQuestStageId? _pendingOperationQuestStageId;
@@ -739,6 +761,7 @@ class GameState extends ChangeNotifier {
   TargetClashQuestion? get targetClashQuestion =>
       _targetClashRuntime?.currentQuestion;
   num? get targetClashTarget => _targetClashRuntime?.currentTarget;
+  TargetClashRevealState? get targetClashReveal => _targetClashReveal;
   @visibleForTesting
   ContextEvidenceResult? get debugLastContextEvidenceResult =>
       _lastContextEvidenceResult;
@@ -804,6 +827,7 @@ class GameState extends ChangeNotifier {
   void debugInstallTargetClashRuntimeForTest(TargetClashRuntimeState runtime) {
     assert(isTargetClash);
     rt.timer?.cancel();
+    _cancelTargetClashReveal();
     _targetClashRuntime = runtime;
     _openTargetClashQuestion();
   }
@@ -3181,6 +3205,28 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
+  TargetClashPowerShotOutcome activateTargetClashPowerShot() {
+    final runtime = _targetClashRuntime;
+    final config = _runSnapshot?.targetClashConfig;
+    if (!isTargetClash ||
+        _targetClashReveal == null ||
+        rt.accepting ||
+        runtime == null ||
+        config == null ||
+        runtime.finished ||
+        runtime.phase == TargetClashPhase.technicalFailure ||
+        runtime.currentQuestion == null) {
+      return TargetClashPowerShotOutcome.denied;
+    }
+    final result = runtime.activatePowerShot(
+      config: config,
+      generator: TargetClashQuestionGenerator(questionGenerator: _qgen),
+    );
+    _targetClashRuntime = result.state;
+    notifyListeners();
+    return result.outcome;
+  }
+
   void _resolveTargetClashAnswer(
       PresentationAnswer? answer, ({int runId, int questionId}) questionToken) {
     if (!_claimQuestionTerminal(
@@ -3204,6 +3250,19 @@ class GameState extends ChangeNotifier {
         : 0;
     final bossWillBeDefeated =
         correctBossDamage > 0 && runtime.bossHealth - correctBossDamage <= 0;
+    final wasCorrect = answer == question.correctAnswer;
+    final wasPerfectHit = wasCorrect &&
+        question.zone == TargetZone.bullseye &&
+        question.correctAnswer == PresentationAnswer.equalTo;
+    final reveal = TargetClashRevealState(
+      question: question,
+      playerAnswer: answer,
+      wasCorrect: wasCorrect,
+      wasPerfectHit: wasPerfectHit,
+      wasPowerShot:
+          runtime.powerShotAppliedQuestionIndex == runtime.stageQuestionIndex,
+      phase: runtime.phase,
+    );
     _targetClashRuntime = runtime.resolve(
       answer: answer,
       difficulty: _runSnapshot!.targetClashConfig!.difficulty,
@@ -3212,12 +3271,52 @@ class GameState extends ChangeNotifier {
         bossWillBeDefeated: bossWillBeDefeated,
       ),
     );
-    if (_targetClashRuntime!.finished ||
-        _targetClashRuntime!.phase == TargetClashPhase.technicalFailure) {
+    _startTargetClashReveal(reveal);
+  }
+
+  void _startTargetClashReveal(TargetClashRevealState reveal) {
+    _targetClashRevealTimer?.cancel();
+    _targetClashReveal = reveal;
+    final runId = _activeRunId;
+    final revealId = ++_targetClashRevealId;
+    _targetClashRevealTimer = Timer(const Duration(milliseconds: 1300), () {
+      _completeTargetClashReveal(runId, revealId);
+    });
+    notifyListeners();
+  }
+
+  void _completeTargetClashReveal(int runId, int revealId) {
+    if (_disposed ||
+        runId != _activeRunId ||
+        revealId != _targetClashRevealId ||
+        _targetClashReveal == null) {
+      return;
+    }
+    _targetClashRevealTimer = null;
+    _targetClashReveal = null;
+    final runtime = _targetClashRuntime;
+    if (runtime == null ||
+        runtime.finished ||
+        runtime.phase == TargetClashPhase.technicalFailure) {
       _endTargetClash();
       return;
     }
     _openTargetClashQuestion();
+  }
+
+  void _cancelTargetClashReveal() {
+    _targetClashRevealTimer?.cancel();
+    _targetClashRevealTimer = null;
+    _targetClashReveal = null;
+    _targetClashRevealId++;
+  }
+
+  @visibleForTesting
+  void debugCompleteTargetClashRevealForTest() {
+    final revealId = _targetClashRevealId;
+    _targetClashRevealTimer?.cancel();
+    _targetClashRevealTimer = null;
+    _completeTargetClashReveal(_activeRunId, revealId);
   }
 
   void _endTargetClash() {
@@ -4361,6 +4460,7 @@ class GameState extends ChangeNotifier {
   }
 
   void _invalidateActiveRun() {
+    _cancelTargetClashReveal();
     final runId = _activeRunId;
     if (_runSnapshot?.runType == GameRunType.targetClash) {
       _resetTargetClashP1LocalState();
