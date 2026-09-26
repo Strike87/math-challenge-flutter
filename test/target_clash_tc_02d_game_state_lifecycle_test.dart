@@ -75,6 +75,7 @@ void main() {
               (answer) => answer != question.correctAnswer,
             ),
     );
+    state.debugCompleteTargetClashRevealForTest();
   }
 
   void complete(GameState state) {
@@ -137,8 +138,10 @@ void main() {
     expect(state.targetClashRuntime!.combo, 0);
     expect(state.targetClashRuntime!.phase, TargetClashPhase.ordinaryStage2);
     expect(state.targetClashTarget, isNot(initialTarget));
+    state.debugCompleteTargetClashRevealForTest();
     expect(state.rt.timer, isNot(same(nextTimer)));
     state.debugTimeoutForTest();
+    state.debugCompleteTargetClashRevealForTest();
     expect(state.targetClashRuntime!.resolvedCount, 4);
   });
 
@@ -154,6 +157,7 @@ void main() {
     expect(state.targetClashRuntime!.score, 0);
     expect(state.targetClashRuntime!.combo, 0);
     expect(state.targetClashTarget, target);
+    state.debugCompleteTargetClashRevealForTest();
     expect(state.rt.timer, isNot(same(timer)));
     expect(timer!.isActive, isFalse);
   });
@@ -345,6 +349,7 @@ void main() {
     expect(state.targetClashRuntime!.feverRemaining, 3);
     state.debugTimeoutForTest();
     expect(state.targetClashRuntime!.feverRemaining, 2);
+    state.debugCompleteTargetClashRevealForTest();
     answer(state);
     expect(state.targetClashRuntime!.feverRemaining, 1);
     answer(state);

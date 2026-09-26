@@ -7,6 +7,7 @@ import '../engine/game_state.dart';
 import '../features/gameplay/presentation/widgets/gameplay_animation_wrappers.dart';
 import '../features/gameplay/presentation/widgets/gameplay_controls.dart';
 import '../features/gameplay/presentation/widgets/gameplay_feedback_effects.dart';
+import '../features/target_clash/presentation/target_clash_gameplay.dart';
 import '../game_config.dart';
 import '../models/enums.dart';
 import '../services/settings.dart';
@@ -38,6 +39,9 @@ class _GameScreenState extends State<GameScreen> {
           child: _MentalMathGameplay(gs: gs, s: s),
         ),
       );
+    }
+    if (gs.isTargetClash) {
+      return SafeArea(child: TargetClashGameplay(gs: gs, s: s));
     }
 
     return SafeArea(
