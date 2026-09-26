@@ -27,6 +27,7 @@ import '../features/target_clash/domain/target_clash_run_config.dart';
 import '../features/target_clash/domain/presentation_answer.dart';
 import '../features/target_clash/domain/target_clash_question.dart';
 import '../features/target_clash/domain/target_clash_question_generator.dart';
+import '../features/target_clash/domain/target_clash_result_summary.dart';
 import '../features/target_clash/domain/target_clash_runtime_state.dart';
 import '../features/modals/presentation/toast_controller.dart';
 import '../features/operation_quest/domain/operation_quest.dart';
@@ -668,6 +669,7 @@ class GameState extends ChangeNotifier {
   int _masterProgress = 0;
   GameRunSnapshot? _runSnapshot;
   TargetClashRuntimeState? _targetClashRuntime;
+  TargetClashResultSummary? _targetClashResultSummary;
   Timer? _targetClashRevealTimer;
   int _targetClashRevealId = 0;
   TargetClashRevealState? _targetClashReveal;
@@ -762,6 +764,8 @@ class GameState extends ChangeNotifier {
 
   GameRunSnapshot? get activeRunSnapshot => _runSnapshot;
   TargetClashRuntimeState? get targetClashRuntime => _targetClashRuntime;
+  TargetClashResultSummary? get targetClashResultSummary =>
+      _targetClashResultSummary;
   TargetClashQuestion? get targetClashQuestion =>
       _targetClashRuntime?.currentQuestion;
   num? get targetClashTarget => _targetClashRuntime?.currentTarget;
@@ -2938,6 +2942,7 @@ class GameState extends ChangeNotifier {
     GameRunSnapshot? replaySnapshot,
     bool skipMentalMathCountdown = false,
   }) {
+    _targetClashResultSummary = null;
     if (replaySnapshot != null && !replaySnapshot.hasValidTargetClashEnvelope) {
       notifyListeners();
       return;
@@ -3458,7 +3463,14 @@ class GameState extends ChangeNotifier {
   void _endTargetClash() {
     rt.timer?.cancel();
     _closeActiveQuestionNeutrally();
-    final completed = _targetClashRuntime?.finished == true;
+    final runtime = _targetClashRuntime;
+    final completed = runtime?.finished == true;
+    if (completed) {
+      _targetClashResultSummary ??=
+          TargetClashResultSummary.fromFinishedRuntime(runtime!);
+    } else {
+      _targetClashResultSummary = null;
+    }
     _invalidateActiveRun();
     rt
       ..gameActive = false
@@ -5585,6 +5597,7 @@ class GameState extends ChangeNotifier {
   Future<void> quitToMenu() async {
     _logPerformance('main menu navigation entered');
     _closeActiveQuestionNeutrally();
+    _targetClashResultSummary = null;
     _invalidateActiveRun();
     _cancelDelayedLossEnd();
     _turnSeq++;
