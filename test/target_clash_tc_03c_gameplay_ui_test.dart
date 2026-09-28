@@ -271,8 +271,7 @@ void main() {
     expect(completed.targetClashReveal, isNotNull);
     expect(find.byKey(const Key('target-clash-power-shot')), findsNothing);
     await tester.pump(const Duration(milliseconds: 1300));
-    expect(
-        find.byKey(const Key('target-clash-terminal-bridge')), findsOneWidget);
+    expect(find.byKey(const Key('target-clash-results')), findsOneWidget);
     await completed.quitToMenu();
 
     final technical = await makeState(generator: _FailSecondStageGenerator());

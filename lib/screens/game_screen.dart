@@ -8,6 +8,7 @@ import '../features/gameplay/presentation/widgets/gameplay_animation_wrappers.da
 import '../features/gameplay/presentation/widgets/gameplay_controls.dart';
 import '../features/gameplay/presentation/widgets/gameplay_feedback_effects.dart';
 import '../features/target_clash/presentation/target_clash_gameplay.dart';
+import '../features/target_clash/presentation/target_clash_results.dart';
 import '../game_config.dart';
 import '../models/enums.dart';
 import '../services/settings.dart';
@@ -41,6 +42,9 @@ class _GameScreenState extends State<GameScreen> {
       );
     }
     if (gs.isTargetClash) {
+      if (gs.hasSuccessfulTargetClashResultDismissal) {
+        return TargetClashResults(gs: gs, s: s);
+      }
       return SafeArea(child: TargetClashGameplay(gs: gs, s: s));
     }
 
