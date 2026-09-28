@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/engine/question_generator.dart';
@@ -11,6 +13,7 @@ import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/models/math_fact.dart';
 import 'package:math_challenge/models/player.dart';
 import 'package:math_challenge/services/audio.dart';
+import 'package:math_challenge/services/admob.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,7 +28,11 @@ void main() {
         numberType: NumberType.integers,
       )!;
 
-  Future<GameState> makeState({QuestionGenerator? generator}) async {
+  Future<GameState> makeState({
+    QuestionGenerator? generator,
+    Random? random,
+    AdMobService? adService,
+  }) async {
     SharedPreferences.setMockInitialValues({});
     await Storage.init();
     final state = GameState(
@@ -42,6 +49,8 @@ void main() {
         ),
       audio: _NoOpAudioService(),
       questionGenerator: generator ?? _TargetClashQuestionGenerator(),
+      runRandom: random,
+      adService: adService,
     );
     await state.load();
     addTearDown(state.dispose);
@@ -157,6 +166,120 @@ void main() {
     expect(state.targetClashRuntime!.phase, TargetClashPhase.technicalFailure);
     expect(state.targetClashResultSummary, isNull);
     expect(state.adGameCount, 0);
+    expect(state.hasSuccessfulTargetClashResultDismissal, isFalse);
+  });
+
+  test('successful replay keeps config and replaces Target Clash runtime',
+      () async {
+    final state = await makeState();
+    final run = config(Difficulty.medium);
+    state.debugStartTargetClashForTest(run);
+    for (var i = 0; i < 6; i++) {
+      resolve(state);
+    }
+    expect(state.targetClashRuntime!.phase, TargetClashPhase.triple);
+    complete(state);
+    final runtime = state.targetClashRuntime!;
+    final ads = state.adGameCount;
+
+    expect(state.hasSuccessfulTargetClashResultDismissal, isTrue);
+    await state.replayGame();
+
+    expect(state.activeRunSnapshot!.targetClashConfig, same(run));
+    expect(state.targetClashRuntime, isNot(same(runtime)));
+    expect(state.targetClashRuntime!.phase, TargetClashPhase.ordinaryStage1);
+    expect(state.targetClashResultSummary, isNull);
+    expect(state.adGameCount, ads);
+  });
+
+  test('replay reaches Triple through a fresh canonical RNG selection',
+      () async {
+    final random = _FixedRandom();
+    final state = await makeState(random: random);
+    state.debugStartTargetClashForTest(config(Difficulty.medium));
+    for (var i = 0; i < 6; i++) {
+      resolve(state);
+    }
+    expect(random.calls, 1);
+    complete(state);
+    await state.replayGame();
+    for (var i = 0; i < 6; i++) {
+      resolve(state);
+    }
+    expect(random.calls, 2);
+  });
+
+  test('blocking interstitial delays replay and menu result dismissal',
+      () async {
+    for (final menu in [false, true]) {
+      final started = Completer<void>();
+      final dismissed = Completer<bool>();
+      final ads = _BlockingAdMobService()
+        ..onShow = () async {
+          started.complete();
+          return dismissed.future;
+        };
+      final state = await makeState(adService: ads);
+      state.adGameCount = 2;
+      state.debugStartTargetClashForTest(config(Difficulty.easy));
+      complete(state);
+      await Future<void>.delayed(Duration.zero);
+      final runtime = state.targetClashRuntime;
+      var done = false;
+      final action = (menu ? state.quitToMenu() : state.replayGame())
+          .whenComplete(() => done = true);
+      await started.future;
+      expect(state.targetClashResultSummary, isNotNull);
+      expect(state.targetClashRuntime, same(runtime));
+      expect(done, isFalse);
+      expect(ads.interstitialShows, 1);
+      expect(state.adGameCount, 3);
+
+      dismissed.complete(true);
+      await action;
+      expect(state.targetClashResultSummary, isNull);
+      expect(state.adGameCount, 3);
+      if (menu) {
+        expect(state.currentScreen, GameScreen.menu);
+      } else {
+        expect(state.targetClashRuntime, isNot(same(runtime)));
+      }
+    }
+  });
+
+  test('ineligible success and technical menu do not show an interstitial',
+      () async {
+    final successAds = _BlockingAdMobService();
+    final success = await makeState(adService: successAds);
+    success.debugStartTargetClashForTest(config(Difficulty.easy));
+    complete(success);
+    await Future<void>.delayed(Duration.zero);
+    final successCount = success.adGameCount;
+    await success.replayGame();
+    expect(successAds.interstitialShows, 0);
+    expect(success.adGameCount, successCount);
+
+    final menuAds = _BlockingAdMobService();
+    final menu = await makeState(adService: menuAds);
+    menu.debugStartTargetClashForTest(config(Difficulty.easy));
+    complete(menu);
+    await Future<void>.delayed(Duration.zero);
+    final menuCount = menu.adGameCount;
+    await menu.quitToMenu();
+    expect(menu.currentScreen, GameScreen.menu);
+    expect(menu.targetClashResultSummary, isNull);
+    expect(menuAds.interstitialShows, 0);
+    expect(menu.adGameCount, menuCount);
+
+    final technicalAds = _BlockingAdMobService();
+    final technical = await makeState(
+      generator: _InitialFailureGenerator(),
+      adService: technicalAds,
+    );
+    technical.debugStartTargetClashForTest(config(Difficulty.easy));
+    await technical.quitToMenu();
+    expect(technicalAds.interstitialShows, 0);
+    expect(technical.adGameCount, 0);
   });
 
   test(
@@ -299,4 +422,42 @@ final class _NoOpAudioService implements AudioService {
   void vibratePowerUp() {}
   @override
   void vibrateWrong() {}
+}
+
+final class _BlockingAdMobService implements AdMobService {
+  Future<bool> Function()? onShow;
+  int interstitialShows = 0;
+
+  @override
+  AdMobRequestPolicy get requestPolicy => AdMobRequestPolicy.familiesSafe;
+  @override
+  Widget? bannerWidget({bool forceHidden = false}) => null;
+  @override
+  Future<void> hideBanner() async {}
+  @override
+  Future<void> initialize() async {}
+  @override
+  Future<void> showBanner() async {}
+  @override
+  Future<bool> showRewarded() async => false;
+  @override
+  Future<bool> showInterstitialIfReady() {
+    interstitialShows++;
+    return onShow?.call() ?? Future.value(false);
+  }
+}
+
+final class _FixedRandom implements Random {
+  int calls = 0;
+
+  @override
+  bool nextBool() => false;
+  @override
+  double nextDouble() => 0;
+  @override
+  int nextInt(int max) {
+    expect(max, 6);
+    calls++;
+    return 0;
+  }
 }
