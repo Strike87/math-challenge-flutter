@@ -1,0 +1,279 @@
+name: TC-05B Frozen Golden Environment Runtime Proof
+
+on:
+  push:
+    branches:
+      - infra/target-clash-tc05b-runtime-proof
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-proof:
+    name: TC-05B Runtime Proof
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+
+    steps:
+      - name: Checkout runtime-proof branch
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Host Docker capability
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker --version
+          docker buildx version
+          docker info --format '{{.OSType}} / {{.Architecture}}'
+
+      - name: Verify pinned OCI index and linux-amd64 manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          INDEX_DIGEST="sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3"
+          AMD64_DIGEST="sha256:496754492fb28b4d3049432f2ca787449331e23fb14f0dd3fffea86bf5a93eb4"
+
+          docker buildx imagetools inspect "ubuntu@${INDEX_DIGEST}" --raw \
+            > "$RUNNER_TEMP/tc05b_ubuntu_index.json"
+
+          jq -e --arg digest "$AMD64_DIGEST" '
+            .manifests[]
+            | select(
+                .platform.os == "linux"
+                and .platform.architecture == "amd64"
+                and .digest == $digest
+              )
+          ' "$RUNNER_TEMP/tc05b_ubuntu_index.json" > /dev/null
+
+          echo "OCI_INDEX_VERIFY=PASS"
+          echo "OCI_AMD64_MANIFEST_VERIFY=PASS"
+
+      - name: Execute frozen runtime proof
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IMAGE="ubuntu@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3"
+
+          docker run --rm \
+            --platform linux/amd64 \
+            -v "$GITHUB_WORKSPACE:/workspace:ro" \
+            -v "$RUNNER_TEMP:/runner-temp" \
+            "$IMAGE" \
+            bash -lc '
+              set -euo pipefail
+
+              exec > >(tee /runner-temp/tc05b_runtime_proof.txt) 2>&1
+
+              echo "=== TC-05B FROZEN ENVIRONMENT RUNTIME PROOF ==="
+
+              export DEBIAN_FRONTEND=noninteractive
+
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                ca-certificates \
+                curl \
+                git \
+                jq \
+                libglu1-mesa \
+                unzip \
+                xz-utils
+
+              rm -rf /var/lib/apt/lists/*
+
+              echo
+              echo "=== BASE OS / PLATFORM ==="
+              cat /etc/os-release
+              uname -a
+
+              if [ "$(uname -m)" != "x86_64" ]; then
+                echo "FAIL: expected x86_64"
+                exit 20
+              fi
+
+              FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.5-stable.tar.xz"
+              FLUTTER_SHA="2132e990f236f8d22e7c6314b29a191a95b10d7cbcfec9b4e2e303d996652cbb"
+
+              echo
+              echo "=== DOWNLOAD OFFICIAL FLUTTER ARCHIVE ==="
+
+              curl --fail --location --retry 3 \
+                "$FLUTTER_URL" \
+                --output /tmp/flutter.tar.xz
+
+              echo "${FLUTTER_SHA}  /tmp/flutter.tar.xz" \
+                | sha256sum --check -
+
+              mkdir -p /opt/flutter-sdk
+              tar -xJf /tmp/flutter.tar.xz \
+                -C /opt/flutter-sdk \
+                --strip-components=1
+
+              export PATH="/opt/flutter-sdk/bin:$PATH"
+
+              git config --global --add safe.directory /opt/flutter-sdk
+
+              echo
+              echo "=== FLUTTER IDENTITY ==="
+
+              flutter --version
+              flutter --version --machine \
+                > /tmp/flutter-version.json
+
+              cat /tmp/flutter-version.json
+
+              test "$(jq -r .frameworkVersion /tmp/flutter-version.json)" = "3.47.5"
+              test "$(jq -r .channel /tmp/flutter-version.json)" = "stable"
+              test "$(jq -r .frameworkRevision /tmp/flutter-version.json)" = "6a19cca56475dbfba1478ee68d7bd0c2ef891da1"
+              test "$(jq -r .engineRevision /tmp/flutter-version.json)" = "af7e796e161ae0bb1ff0758c71a7105418bd9ded"
+
+              DART_MACHINE="$(jq -r .dartSdkVersion /tmp/flutter-version.json)"
+              case "$DART_MACHINE" in
+                3.13.4*) ;;
+                *)
+                  echo "FAIL: unexpected Dart SDK: $DART_MACHINE"
+                  exit 21
+                  ;;
+              esac
+
+              test "$(cat /opt/flutter-sdk/bin/internal/engine.version)" = "af7e796e161ae0bb1ff0758c71a7105418bd9ded"
+
+              dart --version 2>&1 | tee /tmp/dart-version.txt
+              grep -F "Dart SDK version: 3.13.4" /tmp/dart-version.txt
+
+              echo
+              echo "=== FROZEN FONT HASHES ==="
+
+              check_font() {
+                expected="$1"
+                path="$2"
+                echo "${expected}  ${path}" | sha256sum --check -
+              }
+
+              check_font \
+                A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 \
+                /workspace/assets/fonts/Baloo2-Bold.ttf
+
+              check_font \
+                A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 \
+                /workspace/assets/fonts/Baloo2-ExtraBold.ttf
+
+              check_font \
+                A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 \
+                /workspace/assets/fonts/Baloo2-Black.ttf
+
+              check_font \
+                57F73E11F51999432BF7AB22CE55B6F945D5ECA1BF824404CFA9EC2E3718C84E \
+                /workspace/assets/fonts/PlusJakartaSans-Medium.ttf
+
+              check_font \
+                A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 \
+                /workspace/assets/fonts/PlusJakartaSans-SemiBold.ttf
+
+              check_font \
+                A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 \
+                /workspace/assets/fonts/PlusJakartaSans-Bold.ttf
+
+              check_font \
+                A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 \
+                /workspace/assets/fonts/PlusJakartaSans-ExtraBold.ttf
+
+              check_font \
+                32F5840FB2BF844BDABAFE372591DDFB9286E98117F5B21950AAF54EA856919A \
+                /workspace/assets/fonts/OpenDyslexic-Regular.otf
+
+              echo "FONT_HASH_COUNT=8"
+              echo "FONT_HASHES_VERIFIED=PASS"
+
+              echo
+              echo "=== FLUTTER_TESTER SMOKE PROOF ==="
+
+              mkdir -p /tmp/tc05_runtime_probe/test
+
+              cat > /tmp/tc05_runtime_probe/pubspec.yaml <<EOF
+              name: tc05_runtime_probe
+              publish_to: none
+              environment:
+                sdk: ">=3.13.0 <4.0.0"
+              dependencies:
+                flutter:
+                  sdk: flutter
+              dev_dependencies:
+                flutter_test:
+                  sdk: flutter
+              flutter:
+                uses-material-design: true
+              EOF
+
+              cat > /tmp/tc05_runtime_probe/test/runtime_probe_test.dart <<EOF
+              import "package:flutter/material.dart";
+              import "package:flutter_test/flutter_test.dart";
+
+              void main() {
+                testWidgets("TC-05B frozen runtime renders a widget", (tester) async {
+                  tester.view.devicePixelRatio = 1.0;
+                  tester.view.physicalSize = const Size(390, 844);
+                  addTearDown(tester.view.reset);
+
+                  await tester.pumpWidget(
+                    const MaterialApp(
+                      home: Scaffold(
+                        body: Center(
+                          child: Text("TC-05B RUNTIME PROOF"),
+                        ),
+                      ),
+                    ),
+                  );
+
+                  expect(find.text("TC-05B RUNTIME PROOF"), findsOneWidget);
+                  expect(tester.takeException(), isNull);
+                });
+              }
+              EOF
+
+              cd /tmp/tc05_runtime_probe
+
+              flutter test \
+                --reporter expanded \
+                test/runtime_probe_test.dart
+
+              echo
+              echo "=== FINAL PROOF ==="
+              echo "BASE_IMAGE_INDEX_DIGEST=sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3"
+              echo "BASE_IMAGE_AMD64_MANIFEST_DIGEST=sha256:496754492fb28b4d3049432f2ca787449331e23fb14f0dd3fffea86bf5a93eb4"
+              echo "PLATFORM=linux/amd64"
+              echo "FLUTTER_VERSION=3.47.5"
+              echo "FLUTTER_FRAMEWORK_REVISION=6a19cca56475dbfba1478ee68d7bd0c2ef891da1"
+              echo "FLUTTER_ENGINE_REVISION=af7e796e161ae0bb1ff0758c71a7105418bd9ded"
+              echo "DART_VERSION=3.13.4"
+              echo "FLUTTER_ARCHIVE_SHA256=${FLUTTER_SHA}"
+              echo "DPR_PROBE=1.0"
+              echo "GOLDEN_GENERATION=NOT_PERFORMED"
+              echo "GOLDEN_UPDATE=NOT_PERFORMED"
+              echo "TC_05B_RUNTIME_PROOF=PASS"
+            '
+
+      - name: Verify repository remained unmodified
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git status --short
+            echo "FAIL: workflow mutated checked-out repository."
+            exit 30
+          fi
+
+          echo "REPOSITORY_MUTATION=NONE"
+
+      - name: Upload runtime-proof record
+        uses: actions/upload-artifact@v4
+        with:
+          name: tc05b-runtime-proof
+          path: ${{ runner.temp }}/tc05b_runtime_proof.txt
+          if-no-files-found: error
+          retention-days: 14
