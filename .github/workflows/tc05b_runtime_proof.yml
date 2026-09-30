@@ -194,52 +194,63 @@ jobs:
 
               mkdir -p /tmp/tc05_runtime_probe/test
 
-              cat > /tmp/tc05_runtime_probe/pubspec.yaml <<EOF
-              name: tc05_runtime_probe
-              publish_to: none
-              environment:
-                sdk: ">=3.13.0 <4.0.0"
-              dependencies:
-                flutter:
-                  sdk: flutter
-              dev_dependencies:
-                flutter_test:
-                  sdk: flutter
-              flutter:
-                uses-material-design: true
-              EOF
+              printf "%s\n" \
+                "name: tc05_runtime_probe" \
+                "publish_to: none" \
+                "environment:" \
+                "  sdk: \">=3.13.0 <4.0.0\"" \
+                "dependencies:" \
+                "  flutter:" \
+                "    sdk: flutter" \
+                "dev_dependencies:" \
+                "  flutter_test:" \
+                "    sdk: flutter" \
+                "flutter:" \
+                "  uses-material-design: true" \
+                > /tmp/tc05_runtime_probe/pubspec.yaml
 
-              cat > /tmp/tc05_runtime_probe/test/runtime_probe_test.dart <<EOF
-              import "package:flutter/material.dart";
-              import "package:flutter_test/flutter_test.dart";
+              printf "%s\n" \
+                "import \"package:flutter/material.dart\";" \
+                "import \"package:flutter_test/flutter_test.dart\";" \
+                "" \
+                "void main() {" \
+                "  testWidgets(\"TC-05B frozen runtime renders a widget\", (tester) async {" \
+                "    tester.view.devicePixelRatio = 1.0;" \
+                "    tester.view.physicalSize = const Size(390, 844);" \
+                "    addTearDown(tester.view.reset);" \
+                "" \
+                "    await tester.pumpWidget(" \
+                "      const MaterialApp(" \
+                "        home: Scaffold(" \
+                "          body: Center(" \
+                "            child: Text(\"TC-05B RUNTIME PROOF\")," \
+                "          )," \
+                "        )," \
+                "      )," \
+                "    );" \
+                "" \
+                "    expect(find.text(\"TC-05B RUNTIME PROOF\"), findsOneWidget);" \
+                "    expect(tester.takeException(), isNull);" \
+                "  });" \
+                "}" \
+                > /tmp/tc05_runtime_probe/test/runtime_probe_test.dart
 
-              void main() {
-                testWidgets("TC-05B frozen runtime renders a widget", (tester) async {
-                  tester.view.devicePixelRatio = 1.0;
-                  tester.view.physicalSize = const Size(390, 844);
-                  addTearDown(tester.view.reset);
+              test -s /tmp/tc05_runtime_probe/pubspec.yaml
+              test -s /tmp/tc05_runtime_probe/test/runtime_probe_test.dart
 
-                  await tester.pumpWidget(
-                    const MaterialApp(
-                      home: Scaffold(
-                        body: Center(
-                          child: Text("TC-05B RUNTIME PROOF"),
-                        ),
-                      ),
-                    ),
-                  );
+              grep -F "name: tc05_runtime_probe" \
+                /tmp/tc05_runtime_probe/pubspec.yaml > /dev/null
 
-                  expect(find.text("TC-05B RUNTIME PROOF"), findsOneWidget);
-                  expect(tester.takeException(), isNull);
-                });
-              }
-              EOF
+              grep -F "TC-05B RUNTIME PROOF" \
+                /tmp/tc05_runtime_probe/test/runtime_probe_test.dart > /dev/null
 
               cd /tmp/tc05_runtime_probe
 
               flutter test \
                 --reporter expanded \
                 test/runtime_probe_test.dart
+
+              echo "FLUTTER_TESTER_SMOKE_PROOF=PASS"
 
               echo
               echo "=== FINAL PROOF ==="
