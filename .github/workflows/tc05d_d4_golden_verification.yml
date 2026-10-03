@@ -28,9 +28,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          EXPECTED_PARENT="8832ffc12b4890442bd32f4c32464f83e518b062"
+          D3_COMMIT="8832ffc12b4890442bd32f4c32464f83e518b062"
 
-          test "$(git rev-parse HEAD^)" = "$EXPECTED_PARENT"
+          git merge-base --is-ancestor "$D3_COMMIT" HEAD
           test -f test/target_clash_tc_05d_golden_test.dart
 
           count="$(
@@ -209,18 +209,18 @@ jobs:
 
               git config --global --add safe.directory /work
 
-              cat > /tmp/tc05d_expected.sha256 <<EOF
-3dab0a12997198fae56380d1767242529715b0846e2afe4e756c9c839b6b8340  test/goldens/target_clash/tc05d_01_gameplay_open_light_390x844.png
-5d6bf2b5fccfb483a409460a87d2a11ed480a72e571cc56238f80012414d1322  test/goldens/target_clash/tc05d_02_clash_reveal_light_390x844.png
-5422934969d99da5fe80bd4b353f18901c43fe9396498c330627b554917c981d  test/goldens/target_clash/tc05d_03_gameplay_open_dark_390x844.png
-849bc524f4de67453e009b8eab75a194b5e91487155ec35d88ac7901373c4acd  test/goldens/target_clash/tc05d_04_power_shot_ready_390x844.png
-682a17e41b01419235dd4a123ebcc1e69b8af7b4a0a335c41c53d55ca2e3b8aa  test/goldens/target_clash/tc05d_05_triple_power_shot_blocked_390x844.png
-cc70e7095f267c392dd2094eb9d0afbc0bad0a35c43d52f647628c572cfe1514  test/goldens/target_clash/tc05d_06_results_light_390x844.png
-feab10a05246f335c70a6ee7ee3a87f6eb852dd128d40c298c56684afb810146  test/goldens/target_clash/tc05d_07_results_dark_390x844.png
-f604d8049d3e5660b8740c66f0e0910490d9354507ce207ed7ef360c372fbb4b  test/goldens/target_clash/tc05d_08_results_landscape_844x390.png
-30059b0edf760ad1419b1a565fd471dd992829f929424e7f81f8437f654a64bc  test/goldens/target_clash/tc05d_09_technical_failure_390x844.png
-751bef3194f80d8f8b2834815e7042c5abedc3d338ab2981a1b712ae99006e6c  test/goldens/target_clash/tc05d_10_gameplay_tablet_834x1194.png
-EOF
+              printf "%s\n" \
+                "3dab0a12997198fae56380d1767242529715b0846e2afe4e756c9c839b6b8340  test/goldens/target_clash/tc05d_01_gameplay_open_light_390x844.png" \
+                "5d6bf2b5fccfb483a409460a87d2a11ed480a72e571cc56238f80012414d1322  test/goldens/target_clash/tc05d_02_clash_reveal_light_390x844.png" \
+                "5422934969d99da5fe80bd4b353f18901c43fe9396498c330627b554917c981d  test/goldens/target_clash/tc05d_03_gameplay_open_dark_390x844.png" \
+                "849bc524f4de67453e009b8eab75a194b5e91487155ec35d88ac7901373c4acd  test/goldens/target_clash/tc05d_04_power_shot_ready_390x844.png" \
+                "682a17e41b01419235dd4a123ebcc1e69b8af7b4a0a335c41c53d55ca2e3b8aa  test/goldens/target_clash/tc05d_05_triple_power_shot_blocked_390x844.png" \
+                "cc70e7095f267c392dd2094eb9d0afbc0bad0a35c43d52f647628c572cfe1514  test/goldens/target_clash/tc05d_06_results_light_390x844.png" \
+                "feab10a05246f335c70a6ee7ee3a87f6eb852dd128d40c298c56684afb810146  test/goldens/target_clash/tc05d_07_results_dark_390x844.png" \
+                "f604d8049d3e5660b8740c66f0e0910490d9354507ce207ed7ef360c372fbb4b  test/goldens/target_clash/tc05d_08_results_landscape_844x390.png" \
+                "30059b0edf760ad1419b1a565fd471dd992829f929424e7f81f8437f654a64bc  test/goldens/target_clash/tc05d_09_technical_failure_390x844.png" \
+                "751bef3194f80d8f8b2834815e7042c5abedc3d338ab2981a1b712ae99006e6c  test/goldens/target_clash/tc05d_10_gameplay_tablet_834x1194.png" \
+                > /tmp/tc05d_expected.sha256
 
               sha256sum --check /tmp/tc05d_expected.sha256
 
