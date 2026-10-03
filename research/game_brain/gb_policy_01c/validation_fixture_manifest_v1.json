@@ -1,0 +1,446 @@
+{
+  "schema_version": 1,
+  "policy_id": "timeout_concentration_comparator_preference",
+  "policy_version": 1,
+  "decision_context": "chooseDifficulty",
+  "input_contract": "ChooseDifficultyEpistemicPreservationSet",
+  "context": {
+    "operation": "addition",
+    "number_type": "natural",
+    "representation": "directNumeric"
+  },
+  "candidate_envelope": {
+    "allowed_difficulties": ["easy", "medium", "hard"],
+    "required_candidate_count_for_preference": 2,
+    "candidate_order_has_semantics": false,
+    "all_candidates_must_have_present_evidence": true
+  },
+  "policy_rule": {
+    "required_total_timeout_contributions": 1,
+    "required_entries_in_contribution": 1,
+    "required_disposition": "matched",
+    "target_must_differ_from_comparator": true,
+    "comparator_must_be_preserved_candidate": true,
+    "preferred_output": "canonical comparatorDifficulty",
+    "fallback_output": "ChooseDifficultyNoPreference"
+  },
+  "fixtures": [
+    {
+      "id": "P01_hard_to_medium",
+      "candidates": [
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "hard",
+              "comparator": "medium",
+              "entries": ["matched"]
+            }
+          ]
+        },
+        {
+          "difficulty": "medium",
+          "availability": "present",
+          "timeout_contributions": []
+        }
+      ],
+      "expected": {
+        "type": "preferred",
+        "candidate": "medium"
+      }
+    },
+    {
+      "id": "P02_candidate_order_permutation",
+      "candidates": [
+        {
+          "difficulty": "medium",
+          "availability": "present",
+          "timeout_contributions": []
+        },
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "hard",
+              "comparator": "medium",
+              "entries": ["matched"]
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "type": "preferred",
+        "candidate": "medium"
+      }
+    },
+    {
+      "id": "P03_no_enum_order_assumption",
+      "candidates": [
+        {
+          "difficulty": "easy",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "easy",
+              "comparator": "hard",
+              "entries": ["matched"]
+            }
+          ]
+        },
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": []
+        }
+      ],
+      "expected": {
+        "type": "preferred",
+        "candidate": "hard"
+      }
+    },
+    {
+      "id": "N01_no_timeout_contribution",
+      "candidates": [
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": []
+        },
+        {
+          "difficulty": "medium",
+          "availability": "present",
+          "timeout_contributions": []
+        }
+      ],
+      "expected": {
+        "type": "no_preference"
+      }
+    },
+    {
+      "id": "N02_target_evidence_absent",
+      "candidates": [
+        {
+          "difficulty": "hard",
+          "availability": "absent",
+          "timeout_contributions": [
+            {
+              "target": "hard",
+              "comparator": "medium",
+              "entries": ["matched"]
+            }
+          ]
+        },
+        {
+          "difficulty": "medium",
+          "availability": "present",
+          "timeout_contributions": []
+        }
+      ],
+      "expected": {
+        "type": "no_preference"
+      }
+    },
+    {
+      "id": "N03_comparator_evidence_absent",
+      "candidates": [
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "hard",
+              "comparator": "medium",
+              "entries": ["matched"]
+            }
+          ]
+        },
+        {
+          "difficulty": "medium",
+          "availability": "absent",
+          "timeout_contributions": []
+        }
+      ],
+      "expected": {
+        "type": "no_preference"
+      }
+    },
+    {
+      "id": "N04_empty_contribution",
+      "candidates": [
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "hard",
+              "comparator": "medium",
+              "entries": []
+            }
+          ]
+        },
+        {
+          "difficulty": "medium",
+          "availability": "present",
+          "timeout_contributions": []
+        }
+      ],
+      "expected": {
+        "type": "no_preference"
+      }
+    },
+    {
+      "id": "N05_not_matched",
+      "candidates": [
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "hard",
+              "comparator": "medium",
+              "entries": ["notMatched"]
+            }
+          ]
+        },
+        {
+          "difficulty": "medium",
+          "availability": "present",
+          "timeout_contributions": []
+        }
+      ],
+      "expected": {
+        "type": "no_preference"
+      }
+    },
+    {
+      "id": "N06_contradicted",
+      "candidates": [
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "hard",
+              "comparator": "medium",
+              "entries": ["contradicted"]
+            }
+          ]
+        },
+        {
+          "difficulty": "medium",
+          "availability": "present",
+          "timeout_contributions": []
+        }
+      ],
+      "expected": {
+        "type": "no_preference"
+      }
+    },
+    {
+      "id": "N07_multiple_matched_entries",
+      "candidates": [
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "hard",
+              "comparator": "medium",
+              "entries": ["matched", "matched"]
+            }
+          ]
+        },
+        {
+          "difficulty": "medium",
+          "availability": "present",
+          "timeout_contributions": []
+        }
+      ],
+      "expected": {
+        "type": "no_preference"
+      }
+    },
+    {
+      "id": "N08_mixed_entries",
+      "candidates": [
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "hard",
+              "comparator": "medium",
+              "entries": ["matched", "notMatched"]
+            }
+          ]
+        },
+        {
+          "difficulty": "medium",
+          "availability": "present",
+          "timeout_contributions": []
+        }
+      ],
+      "expected": {
+        "type": "no_preference"
+      }
+    },
+    {
+      "id": "N09_duplicate_contributions",
+      "candidates": [
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "hard",
+              "comparator": "medium",
+              "entries": ["matched"]
+            },
+            {
+              "target": "hard",
+              "comparator": "medium",
+              "entries": ["matched"]
+            }
+          ]
+        },
+        {
+          "difficulty": "medium",
+          "availability": "present",
+          "timeout_contributions": []
+        }
+      ],
+      "expected": {
+        "type": "no_preference"
+      }
+    },
+    {
+      "id": "N10_competing_contributions",
+      "candidates": [
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "hard",
+              "comparator": "medium",
+              "entries": ["matched"]
+            }
+          ]
+        },
+        {
+          "difficulty": "medium",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "medium",
+              "comparator": "hard",
+              "entries": ["matched"]
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "type": "no_preference"
+      }
+    },
+    {
+      "id": "N11_three_candidate_envelope",
+      "candidates": [
+        {
+          "difficulty": "easy",
+          "availability": "present",
+          "timeout_contributions": []
+        },
+        {
+          "difficulty": "medium",
+          "availability": "present",
+          "timeout_contributions": []
+        },
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "hard",
+              "comparator": "medium",
+              "entries": ["matched"]
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "type": "no_preference"
+      }
+    },
+    {
+      "id": "N12_comparator_not_preserved",
+      "candidates": [
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "hard",
+              "comparator": "easy",
+              "entries": ["matched"]
+            }
+          ]
+        },
+        {
+          "difficulty": "medium",
+          "availability": "present",
+          "timeout_contributions": []
+        }
+      ],
+      "expected": {
+        "type": "no_preference"
+      }
+    },
+    {
+      "id": "N13_target_equals_comparator",
+      "candidates": [
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": [
+            {
+              "target": "hard",
+              "comparator": "hard",
+              "entries": ["matched"]
+            }
+          ]
+        },
+        {
+          "difficulty": "medium",
+          "availability": "present",
+          "timeout_contributions": []
+        }
+      ],
+      "expected": {
+        "type": "no_preference"
+      }
+    },
+    {
+      "id": "N14_one_candidate_only",
+      "candidates": [
+        {
+          "difficulty": "hard",
+          "availability": "present",
+          "timeout_contributions": []
+        }
+      ],
+      "expected": {
+        "type": "no_preference"
+      }
+    },
+    {
+      "id": "N15_zero_candidates",
+      "candidates": [],
+      "expected": {
+        "type": "no_preference"
+      }
+    }
+  ]
+}
