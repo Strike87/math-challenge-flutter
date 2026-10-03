@@ -1,0 +1,281 @@
+name: TC-05D D4 Frozen Golden Verification
+
+on:
+  push:
+    branches:
+      - feature/target-clash-tc05d-controlled-goldens
+    paths:
+      - .github/workflows/tc05d_d4_golden_verification.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-golden-verification:
+    name: TC-05D D4 Frozen Golden Verification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout TC-05D branch
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - name: Verify D3 parent and required files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          EXPECTED_PARENT="8832ffc12b4890442bd32f4c32464f83e518b062"
+
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_PARENT"
+          test -f test/target_clash_tc_05d_golden_test.dart
+
+          count="$(
+            find test/goldens/target_clash \
+              -maxdepth 1 \
+              -type f \
+              -name 'tc05d_*.png' \
+              | wc -l
+          )"
+
+          test "$count" -eq 10
+
+          echo "D3_PARENT=PASS"
+          echo "HARNESS_PRESENT=PASS"
+          echo "COMMITTED_GOLDEN_COUNT=10"
+
+      - name: Host Docker capability
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker --version
+          docker buildx version
+          docker info --format '{{.OSType}} / {{.Architecture}}'
+
+      - name: Verify pinned OCI index and linux-amd64 manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          INDEX_DIGEST="sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3"
+          AMD64_DIGEST="sha256:496754492fb28b4d3049432f2ca787449331e23fb14f0dd3fffea86bf5a93eb4"
+
+          docker buildx imagetools inspect "ubuntu@${INDEX_DIGEST}" --raw \
+            > "$RUNNER_TEMP/tc05d_d4_ubuntu_index.json"
+
+          jq -e --arg digest "$AMD64_DIGEST" '
+            .manifests[]
+            | select(
+                .platform.os == "linux"
+                and .platform.architecture == "amd64"
+                and .digest == $digest
+              )
+          ' "$RUNNER_TEMP/tc05d_d4_ubuntu_index.json" > /dev/null
+
+          echo "OCI_INDEX_VERIFY=PASS"
+          echo "OCI_AMD64_MANIFEST_VERIFY=PASS"
+
+      - name: Verify committed goldens in frozen runtime without update
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IMAGE="ubuntu@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3"
+
+          docker run --rm \
+            --platform linux/amd64 \
+            -e SOURCE_HEAD="$GITHUB_SHA" \
+            -v "$GITHUB_WORKSPACE:/workspace:ro" \
+            -v "$RUNNER_TEMP:/runner-temp" \
+            "$IMAGE" \
+            bash -lc '
+              set -euo pipefail
+
+              exec > >(tee /runner-temp/tc05d_d4_verification_log.txt) 2>&1
+
+              echo "=== TC-05D D4 FROZEN GOLDEN VERIFICATION ==="
+
+              export DEBIAN_FRONTEND=noninteractive
+
+              apt-get update
+
+              apt-get install -y --no-install-recommends \
+                ca-certificates \
+                curl \
+                git \
+                jq \
+                libglu1-mesa \
+                unzip \
+                xz-utils
+
+              rm -rf /var/lib/apt/lists/*
+
+              test "$(uname -m)" = "x86_64"
+
+              FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.5-stable.tar.xz"
+              FLUTTER_SHA="2132e990f236f8d22e7c6314b29a191a95b10d7cbcfec9b4e2e303d996652cbb"
+
+              echo
+              echo "=== DOWNLOAD / VERIFY OFFICIAL FLUTTER ==="
+
+              curl --fail --location --retry 3 \
+                "$FLUTTER_URL" \
+                --output /tmp/flutter.tar.xz
+
+              echo "${FLUTTER_SHA}  /tmp/flutter.tar.xz" \
+                | sha256sum --check -
+
+              mkdir -p /opt/flutter-sdk
+
+              tar -xJf /tmp/flutter.tar.xz \
+                -C /opt/flutter-sdk \
+                --strip-components=1
+
+              export PATH="/opt/flutter-sdk/bin:$PATH"
+
+              git config --global --add safe.directory /opt/flutter-sdk
+
+              flutter --version
+              flutter --version --machine > /tmp/flutter-version.json
+
+              test "$(jq -r .frameworkVersion /tmp/flutter-version.json)" = "3.47.5"
+              test "$(jq -r .channel /tmp/flutter-version.json)" = "stable"
+              test "$(jq -r .frameworkRevision /tmp/flutter-version.json)" = "6a19cca56475dbfba1478ee68d7bd0c2ef891da1"
+              test "$(jq -r .engineRevision /tmp/flutter-version.json)" = "af7e796e161ae0bb1ff0758c71a7105418bd9ded"
+
+              DART_MACHINE="$(jq -r .dartSdkVersion /tmp/flutter-version.json)"
+
+              case "$DART_MACHINE" in
+                3.13.4*) ;;
+                *)
+                  echo "FAIL: unexpected Dart SDK: $DART_MACHINE"
+                  exit 21
+                  ;;
+              esac
+
+              echo
+              echo "=== VERIFY FROZEN FONT AUTHORITY ==="
+
+              check_font() {
+                expected="$1"
+                path="$2"
+                echo "${expected}  ${path}" | sha256sum --check -
+              }
+
+              check_font \
+                A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 \
+                /workspace/assets/fonts/Baloo2-Bold.ttf
+
+              check_font \
+                A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 \
+                /workspace/assets/fonts/Baloo2-ExtraBold.ttf
+
+              check_font \
+                A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 \
+                /workspace/assets/fonts/Baloo2-Black.ttf
+
+              check_font \
+                57F73E11F51999432BF7AB22CE55B6F945D5ECA1BF824404CFA9EC2E3718C84E \
+                /workspace/assets/fonts/PlusJakartaSans-Medium.ttf
+
+              check_font \
+                A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 \
+                /workspace/assets/fonts/PlusJakartaSans-SemiBold.ttf
+
+              check_font \
+                A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 \
+                /workspace/assets/fonts/PlusJakartaSans-Bold.ttf
+
+              check_font \
+                A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 \
+                /workspace/assets/fonts/PlusJakartaSans-ExtraBold.ttf
+
+              check_font \
+                32F5840FB2BF844BDABAFE372591DDFB9286E98117F5B21950AAF54EA856919A \
+                /workspace/assets/fonts/OpenDyslexic-Regular.otf
+
+              echo "FONT_HASH_COUNT=8"
+              echo "FONT_HASHES_VERIFIED=PASS"
+
+              echo
+              echo "=== PREPARE EPHEMERAL COPY ==="
+
+              mkdir -p /work
+              cp -a /workspace/. /work/
+              cd /work
+
+              git config --global --add safe.directory /work
+
+              cat > /tmp/tc05d_expected.sha256 <<EOF
+3dab0a12997198fae56380d1767242529715b0846e2afe4e756c9c839b6b8340  test/goldens/target_clash/tc05d_01_gameplay_open_light_390x844.png
+5d6bf2b5fccfb483a409460a87d2a11ed480a72e571cc56238f80012414d1322  test/goldens/target_clash/tc05d_02_clash_reveal_light_390x844.png
+5422934969d99da5fe80bd4b353f18901c43fe9396498c330627b554917c981d  test/goldens/target_clash/tc05d_03_gameplay_open_dark_390x844.png
+849bc524f4de67453e009b8eab75a194b5e91487155ec35d88ac7901373c4acd  test/goldens/target_clash/tc05d_04_power_shot_ready_390x844.png
+682a17e41b01419235dd4a123ebcc1e69b8af7b4a0a335c41c53d55ca2e3b8aa  test/goldens/target_clash/tc05d_05_triple_power_shot_blocked_390x844.png
+cc70e7095f267c392dd2094eb9d0afbc0bad0a35c43d52f647628c572cfe1514  test/goldens/target_clash/tc05d_06_results_light_390x844.png
+feab10a05246f335c70a6ee7ee3a87f6eb852dd128d40c298c56684afb810146  test/goldens/target_clash/tc05d_07_results_dark_390x844.png
+f604d8049d3e5660b8740c66f0e0910490d9354507ce207ed7ef360c372fbb4b  test/goldens/target_clash/tc05d_08_results_landscape_844x390.png
+30059b0edf760ad1419b1a565fd471dd992829f929424e7f81f8437f654a64bc  test/goldens/target_clash/tc05d_09_technical_failure_390x844.png
+751bef3194f80d8f8b2834815e7042c5abedc3d338ab2981a1b712ae99006e6c  test/goldens/target_clash/tc05d_10_gameplay_tablet_834x1194.png
+EOF
+
+              sha256sum --check /tmp/tc05d_expected.sha256
+
+              echo "PRE_TEST_CANONICAL_HASH_VERIFY=PASS"
+
+              flutter pub get
+
+              echo
+              echo "=== GOLDEN VERIFICATION — NO UPDATE ==="
+
+              flutter test \
+                --reporter expanded \
+                test/target_clash_tc_05d_golden_test.dart
+
+              echo
+              echo "=== POST-TEST CANONICAL HASH VERIFY ==="
+
+              sha256sum --check /tmp/tc05d_expected.sha256
+
+              echo "POST_TEST_CANONICAL_HASH_VERIFY=PASS"
+
+              echo
+              echo "=== FINAL D4 PROOF ==="
+
+              echo "TC_05D_D4_FROZEN_GOLDEN_VERIFICATION=PASS"
+              echo "SOURCE_HEAD=${SOURCE_HEAD}"
+              echo "PLATFORM=linux/amd64"
+              echo "FLUTTER_VERSION=3.47.5"
+              echo "DART_VERSION=3.13.4"
+              echo "FONT_HASH_COUNT=8"
+              echo "DPR=1.0"
+              echo "LOCALE=en"
+              echo "TEXT_SCALE=1.0"
+              echo "GOLDEN_COUNT=10"
+              echo "UPDATE_GOLDENS=NOT_USED"
+              echo "CANONICAL_HASHES_UNCHANGED=PASS"
+            '
+
+      - name: Verify checked-out repository remained unmodified
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git status --short
+            echo "FAIL: source checkout mutated."
+            exit 30
+          fi
+
+          echo "SOURCE_REPOSITORY_MUTATION=NONE"
+
+      - name: Upload D4 verification record
+        uses: actions/upload-artifact@v4
+        with:
+          name: tc05d-d4-frozen-golden-verification
+          path: ${{ runner.temp }}/tc05d_d4_verification_log.txt
+          if-no-files-found: error
+          retention-days: 14
