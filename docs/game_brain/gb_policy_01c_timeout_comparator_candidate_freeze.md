@@ -12,6 +12,7 @@ VALIDATION EXECUTION NOT AUTHORIZED
 POLICY VALIDATED = NO
 POLICY AUTHORITY = NONE
 mayAffectGameplay = false
+```
 
 1. Authority and parent gate
 Parent governance:
