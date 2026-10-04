@@ -1,0 +1,274 @@
+name: GB-POLICY-01C Dependency Recovery Probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Exact confirmation token required to start this probe.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  confirmation:
+    name: Confirm dependency recovery probe
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fail closed unless confirmed
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$CONFIRMATION" = "GB-POLICY-01C-DEPENDENCY-RECOVERY"
+
+  dependency-recovery:
+    name: Capture frozen-runtime lockfile delta
+    needs: confirmation
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify runner platform
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -s)" = "Linux"
+          test "$(uname -m)" = "x86_64"
+
+      - name: Checkout frozen scientific subject
+        uses: actions/checkout@v5
+        with:
+          ref: a616efa9f2167ad1b510e9f3978240acdd75d5a8
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify frozen subject checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "a616efa9f2167ad1b510e9f3978240acdd75d5a8"
+          git merge-base --is-ancestor 59130ebae16c7ebc670eab11e9b25ca451ffc80f HEAD
+          git merge-base --is-ancestor 29961bbd011289cd88975b0f045e9f7ad5470309 HEAD
+          git merge-base --is-ancestor ddd3e41e500c1a1fa7b270115ac7efa221a55e89 HEAD
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Verify frozen Git-object bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          verify_object_hash() {
+            local expected="$1"
+            local path="$2"
+            local actual
+            actual="$(git cat-file blob "HEAD:${path}" | sha256sum | awk '{print $1}')"
+            test "$actual" = "$expected"
+          }
+
+          verify_object_hash 7fe12301cb469e25a3839f925fd098159d294f8db2a3873371b3cf4b4c03eab6 lib/features/game_brain/policy/timeout_concentration_comparator_policy.dart
+          verify_object_hash 87aab26e47bcc635572c0b47e7d611e6fb92574383081e997204224b8bf70e42 test/features/game_brain/timeout_concentration_comparator_policy_test.dart
+          verify_object_hash e3342de093d709379785cf01cad88b1a1897256acd8e1e2247abbb76d1e45bc8 lib/features/game_brain/game_brain.dart
+          verify_object_hash 288392de02e9fcdc70cdaa8535d0bedcef6e793fac51528e939d5b2ba0accaa9 research/game_brain/gb_policy_01c/validation_fixture_manifest_v1.json
+          verify_object_hash 999ab7522219784992327fb410cdf4a1c9fdee9c7c265f0495cb59ebe6411b06 docs/game_brain/gb_policy_01c_preexecution_binding_review.md
+          verify_object_hash b422f0bce3b1b07f61af08775a11f2e4134276ca71c040bef34801b127f3d0e3 research/game_brain/gb_policy_01c/gb_policy_01c_frozen_validation_test.dart
+          test "$(git rev-parse HEAD:research/game_brain/gb_policy_01c/validation_fixture_manifest_v1.json)" = "02aa3a63bbd2b9c2c1a0bbc1f0bf5aad0119cad2"
+
+      - name: Install frozen Flutter SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter_url="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.5-stable.tar.xz"
+          flutter_sha="2132e990f236f8d22e7c6314b29a191a95b10d7cbcfec9b4e2e303d996652cbb"
+          flutter_archive="$RUNNER_TEMP/flutter.tar.xz"
+          flutter_root="$RUNNER_TEMP/flutter-sdk"
+
+          curl --fail --location --retry 3 "$flutter_url" --output "$flutter_archive"
+          echo "$flutter_sha  $flutter_archive" | sha256sum --check -
+          mkdir -p "$flutter_root"
+          tar -xJf "$flutter_archive" -C "$flutter_root" --strip-components=1
+          echo "$flutter_root/bin" >> "$GITHUB_PATH"
+
+      - name: Verify frozen Flutter identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CI=true
+          flutter --version --machine > "$RUNNER_TEMP/flutter-version.json"
+          cat "$RUNNER_TEMP/flutter-version.json"
+          jq -e '
+            .frameworkVersion == "3.47.5"
+            and .frameworkRevision == "6a19cca56475dbfba1478ee68d7bd0c2ef891da1"
+            and .engineRevision == "af7e796e161ae0bb1ff0758c71a7105418bd9ded"
+            and .dartSdkVersion == "3.13.4"
+          ' "$RUNNER_TEMP/flutter-version.json" > /dev/null
+
+      - name: Capture and probe dependency resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          pubspec_sha_before="$(sha256sum pubspec.yaml | awk '{print $1}')"
+          lockfile_sha_before="$(sha256sum pubspec.lock | awk '{print $1}')"
+          lockfile_before="$RUNNER_TEMP/pubspec.lock.before"
+          cp pubspec.lock "$lockfile_before"
+          printf 'PUBSPEC_SHA_BEFORE\n= %s\nPUBSPEC_LOCK_SHA_BEFORE\n= %s\n' "$pubspec_sha_before" "$lockfile_sha_before"
+          echo "PUBSPEC_LOCK_SHA_BEFORE=$lockfile_sha_before" >> "$GITHUB_ENV"
+
+          restore_and_verify_tracked_clean() {
+            local status="$?"
+            trap - EXIT
+            git restore --source=HEAD -- pubspec.lock
+            git diff --exit-code
+            test -z "$(git status --porcelain --untracked-files=no)"
+            exit "$status"
+          }
+          trap restore_and_verify_tracked_clean EXIT
+
+          set +e
+          flutter pub get --enforce-lockfile > "$RUNNER_TEMP/enforced-lockfile.stdout" 2> "$RUNNER_TEMP/enforced-lockfile.stderr"
+          enforced_lockfile_exit_code="$?"
+          set -e
+          cat "$RUNNER_TEMP/enforced-lockfile.stdout"
+          cat "$RUNNER_TEMP/enforced-lockfile.stderr" >&2
+          printf 'ENFORCED_LOCKFILE_EXIT_CODE\n= %s\n' "$enforced_lockfile_exit_code"
+          if [ "$enforced_lockfile_exit_code" -eq 0 ]; then
+            printf 'ENFORCED_LOCKFILE_RESOLUTION\n= SUCCEEDED_UNEXPECTEDLY\n' >&2
+            exit 1
+          fi
+
+          cat \
+            "$RUNNER_TEMP/enforced-lockfile.stdout" \
+            "$RUNNER_TEMP/enforced-lockfile.stderr" \
+            > "$RUNNER_TEMP/enforced-lockfile.combined"
+          grep -F \
+            'Unable to satisfy `pubspec.yaml` using `pubspec.lock`.' \
+            "$RUNNER_TEMP/enforced-lockfile.combined" \
+            > /dev/null
+          grep -F \
+            'Would change ' \
+            "$RUNNER_TEMP/enforced-lockfile.combined" \
+            > /dev/null
+          echo "ENFORCED_LOCKFILE_RESOLUTION=FAILED_AS_OBSERVED" >> "$GITHUB_ENV"
+
+          test "$(sha256sum pubspec.yaml | awk '{print $1}')" = "$pubspec_sha_before"
+          if ! cmp -s pubspec.lock "$lockfile_before"; then
+            printf 'ENFORCED_LOCKFILE_MUTATED_LOCKFILE\n= RESTORED\n'
+            cp "$lockfile_before" pubspec.lock
+          fi
+          git diff --exit-code
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+          flutter pub get
+
+          test "$(sha256sum pubspec.yaml | awk '{print $1}')" = "$pubspec_sha_before"
+          lockfile_sha_after="$(sha256sum pubspec.lock | awk '{print $1}')"
+          changed_paths="$(git diff --name-only)"
+          printf 'PUBSPEC_LOCK_SHA_AFTER\n= %s\n' "$lockfile_sha_after"
+          if [ -z "$changed_paths" ]; then
+            tracked_discovery_delta="NONE"
+          else
+            test "$changed_paths" = "pubspec.lock"
+            tracked_discovery_delta="pubspec.lock ONLY"
+          fi
+          printf 'TRACKED_DISCOVERY_DELTA\n= %s\n' "$tracked_discovery_delta"
+          echo "TRACKED_DISCOVERY_DELTA=$tracked_discovery_delta" >> "$GITHUB_ENV"
+          echo "PUBSPEC_LOCK_SHA_AFTER=$lockfile_sha_after" >> "$GITHUB_ENV"
+
+          git diff --no-ext-diff -- pubspec.lock
+          python3 - "$lockfile_before" pubspec.lock > "$RUNNER_TEMP/package-version-delta.txt" <<'PY'
+          import sys
+
+          def versions(path):
+              values = {}
+              in_packages = False
+              package = None
+              with open(path, encoding="utf-8") as source:
+                  for line in source:
+                      if line == "packages:\n":
+                          in_packages = True
+                          continue
+                      if in_packages and line and not line.startswith(" "):
+                          break
+                      if in_packages and line.startswith("  ") and not line.startswith("    ") and line.rstrip().endswith(":"):
+                          package = line.strip()[:-1]
+                      elif package and line.startswith("    version: "):
+                          values[package] = line.split(": ", 1)[1].strip().strip('"')
+              return values
+
+          before = versions(sys.argv[1])
+          after = versions(sys.argv[2])
+          changed = sorted(name for name in before.keys() | after.keys() if before.get(name) != after.get(name))
+          print("PACKAGE | BEFORE | AFTER")
+          for name in changed:
+              print(f"{name} | {before.get(name, '<absent>')} | {after.get(name, '<absent>')}")
+          print(f"PACKAGE_VERSION_DELTA_COUNT={len(changed)}")
+          PY
+          cat "$RUNNER_TEMP/package-version-delta.txt"
+          package_version_delta_count="$(tail -n 1 "$RUNNER_TEMP/package-version-delta.txt" | cut -d= -f2)"
+          printf 'PACKAGE VERSION DELTA COUNT\n= %s\n' "$package_version_delta_count"
+          echo "PACKAGE_VERSION_DELTA_COUNT=$package_version_delta_count" >> "$GITHUB_ENV"
+
+          printf 'LOCKFILE_BEFORE_COPY_SHA256\n= %s\nLOCKFILE_CURRENT_SHA256\n= %s\n' \
+            "$(sha256sum "$lockfile_before" | awk '{print $1}')" \
+            "$lockfile_sha_after"
+          git diff --numstat -- pubspec.lock
+
+          git restore --source=HEAD -- pubspec.lock
+          git diff --exit-code
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Print probe summary
+        shell: bash
+        run: |
+          cat <<EOF
+          GB-POLICY-01C DEPENDENCY COMPATIBILITY PROBE
+          = COMPLETE
+
+          SUBJECT BASELINE
+          = a616efa9f2167ad1b510e9f3978240acdd75d5a8
+
+          FROZEN RUNTIME
+          = VERIFIED
+
+          BOUND HASHES
+          = VERIFIED
+
+          ENFORCED LOCKFILE RESOLUTION
+          = $ENFORCED_LOCKFILE_RESOLUTION
+
+          DISCOVERY PUB GET
+          = COMPLETED
+
+          TRACKED DISCOVERY DELTA
+          = $TRACKED_DISCOVERY_DELTA
+
+          LOCKFILE BEFORE SHA-256
+          = $PUBSPEC_LOCK_SHA_BEFORE
+
+          LOCKFILE AFTER SHA-256
+          = $PUBSPEC_LOCK_SHA_AFTER
+
+          PACKAGE VERSION DELTA COUNT
+          = $PACKAGE_VERSION_DELTA_COUNT
+
+          FROZEN FIXTURES EXECUTED
+          = 0
+
+          VALIDATION EVALUATIONS
+          = 0
+
+          VALIDATION EXECUTION
+          = NOT_STARTED
+
+          POLICY VALIDATED
+          = NO
+
+          SHADOW STUDY AUTHORIZED
+          = NO
+
+          GAMEPLAY AUTHORITY
+          = NONE
+
+          mayAffectGameplay
+          = false
+          EOF
