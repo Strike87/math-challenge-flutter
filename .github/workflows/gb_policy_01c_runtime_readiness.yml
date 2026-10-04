@@ -1,0 +1,197 @@
+name: GB-POLICY-01C Runtime Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Exact confirmation token required to start the readiness gate.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  confirmation:
+    name: Confirm runtime-readiness execution
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fail closed unless confirmed
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$CONFIRMATION" = "GB-POLICY-01C-RUNTIME-READINESS"
+
+  runtime-readiness:
+    name: GB-POLICY-01C Linux amd64 runtime readiness
+    needs: confirmation
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify runner platform
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -s)" = "Linux"
+          test "$(uname -m)" = "x86_64"
+
+      - name: Checkout frozen subject baseline
+        uses: actions/checkout@v5
+        with:
+          ref: a616efa9f2167ad1b510e9f3978240acdd75d5a8
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify frozen subject checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "a616efa9f2167ad1b510e9f3978240acdd75d5a8"
+          git merge-base --is-ancestor 59130ebae16c7ebc670eab11e9b25ca451ffc80f HEAD
+          git merge-base --is-ancestor 29961bbd011289cd88975b0f045e9f7ad5470309 HEAD
+          git merge-base --is-ancestor ddd3e41e500c1a1fa7b270115ac7efa221a55e89 HEAD
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Verify frozen Git-object bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          verify_object_hash() {
+            local expected="$1"
+            local path="$2"
+            local actual
+            actual="$(git cat-file blob "HEAD:${path}" | sha256sum | awk '{print $1}')"
+            test "$actual" = "$expected"
+          }
+
+          verify_object_hash 7fe12301cb469e25a3839f925fd098159d294f8db2a3873371b3cf4b4c03eab6 lib/features/game_brain/policy/timeout_concentration_comparator_policy.dart
+          verify_object_hash 87aab26e47bcc635572c0b47e7d611e6fb92574383081e997204224b8bf70e42 test/features/game_brain/timeout_concentration_comparator_policy_test.dart
+          verify_object_hash e3342de093d709379785cf01cad88b1a1897256acd8e1e2247abbb76d1e45bc8 lib/features/game_brain/game_brain.dart
+          verify_object_hash 288392de02e9fcdc70cdaa8535d0bedcef6e793fac51528e939d5b2ba0accaa9 research/game_brain/gb_policy_01c/validation_fixture_manifest_v1.json
+          verify_object_hash 999ab7522219784992327fb410cdf4a1c9fdee9c7c265f0495cb59ebe6411b06 docs/game_brain/gb_policy_01c_preexecution_binding_review.md
+          verify_object_hash b422f0bce3b1b07f61af08775a11f2e4134276ca71c040bef34801b127f3d0e3 research/game_brain/gb_policy_01c/gb_policy_01c_frozen_validation_test.dart
+          test "$(git rev-parse HEAD:research/game_brain/gb_policy_01c/validation_fixture_manifest_v1.json)" = "02aa3a63bbd2b9c2c1a0bbc1f0bf5aad0119cad2"
+
+      - name: Install frozen Flutter SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter_url="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.5-stable.tar.xz"
+          flutter_sha="2132e990f236f8d22e7c6314b29a191a95b10d7cbcfec9b4e2e303d996652cbb"
+          flutter_archive="$RUNNER_TEMP/flutter.tar.xz"
+          flutter_root="$RUNNER_TEMP/flutter-sdk"
+
+          curl --fail --location --retry 3 "$flutter_url" --output "$flutter_archive"
+          echo "$flutter_sha  $flutter_archive" | sha256sum --check -
+          mkdir -p "$flutter_root"
+          tar -xJf "$flutter_archive" -C "$flutter_root" --strip-components=1
+          echo "$flutter_root/bin" >> "$GITHUB_PATH"
+
+      - name: Verify frozen Flutter identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CI=true
+          flutter --version --machine > "$RUNNER_TEMP/flutter-version.json"
+          cat "$RUNNER_TEMP/flutter-version.json"
+          jq -e '
+            .frameworkVersion == "3.47.5"
+            and .frameworkRevision == "6a19cca56475dbfba1478ee68d7bd0c2ef891da1"
+            and .engineRevision == "af7e796e161ae0bb1ff0758c71a7105418bd9ded"
+            and .dartSdkVersion == "3.13.4"
+          ' "$RUNNER_TEMP/flutter-version.json" > /dev/null
+
+      - name: Prepare dependencies without changing the lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          lockfile_sha_before="$(sha256sum pubspec.lock | awk '{print $1}')"
+          flutter pub get --help | grep -F -- '--enforce-lockfile' > /dev/null
+          flutter pub get --enforce-lockfile
+          test "$(sha256sum pubspec.lock | awk '{print $1}')" = "$lockfile_sha_before"
+          git diff --exit-code -- pubspec.lock
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Run targeted policy tests
+        shell: bash
+        run: flutter test test/features/game_brain/timeout_concentration_comparator_policy_test.dart
+
+      - name: Run choose-difficulty policy contract tests
+        shell: bash
+        run: flutter test test/features/game_brain/choose_difficulty_policy_contract_test.dart
+
+      - name: Run static analysis
+        shell: bash
+        run: flutter analyze
+
+      - name: Run full non-golden test suite
+        shell: bash
+        run: flutter test --exclude-tags golden test
+
+      - name: Verify tracked repository remained unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Print readiness summary
+        shell: bash
+        run: |
+          cat <<'EOF'
+          GB-POLICY-01C RUNTIME READINESS
+          = PASS
+
+          SUBJECT BASELINE
+          = a616efa9f2167ad1b510e9f3978240acdd75d5a8
+
+          PLATFORM
+          = linux/amd64
+
+          FLUTTER
+          = 3.47.5
+
+          DART
+          = 3.13.4
+
+          BOUND HASHES
+          = VERIFIED
+
+          LOCKFILE
+          = UNCHANGED
+
+          TARGETED POLICY TESTS
+          = PASS
+
+          CHOOSE-DIFFICULTY CONTRACT TESTS
+          = PASS
+
+          FLUTTER ANALYZE
+          = PASS
+
+          FULL NON-GOLDEN TEST SUITE
+          = PASS
+
+          FROZEN FIXTURES EXECUTED
+          = 0
+
+          VALIDATION EVALUATIONS
+          = 0
+
+          VALIDATION EXECUTION
+          = NOT_STARTED
+
+          POLICY VALIDATED
+          = NO
+
+          SHADOW STUDY AUTHORIZED
+          = NO
+
+          GAMEPLAY AUTHORITY
+          = NONE
+
+          mayAffectGameplay
+          = false
+          EOF
