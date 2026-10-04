@@ -135,6 +135,19 @@ jobs:
             printf 'ENFORCED_LOCKFILE_RESOLUTION\n= SUCCEEDED_UNEXPECTEDLY\n' >&2
             exit 1
           fi
+
+          cat \
+            "$RUNNER_TEMP/enforced-lockfile.stdout" \
+            "$RUNNER_TEMP/enforced-lockfile.stderr" \
+            > "$RUNNER_TEMP/enforced-lockfile.combined"
+          grep -F \
+            'Unable to satisfy `pubspec.yaml` using `pubspec.lock`.' \
+            "$RUNNER_TEMP/enforced-lockfile.combined" \
+            > /dev/null
+          grep -F \
+            'Would change ' \
+            "$RUNNER_TEMP/enforced-lockfile.combined" \
+            > /dev/null
           echo "ENFORCED_LOCKFILE_RESOLUTION=FAILED_AS_OBSERVED" >> "$GITHUB_ENV"
 
           test "$(sha256sum pubspec.yaml | awk '{print $1}')" = "$pubspec_sha_before"
@@ -142,7 +155,8 @@ jobs:
             printf 'ENFORCED_LOCKFILE_MUTATED_LOCKFILE\n= RESTORED\n'
             cp "$lockfile_before" pubspec.lock
           fi
-          git diff --exit-code -- pubspec.lock
+          git diff --exit-code
+          test -z "$(git status --porcelain --untracked-files=no)"
 
           flutter pub get
 
