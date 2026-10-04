@@ -189,10 +189,44 @@ jobs:
           cat "$lockfile_diff"
           git diff --no-ext-diff -- analysis_options.yaml > "$analysis_options_diff"
           cat "$analysis_options_diff"
-          grep -Fx '+analyzer:' "$analysis_options_diff" > /dev/null
-          grep -Fx '+  exclude:' "$analysis_options_diff" > /dev/null
-          grep -Fx '+    - build/**' "$analysis_options_diff" > /dev/null
-          grep -Fx '+    - android/**' "$analysis_options_diff" > /dev/null
+          analysis_options_expected="$RUNNER_TEMP/analysis_options.yaml.expected"
+          python3 - "$analysis_options_before" "$analysis_options_expected" <<'PY'
+          import pathlib
+          import sys
+
+          before_path = pathlib.Path(sys.argv[1])
+          expected_path = pathlib.Path(sys.argv[2])
+          data = before_path.read_bytes()
+
+          needle = b"include: package:flutter_lints/flutter.yaml\n"
+          replacement = (
+              b"analyzer:\n"
+              b"  exclude:\n"
+              b"    - build/**\n"
+              b"    - android/**\n"
+              b"include: package:flutter_lints/flutter.yaml\n"
+          )
+
+          if data.count(needle) != 1:
+              raise SystemExit(
+                  "FAIL: frozen analysis_options include anchor must occur exactly once"
+              )
+
+          if b"\nanalyzer:\n" in data or data.startswith(b"analyzer:\n"):
+              raise SystemExit(
+                  "FAIL: frozen before analysis_options unexpectedly already has analyzer"
+              )
+
+          expected_path.write_bytes(data.replace(needle, replacement, 1))
+          PY
+          if ! cmp -s analysis_options.yaml "$analysis_options_expected"; then
+            printf 'ANALYSIS_OPTIONS_MIGRATION\n= FAILED_EXACT_BYTE_COMPARISON\n' >&2
+            exit 1
+          fi
+          analysis_options_expected_sha="$(sha256sum "$analysis_options_expected" | awk '{print $1}')"
+          printf 'ANALYSIS_OPTIONS_EXPECTED_SHA256\n= %s\n' \
+            "$analysis_options_expected_sha"
+          test "$analysis_options_expected_sha" = "$analysis_options_sha_after"
           python3 - "$lockfile_before" pubspec.lock > "$RUNNER_TEMP/package-version-delta.txt" <<'PY'
           import sys
 
