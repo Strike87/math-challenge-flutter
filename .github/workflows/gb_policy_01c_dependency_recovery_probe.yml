@@ -109,15 +109,20 @@ jobs:
           set -euo pipefail
           pubspec_sha_before="$(sha256sum pubspec.yaml | awk '{print $1}')"
           lockfile_sha_before="$(sha256sum pubspec.lock | awk '{print $1}')"
+          analysis_options_sha_before="$(sha256sum analysis_options.yaml | awk '{print $1}')"
           lockfile_before="$RUNNER_TEMP/pubspec.lock.before"
+          analysis_options_before="$RUNNER_TEMP/analysis_options.yaml.before"
           cp pubspec.lock "$lockfile_before"
-          printf 'PUBSPEC_SHA_BEFORE\n= %s\nPUBSPEC_LOCK_SHA_BEFORE\n= %s\n' "$pubspec_sha_before" "$lockfile_sha_before"
+          cp analysis_options.yaml "$analysis_options_before"
+          printf 'PUBSPEC_SHA_BEFORE\n= %s\nPUBSPEC_LOCK_SHA_BEFORE\n= %s\nANALYSIS_OPTIONS_SHA_BEFORE\n= %s\n' \
+            "$pubspec_sha_before" "$lockfile_sha_before" "$analysis_options_sha_before"
           echo "PUBSPEC_LOCK_SHA_BEFORE=$lockfile_sha_before" >> "$GITHUB_ENV"
+          echo "ANALYSIS_OPTIONS_SHA_BEFORE=$analysis_options_sha_before" >> "$GITHUB_ENV"
 
           restore_and_verify_tracked_clean() {
             local status="$?"
             trap - EXIT
-            git restore --source=HEAD -- pubspec.lock
+            git restore --source=HEAD -- pubspec.lock analysis_options.yaml
             git diff --exit-code
             test -z "$(git status --porcelain --untracked-files=no)"
             exit "$status"
@@ -155,6 +160,10 @@ jobs:
             printf 'ENFORCED_LOCKFILE_MUTATED_LOCKFILE\n= RESTORED\n'
             cp "$lockfile_before" pubspec.lock
           fi
+          if ! cmp -s analysis_options.yaml "$analysis_options_before"; then
+            printf 'ENFORCED_LOCKFILE_MUTATED_ANALYSIS_OPTIONS\n= RESTORED\n'
+            cp "$analysis_options_before" analysis_options.yaml
+          fi
           git diff --exit-code
           test -z "$(git status --porcelain --untracked-files=no)"
 
@@ -162,19 +171,28 @@ jobs:
 
           test "$(sha256sum pubspec.yaml | awk '{print $1}')" = "$pubspec_sha_before"
           lockfile_sha_after="$(sha256sum pubspec.lock | awk '{print $1}')"
-          changed_paths="$(git diff --name-only)"
-          printf 'PUBSPEC_LOCK_SHA_AFTER\n= %s\n' "$lockfile_sha_after"
-          if [ -z "$changed_paths" ]; then
-            tracked_discovery_delta="NONE"
-          else
-            test "$changed_paths" = "pubspec.lock"
-            tracked_discovery_delta="pubspec.lock ONLY"
-          fi
+          analysis_options_sha_after="$(sha256sum analysis_options.yaml | awk '{print $1}')"
+          changed_paths="$(git diff --name-only | LC_ALL=C sort)"
+          expected_changed_paths=$'analysis_options.yaml\npubspec.lock'
+          test "$changed_paths" = "$expected_changed_paths"
+          tracked_discovery_delta="analysis_options.yaml + pubspec.lock ONLY"
+          printf 'PUBSPEC_LOCK_SHA_AFTER\n= %s\nANALYSIS_OPTIONS_SHA_AFTER\n= %s\n' \
+            "$lockfile_sha_after" "$analysis_options_sha_after"
           printf 'TRACKED_DISCOVERY_DELTA\n= %s\n' "$tracked_discovery_delta"
           echo "TRACKED_DISCOVERY_DELTA=$tracked_discovery_delta" >> "$GITHUB_ENV"
           echo "PUBSPEC_LOCK_SHA_AFTER=$lockfile_sha_after" >> "$GITHUB_ENV"
+          echo "ANALYSIS_OPTIONS_SHA_AFTER=$analysis_options_sha_after" >> "$GITHUB_ENV"
 
-          git diff --no-ext-diff -- pubspec.lock
+          lockfile_diff="$RUNNER_TEMP/pubspec.lock.diff"
+          analysis_options_diff="$RUNNER_TEMP/analysis_options.yaml.diff"
+          git diff --no-ext-diff -- pubspec.lock > "$lockfile_diff"
+          cat "$lockfile_diff"
+          git diff --no-ext-diff -- analysis_options.yaml > "$analysis_options_diff"
+          cat "$analysis_options_diff"
+          grep -Fx '+analyzer:' "$analysis_options_diff" > /dev/null
+          grep -Fx '+  exclude:' "$analysis_options_diff" > /dev/null
+          grep -Fx '+    - build/**' "$analysis_options_diff" > /dev/null
+          grep -Fx '+    - android/**' "$analysis_options_diff" > /dev/null
           python3 - "$lockfile_before" pubspec.lock > "$RUNNER_TEMP/package-version-delta.txt" <<'PY'
           import sys
 
@@ -211,9 +229,12 @@ jobs:
           printf 'LOCKFILE_BEFORE_COPY_SHA256\n= %s\nLOCKFILE_CURRENT_SHA256\n= %s\n' \
             "$(sha256sum "$lockfile_before" | awk '{print $1}')" \
             "$lockfile_sha_after"
-          git diff --numstat -- pubspec.lock
+          printf 'ANALYSIS_OPTIONS_BEFORE_COPY_SHA256\n= %s\nANALYSIS_OPTIONS_CURRENT_SHA256\n= %s\n' \
+            "$(sha256sum "$analysis_options_before" | awk '{print $1}')" \
+            "$analysis_options_sha_after"
+          git diff --numstat -- pubspec.lock analysis_options.yaml
 
-          git restore --source=HEAD -- pubspec.lock
+          git restore --source=HEAD -- pubspec.lock analysis_options.yaml
           git diff --exit-code
           test -z "$(git status --porcelain --untracked-files=no)"
 
@@ -221,7 +242,7 @@ jobs:
         shell: bash
         run: |
           cat <<EOF
-          GB-POLICY-01C DEPENDENCY COMPATIBILITY PROBE
+          GB-POLICY-01C DEPENDENCY COMPATIBILITY PROBE R3
           = COMPLETE
 
           SUBJECT BASELINE
@@ -233,8 +254,8 @@ jobs:
           BOUND HASHES
           = VERIFIED
 
-          ENFORCED LOCKFILE RESOLUTION
-          = $ENFORCED_LOCKFILE_RESOLUTION
+          EXPECTED ENFORCED-LOCKFILE FAILURE
+          = VERIFIED
 
           DISCOVERY PUB GET
           = COMPLETED
@@ -242,14 +263,26 @@ jobs:
           TRACKED DISCOVERY DELTA
           = $TRACKED_DISCOVERY_DELTA
 
-          LOCKFILE BEFORE SHA-256
+          PUBSPEC.LOCK BEFORE SHA-256
           = $PUBSPEC_LOCK_SHA_BEFORE
 
-          LOCKFILE AFTER SHA-256
+          PUBSPEC.LOCK AFTER SHA-256
           = $PUBSPEC_LOCK_SHA_AFTER
+
+          ANALYSIS_OPTIONS BEFORE SHA-256
+          = $ANALYSIS_OPTIONS_SHA_BEFORE
+
+          ANALYSIS_OPTIONS AFTER SHA-256
+          = $ANALYSIS_OPTIONS_SHA_AFTER
 
           PACKAGE VERSION DELTA COUNT
           = $PACKAGE_VERSION_DELTA_COUNT
+
+          REPOSITORY RESTORED
+          = YES
+
+          RUNTIME READINESS
+          = FAIL_PENDING_RECOVERY_CANDIDATE
 
           FROZEN FIXTURES EXECUTED
           = 0
