@@ -1,0 +1,235 @@
+name: GB-POLICY-01C Frozen Validation Execution
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Exact confirmation token required to execute frozen validation.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-validation:
+    name: GB-POLICY-01C frozen validation controller
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Confirm execution authority and runner platform
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$CONFIRMATION" = "GB-POLICY-01C-VALIDATION-EXECUTION"
+          test "$(uname -s)" = "Linux"
+          test "$(uname -m)" = "x86_64"
+
+      - name: Checkout exact frozen scientific subject
+        uses: actions/checkout@v5
+        with:
+          ref: 7b369923ca692caf33b9fd8aca2863c4e801fd6d
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checkout lineage and cleanliness
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "7b369923ca692caf33b9fd8aca2863c4e801fd6d"
+          git merge-base --is-ancestor 59130ebae16c7ebc670eab11e9b25ca451ffc80f HEAD
+          git merge-base --is-ancestor 29961bbd011289cd88975b0f045e9f7ad5470309 HEAD
+          git merge-base --is-ancestor ddd3e41e500c1a1fa7b270115ac7efa221a55e89 HEAD
+          git merge-base --is-ancestor 14cfa0e721becfefef65ee84aad392edc0183f04 HEAD
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Verify all frozen and recovery Git-object bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          verify_object_hash() {
+            local expected="$1" path="$2" actual
+            actual="$(git cat-file blob "HEAD:${path}" | sha256sum | awk '{print $1}')"
+            test "$actual" = "$expected"
+          }
+          verify_object_hash 7fe12301cb469e25a3839f925fd098159d294f8db2a3873371b3cf4b4c03eab6 lib/features/game_brain/policy/timeout_concentration_comparator_policy.dart
+          verify_object_hash 87aab26e47bcc635572c0b47e7d611e6fb92574383081e997204224b8bf70e42 test/features/game_brain/timeout_concentration_comparator_policy_test.dart
+          verify_object_hash e3342de093d709379785cf01cad88b1a1897256acd8e1e2247abbb76d1e45bc8 lib/features/game_brain/game_brain.dart
+          verify_object_hash 288392de02e9fcdc70cdaa8535d0bedcef6e793fac51528e939d5b2ba0accaa9 research/game_brain/gb_policy_01c/validation_fixture_manifest_v1.json
+          verify_object_hash 999ab7522219784992327fb410cdf4a1c9fdee9c7c265f0495cb59ebe6411b06 docs/game_brain/gb_policy_01c_preexecution_binding_review.md
+          verify_object_hash b422f0bce3b1b07f61af08775a11f2e4134276ca71c040bef34801b127f3d0e3 research/game_brain/gb_policy_01c/gb_policy_01c_frozen_validation_test.dart
+          verify_object_hash 5da54d9febda0da002f977b9caf5f218fa109cf701535a12a353e97ff75cad8c pubspec.yaml
+          verify_object_hash b87b596c422638217bedd229af25d1d41944f276a23ecd9caf3559e2358e666e pubspec.lock
+          verify_object_hash 5019cc6fcd7a9ffee1d8ef621d43c0e724dbe7422de2d457ecd0da3c3ca0517b analysis_options.yaml
+          test "$(git rev-parse HEAD:research/game_brain/gb_policy_01c/validation_fixture_manifest_v1.json)" = "02aa3a63bbd2b9c2c1a0bbc1f0bf5aad0119cad2"
+
+      - name: Install exact frozen Flutter SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/flutter.tar.xz"
+          root="$RUNNER_TEMP/flutter-sdk"
+          curl --fail --location --retry 3 https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.5-stable.tar.xz --output "$archive"
+          echo "2132e990f236f8d22e7c6314b29a191a95b10d7cbcfec9b4e2e303d996652cbb  $archive" | sha256sum --check -
+          mkdir -p "$root"
+          tar -xJf "$archive" -C "$root" --strip-components=1
+          echo "$root/bin" >> "$GITHUB_PATH"
+
+      - name: Verify exact frozen Flutter identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CI=true
+          flutter --version --machine > "$RUNNER_TEMP/flutter-version.json"
+          jq -e '.frameworkVersion == "3.47.5" and .frameworkRevision == "6a19cca56475dbfba1478ee68d7bd0c2ef891da1" and .engineRevision == "af7e796e161ae0bb1ff0758c71a7105418bd9ded" and .dartSdkVersion == "3.13.4"' "$RUNNER_TEMP/flutter-version.json" > /dev/null
+
+      - name: Prepare dependencies fail closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          verify_recovery_hashes() {
+            test "$(sha256sum pubspec.yaml | awk '{print $1}')" = "5da54d9febda0da002f977b9caf5f218fa109cf701535a12a353e97ff75cad8c"
+            test "$(sha256sum pubspec.lock | awk '{print $1}')" = "b87b596c422638217bedd229af25d1d41944f276a23ecd9caf3559e2358e666e"
+            test "$(sha256sum analysis_options.yaml | awk '{print $1}')" = "5019cc6fcd7a9ffee1d8ef621d43c0e724dbe7422de2d457ecd0da3c3ca0517b"
+          }
+          verify_recovery_hashes
+          flutter pub get --help | grep -F -- '--enforce-lockfile' > /dev/null
+          flutter pub get --enforce-lockfile
+          verify_recovery_hashes
+          git diff --exit-code
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Run mandatory external prevalidation gates in exact order
+        id: external-gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter test test/features/game_brain/timeout_concentration_comparator_policy_test.dart
+          printf 'targeted_policy_tests=PASS\n' >> "$GITHUB_OUTPUT"
+          flutter analyze
+          printf 'flutter_analyze=PASS\n' >> "$GITHUB_OUTPUT"
+          flutter test --exclude-tags golden test
+          printf 'full_non_golden_test_suite=PASS\n' >> "$GITHUB_OUTPUT"
+          git diff --exit-code
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Remove only stale untracked frozen result
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=build/game_brain/gb_policy_01c/frozen_validation_result.json
+          if git ls-files --error-unmatch "$result" > /dev/null 2>&1; then
+            exit 1
+          fi
+          rm -f "$result"
+
+      - name: Run frozen harness and preserve its result
+        id: harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=build/game_brain/gb_policy_01c/frozen_validation_result.json
+          set +e
+          flutter test research/game_brain/gb_policy_01c/gb_policy_01c_frozen_validation_test.dart
+          harness_exit="$?"
+          set -e
+          printf 'exit_code=%s\n' "$harness_exit" >> "$GITHUB_OUTPUT"
+          test -r "$result"
+          jq -e . "$result" > /dev/null
+          exit 0
+
+      - name: Parse only the predeclared acceptance criteria
+        id: acceptance
+        shell: bash
+        env:
+          HARNESS_EXIT: ${{ steps.harness.outputs.exit_code }}
+          TARGETED_POLICY_TESTS: ${{ steps.external-gates.outputs.targeted_policy_tests }}
+          FLUTTER_ANALYZE: ${{ steps.external-gates.outputs.flutter_analyze }}
+          FULL_NON_GOLDEN_TEST_SUITE: ${{ steps.external-gates.outputs.full_non_golden_test_suite }}
+        run: |
+          set -euo pipefail
+          result=build/game_brain/gb_policy_01c/frozen_validation_result.json
+          cat "$result"
+          sha256sum "$result"
+          jq -e '
+            .schema_version == 1 and
+            .policy_id == "timeout_concentration_comparator_preference" and
+            .policy_version == 1 and
+            .manifest_fixture_count == 18 and
+            .repetitions_per_fixture == 100 and
+            .total_evaluations == 1800 and
+            .positive_fixture_count == 3 and
+            .no_preference_fixture_count == 15 and
+            (.fixtures | length == 18) and
+            all(.fixtures[]; .repetitions == 100)
+          ' "$result" > /dev/null
+          test "$TARGETED_POLICY_TESTS" = PASS
+          test "$FLUTTER_ANALYZE" = PASS
+          test "$FULL_NON_GOLDEN_TEST_SUITE" = PASS
+
+          case "$HARNESS_EXIT" in
+            ''|*[!0-9]*) exit 1 ;;
+          esac
+
+          semantic_pass=false
+          if jq -e '
+            .fixture_exact_resolution_count == 18 and .fixture_exact_resolution_rate == 1 and
+            all(.fixtures[]; .exact_match_count == 100 and .repeat_match_count == 100 and .exact_pass == true) and
+            .deterministic_repeat_count == 1800 and .deterministic_repeat_match_count == 1800 and .deterministic_repeat_match_rate == 1 and
+            .preferred_candidate_membership_violations == 0 and .authority_violations == 0 and .mayAffectGameplay_violations == 0 and
+            .candidate_order_invariance == true and .P03_no_enum_order_assumption == true and .negative_fixture_exact_no_preference == true
+          ' "$result" > /dev/null; then
+            semantic_pass=true
+          fi
+
+          if [ "$semantic_pass" = true ]; then
+            test "$HARNESS_EXIT" -eq 0
+            acceptance=true
+          else
+            test "$HARNESS_EXIT" -ne 0
+            acceptance=false
+          fi
+
+          printf 'accepted=%s\n' "$acceptance" >> "$GITHUB_OUTPUT"
+          git diff --exit-code
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Publish legal research disposition without granting authority
+        shell: bash
+        env:
+          ACCEPTED: ${{ steps.acceptance.outputs.accepted }}
+        run: |
+          set -euo pipefail
+          if [ "$ACCEPTED" = true ]; then outcome=ACCEPTED_FOR_SHADOW_STUDY; else outcome=EXECUTED_NOT_ACCEPTED; fi
+          cat <<EOF
+          OUTCOME
+          = $outcome
+
+          SHADOW STUDY AUTHORIZED
+          = NO
+
+          GAMEPLAY AUTHORITY
+          = NONE
+
+          mayAffectGameplay
+          = false
+          EOF
+
+      - name: Report not-ready controller stop
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          cat <<'EOF'
+          OUTCOME
+          = NOT_READY
+
+          SHADOW STUDY AUTHORIZED
+          = NO
+
+          GAMEPLAY AUTHORITY
+          = NONE
+
+          mayAffectGameplay
+          = false
+          EOF
