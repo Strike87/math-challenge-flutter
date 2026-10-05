@@ -39,7 +39,7 @@ jobs:
       - name: Checkout frozen subject baseline
         uses: actions/checkout@v5
         with:
-          ref: a616efa9f2167ad1b510e9f3978240acdd75d5a8
+          ref: 7b369923ca692caf33b9fd8aca2863c4e801fd6d
           fetch-depth: 0
           persist-credentials: false
 
@@ -47,10 +47,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "a616efa9f2167ad1b510e9f3978240acdd75d5a8"
+          test "$(git rev-parse HEAD)" = "7b369923ca692caf33b9fd8aca2863c4e801fd6d"
           git merge-base --is-ancestor 59130ebae16c7ebc670eab11e9b25ca451ffc80f HEAD
           git merge-base --is-ancestor 29961bbd011289cd88975b0f045e9f7ad5470309 HEAD
           git merge-base --is-ancestor ddd3e41e500c1a1fa7b270115ac7efa221a55e89 HEAD
+          git merge-base --is-ancestor 14cfa0e721becfefef65ee84aad392edc0183f04 HEAD
           test -z "$(git status --porcelain --untracked-files=no)"
 
       - name: Verify frozen Git-object bindings
@@ -72,6 +73,9 @@ jobs:
           verify_object_hash 288392de02e9fcdc70cdaa8535d0bedcef6e793fac51528e939d5b2ba0accaa9 research/game_brain/gb_policy_01c/validation_fixture_manifest_v1.json
           verify_object_hash 999ab7522219784992327fb410cdf4a1c9fdee9c7c265f0495cb59ebe6411b06 docs/game_brain/gb_policy_01c_preexecution_binding_review.md
           verify_object_hash b422f0bce3b1b07f61af08775a11f2e4134276ca71c040bef34801b127f3d0e3 research/game_brain/gb_policy_01c/gb_policy_01c_frozen_validation_test.dart
+          verify_object_hash 5da54d9febda0da002f977b9caf5f218fa109cf701535a12a353e97ff75cad8c pubspec.yaml
+          verify_object_hash b87b596c422638217bedd229af25d1d41944f276a23ecd9caf3559e2358e666e pubspec.lock
+          verify_object_hash 5019cc6fcd7a9ffee1d8ef621d43c0e724dbe7422de2d457ecd0da3c3ca0517b analysis_options.yaml
           test "$(git rev-parse HEAD:research/game_brain/gb_policy_01c/validation_fixture_manifest_v1.json)" = "02aa3a63bbd2b9c2c1a0bbc1f0bf5aad0119cad2"
 
       - name: Install frozen Flutter SDK
@@ -107,11 +111,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          lockfile_sha_before="$(sha256sum pubspec.lock | awk '{print $1}')"
+          pubspec_yaml_sha_before="$(sha256sum pubspec.yaml | awk '{print $1}')"
+          pubspec_lock_sha_before="$(sha256sum pubspec.lock | awk '{print $1}')"
+          analysis_options_sha_before="$(sha256sum analysis_options.yaml | awk '{print $1}')"
+          test "$pubspec_yaml_sha_before" = "5da54d9febda0da002f977b9caf5f218fa109cf701535a12a353e97ff75cad8c"
+          test "$pubspec_lock_sha_before" = "b87b596c422638217bedd229af25d1d41944f276a23ecd9caf3559e2358e666e"
+          test "$analysis_options_sha_before" = "5019cc6fcd7a9ffee1d8ef621d43c0e724dbe7422de2d457ecd0da3c3ca0517b"
           flutter pub get --help | grep -F -- '--enforce-lockfile' > /dev/null
           flutter pub get --enforce-lockfile
-          test "$(sha256sum pubspec.lock | awk '{print $1}')" = "$lockfile_sha_before"
-          git diff --exit-code -- pubspec.lock
+          test "$(sha256sum pubspec.yaml | awk '{print $1}')" = "$pubspec_yaml_sha_before"
+          test "$(sha256sum pubspec.lock | awk '{print $1}')" = "$pubspec_lock_sha_before"
+          test "$(sha256sum analysis_options.yaml | awk '{print $1}')" = "$analysis_options_sha_before"
+          git diff --exit-code -- \
+            pubspec.yaml \
+            pubspec.lock \
+            analysis_options.yaml
+          git diff --exit-code
           test -z "$(git status --porcelain --untracked-files=no)"
 
       - name: Run targeted policy tests
@@ -145,7 +160,10 @@ jobs:
           = PASS
 
           SUBJECT BASELINE
-          = a616efa9f2167ad1b510e9f3978240acdd75d5a8
+          = 7b369923ca692caf33b9fd8aca2863c4e801fd6d
+
+          RECOVERY CANDIDATE
+          = 14cfa0e721becfefef65ee84aad392edc0183f04
 
           PLATFORM
           = linux/amd64
@@ -159,7 +177,13 @@ jobs:
           BOUND HASHES
           = VERIFIED
 
-          LOCKFILE
+          PUBSPEC.YAML
+          = UNCHANGED
+
+          PUBSPEC.LOCK
+          = UNCHANGED
+
+          ANALYSIS_OPTIONS
           = UNCHANGED
 
           TARGETED POLICY TESTS
