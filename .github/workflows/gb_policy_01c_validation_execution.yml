@@ -164,16 +164,33 @@ jobs:
             (.fixtures | length == 18) and
             all(.fixtures[]; .repetitions == 100)
           ' "$result" > /dev/null
-          acceptance=false
-          if [ "$TARGETED_POLICY_TESTS" = PASS ] && [ "$FLUTTER_ANALYZE" = PASS ] && [ "$FULL_NON_GOLDEN_TEST_SUITE" = PASS ] && jq -e '
+          test "$TARGETED_POLICY_TESTS" = PASS
+          test "$FLUTTER_ANALYZE" = PASS
+          test "$FULL_NON_GOLDEN_TEST_SUITE" = PASS
+
+          case "$HARNESS_EXIT" in
+            ''|*[!0-9]*) exit 1 ;;
+          esac
+
+          semantic_pass=false
+          if jq -e '
             .fixture_exact_resolution_count == 18 and .fixture_exact_resolution_rate == 1 and
             all(.fixtures[]; .exact_match_count == 100 and .repeat_match_count == 100 and .exact_pass == true) and
             .deterministic_repeat_count == 1800 and .deterministic_repeat_match_count == 1800 and .deterministic_repeat_match_rate == 1 and
             .preferred_candidate_membership_violations == 0 and .authority_violations == 0 and .mayAffectGameplay_violations == 0 and
             .candidate_order_invariance == true and .P03_no_enum_order_assumption == true and .negative_fixture_exact_no_preference == true
-          ' "$result" > /dev/null && [ "$HARNESS_EXIT" -eq 0 ]; then
-            acceptance=true
+          ' "$result" > /dev/null; then
+            semantic_pass=true
           fi
+
+          if [ "$semantic_pass" = true ]; then
+            test "$HARNESS_EXIT" -eq 0
+            acceptance=true
+          else
+            test "$HARNESS_EXIT" -ne 0
+            acceptance=false
+          fi
+
           printf 'accepted=%s\n' "$acceptance" >> "$GITHUB_OUTPUT"
           git diff --exit-code
           test -z "$(git status --porcelain --untracked-files=no)"
@@ -199,7 +216,7 @@ jobs:
           = false
           EOF
 
-      - name: Report not-ready controller stop without fixture execution
+      - name: Report not-ready controller stop
         if: ${{ failure() }}
         shell: bash
         run: |
