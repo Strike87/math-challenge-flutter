@@ -474,44 +474,6 @@ class _GameTopBar extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ModeBadge(label: label.toUpperCase(), color: color),
-                    if (gs.effectiveGameBrainEnabled) ...[
-                      const SizedBox(width: 10),
-                      WarningPulse(
-                        active: true,
-                        effectsEnabled: !s.reduceMotion && !s.lowPerf,
-                        duration: s.duration(1000),
-                        builder: (_, opacity) {
-                          final pulse =
-                              !s.reduceMotion && !s.lowPerf ? 1 - opacity : 0.0;
-                          return Transform.scale(
-                            scale: 1 + (pulse * 0.04),
-                            child: Container(
-                              key: const Key('gamebrain-enabled-badge'),
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: const Color(GameConfig.grape),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(GameConfig.grape)
-                                        .withValues(
-                                            alpha: 0.16 + (pulse * 0.12)),
-                                    blurRadius: 8 + (pulse * 4),
-                                  ),
-                                ],
-                              ),
-                              alignment: Alignment.center,
-                              child: const Icon(
-                                Icons.psychology_outlined,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
                     if (rt.comboMultiplier > 1.0 &&
                         gs.activeMode != GameMode.combo) ...[
                       const SizedBox(width: 8),

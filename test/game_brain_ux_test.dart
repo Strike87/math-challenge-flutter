@@ -273,18 +273,19 @@ void main() {
 
   for (final dark in [false, true]) {
     testWidgets(
-        'menu control and enabled badge are bounded in ${dark ? 'dark' : 'light'} mode',
+        'GameBrain UI is hidden in ${dark ? 'dark' : 'light'} mode',
         (tester) async {
       final state = await _makeState(dark: dark);
       await tester.pumpWidget(_host(state, const MenuScreen()));
-      expect(find.byKey(const Key('gamebrain-master-control')), findsOneWidget);
-      expect(find.text('GameBrain'), findsOneWidget);
+      expect(find.byKey(const Key('gamebrain-master-control')), findsNothing);
+      expect(find.text('GameBrain'), findsNothing);
       expect(find.text('GameBrain preference'), findsNothing);
-      expect(find.text('Saved OFF'), findsOneWidget);
+      expect(find.text('Saved OFF'), findsNothing);
       expect(tester.takeException(), isNull);
-      await tester.tap(find.byType(Switch));
+      await state.setGameBrainPreference(true);
       await tester.pump();
-      expect(find.text('Saved ON — not active'), findsOneWidget);
+      expect(find.byKey(const Key('gamebrain-master-control')), findsNothing);
+      expect(find.text('GameBrain'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(_host(state, const gameplay.GameScreen()));
       expect(find.byKey(const Key('gamebrain-enabled-badge')), findsNothing);
@@ -294,16 +295,11 @@ void main() {
       await tester.pumpWidget(_host(state, const MenuScreen()));
       await state.submitFamilyAgeRange(FamilyAgeRange.adult18plus);
       await tester.pump();
-      expect(find.text('Active'), findsOneWidget);
+      expect(state.effectiveGameBrainEnabled, isTrue);
+      expect(find.byKey(const Key('gamebrain-master-control')), findsNothing);
+      expect(find.text('GameBrain'), findsNothing);
       await tester.pumpWidget(_host(state, const gameplay.GameScreen()));
-      expect(find.byKey(const Key('gamebrain-enabled-badge')), findsOneWidget);
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('gamebrain-enabled-badge')),
-          matching: find.byIcon(Icons.psychology_outlined),
-        ),
-        findsOneWidget,
-      );
+      expect(find.byKey(const Key('gamebrain-enabled-badge')), findsNothing);
       expect(find.text('GAMEBRAIN ENABLED'), findsNothing);
       expect(tester.takeException(), isNull);
     });
