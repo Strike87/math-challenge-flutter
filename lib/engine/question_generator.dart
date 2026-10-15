@@ -64,6 +64,101 @@ class QuestionGenerator {
     return _renderFact(candidates[_rng.nextInt(candidates.length)]);
   }
 
+  /// Returns the finite, sorted direct-result domain without consuming RNG.
+  ///
+  /// This deliberately shares the same operand and direct-fact legality as
+  /// [buildDirectForResult], but exposes no rendered question or random choice.
+  List<num> canonicalDirectResultDomain({
+    required Operation type,
+    required Difficulty diff,
+    required NumberType numType,
+  }) {
+    if (numType == NumberType.mixed || !_isBasicOperation(type)) {
+      return const [];
+    }
+    final results = <num>{};
+    void addIfDirect(num result) {
+      if (_directFactsForResult(type, diff, numType, result).isNotEmpty) {
+        results.add(result);
+      }
+    }
+
+    if (numType == NumberType.rationals) {
+      final places = _rationalDecimalPlaces(diff);
+      final factor = pow(10, places).toInt();
+      bool decimalTick(int tick) =>
+          tick >= factor + 1 && tick <= 16 * factor - 1 && tick % factor != 0;
+      switch (type) {
+        case Operation.addition:
+          for (var left = factor + 1; left <= 16 * factor - 1; left++) {
+            if (!decimalTick(left)) continue;
+            for (var right = factor + 1; right <= 16 * factor - 1; right++) {
+              if (decimalTick(right)) results.add((left + right) / factor);
+            }
+          }
+        case Operation.subtraction:
+          for (var result = factor + 1; result <= 9 * factor - 1; result++) {
+            if (result % factor == 0) continue;
+            for (var right = factor + 1; right <= 16 * factor - 1; right++) {
+              if (decimalTick(right) && right + result < 25 * factor) {
+                results.add(result / factor);
+                break;
+              }
+            }
+          }
+        case Operation.multiplication:
+          for (var left = factor + 1; left <= 16 * factor - 1; left++) {
+            if (!decimalTick(left)) continue;
+            for (var right = 2; right <= 9; right++) {
+              results.add((left * right) / factor);
+            }
+          }
+        case Operation.division:
+          for (var result = factor + 1; result <= 16 * factor - 1; result++) {
+            if (decimalTick(result)) results.add(result / factor);
+          }
+        default:
+          break;
+      }
+    } else {
+      final range = _operandRange(type, diff);
+      final min = range.$1;
+      final max = range.$2;
+      if (numType == NumberType.natural) {
+        switch (type) {
+          case Operation.addition:
+            for (var result = min * 2; result <= max * 2; result++) {
+              addIfDirect(result);
+            }
+          case Operation.subtraction:
+          case Operation.division:
+            for (var result = min; result <= max; result++) {
+              addIfDirect(result);
+            }
+          case Operation.multiplication:
+            for (var result = min * min; result <= max * max; result++) {
+              addIfDirect(result);
+            }
+          default:
+            break;
+        }
+      } else if (numType == NumberType.integers) {
+        final limit = switch (type) {
+          Operation.addition => max * 2,
+          Operation.subtraction => max * 3,
+          Operation.multiplication => max * max,
+          Operation.division => max,
+          _ => 0,
+        };
+        for (var result = -limit; result <= limit; result++) {
+          addIfDirect(result);
+        }
+      }
+    }
+    final sorted = results.toList()..sort((a, b) => a.compareTo(b));
+    return List.unmodifiable(sorted);
+  }
+
   List<MathFact> _directFactsForResult(
     Operation type,
     Difficulty diff,

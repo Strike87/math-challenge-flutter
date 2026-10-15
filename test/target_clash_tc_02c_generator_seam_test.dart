@@ -118,10 +118,11 @@ void main() {
       ],
     );
     expect(failed.stage, isNull);
-    expect(failed.failure, TargetClashGenerationFailure.slotGenerationFailed);
+    expect(failed.failure,
+        TargetClashGenerationFailure.canonicalDomainMaterializationMismatch);
   });
 
-  test('fresh empty requests retain the TC-01 anchor behavior', () {
+  test('empty requests fail with the current invalid-input contract', () {
     final fresh = _FreshGenerator();
     final generator = TargetClashQuestionGenerator(questionGenerator: fresh);
     final result = generator.prepareStage(
@@ -130,10 +131,9 @@ void main() {
       numberType: NumberType.natural,
       requests: const [],
     );
-    expect(result.failure, isNull);
-    expect(result.stage!.targetValue, 10);
-    expect(result.stage!.questions, isEmpty);
-    expect(fresh.buildCalls, 1);
+    expect(result.stage, isNull);
+    expect(result.failure, TargetClashGenerationFailure.invalidRequest);
+    expect(fresh.buildCalls, 0);
     expect(
       generator.prepareStageForTarget(
         operation: Operation.addition,
@@ -206,28 +206,28 @@ void main() {
               operation: Operation.addition,
               difficulty: Difficulty.easy,
               numberType: NumberType.rationals,
-              targetValue: 1.1,
+              targetValue: 2.2,
               request: const TargetClashQuestionRequest(
                   answer: PresentationAnswer.greaterThan,
                   zone: TargetZone.danger),
             )
             .question!
             .expressionValue,
-        1.2);
+        2.3);
     expect(
         generator
             .materializeForTarget(
               operation: Operation.addition,
               difficulty: Difficulty.hard,
               numberType: NumberType.rationals,
-              targetValue: 1.11,
+              targetValue: 2.02,
               request: const TargetClashQuestionRequest(
                   answer: PresentationAnswer.greaterThan,
                   zone: TargetZone.danger),
             )
             .question!
             .expressionValue,
-        1.12);
+        2.03);
     expect(
         generator
             .materializeForTarget(
@@ -270,6 +270,20 @@ class _DirectOnlyGenerator extends QuestionGenerator {
   final directResults = <num>[];
 
   @override
+  List<num> canonicalDirectResultDomain({
+    required Operation type,
+    required Difficulty diff,
+    required NumberType numType,
+  }) => switch (numType) {
+    NumberType.rationals => switch (diff) {
+      Difficulty.easy => const [2.2, 2.3],
+      Difficulty.hard => const [2.02, 2.03, 2.35, 2.37],
+      _ => const [],
+    },
+    _ => List<num>.generate(101, (index) => index),
+  };
+
+  @override
   Question build(
       {required Operation type,
       required Difficulty diff,
@@ -287,13 +301,35 @@ class _DirectOnlyGenerator extends QuestionGenerator {
       required NumberType numType,
       required num result}) {
     directResults.add(result);
-    final right = switch (type) {
+    var left = result;
+    num right = switch (type) {
       Operation.multiplication || Operation.division => 1,
       _ => 0,
     };
+    if (type == Operation.addition && numType == NumberType.rationals) {
+      if (diff == Difficulty.easy && result == 2.2) {
+        left = 1.1;
+        right = 1.1;
+      } else if (diff == Difficulty.easy && result == 2.3) {
+        left = 1.1;
+        right = 1.2;
+      } else if (diff == Difficulty.hard && result == 2.02) {
+        left = 1.01;
+        right = 1.01;
+      } else if (diff == Difficulty.hard && result == 2.03) {
+        left = 1.01;
+        right = 1.02;
+      } else if (diff == Difficulty.hard && result == 2.35) {
+        left = 1.01;
+        right = 1.34;
+      } else if (diff == Difficulty.hard && result == 2.37) {
+        left = 1.01;
+        right = 1.36;
+      }
+    }
     final fact = MathFact(
       operation: type,
-      left: result,
+      left: left,
       right: right,
       result: result,
       representation: FactRepresentation.direct,

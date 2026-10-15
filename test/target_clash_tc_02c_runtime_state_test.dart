@@ -29,11 +29,11 @@ void main() {
   });
 
   test(
-      'legacy empty successful stages fail closed only at the runtime boundary',
+      'empty request preparation reports invalid input at the generator boundary',
       () {
     final empty = _freshEmptyStage();
-    expect(empty.stage, isNotNull);
-    expect(empty.stage!.questions, isEmpty);
+    expect(empty.stage, isNull);
+    expect(empty.failure, TargetClashGenerationFailure.invalidRequest);
     final initial = TargetClashRuntimeState.start(empty);
     expect(initial.phase, TargetClashPhase.technicalFailure);
     expect(
@@ -189,7 +189,7 @@ void main() {
     expect(failed.currentQuestion, isNull);
     expect(failed.finished, isFalse);
     expect(failed.generationFailure,
-        TargetClashGenerationFailure.slotGenerationFailed);
+        TargetClashGenerationFailure.canonicalDomainMaterializationMismatch);
   });
 
   test('best Combo survives a reset and Perfect Hit increments its counter',
@@ -308,7 +308,7 @@ void main() {
   test(
       'combo-four Fever Power Shot scores 120 and Triple completion arms Fever',
       () {
-    final state = _hardBossState(_stage(requests: const [
+    final state = _hardBossState(_hardStage(requests: const [
       TargetClashQuestionRequest(
           answer: PresentationAnswer.lessThan, zone: TargetZone.normal),
     ]));
@@ -491,7 +491,7 @@ void main() {
           .outcome,
       TargetClashPowerShotOutcome.denied,
     );
-    final dangerState = _chargedHardBossState(_stage(requests: const [
+    final dangerState = _chargedHardBossState(_hardStage(requests: const [
       TargetClashQuestionRequest(
         answer: PresentationAnswer.lessThan,
         zone: TargetZone.danger,
@@ -507,7 +507,7 @@ void main() {
     expect(source.directCalls, 0);
     expect(applied.state.clashPower, 0);
     expect(applied.state.powerShotAppliedQuestionIndex, 0);
-    final unavailable = _chargedHardBossState(_stage()).activatePowerShot(
+    final unavailable = _chargedHardBossState(_hardStage()).activatePowerShot(
       config: _hardConfig(),
       generator:
           TargetClashQuestionGenerator(questionGenerator: _NullGenerator()),
@@ -542,7 +542,7 @@ void main() {
   });
 
   test('manual Power Shot may replace a Bullseye slot', () {
-    final state = _chargedHardBossState(_stage(requests: const [
+    final state = _chargedHardBossState(_hardStage(requests: const [
       TargetClashQuestionRequest(
         answer: PresentationAnswer.equalTo,
         zone: TargetZone.bullseye,
@@ -567,7 +567,7 @@ void main() {
       PresentationAnswer.lessThan,
       PresentationAnswer.greaterThan,
     ]) {
-      final state = _chargedHardBossState(_stage(requests: [
+      final state = _chargedHardBossState(_hardStage(requests: [
         TargetClashQuestionRequest(answer: answer, zone: TargetZone.normal),
       ]));
       final before = state.currentQuestion!;
@@ -582,7 +582,7 @@ void main() {
   });
 
   test('Fever and Power Shot materialize a scheduled slot only once', () {
-    final state = _chargedHardBossState(_stage(requests: const [
+    final state = _chargedHardBossState(_hardStage(requests: const [
       TargetClashQuestionRequest(
         answer: PresentationAnswer.lessThan,
         zone: TargetZone.normal,
@@ -741,6 +741,20 @@ TargetClashStageResult _stage({List<TargetClashQuestionRequest>? requests}) =>
                 answer: PresentationAnswer.lessThan, zone: TargetZone.normal),
             TargetClashQuestionRequest(
                 answer: PresentationAnswer.equalTo, zone: TargetZone.bullseye),
+          ],
+    );
+
+TargetClashStageResult _hardStage({List<TargetClashQuestionRequest>? requests}) =>
+    TargetClashQuestionGenerator(questionGenerator: _Generator())
+        .prepareStageForTarget(
+      operation: Operation.addition,
+      difficulty: Difficulty.hard,
+      numberType: NumberType.natural,
+      targetValue: 20,
+      requests: requests ??
+          const [
+            TargetClashQuestionRequest(
+                answer: PresentationAnswer.lessThan, zone: TargetZone.normal),
           ],
     );
 
@@ -966,6 +980,13 @@ TargetClashRuntimeState _easyFinalState() {
 }
 
 class _Generator extends QuestionGenerator {
+  @override
+  List<num> canonicalDirectResultDomain({
+    required Operation type,
+    required Difficulty diff,
+    required NumberType numType,
+  }) => List<num>.generate(31, (index) => index);
+
   @override
   Question buildDirectForResult(
           {required Operation type,
