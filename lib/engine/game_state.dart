@@ -3105,8 +3105,12 @@ class GameState extends ChangeNotifier {
         operation: config.operation,
         difficulty: config.difficulty,
         numberType: config.numberType,
-        requests:
-            TargetClashRuntimeState.ordinaryRequests(config.difficulty, 1),
+        requests: TargetClashRuntimeState.resolveRequests(
+          operation: config.operation,
+          difficulty: config.difficulty,
+          numberType: config.numberType,
+          phase: TargetClashRequestProfilePhase.ordinaryStage1,
+        ),
       ));
       _openTargetClashQuestion();
       return;
@@ -3277,8 +3281,15 @@ class GameState extends ChangeNotifier {
           operation: config.operation,
           difficulty: config.difficulty,
           numberType: config.numberType,
-          requests:
-              TargetClashRuntimeState.ordinaryRequests(config.difficulty, 2),
+          requests: TargetClashRuntimeState.resolveRequests(
+            operation: config.operation,
+            difficulty: config.difficulty,
+            numberType: config.numberType,
+            phase: TargetClashRequestProfilePhase.ordinaryStage2,
+          ),
+          futureRequests: config.difficulty == Difficulty.easy
+              ? const []
+              : TargetClashRuntimeState.tripleRequests(0)!,
         );
       case TargetClashPhase.ordinaryStage2:
         if (config.difficulty == Difficulty.easy) {
@@ -3286,7 +3297,12 @@ class GameState extends ChangeNotifier {
             operation: config.operation,
             difficulty: config.difficulty,
             numberType: config.numberType,
-            requests: TargetClashRuntimeState.bossRequests(config.difficulty),
+            requests: TargetClashRuntimeState.resolveRequests(
+              operation: config.operation,
+              difficulty: config.difficulty,
+              numberType: config.numberType,
+              phase: TargetClashRequestProfilePhase.boss,
+            ),
           );
         }
         return generator.prepareStageForTarget(
@@ -3301,14 +3317,24 @@ class GameState extends ChangeNotifier {
           operation: config.operation,
           difficulty: config.difficulty,
           numberType: config.numberType,
-          requests: TargetClashRuntimeState.bossRequests(config.difficulty),
+          requests: TargetClashRuntimeState.resolveRequests(
+            operation: config.operation,
+            difficulty: config.difficulty,
+            numberType: config.numberType,
+            phase: TargetClashRequestProfilePhase.boss,
+          ),
         );
       case TargetClashPhase.boss:
         return generator.prepareStage(
           operation: config.operation,
           difficulty: config.difficulty,
           numberType: config.numberType,
-          requests: TargetClashRuntimeState.finalRequests(config.difficulty),
+          requests: TargetClashRuntimeState.resolveRequests(
+            operation: config.operation,
+            difficulty: config.difficulty,
+            numberType: config.numberType,
+            phase: TargetClashRequestProfilePhase.finalTarget,
+          ),
         );
       default:
         return null;

@@ -18,6 +18,40 @@ enum TargetClashPhase {
 
 enum TargetClashPowerShotOutcome { applied, unavailable, denied }
 
+/// Identifies the non-Triple runtime request profile being prepared.
+enum TargetClashRequestProfilePhase {
+  ordinaryStage1,
+  ordinaryStage2,
+  boss,
+  finalTarget,
+}
+
+/// Exact-match key for an approved non-Triple profile correction.
+final class TargetClashProfileOverrideKey {
+  const TargetClashProfileOverrideKey({
+    required this.operation,
+    required this.difficulty,
+    required this.numberType,
+    required this.phase,
+  });
+
+  final Operation operation;
+  final Difficulty difficulty;
+  final NumberType numberType;
+  final TargetClashRequestProfilePhase phase;
+
+  @override
+  bool operator ==(Object other) =>
+      other is TargetClashProfileOverrideKey &&
+      operation == other.operation &&
+      difficulty == other.difficulty &&
+      numberType == other.numberType &&
+      phase == other.phase;
+
+  @override
+  int get hashCode => Object.hash(operation, difficulty, numberType, phase);
+}
+
 final class TargetClashPowerShotResult {
   const TargetClashPowerShotResult(this.state, this.outcome);
 
@@ -218,6 +252,85 @@ final class TargetClashRuntimeState {
         Difficulty.hard => const [_ld, _gd, _eq],
         _ => const [],
       };
+
+  /// Returns the existing non-Triple profile, with an approved exact override
+  /// when the operation, difficulty, number type, and phase all match.
+  static List<TargetClashQuestionRequest> resolveRequests({
+    required Operation operation,
+    required Difficulty difficulty,
+    required NumberType numberType,
+    required TargetClashRequestProfilePhase phase,
+  }) {
+    final base = switch (phase) {
+      TargetClashRequestProfilePhase.ordinaryStage1 =>
+        ordinaryRequests(difficulty, 1),
+      TargetClashRequestProfilePhase.ordinaryStage2 =>
+        ordinaryRequests(difficulty, 2),
+      TargetClashRequestProfilePhase.boss => bossRequests(difficulty),
+      TargetClashRequestProfilePhase.finalTarget => finalRequests(difficulty),
+    };
+    return profileOverrides[TargetClashProfileOverrideKey(
+          operation: operation,
+          difficulty: difficulty,
+          numberType: numberType,
+          phase: phase,
+        )] ??
+        base;
+  }
+
+  static final Map<TargetClashProfileOverrideKey,
+      List<TargetClashQuestionRequest>> profileOverrides = Map.unmodifiable(
+    <TargetClashProfileOverrideKey, List<TargetClashQuestionRequest>>{
+    const TargetClashProfileOverrideKey(
+      operation: Operation.multiplication,
+      difficulty: Difficulty.hard,
+      numberType: NumberType.natural,
+      phase: TargetClashRequestProfilePhase.boss,
+    ): const [_ln, _gc, _ld, _gc, _eq],
+    const TargetClashProfileOverrideKey(
+      operation: Operation.multiplication,
+      difficulty: Difficulty.hard,
+      numberType: NumberType.integers,
+      phase: TargetClashRequestProfilePhase.boss,
+    ): const [_ln, _gc, _ld, _gc, _eq],
+    const TargetClashProfileOverrideKey(
+      operation: Operation.division,
+      difficulty: Difficulty.easy,
+      numberType: NumberType.natural,
+      phase: TargetClashRequestProfilePhase.ordinaryStage1,
+    ): const [_ld, _gd, _eq],
+    const TargetClashProfileOverrideKey(
+      operation: Operation.division,
+      difficulty: Difficulty.easy,
+      numberType: NumberType.natural,
+      phase: TargetClashRequestProfilePhase.ordinaryStage2,
+    ): const [_gd, _ld, _eq],
+    const TargetClashProfileOverrideKey(
+      operation: Operation.division,
+      difficulty: Difficulty.easy,
+      numberType: NumberType.natural,
+      phase: TargetClashRequestProfilePhase.boss,
+    ): const [_ld, _gd, _eq],
+    const TargetClashProfileOverrideKey(
+      operation: Operation.division,
+      difficulty: Difficulty.easy,
+      numberType: NumberType.natural,
+      phase: TargetClashRequestProfilePhase.finalTarget,
+    ): const [_ld, _gc, _eq],
+    const TargetClashProfileOverrideKey(
+      operation: Operation.division,
+      difficulty: Difficulty.easy,
+      numberType: NumberType.integers,
+      phase: TargetClashRequestProfilePhase.ordinaryStage1,
+    ): const [_ln, _gd, _eq],
+    const TargetClashProfileOverrideKey(
+      operation: Operation.division,
+      difficulty: Difficulty.easy,
+      numberType: NumberType.integers,
+      phase: TargetClashRequestProfilePhase.ordinaryStage2,
+    ): const [_gn, _ld, _eq],
+  },
+  );
 
   TargetClashRuntimeState resolve({
     PresentationAnswer? answer,
