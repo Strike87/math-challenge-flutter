@@ -484,6 +484,35 @@ final class _Generator extends QuestionGenerator {
   _Generator() : super(rng: Random(1));
 
   int _anchor = 0;
+  int _domainCall = 0;
+
+  @override
+  List<num> canonicalDirectResultDomain({
+    required Operation type,
+    required Difficulty diff,
+    required NumberType numType,
+  }) {
+    if (type != Operation.addition || numType != NumberType.integers) {
+      return const [];
+    }
+
+    return switch (diff) {
+      Difficulty.easy => switch (++_domainCall) {
+          1 => const [7, 11, 15],
+          2 => const [8, 12, 16],
+          3 => const [9, 13, 14],
+          4 => const [10, 14, 16],
+          _ => const [],
+        },
+      Difficulty.medium => switch (++_domainCall) {
+          1 => const [7, 11, 13],
+          2 => const [8, 10, 12, 16],
+          3 => const [8, 12, 16],
+          _ => const [],
+        },
+      _ => const [],
+    };
+  }
 
   @override
   Question build({
@@ -544,6 +573,14 @@ final class _Generator extends QuestionGenerator {
 }
 
 final class _FailGenerator extends QuestionGenerator {
+  @override
+  List<num> canonicalDirectResultDomain({
+    required Operation type,
+    required Difficulty diff,
+    required NumberType numType,
+  }) =>
+      const [];
+
   @override
   Question build({
     required Operation type,
