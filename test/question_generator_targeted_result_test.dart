@@ -51,6 +51,88 @@ void main() {
     }
   });
 
+  test('canonical direct domains are sorted, materializable, and RNG-neutral',
+      () {
+    var seed = 100;
+    for (final operation in operations) {
+      for (final difficulty in difficulties) {
+        for (final numberType in numberTypes) {
+          final a = QuestionGenerator(rng: Random(seed));
+          final b = QuestionGenerator(rng: Random(seed++));
+          final domain = b.canonicalDirectResultDomain(
+              type: operation, diff: difficulty, numType: numberType);
+          expect(domain, isNotEmpty,
+              reason: '$operation/$difficulty/$numberType');
+          expect(domain, orderedEquals([...domain]..sort()));
+          expect(domain.toSet().length, domain.length,
+              reason: 'canonical domain must not repeat results');
+          // The public query is pure: even repeated inspection cannot perturb
+          // the next ordinary generated question.
+          expect(
+              b.canonicalDirectResultDomain(
+                  type: operation, diff: difficulty, numType: numberType),
+              domain);
+          final ordinaryA = a.build(
+              type: operation, diff: difficulty, numType: numberType);
+          final ordinaryB = b.build(
+              type: operation, diff: difficulty, numType: numberType);
+          _expectSameQuestion(ordinaryA, ordinaryB);
+          for (final result in domain) {
+            final direct = QuestionGenerator(rng: Random(1)).buildDirectForResult(
+                type: operation,
+                diff: difficulty,
+                numType: numberType,
+                result: result);
+            expect(direct, isNotNull,
+                reason: 'domain result $result must materialize');
+            expect(direct!.fact!.result, result);
+          }
+        }
+      }
+    }
+  });
+
+  test('canonical domain excludes unsupported configurations', () {
+    final generator = QuestionGenerator(rng: Random(23));
+    for (final operation in Operation.values.skip(4)) {
+      expect(generator.canonicalDirectResultDomain(
+          type: operation,
+          diff: Difficulty.easy,
+          numType: NumberType.natural), isEmpty);
+    }
+    expect(generator.canonicalDirectResultDomain(
+        type: Operation.addition,
+        diff: Difficulty.easy,
+        numType: NumberType.mixed), isEmpty);
+  });
+
+  test('finite independent result enumeration finds no canonical-domain omissions',
+      () {
+    for (final operation in operations) {
+      for (final difficulty in difficulties) {
+        for (final numberType in numberTypes) {
+          final domain = QuestionGenerator(rng: Random(91))
+              .canonicalDirectResultDomain(
+                  type: operation, diff: difficulty, numType: numberType)
+              .toSet();
+          for (final result in _independentResultCandidates(
+              operation, difficulty, numberType)) {
+            final direct = QuestionGenerator(rng: Random(92))
+                .buildDirectForResult(
+                    type: operation,
+                    diff: difficulty,
+                    numType: numberType,
+                    result: result);
+            if (direct != null) {
+              expect(domain, contains(result),
+                  reason: '$operation/$difficulty/$numberType omits $result');
+            }
+          }
+        }
+      }
+    }
+  });
+
   test(
     'rejects unsupported, non-finite, off-grid, and unreachable requests',
     () {
@@ -321,6 +403,49 @@ void main() {
       );
     }
   });
+}
+
+void _expectSameQuestion(dynamic left, dynamic right) {
+  expect(right.type, left.type);
+  expect(right.key, left.key);
+  expect(right.text, left.text);
+  expect(right.ans, left.ans);
+  expect(right.choices, left.choices);
+  expect(right.diff, left.diff);
+  expect(right.numType, left.numType);
+  expect(right.ratDP, left.ratDP);
+  final leftFact = left.fact!;
+  final rightFact = right.fact!;
+  expect(rightFact.operation, leftFact.operation);
+  expect(rightFact.left, leftFact.left);
+  expect(rightFact.right, leftFact.right);
+  expect(rightFact.result, leftFact.result);
+  expect(rightFact.representation, leftFact.representation);
+  expect(rightFact.difficulty, leftFact.difficulty);
+  expect(rightFact.numberType, leftFact.numberType);
+  expect(rightFact.rationalDecimalPlaces, leftFact.rationalDecimalPlaces);
+}
+
+Iterable<num> _independentResultCandidates(
+    Operation operation, Difficulty difficulty, NumberType numberType) sync* {
+  final max = switch (operation) {
+    Operation.addition => const [20, 98, 198][difficulty.index],
+    Operation.subtraction || Operation.division =>
+      const [9, 44, 79][difficulty.index],
+    Operation.multiplication => const [25, 100, 144][difficulty.index],
+    _ => 0,
+  };
+  if (numberType == NumberType.rationals) {
+    final factor = difficulty == Difficulty.hard ? 100 : 10;
+    final upper = operation == Operation.multiplication ? 144 * factor : 32 * factor;
+    for (var tick = -upper; tick <= upper; tick++) yield tick / factor;
+    return;
+  }
+  // These bounds are independently derived from the visible operand ranges;
+  // include negatives for integer direct forms.
+  final upper = operation == Operation.multiplication ? max * max : max * 3;
+  final lower = numberType == NumberType.integers ? -upper : 0;
+  for (var value = lower; value <= upper; value++) yield value;
 }
 
 num _reachableResult(

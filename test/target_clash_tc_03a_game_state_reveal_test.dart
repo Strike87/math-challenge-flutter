@@ -221,6 +221,13 @@ class _TargetClashQuestionGenerator extends QuestionGenerator {
   int _anchors = 0;
 
   @override
+  List<num> canonicalDirectResultDomain({
+    required Operation type,
+    required Difficulty diff,
+    required NumberType numType,
+  }) => const [6, 7, 8, 9, 10, 11, 12, 13, 14];
+
+  @override
   Question build({
     required Operation type,
     required Difficulty diff,
@@ -288,32 +295,24 @@ final class _ToggleDirectGenerator extends _TargetClashQuestionGenerator {
 }
 
 final class _FailSecondStageGenerator extends _TargetClashQuestionGenerator {
-  int _builds = 0;
+  int _directStages = 0;
 
   @override
-  Question build({
+  Question? buildDirectForResult({
     required Operation type,
     required Difficulty diff,
     required NumberType numType,
-    bool integerQuest = false,
-    bool decimalQuest = false,
+    required num result,
   }) {
-    if (++_builds < 2) {
-      return super.build(
+    if (_directStages++ < 3) {
+      return super.buildDirectForResult(
         type: type,
         diff: diff,
         numType: numType,
-        integerQuest: integerQuest,
-        decimalQuest: decimalQuest,
+        result: result,
       );
     }
-    return Question(
-      type: type,
-      key: 'invalid',
-      text: 'invalid',
-      ans: 0,
-      choices: const [0],
-    );
+    return null;
   }
 }
 

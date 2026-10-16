@@ -329,6 +329,13 @@ final class _InitialFailureGenerator extends QuestionGenerator {
   _InitialFailureGenerator() : super(rng: Random(1));
 
   @override
+  List<num> canonicalDirectResultDomain({
+    required Operation type,
+    required Difficulty diff,
+    required NumberType numType,
+  }) => const [];
+
+  @override
   Question build({
     required Operation type,
     required Difficulty diff,
@@ -349,6 +356,13 @@ final class _TargetClashQuestionGenerator extends QuestionGenerator {
   _TargetClashQuestionGenerator() : super(rng: Random(1));
 
   int _anchors = 0;
+
+  @override
+  List<num> canonicalDirectResultDomain({
+    required Operation type,
+    required Difficulty diff,
+    required NumberType numType,
+  }) => const [6, 7, 8, 9, 10, 11, 12, 13, 14];
 
   @override
   Question build({

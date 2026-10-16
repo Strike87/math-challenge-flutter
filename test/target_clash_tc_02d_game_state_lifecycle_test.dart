@@ -230,6 +230,130 @@ void main() {
     }
   });
 
+  test('Medium and Hard Stage 2 retain the preflighted target into Triple',
+      () async {
+    for (final difficulty in [Difficulty.medium, Difficulty.hard]) {
+      final state = await makeState();
+      state.debugStartTargetClashForTest(config(difficulty));
+      // The first three answers finish Stage 1; Stage 2 must already be
+      // feasible for its later retained-target Triple request set.
+      for (var i = 0; i < 3; i++) answer(state);
+      final stage2Target = state.targetClashTarget;
+      for (var i = 0; i < 3; i++) answer(state);
+      expect(state.targetClashRuntime!.phase, TargetClashPhase.triple);
+      expect(state.targetClashTarget, stage2Target);
+      expect(state.targetClashRuntime!.generationFailure, isNull);
+    }
+  });
+
+  test('Easy reaches Boss without a retained-target Triple preflight path',
+      () async {
+    final state = await makeState();
+    state.debugStartTargetClashForTest(config(Difficulty.easy));
+    for (var i = 0; i < 6; i++) answer(state);
+    expect(state.targetClashRuntime!.phase, TargetClashPhase.boss);
+    expect(state.targetClashRuntime!.generationFailure, isNull);
+  });
+
+  test('R3-18 visible target is stable across every non-boundary replacement',
+      () async {
+    final state = await makeState();
+    state.debugStartTargetClashForTest(config(Difficulty.medium));
+    final target = state.targetClashTarget;
+    for (var index = 0; index < 2; index++) {
+      answer(state);
+      expect(state.targetClashTarget, target);
+    }
+    state.debugTimeoutForTest();
+    state.debugCompleteTargetClashRevealForTest();
+    expect(state.targetClashRuntime!.phase, TargetClashPhase.ordinaryStage2);
+    final boundaryTarget = state.targetClashTarget;
+    expect(boundaryTarget, isNotNull);
+  });
+
+  test('R3-20 Boss and Final boundaries prepare fresh targets', () async {
+    final state = await makeState();
+    state.debugStartTargetClashForTest(config(Difficulty.easy));
+    for (var index = 0; index < 6; index++) answer(state);
+    expect(state.targetClashRuntime!.phase, TargetClashPhase.boss);
+    final bossStage = state.targetClashRuntime!.preparedStage;
+    // Easy Boss has three prompts; its terminal transition is Final.
+    for (var index = 0; index < 3; index++) answer(state);
+    expect(state.targetClashRuntime!.phase, TargetClashPhase.finalTarget);
+    expect(state.targetClashRuntime!.preparedStage, isNot(same(bossStage)));
+  });
+
+  test('R3-13 seed 23 reaches actual Boss preparation without failure',
+      () async {
+    final state = await makeState(generator: QuestionGenerator(rng: Random(23)));
+    state.debugStartTargetClashForTest(config(Difficulty.easy));
+    for (var index = 0; index < 6; index++) answer(state);
+    final runtime = state.targetClashRuntime!;
+    expect(runtime.phase, TargetClashPhase.boss);
+    expect(runtime.phase, isNot(TargetClashPhase.technicalFailure));
+    expect(runtime.preparedStage, isNotNull);
+    expect(runtime.preparedStage!.questions, hasLength(3));
+    expect(runtime.generationFailure, isNull);
+    expect(state.isTargetClash, isTrue);
+  });
+
+  test('R3-21 planner technical failure remains outside completion/reward paths',
+      () async {
+    final state = await makeState(
+      generator: _FailAtBoundaryQuestionGenerator(_FailurePoint.stage2),
+    );
+    state.debugStartTargetClashForTest(config(Difficulty.easy));
+    for (var index = 0; index < 3; index++) answer(state);
+    expect(state.targetClashRuntime!.phase, TargetClashPhase.technicalFailure);
+    expect(state.targetClashRuntime!.finished, isFalse);
+    expect(state.adGameCount, 0);
+    expect(state.activeAdaptive, isFalse);
+  });
+
+  test(
+      'R3-21 technical failure writes no success persistence and exposes no successful result',
+      () async {
+    final state = await makeState(
+      generator: _FailAtBoundaryQuestionGenerator(_FailurePoint.stage2),
+    );
+    state.debugStartTargetClashForTest(config(Difficulty.easy));
+
+    final writes = <(String key, String operation)>[];
+    final previousWriteFailureHook = Storage.writeFailureHook;
+    try {
+      Storage.writeFailureHook = (key, operation) {
+        writes.add((key, operation));
+        previousWriteFailureHook?.call(key, operation);
+      };
+
+      for (var index = 0; index < 3; index++) {
+        answer(state);
+      }
+
+      final runtime = state.targetClashRuntime!;
+      expect(runtime.phase, TargetClashPhase.technicalFailure);
+      expect(
+        runtime.generationFailure,
+        TargetClashGenerationFailure.anchorGenerationFailed,
+      );
+      expect(runtime.finished, isFalse);
+      expect(state.rt.gameActive, isFalse);
+      expect(state.rt.state, 'ended');
+      expect(
+        writes.where(
+          (write) =>
+              write.$1 == 'mc_adGameCount' && write.$2 == 'setInt',
+        ),
+        isEmpty,
+      );
+      expect(state.adGameCount, 0);
+      expect(state.targetClashResultSummary, isNull);
+      expect(state.hasSuccessfulTargetClashResultDismissal, isFalse);
+    } finally {
+      Storage.writeFailureHook = previousWriteFailureHook;
+    }
+  });
+
   test('Easy skips Triple and each profile completes at its frozen count',
       () async {
     final easy = await makeState();
@@ -543,6 +667,19 @@ class _TargetClashQuestionGenerator extends QuestionGenerator {
       };
 
   bool get _failDirect => failurePoint == _FailurePoint.triple && _direct >= 5;
+
+  @override
+  List<num> canonicalDirectResultDomain({
+    required Operation type,
+    required Difficulty diff,
+    required NumberType numType,
+  }) {
+    _anchors++;
+    if (_failAnchor) return const [];
+    // Explicit, deterministic domain covering all integer zone offsets used
+    // by the lifecycle fake. No inherited random-domain fallback is allowed.
+    return List<num>.unmodifiable(List<num>.generate(81, (index) => index - 20));
+  }
 
   @override
   Question build({

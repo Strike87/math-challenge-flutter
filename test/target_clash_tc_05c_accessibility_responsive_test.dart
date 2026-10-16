@@ -510,6 +510,13 @@ final class _Generator extends QuestionGenerator {
   int _anchor = 0;
 
   @override
+  List<num> canonicalDirectResultDomain({
+    required Operation type,
+    required Difficulty diff,
+    required NumberType numType,
+  }) => const [6, 7, 8, 9, 10, 11, 12, 13, 14];
+
+  @override
   Question build({
     required Operation type,
     required Difficulty diff,
@@ -568,6 +575,13 @@ final class _Generator extends QuestionGenerator {
 }
 
 final class _FailGenerator extends QuestionGenerator {
+  @override
+  List<num> canonicalDirectResultDomain({
+    required Operation type,
+    required Difficulty diff,
+    required NumberType numType,
+  }) => const [];
+
   @override
   Question build({
     required Operation type,
