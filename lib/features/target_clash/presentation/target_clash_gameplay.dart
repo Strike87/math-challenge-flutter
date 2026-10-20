@@ -156,51 +156,50 @@ class _Hud extends StatelessWidget {
       TargetClashPhase.finalTarget => 'FINAL TARGET',
       _ => '',
     };
-    return Container(
-      key: const Key('target-clash-hud'),
-      margin: const EdgeInsets.symmetric(horizontal: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: NeoCard(
+        key: const Key('target-clash-hud'),
+        padding: const EdgeInsets.all(12),
         color: s.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(GameConfig.grape)),
-      ),
-      child: Column(children: [
-        Text(phase,
-            key: const Key('target-clash-phase'),
-            style:
-                const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
-        const SizedBox(height: 8),
-        Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 18,
-            runSpacing: 6,
-            children: [
-              _Metric(
-                  'SCORE', '${runtime.score}', const Key('target-clash-score')),
-              _Metric('COMBO', '${runtime.displayCombo}',
-                  const Key('target-clash-combo')),
-              _Metric('×', '${runtime.comboMultiplier}',
-                  const Key('target-clash-multiplier')),
-              _Metric(
-                  'CLASH POWER',
-                  runtime.isPowerShotReady
-                      ? '6 / 6 READY'
-                      : '${runtime.clashPower} / 6',
-                  const Key('target-clash-power')),
-              if (stageCount > 0)
+        borderRadius: 20,
+        child: Column(children: [
+          Text(phase,
+              key: const Key('target-clash-phase'),
+              style: const TextStyle(
+                  fontWeight: FontWeight.w900, letterSpacing: 1)),
+          const SizedBox(height: 8),
+          Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 18,
+              runSpacing: 6,
+              children: [
+                _Metric('SCORE', '${runtime.score}',
+                    const Key('target-clash-score')),
+                _Metric('COMBO', '${runtime.displayCombo}',
+                    const Key('target-clash-combo')),
+                _Metric('×', '${runtime.comboMultiplier}',
+                    const Key('target-clash-multiplier')),
                 _Metric(
-                    'STAGE',
-                    '${runtime.stageQuestionIndex + 1} / $stageCount',
-                    const Key('target-clash-progress')),
-              if (runtime.isFeverActive)
-                _Metric('FEVER ×2', '${runtime.feverRemaining} remaining',
-                    const Key('target-clash-fever')),
-              if (runtime.phase == TargetClashPhase.boss)
-                _Metric('BOSS HEALTH', '${runtime.bossHealth}',
-                    const Key('target-clash-boss-health')),
-            ]),
-      ]),
+                    'CLASH POWER',
+                    runtime.isPowerShotReady
+                        ? '6 / 6 READY'
+                        : '${runtime.clashPower} / 6',
+                    const Key('target-clash-power')),
+                if (stageCount > 0)
+                  _Metric(
+                      'STAGE',
+                      '${runtime.stageQuestionIndex + 1} / $stageCount',
+                      const Key('target-clash-progress')),
+                if (runtime.isFeverActive)
+                  _Metric('FEVER ×2', '${runtime.feverRemaining} remaining',
+                      const Key('target-clash-fever')),
+                if (runtime.phase == TargetClashPhase.boss)
+                  _Metric('BOSS HEALTH', '${runtime.bossHealth}',
+                      const Key('target-clash-boss-health')),
+              ]),
+        ]),
+      ),
     );
   }
 }
@@ -240,23 +239,49 @@ class _QuestionPanel extends StatelessWidget {
                     : 'CORRECT • $relation'
                 : 'INCORRECT • $relation'
         : null;
-    return Container(
+    return NeoCard(
+      key: const Key('target-clash-question-panel'),
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-          color: s.surface, borderRadius: BorderRadius.circular(24)),
+      color: s.surface,
+      borderRadius: 24,
       child: Column(children: [
         Text('TARGET ${_number(question.targetValue, question.expression)}',
             key: const Key('target-clash-target'),
-            style: TextStyle(color: s.muted, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 16),
-        Text(_expression(question.expression),
-            key: const Key('target-clash-expression'),
-            textAlign: TextAlign.center,
             style: TextStyle(
-                color: s.text,
-                fontSize: 34,
-                fontWeight: FontWeight.w900,
-                fontFamily: AppFonts.headFor(s))),
+                color: s.muted,
+                fontWeight: FontWeight.w800,
+                fontFamily: AppFonts.bodyFor(s))),
+        const SizedBox(height: 16),
+        Semantics(
+          label: isReveal
+              ? 'Resolved mathematical relation'
+              : 'Compare the expression with the target. Choose the unknown relation.',
+          child: Wrap(
+            key: const Key('target-clash-inline-relation'),
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              Text(_expression(question.expression),
+                  key: const Key('target-clash-expression'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: s.text,
+                      fontSize: 34,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: AppFonts.headFor(s))),
+              _UnknownRelation(s: s),
+              Text(_number(question.targetValue, question.expression),
+                  key: const Key('target-clash-inline-target'),
+                  style: TextStyle(
+                      color: s.text,
+                      fontSize: 34,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: AppFonts.headFor(s))),
+            ],
+          ),
+        ),
         if (isReveal) ...[
           const SizedBox(height: 10),
           Text(
@@ -271,6 +296,32 @@ class _QuestionPanel extends StatelessWidget {
       ]),
     );
   }
+}
+
+class _UnknownRelation extends StatelessWidget {
+  const _UnknownRelation({required this.s});
+
+  final SettingsService s;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        key: const Key('target-clash-unknown-relation'),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: s.accent(GameConfig.grape).withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: s.accent(GameConfig.grape), width: 1.5),
+        ),
+        child: Text(
+          '[?]',
+          style: TextStyle(
+            color: s.accent(GameConfig.grape),
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            fontFamily: AppFonts.headFor(s),
+          ),
+        ),
+      );
 }
 
 class _RelationControls extends StatelessWidget {

@@ -89,7 +89,7 @@ void main() {
     await state.quitToMenu();
   });
 
-  testWidgets('open prompt has typed expression and relation controls in order',
+  testWidgets('open prompt has inline typed relation and controls in order',
       (tester) async {
     final state = await makeState();
     state.debugStartTargetClashForTest(config());
@@ -97,7 +97,15 @@ void main() {
 
     expect(find.byKey(const Key('target-clash-target')), findsOneWidget);
     expect(find.byKey(const Key('target-clash-expression')), findsOneWidget);
+    expect(
+        find.byKey(const Key('target-clash-inline-relation')), findsOneWidget);
+    expect(find.text('[?]'), findsOneWidget);
     expect(find.byKey(const Key('target-clash-reveal-relation')), findsNothing);
+    expect(
+      find.textContaining('= ${state.targetClashQuestion!.expressionValue} '),
+      findsNothing,
+      reason: 'The result remains hidden until the canonical reveal.',
+    );
     final buttons = tester.widgetList<FilledButton>(find.byType(FilledButton));
     expect(
         buttons.map((button) => (button.child! as Text).data), ['<', '=', '>']);
@@ -342,6 +350,8 @@ void main() {
     await tester.pumpWidget(_Host(fever));
     expect(find.text('BOSS TARGET'), findsOneWidget);
     expect(find.text('FEVER ×2'), findsOneWidget);
+    expect(find.byKey(const Key('target-clash-fever')), findsOneWidget);
+    expect(find.byKey(const Key('target-clash-boss-health')), findsOneWidget);
     await fever.quitToMenu();
 
     final finalTarget = await makeState();

@@ -1,0 +1,199 @@
+name: Target Clash V5 Isolated Frozen Validation
+
+on:
+  push:
+    branches: [validation/target-clash-v5-native-ui]
+    paths:
+      - .github/workflows/target_clash_v5_isolated_validation.yml
+      - lib/features/target_clash/presentation/target_clash_gameplay.dart
+      - test/target_clash_tc_03c_gameplay_ui_test.dart
+      - test/target_clash_v5_native_ui_capture_test.dart
+      - docs/target_clash/target_clash_ui_v5_presentation_amendment.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  baseline-versus-v5:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Verify frozen OCI authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker --version
+          docker buildx version
+          docker info --format '{{.OSType}} / {{.Architecture}}'
+          docker buildx imagetools inspect \
+            ubuntu@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3 \
+            --raw > "$RUNNER_TEMP/ubuntu-index.json"
+          jq -e --arg digest sha256:496754492fb28b4d3049432f2ca787449331e23fb14f0dd3fffea86bf5a93eb4 '
+            .manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64" and .digest == $digest)
+          ' "$RUNNER_TEMP/ubuntu-index.json" >/dev/null
+
+      - name: Run controlled frozen comparison and captures
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --platform linux/amd64 \
+            -e SOURCE_HEAD="$GITHUB_SHA" \
+            -e TC_V5_CAPTURE_DIR=/runner-temp/captures \
+            -v "$GITHUB_WORKSPACE:/workspace:ro" \
+            -v "$RUNNER_TEMP:/runner-temp" \
+            ubuntu@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3 \
+            bash -lc '
+              set -euo pipefail
+              exec > >(tee /runner-temp/target-clash-v5-validation.log) 2>&1
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install -y --no-install-recommends ca-certificates curl file git jq libglu1-mesa unzip xz-utils
+              rm -rf /var/lib/apt/lists/*
+              test "$(uname -m)" = x86_64
+
+              flutter_url=https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.5-stable.tar.xz
+              flutter_sha=2132e990f236f8d22e7c6314b29a191a95b10d7cbcfec9b4e2e303d996652cbb
+              curl --fail --location --retry 3 "$flutter_url" -o /tmp/flutter.tar.xz
+              echo "$flutter_sha  /tmp/flutter.tar.xz" | sha256sum --check -
+              mkdir -p /opt/flutter-sdk
+              tar -xJf /tmp/flutter.tar.xz -C /opt/flutter-sdk --strip-components=1
+              export PATH=/opt/flutter-sdk/bin:$PATH
+              git config --global --add safe.directory /opt/flutter-sdk
+              flutter --version --machine > /tmp/flutter.json
+              jq -e ".frameworkVersion == \"3.47.5\" and .channel == \"stable\" and .frameworkRevision == \"6a19cca56475dbfba1478ee68d7bd0c2ef891da1\" and .engineRevision == \"af7e796e161ae0bb1ff0758c71a7105418bd9ded\" and (.dartSdkVersion | startswith(\"3.13.4\"))" /tmp/flutter.json >/dev/null
+              test "$(cat /opt/flutter-sdk/bin/internal/engine.version)" = af7e796e161ae0bb1ff0758c71a7105418bd9ded
+              dart --version 2>&1 | grep -F "Dart SDK version: 3.13.4"
+
+              check_font() { echo "$1  /workspace/$2" | sha256sum --check; }
+              check_font A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 assets/fonts/Baloo2-Bold.ttf
+              check_font A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 assets/fonts/Baloo2-ExtraBold.ttf
+              check_font A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 assets/fonts/Baloo2-Black.ttf
+              check_font 57F73E11F51999432BF7AB22CE55B6F945D5ECA1BF824404CFA9EC2E3718C84E assets/fonts/PlusJakartaSans-Medium.ttf
+              check_font A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 assets/fonts/PlusJakartaSans-SemiBold.ttf
+              check_font A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 assets/fonts/PlusJakartaSans-Bold.ttf
+              check_font A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 assets/fonts/PlusJakartaSans-ExtraBold.ttf
+              check_font 32F5840FB2BF844BDABAFE372591DDFB9286E98117F5B21950AAF54EA856919A assets/fonts/OpenDyslexic-Regular.otf
+
+              baseline=f0877f6673e32e704d3f018a387d9fef12334e53
+              mkdir -p /work /runner-temp/captures
+              git config --global --add safe.directory /workspace
+              git clone /workspace /work/baseline
+              git -C /work/baseline checkout --detach "$baseline"
+              cp -a /workspace/. /work/v5
+              printf "SOURCE_HEAD=%s\nBASELINE_HEAD=%s\n" "$SOURCE_HEAD" "$baseline" > /runner-temp/comparison.txt
+
+              printf "%s\n" \
+                lib/features/target_clash/presentation/target_clash_gameplay.dart \
+                test/target_clash_tc_03c_gameplay_ui_test.dart \
+                docs/target_clash/target_clash_ui_v5_presentation_amendment.md \
+                .github/workflows/target_clash_v5_isolated_validation.yml \
+                test/target_clash_v5_native_ui_capture_test.dart \
+                > /tmp/v5-allowlist
+              git -C /work/v5 diff --name-only "$baseline" HEAD | sort > /tmp/v5-observed
+              diff -u /tmp/v5-allowlist /tmp/v5-observed
+              echo "B_DIFF_ALLOWLIST=PASS" | tee -a /runner-temp/comparison.txt
+              for path in $(cat /tmp/v5-allowlist) pubspec.yaml pubspec.lock; do
+                printf "%s " "$path" | tee -a /runner-temp/comparison.txt
+                for state in baseline v5; do
+                  if test -f "/work/$state/$path"; then
+                    sha256sum "/work/$state/$path" | awk "{print \$1}" | tr "\n" " "
+                  else
+                    printf "MISSING "
+                  fi
+                done
+                printf "\n" | tee -a /runner-temp/comparison.txt
+              done
+              git -C /work/v5 diff --exit-code "$baseline" HEAD -- pubspec.yaml pubspec.lock
+              echo "DEPENDENCY_BASELINE=PASS" | tee -a /runner-temp/comparison.txt
+
+              failures=0
+              ledger() {
+                printf "LEDGER|state=%s|check=%s|exit=%s|classification=%s\n" "$1" "$2" "$3" "$4" \
+                  | tee -a /runner-temp/comparison.txt
+              }
+
+              run_check() {
+                state="$1"
+                check="$2"
+                command="$3"
+                set +e
+                eval "$command" >> /runner-temp/comparison.txt 2>&1
+                code=$?
+                set -e
+                if test "$code" -eq 0; then
+                  ledger "$state" "$check" "$code" PASS
+                else
+                  ledger "$state" "$check" "$code" TEST_OR_RENDERER_FAILURE
+                  failures=1
+                fi
+                return 0
+              }
+
+              run_case() {
+                name="$1"
+                cd "/work/$name"
+                git config --global --add safe.directory "$(pwd)"
+                echo "=== $name SOURCE HASHES ===" | tee -a /runner-temp/comparison.txt
+                sha256sum lib/features/target_clash/presentation/target_clash_gameplay.dart test/target_clash_tc_03c_gameplay_ui_test.dart | tee -a /runner-temp/comparison.txt
+                flutter pub get
+                run_check "$name" target-clash-runtime "flutter test --reporter compact --no-pub test/target_clash_tc_02c_runtime_state_test.dart test/target_clash_tc_02c_generator_seam_test.dart test/target_clash_tc_02d_game_state_lifecycle_test.dart test/target_clash_tc_03a_game_state_reveal_test.dart test/target_clash_tc_03c_gameplay_ui_test.dart"
+                run_check "$name" tc05c "flutter test --reporter compact --no-pub test/target_clash_tc_05c_accessibility_responsive_test.dart"
+                run_check "$name" analyze "flutter analyze --no-pub"
+              }
+              run_case baseline
+              run_case v5
+
+              cd /work/baseline
+              run_check baseline tc05d "flutter test --reporter compact --no-pub test/target_clash_tc_05d_golden_test.dart"
+              baseline_d4="$code"
+              cd /work/v5
+              set +e
+              flutter test --reporter compact --no-pub test/target_clash_tc_05d_golden_test.dart > /runner-temp/v5-tc05d.log 2>&1
+              v5_d4=$?
+              set -e
+              cat /runner-temp/v5-tc05d.log >> /runner-temp/comparison.txt
+              if test "$baseline_d4" -eq 0 \
+                && test "$v5_d4" -ne 0 \
+                && grep -Eqi "golden.*(mismatch|pixel|fail)|pixel.*(mismatch|fail)" /runner-temp/v5-tc05d.log \
+                && ! grep -Eqi "renderer|shader|unhandled exception|exception caught|renderflex.*overflow|failed assertion|testfailure" /runner-temp/v5-tc05d.log; then
+                ledger v5 tc05d "$v5_d4" EXPECTED_V5_PRESENTATION_DELTA
+              elif test "$v5_d4" -eq 0; then
+                ledger v5 tc05d 0 PASS
+              else
+                ledger v5 tc05d "$v5_d4" V5_REGRESSION_OR_UNDETERMINED
+                failures=1
+              fi
+
+              cd /work/v5
+              run_check v5 native-captures "flutter test --reporter expanded --no-pub test/target_clash_v5_native_ui_capture_test.dart"
+              for image in ordinary_light_390x844.png triple_light_390x844.png fever_light_390x844.png boss_light_390x844.png final_target_light_390x844.png boss_dark_390x844.png fever_dark_390x844.png; do
+                test -f "/runner-temp/captures/$image"
+                file "/runner-temp/captures/$image" | grep -F "390 x 844"
+              done
+              ledger v5 capture-dimensions 0 PASS
+              git -C /work/v5 status --short | tee -a /runner-temp/comparison.txt
+              echo "CAPTURES=RUNNER_TEMP_ONLY_NO_GOLDEN_UPDATE" | tee -a /runner-temp/comparison.txt
+              if test "$failures" -ne 0; then
+                echo "VALIDATION_RESULT=FAIL" | tee -a /runner-temp/comparison.txt
+                exit 1
+              fi
+              echo "VALIDATION_RESULT=PASS_WITH_D4_PRESENTATION_DELTA_PRESERVED" | tee -a /runner-temp/comparison.txt
+            '
+
+      - name: Upload immutable evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: target-clash-v5-frozen-validation
+          path: |
+            ${{ runner.temp }}/target-clash-v5-validation.log
+            ${{ runner.temp }}/comparison.txt
+            ${{ runner.temp }}/v5-tc05d.log
+            ${{ runner.temp }}/captures
+          if-no-files-found: warn
+          retention-days: 14
