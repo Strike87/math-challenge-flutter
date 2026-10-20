@@ -82,6 +82,7 @@ jobs:
               baseline=f0877f6673e32e704d3f018a387d9fef12334e53
               mkdir -p /work /runner-temp/captures
               git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /workspace/.git
               git clone /workspace /work/baseline
               git -C /work/baseline checkout --detach "$baseline"
               cp -a /workspace/. /work/v5
