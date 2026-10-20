@@ -95,7 +95,7 @@ jobs:
                 .github/workflows/target_clash_v5_isolated_validation.yml \
                 test/target_clash_v5_native_ui_capture_test.dart \
                 > /tmp/v5-allowlist
-              git -C /work/v5 diff --name-only "$baseline" HEAD | sort > /tmp/v5-observed
+              git -C /work/baseline diff --name-only "$baseline" "$SOURCE_HEAD" | sort > /tmp/v5-observed
               diff -u /tmp/v5-allowlist /tmp/v5-observed
               echo "B_DIFF_ALLOWLIST=PASS" | tee -a /runner-temp/comparison.txt
               for path in $(cat /tmp/v5-allowlist) pubspec.yaml pubspec.lock; do
@@ -109,8 +109,14 @@ jobs:
                 done
                 printf "\n" | tee -a /runner-temp/comparison.txt
               done
-              git -C /work/v5 diff --exit-code "$baseline" HEAD -- pubspec.yaml pubspec.lock
+              git -C /work/baseline diff --exit-code "$baseline" "$SOURCE_HEAD" -- pubspec.yaml pubspec.lock
               echo "DEPENDENCY_BASELINE=PASS" | tee -a /runner-temp/comparison.txt
+              (
+                cd /work/v5
+                while IFS= read -r path; do
+                  sha256sum "$path"
+                done < <(cat /tmp/v5-allowlist; printf "%s\n" pubspec.yaml pubspec.lock)
+              ) > /tmp/v5-source-before.sha256
 
               failures=0
               ledger() {
@@ -177,7 +183,8 @@ jobs:
                 file "/runner-temp/captures/$image" | grep -F "390 x 844"
               done
               ledger v5 capture-dimensions 0 PASS
-              git -C /work/v5 status --short | tee -a /runner-temp/comparison.txt
+              sha256sum --check /tmp/v5-source-before.sha256 | tee -a /runner-temp/comparison.txt
+              echo "V5_COPY_SOURCE_MUTATION=NONE" | tee -a /runner-temp/comparison.txt
               echo "CAPTURES=RUNNER_TEMP_ONLY_NO_GOLDEN_UPDATE" | tee -a /runner-temp/comparison.txt
               if test "$failures" -ne 0; then
                 echo "VALIDATION_RESULT=FAIL" | tee -a /runner-temp/comparison.txt
