@@ -180,23 +180,31 @@ jobs:
               fi
 
               cd /work/v5
-              # Recovery R1 runs one capture only. The separate tee preserves the
-              # last TC_V5_CAPTURE marker in an uploadable log if the command stalls.
+              # Each frame keeps its TC_V5_CAPTURE markers. The separate tee
+              # preserves the last completed marker if the bounded matrix stalls.
               set +e
-              timeout --preserve-status 180s flutter test --reporter expanded --no-pub \
+              timeout --preserve-status 600s flutter test --reporter expanded --no-pub \
                 test/target_clash_v5_native_ui_capture_test.dart \
-                --plain-name "captures ordinary light 390x844" \
-                2>&1 | tee /runner-temp/target-clash-v5-capture-ordinary.log
+                2>&1 | tee /runner-temp/target-clash-v5-captures.log
               capture_code=${PIPESTATUS[0]}
               set -e
               if test "$capture_code" -eq 0; then
-                ledger v5 native-capture-ordinary "$capture_code" PASS
-                test -f /runner-temp/captures/ordinary_light_390x844.png
-                file /runner-temp/captures/ordinary_light_390x844.png | grep -F "390 x 844"
-                sha256sum /runner-temp/captures/ordinary_light_390x844.png | tee -a /runner-temp/comparison.txt
-                ledger v5 native-capture-ordinary-dimensions 0 PASS
+                ledger v5 native-capture-matrix "$capture_code" PASS
+                for image in \
+                  ordinary_light_390x844.png \
+                  triple_light_390x844.png \
+                  fever_light_390x844.png \
+                  boss_light_390x844.png \
+                  final_target_light_390x844.png \
+                  boss_dark_390x844.png \
+                  fever_dark_390x844.png; do
+                  test -f "/runner-temp/captures/$image"
+                  file "/runner-temp/captures/$image" | grep -F "390 x 844"
+                  sha256sum "/runner-temp/captures/$image" | tee -a /runner-temp/comparison.txt
+                done
+                ledger v5 native-capture-matrix-dimensions 0 PASS
               else
-                ledger v5 native-capture-ordinary "$capture_code" CAPTURE_HARNESS_OR_ENVIRONMENT_FAILURE
+                ledger v5 native-capture-matrix "$capture_code" CAPTURE_HARNESS_OR_ENVIRONMENT_FAILURE
                 failures=1
               fi
               sha256sum --check /tmp/v5-source-before.sha256 | tee -a /runner-temp/comparison.txt
@@ -216,7 +224,7 @@ jobs:
           name: target-clash-v5-frozen-validation
           path: |
             ${{ runner.temp }}/target-clash-v5-validation.log
-            ${{ runner.temp }}/target-clash-v5-capture-ordinary.log
+            ${{ runner.temp }}/target-clash-v5-captures.log
             ${{ runner.temp }}/comparison.txt
             ${{ runner.temp }}/v5-tc05d.log
             ${{ runner.temp }}/captures
