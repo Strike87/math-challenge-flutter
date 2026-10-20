@@ -52,7 +52,9 @@ jobs:
               exec > >(tee /runner-temp/target-clash-v5-validation.log) 2>&1
               export DEBIAN_FRONTEND=noninteractive
               apt-get update
-              apt-get install -y --no-install-recommends ca-certificates curl file git jq libglu1-mesa unzip xz-utils
+              # Disposable runtime extension for both baseline and V5: the shared
+              # Target Clash suite loads sqlite through FFI and needs libsqlite3.so.
+              apt-get install -y --no-install-recommends ca-certificates curl file git jq libglu1-mesa libsqlite3-dev unzip xz-utils
               rm -rf /var/lib/apt/lists/*
               test "$(uname -m)" = x86_64
 
@@ -178,12 +180,25 @@ jobs:
               fi
 
               cd /work/v5
-              run_check v5 native-captures "flutter test --reporter expanded --no-pub test/target_clash_v5_native_ui_capture_test.dart"
-              for image in ordinary_light_390x844.png triple_light_390x844.png fever_light_390x844.png boss_light_390x844.png final_target_light_390x844.png boss_dark_390x844.png fever_dark_390x844.png; do
-                test -f "/runner-temp/captures/$image"
-                file "/runner-temp/captures/$image" | grep -F "390 x 844"
-              done
-              ledger v5 capture-dimensions 0 PASS
+              # Recovery R1 runs one capture only. The separate tee preserves the
+              # last TC_V5_CAPTURE marker in an uploadable log if the command stalls.
+              set +e
+              timeout --preserve-status 180s flutter test --reporter expanded --no-pub \
+                test/target_clash_v5_native_ui_capture_test.dart \
+                --plain-name "captures ordinary light 390x844" \
+                2>&1 | tee /runner-temp/target-clash-v5-capture-ordinary.log
+              capture_code=${PIPESTATUS[0]}
+              set -e
+              if test "$capture_code" -eq 0; then
+                ledger v5 native-capture-ordinary "$capture_code" PASS
+                test -f /runner-temp/captures/ordinary_light_390x844.png
+                file /runner-temp/captures/ordinary_light_390x844.png | grep -F "390 x 844"
+                sha256sum /runner-temp/captures/ordinary_light_390x844.png | tee -a /runner-temp/comparison.txt
+                ledger v5 native-capture-ordinary-dimensions 0 PASS
+              else
+                ledger v5 native-capture-ordinary "$capture_code" CAPTURE_HARNESS_OR_ENVIRONMENT_FAILURE
+                failures=1
+              fi
               sha256sum --check /tmp/v5-source-before.sha256 | tee -a /runner-temp/comparison.txt
               echo "V5_COPY_SOURCE_MUTATION=NONE" | tee -a /runner-temp/comparison.txt
               echo "CAPTURES=RUNNER_TEMP_ONLY_NO_GOLDEN_UPDATE" | tee -a /runner-temp/comparison.txt
@@ -201,6 +216,7 @@ jobs:
           name: target-clash-v5-frozen-validation
           path: |
             ${{ runner.temp }}/target-clash-v5-validation.log
+            ${{ runner.temp }}/target-clash-v5-capture-ordinary.log
             ${{ runner.temp }}/comparison.txt
             ${{ runner.temp }}/v5-tc05d.log
             ${{ runner.temp }}/captures

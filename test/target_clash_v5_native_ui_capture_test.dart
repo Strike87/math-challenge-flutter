@@ -1,6 +1,5 @@
-import 'dart:math';
 import 'dart:io';
-import 'dart:typed_data';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -100,28 +99,66 @@ void main() {
   }
 
   Future<void> capture(WidgetTester tester, String name) async {
+    // ignore: avoid_print
+    print('TC_V5_CAPTURE $name pump:before');
     await tester.pump();
+    // ignore: avoid_print
+    print('TC_V5_CAPTURE $name pump:after');
     expect(tester.takeException(), isNull);
     final output = Platform.environment['TC_V5_CAPTURE_DIR'];
     expect(output, isNotNull,
         reason: 'The disposable CI capture directory must be supplied.');
     final boundary =
         tester.renderObject<RenderRepaintBoundary>(find.byKey(_root));
-    final image = await boundary.toImage(pixelRatio: 1.0);
-    expect(image.width, 390);
-    expect(image.height, 844);
-    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    expect(bytes, isNotNull);
-    final file = File('$output/$name');
-    await file.parent.create(recursive: true);
-    await file.writeAsBytes(
-      Uint8List.view(bytes!.buffer),
-      flush: true,
-    );
-    expect(await file.exists(), isTrue);
-    // This is retained in the CI test log beside the artifact names.
+    final result = await tester.runAsync(() async {
+      ui.Image? image;
+      try {
+        // ignore: avoid_print
+        print('TC_V5_CAPTURE $name toImage:before');
+        image = await boundary.toImage(pixelRatio: 1.0);
+        // ignore: avoid_print
+        print(
+            'TC_V5_CAPTURE $name toImage:after ${image.width}x${image.height}');
+        if (image.width != 390 || image.height != 844) {
+          throw StateError(
+              'Expected 390x844, got ${image.width}x${image.height}.');
+        }
+        // ignore: avoid_print
+        print('TC_V5_CAPTURE $name toByteData:before');
+        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+        // ignore: avoid_print
+        print('TC_V5_CAPTURE $name toByteData:after');
+        if (bytes == null) {
+          throw StateError('PNG encoding returned no bytes.');
+        }
+        final png = List<int>.of(
+          bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
+        );
+        final file = File('$output/$name');
+        // ignore: avoid_print
+        print('TC_V5_CAPTURE $name file-create:before');
+        await file.parent.create(recursive: true);
+        // ignore: avoid_print
+        print('TC_V5_CAPTURE $name file-create:after');
+        // ignore: avoid_print
+        print('TC_V5_CAPTURE $name file-write:before');
+        await file.writeAsBytes(png, flush: true);
+        // ignore: avoid_print
+        print('TC_V5_CAPTURE $name file-write:after');
+        if (!await file.exists()) {
+          throw StateError('Capture file was not written: ${file.path}');
+        }
+        return (width: image.width, height: image.height);
+      } finally {
+        image?.dispose();
+        // ignore: avoid_print
+        print('TC_V5_CAPTURE $name image-dispose:after');
+      }
+    });
+    expect(result, isNotNull);
+    // This is retained in the CI test log beside the artifact name.
     // ignore: avoid_print
-    print('TC_V5_CAPTURE $name ${image.width}x${image.height}');
+    print('TC_V5_CAPTURE $name complete ${result!.width}x${result.height}');
     expect(tester.takeException(), isNull);
   }
 
@@ -147,9 +184,17 @@ void main() {
     expect(current.targetClashRuntime!.phase, expectedPhase);
     expect(current.targetClashRuntime!.isFeverActive, expectedFever);
     viewport(tester);
+    // ignore: avoid_print
+    print('TC_V5_CAPTURE $name pumpWidget:before');
     await tester.pumpWidget(host(current));
+    // ignore: avoid_print
+    print('TC_V5_CAPTURE $name pumpWidget:after');
     await capture(tester, name);
+    // ignore: avoid_print
+    print('TC_V5_CAPTURE $name phase-cleanup:before');
     await current.quitToMenu();
+    // ignore: avoid_print
+    print('TC_V5_CAPTURE $name phase-cleanup:after');
   }
 
   testWidgets('captures ordinary light 390x844', (tester) async {
