@@ -95,6 +95,7 @@ jobs:
                 .github/workflows/target_clash_v5_isolated_validation.yml \
                 test/target_clash_v5_native_ui_capture_test.dart \
                 > /tmp/v5-allowlist
+              sort -o /tmp/v5-allowlist /tmp/v5-allowlist
               git -C /work/baseline diff --name-only "$baseline" "$SOURCE_HEAD" | sort > /tmp/v5-observed
               diff -u /tmp/v5-allowlist /tmp/v5-observed
               echo "B_DIFF_ALLOWLIST=PASS" | tee -a /runner-temp/comparison.txt
