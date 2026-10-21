@@ -24,3 +24,13 @@ All TC-03 gameplay and reveal semantics remain authoritative, including typed
 reveal lifecycle, scoring, Fever, Boss, Power Shot, persistence, and
 GameBrain/service firewalls. This amendment authorizes no change to those
 behaviors.
+
+## V5.1 visual polish
+
+The standalone `TARGET n` heading is intentionally absent. The target remains
+the right-hand operand of the inline relation, so the open prompt has one
+mathematical focal point rather than a duplicate target label. Boss Health and
+Fever are visually prioritized only when their canonical runtime values are
+present; Boss Health remains the current authoritative value and Fever remains
+the canonical remaining count. No maximum, percentage, or derived progress is
+displayed.

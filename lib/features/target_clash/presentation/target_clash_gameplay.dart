@@ -167,11 +167,34 @@ class _Hud extends StatelessWidget {
           Text(phase,
               key: const Key('target-clash-phase'),
               style: const TextStyle(
-                  fontWeight: FontWeight.w900, letterSpacing: 1)),
-          const SizedBox(height: 8),
+                  fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1)),
+          if (runtime.isFeverActive || runtime.phase == TargetClashPhase.boss)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  if (runtime.isFeverActive)
+                    _PriorityMetric(
+                      'FEVER ×2',
+                      '${runtime.feverRemaining} remaining',
+                      const Key('target-clash-fever'),
+                    ),
+                  if (runtime.phase == TargetClashPhase.boss)
+                    _PriorityMetric(
+                      'BOSS HEALTH',
+                      '${runtime.bossHealth}',
+                      const Key('target-clash-boss-health'),
+                    ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 10),
           Wrap(
               alignment: WrapAlignment.center,
-              spacing: 18,
+              spacing: 16,
               runSpacing: 6,
               children: [
                 _Metric('SCORE', '${runtime.score}',
@@ -191,12 +214,6 @@ class _Hud extends StatelessWidget {
                       'STAGE',
                       '${runtime.stageQuestionIndex + 1} / $stageCount',
                       const Key('target-clash-progress')),
-                if (runtime.isFeverActive)
-                  _Metric('FEVER ×2', '${runtime.feverRemaining} remaining',
-                      const Key('target-clash-fever')),
-                if (runtime.phase == TargetClashPhase.boss)
-                  _Metric('BOSS HEALTH', '${runtime.bossHealth}',
-                      const Key('target-clash-boss-health')),
               ]),
         ]),
       ),
@@ -217,6 +234,35 @@ class _Metric extends StatelessWidget {
         Text(value,
             key: keyValue, style: const TextStyle(fontWeight: FontWeight.w900)),
       ]);
+}
+
+class _PriorityMetric extends StatelessWidget {
+  const _PriorityMetric(this.label, this.value, this.keyValue);
+
+  final String label;
+  final String value;
+  final Key keyValue;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        label: '$label, $value',
+        child: Container(
+          key: keyValue,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: .12),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text(label,
+                style:
+                    const TextStyle(fontSize: 10, fontWeight: FontWeight.w900)),
+            Text(value,
+                style:
+                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
+          ]),
+        ),
+      );
 }
 
 class _QuestionPanel extends StatelessWidget {
@@ -241,17 +287,10 @@ class _QuestionPanel extends StatelessWidget {
         : null;
     return NeoCard(
       key: const Key('target-clash-question-panel'),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
       color: s.surface,
       borderRadius: 24,
       child: Column(children: [
-        Text('TARGET ${_number(question.targetValue, question.expression)}',
-            key: const Key('target-clash-target'),
-            style: TextStyle(
-                color: s.muted,
-                fontWeight: FontWeight.w800,
-                fontFamily: AppFonts.bodyFor(s))),
-        const SizedBox(height: 16),
         Semantics(
           label: isReveal
               ? 'Resolved mathematical relation'

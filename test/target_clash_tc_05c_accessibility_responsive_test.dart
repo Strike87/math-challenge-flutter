@@ -118,74 +118,81 @@ void main() {
   }
 
   testWidgets(
-    '360x640 at 1.5x keeps gameplay controls usable and semantics ordered',
+    'compact text scales keep gameplay controls usable and semantics ordered',
     (tester) async {
       resetViewOnTearDown(tester);
 
       final state = await makeState();
       state.debugStartTargetClashForTest(config);
 
-      configureView(
-        tester,
-        const Size(360, 640),
-        textScale: 1.5,
-      );
+      for (final viewport in const [
+        (Size(320, 568), 1.0),
+        (Size(360, 800), 1.5),
+        (Size(390, 844), 1.3),
+      ]) {
+        configureView(tester, viewport.$1, textScale: viewport.$2);
 
-      await tester.pumpWidget(host(state));
-      await tester.pump();
+        await tester.pumpWidget(host(state));
+        await tester.pump();
 
-      expect(tester.takeException(), isNull);
-      expect(find.byKey(const Key('target-clash-gameplay')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        expect(find.byKey(const Key('target-clash-gameplay')), findsOneWidget);
 
-      final cases = <(Key, String)>[
-        (const Key('target-clash-relation-less'), 'Less than target'),
-        (const Key('target-clash-relation-equal'), 'Equal to target'),
-        (const Key('target-clash-relation-greater'), 'Greater than target'),
-      ];
+        final cases = <(Key, String)>[
+          (const Key('target-clash-relation-less'), 'Less than target'),
+          (const Key('target-clash-relation-equal'), 'Equal to target'),
+          (const Key('target-clash-relation-greater'), 'Greater than target'),
+        ];
 
-      for (final entry in cases) {
-        final key = entry.$1;
-        final semanticsLabel = entry.$2;
+        for (final entry in cases) {
+          final key = entry.$1;
+          final semanticsLabel = entry.$2;
 
-        expect(find.bySemanticsLabel(semanticsLabel), findsOneWidget);
-        expectButtonSemantics(
-          tester,
-          find.bySemanticsLabel(semanticsLabel),
-        );
+          expect(find.bySemanticsLabel(semanticsLabel), findsOneWidget);
+          expectButtonSemantics(
+            tester,
+            find.bySemanticsLabel(semanticsLabel),
+          );
 
-        final button = relationButton(key);
+          final button = relationButton(key);
 
-        expect(button, findsOneWidget);
+          expect(button, findsOneWidget);
+          await tester.ensureVisible(button);
+          await tester.pump();
 
-        final size = tester.getSize(button);
+          final size = tester.getSize(button);
 
-        expect(
-          size.height,
-          greaterThanOrEqualTo(48),
-          reason: '$semanticsLabel height must remain a practical tap target.',
-        );
+          expect(
+            size.height,
+            greaterThanOrEqualTo(48),
+            reason:
+                '$semanticsLabel height must remain a practical tap target.',
+          );
 
-        expect(
-          size.width,
-          greaterThanOrEqualTo(48),
-          reason: '$semanticsLabel width must remain a practical tap target.',
-        );
+          expect(
+            size.width,
+            greaterThanOrEqualTo(48),
+            reason: '$semanticsLabel width must remain a practical tap target.',
+          );
 
-        expect(button.hitTestable(), findsOneWidget);
+          expect(button.hitTestable(), findsOneWidget);
+        }
+
+        final lessX = tester
+            .getCenter(relationButton(const Key('target-clash-relation-less')))
+            .dx;
+        final equalX = tester
+            .getCenter(relationButton(const Key('target-clash-relation-equal')))
+            .dx;
+        final greaterX = tester
+            .getCenter(
+              relationButton(const Key('target-clash-relation-greater')),
+            )
+            .dx;
+
+        expect(lessX, lessThan(equalX));
+        expect(equalX, lessThan(greaterX));
       }
-
-      final lessX = tester
-          .getCenter(relationButton(const Key('target-clash-relation-less')))
-          .dx;
-      final equalX = tester
-          .getCenter(relationButton(const Key('target-clash-relation-equal')))
-          .dx;
-      final greaterX = tester
-          .getCenter(relationButton(const Key('target-clash-relation-greater')))
-          .dx;
-
-      expect(lessX, lessThan(equalX));
-      expect(equalX, lessThan(greaterX));
 
       expect(tester.takeException(), isNull);
       await state.quitToMenu();

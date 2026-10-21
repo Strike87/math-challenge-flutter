@@ -7,6 +7,7 @@ on:
       - .github/workflows/target_clash_v5_isolated_validation.yml
       - lib/features/target_clash/presentation/target_clash_gameplay.dart
       - test/target_clash_tc_03c_gameplay_ui_test.dart
+      - test/target_clash_tc_05c_accessibility_responsive_test.dart
       - test/target_clash_v5_native_ui_capture_test.dart
       - docs/target_clash/target_clash_ui_v5_presentation_amendment.md
   workflow_dispatch:
@@ -93,6 +94,7 @@ jobs:
               printf "%s\n" \
                 lib/features/target_clash/presentation/target_clash_gameplay.dart \
                 test/target_clash_tc_03c_gameplay_ui_test.dart \
+                test/target_clash_tc_05c_accessibility_responsive_test.dart \
                 docs/target_clash/target_clash_ui_v5_presentation_amendment.md \
                 .github/workflows/target_clash_v5_isolated_validation.yml \
                 test/target_clash_v5_native_ui_capture_test.dart \
@@ -149,7 +151,7 @@ jobs:
                 cd "/work/$name"
                 git config --global --add safe.directory "$(pwd)"
                 echo "=== $name SOURCE HASHES ===" | tee -a /runner-temp/comparison.txt
-                sha256sum lib/features/target_clash/presentation/target_clash_gameplay.dart test/target_clash_tc_03c_gameplay_ui_test.dart | tee -a /runner-temp/comparison.txt
+                sha256sum lib/features/target_clash/presentation/target_clash_gameplay.dart test/target_clash_tc_03c_gameplay_ui_test.dart test/target_clash_tc_05c_accessibility_responsive_test.dart | tee -a /runner-temp/comparison.txt
                 flutter pub get
                 run_check "$name" target-clash-runtime "flutter test --reporter compact --no-pub test/target_clash_tc_02c_runtime_state_test.dart test/target_clash_tc_02c_generator_seam_test.dart test/target_clash_tc_02d_game_state_lifecycle_test.dart test/target_clash_tc_03a_game_state_reveal_test.dart test/target_clash_tc_03c_gameplay_ui_test.dart"
                 run_check "$name" tc05c "flutter test --reporter compact --no-pub test/target_clash_tc_05c_accessibility_responsive_test.dart"

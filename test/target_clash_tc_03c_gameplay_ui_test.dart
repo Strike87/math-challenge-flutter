@@ -95,11 +95,14 @@ void main() {
     state.debugStartTargetClashForTest(config());
     await tester.pumpWidget(_Host(state));
 
-    expect(find.byKey(const Key('target-clash-target')), findsOneWidget);
+    expect(find.byKey(const Key('target-clash-target')), findsNothing);
     expect(find.byKey(const Key('target-clash-expression')), findsOneWidget);
     expect(
         find.byKey(const Key('target-clash-inline-relation')), findsOneWidget);
     expect(find.text('[?]'), findsOneWidget);
+    expect(find.text('TARGET ${state.targetClashQuestion!.targetValue}'),
+        findsNothing,
+        reason: 'The target remains part of the inline relation only.');
     expect(find.byKey(const Key('target-clash-reveal-relation')), findsNothing);
     expect(
       find.textContaining('= ${state.targetClashQuestion!.expressionValue} '),
