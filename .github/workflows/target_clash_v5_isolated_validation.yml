@@ -42,13 +42,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm --platform linux/amd64 \
+          docker run --rm -i --platform linux/amd64 \
             -e SOURCE_HEAD="$GITHUB_SHA" \
             -e TC_V5_CAPTURE_DIR=/runner-temp/captures \
             -v "$GITHUB_WORKSPACE:/workspace:ro" \
             -v "$RUNNER_TEMP:/runner-temp" \
             ubuntu@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3 \
-            bash -lc '
+            bash -s <<'CONTAINER_SCRIPT'
               set -euo pipefail
               exec > >(tee /runner-temp/target-clash-v5-validation.log) 2>&1
               export DEBIAN_FRONTEND=noninteractive
@@ -165,14 +165,64 @@ jobs:
               baseline_d4="$code"
               cd /work/v5
               set +e
-              flutter test --reporter compact --no-pub test/target_clash_tc_05d_golden_test.dart > /runner-temp/v5-tc05d.log 2>&1
+              flutter test --machine --no-pub test/target_clash_tc_05d_golden_test.dart > /runner-temp/v5-tc05d.jsonl 2> /runner-temp/v5-tc05d.stderr
               v5_d4=$?
               set -e
+              # Keep a readable transcript without rerunning the golden tests.
+              jq -r 'select(.type == "print" or .type == "error") | .message // .error' \
+                /runner-temp/v5-tc05d.jsonl > /runner-temp/v5-tc05d.log || true
+              cat /runner-temp/v5-tc05d.stderr >> /runner-temp/v5-tc05d.log
               cat /runner-temp/v5-tc05d.log >> /runner-temp/comparison.txt
+              # Every failed test must have exactly one known golden diagnostic
+              # and its one Flutter wrapper error; incomplete/extra failures block.
+              expected_deltas_only() {
+                test ! -s /runner-temp/v5-tc05d.stderr && jq -s -e '
+                  {
+                    "TC-05D 01 ordinary gameplay open light phone": "tc05d_01_gameplay_open_light_390x844.png",
+                    "TC-05D 02 clash reveal light phone": "tc05d_02_clash_reveal_light_390x844.png",
+                    "TC-05D 03 gameplay open dark phone": "tc05d_03_gameplay_open_dark_390x844.png",
+                    "TC-05D 04 power shot ready reveal": "tc05d_04_power_shot_ready_390x844.png",
+                    "TC-05D 05 triple blocks ready power shot": "tc05d_05_triple_power_shot_blocked_390x844.png",
+                    "TC-05D 06 results light phone": null,
+                    "TC-05D 07 results dark phone": null,
+                    "TC-05D 08 results landscape": null,
+                    "TC-05D 09 technical failure phone": null,
+                    "TC-05D 10 ordinary gameplay tablet boundary": "tc05d_10_gameplay_tablet_834x1194.png"
+                  } as $expected |
+                  . as $events |
+                  [ .[] | select(.type == "testStart") | .test ] as $tests |
+                  [ .[] | select(.type == "testDone") ] as $ends |
+                  [ .[] | select(.type == "error") ] as $errors |
+                  [ .[] | select(.type == "print") | .message ] | join("\n") as $log |
+                  ($events[-1].type == "done" and $events[-1].success == false) and
+                  ([$events[] | select(.type == "done")] | length == 1) and
+                  ($errors | length == 6) and
+                  ([$ends[] | select(.result != "success")] | length == 6) and
+                  ([$tests[] | select(.name | startswith("TC-05D")) | .name] | sort == ($expected | keys)) and
+                  ([$tests[].id] | length == (unique | length)) and
+                  ($ends | length == ($tests | length)) and
+                  all($tests[]; . as $test |
+                    [$ends[] | select(.testID == $test.id)] as $end |
+                    [$errors[] | select(.testID == $test.id)] as $error |
+                    [$events[] | select(.type == "print" and .testID == $test.id) | .message] | join("\n") as $printed |
+                    ($end | length == 1) and ($end[0].skipped == false) and
+                    if $expected[$test.name] != null then
+                      $expected[$test.name] as $golden |
+                      ($end[0].result == "error") and ($error | length == 1) and
+                      ($error[0].error == ("Test failed. See exception logs above.\nThe test description was: " + $test.name)) and
+                      ($error[0].isFailure == false) and
+                      ([$printed | scan("The following [^\\n]+ was thrown")] | length == 1) and
+                      ([$printed | scan("The following TestFailure was thrown running a test:")] | length == 1) and
+                      ([$printed | capture("Golden\\s+\\\"goldens/target_clash/(?<golden>[^\\\"]+)\\\":\\s+Pixel\\s+test\\s+failed,\\s+[0-9]+[.][0-9]+%,\\s+[0-9]+px\\s+diff\\s+detected[.]\\s+Failure\\s+feedback\\s+can\\s+be\\s+found\\s+at\\s+[^\\s]+"; "g")] | length == 1 and .[0].golden == $golden)
+                    else
+                      ($end[0].result == "success") and ($error | length == 0)
+                    end) and
+                  ($log | test("RenderFlex.*overflow|renderer|shader|Unsupported runtime stages|MissingPluginException|unhandled exception|failed assertion|TimeoutException|timed out"; "i") | not)
+                ' /runner-temp/v5-tc05d.jsonl > /runner-temp/v5-tc05d-classification.txt
+              }
               if test "$baseline_d4" -eq 0 \
-                && test "$v5_d4" -ne 0 \
-                && grep -Eqi "golden.*(mismatch|pixel|fail)|pixel.*(mismatch|fail)" /runner-temp/v5-tc05d.log \
-                && ! grep -Eqi "renderer|shader|unhandled exception|exception caught|renderflex.*overflow|failed assertion|testfailure" /runner-temp/v5-tc05d.log; then
+                && test "$v5_d4" -eq 1 \
+                && expected_deltas_only; then
                 ledger v5 tc05d "$v5_d4" EXPECTED_V5_PRESENTATION_DELTA
               elif test "$v5_d4" -eq 0; then
                 ledger v5 tc05d 0 PASS
@@ -217,7 +267,7 @@ jobs:
                 exit 1
               fi
               echo "VALIDATION_RESULT=PASS_WITH_D4_PRESENTATION_DELTA_PRESERVED" | tee -a /runner-temp/comparison.txt
-            '
+          CONTAINER_SCRIPT
 
       - name: Upload immutable evidence
         if: always()
@@ -229,6 +279,9 @@ jobs:
             ${{ runner.temp }}/target-clash-v5-captures.log
             ${{ runner.temp }}/comparison.txt
             ${{ runner.temp }}/v5-tc05d.log
+            ${{ runner.temp }}/v5-tc05d.jsonl
+            ${{ runner.temp }}/v5-tc05d.stderr
+            ${{ runner.temp }}/v5-tc05d-classification.txt
             ${{ runner.temp }}/captures
           if-no-files-found: warn
           retention-days: 14

@@ -99,7 +99,11 @@ void main() {
     expect(find.byKey(const Key('target-clash-expression')), findsOneWidget);
     expect(
         find.byKey(const Key('target-clash-inline-relation')), findsOneWidget);
-    expect(find.text('[?]'), findsOneWidget);
+    expect(find.text('?'), findsOneWidget);
+    expect(find.text('[?]'), findsNothing);
+    for (var i = 0; i < 6; i++) {
+      expect(find.byKey(Key('target-clash-power-segment-$i')), findsOneWidget);
+    }
     expect(find.text('TARGET ${state.targetClashQuestion!.targetValue}'),
         findsNothing,
         reason: 'The target remains part of the inline relation only.');
@@ -176,6 +180,7 @@ void main() {
     final powerShot = find.byKey(const Key('target-clash-power-shot'));
     expect(powerShot, findsOneWidget);
     expect(tester.widget<OutlinedButton>(powerShot).onPressed, isNotNull);
+    await tester.ensureVisible(powerShot);
     await tester.tap(powerShot);
     await tester.pump();
 
@@ -218,6 +223,8 @@ void main() {
     generator.rejectDirect = true;
     await tester.pumpWidget(_Host(unavailable));
     final charge = unavailable.targetClashRuntime!.clashPower;
+    await tester
+        .ensureVisible(find.byKey(const Key('target-clash-power-shot')));
     await tester.tap(find.byKey(const Key('target-clash-power-shot')));
     await tester.pump();
     expect(find.text('POWER SHOT UNAVAILABLE'), findsOneWidget);
@@ -235,6 +242,8 @@ void main() {
     state.onTargetClashAnswer(state.targetClashQuestion!.correctAnswer);
     await tester.pump();
     final revealA = state.targetClashReveal;
+    await tester
+        .ensureVisible(find.byKey(const Key('target-clash-power-shot')));
     await tester.tap(find.byKey(const Key('target-clash-power-shot')));
     await tester.pump();
     expect(find.text('POWER SHOT ARMED'), findsOneWidget);

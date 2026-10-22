@@ -200,6 +200,35 @@ void main() {
   );
 
   testWidgets(
+    'V5.2 centers gameplay math and aligns accessible answer controls below',
+    (tester) async {
+      resetViewOnTearDown(tester);
+      final state = await makeState();
+      state.debugStartTargetClashForTest(config);
+      configureView(tester, const Size(390, 844));
+      await tester.pumpWidget(host(state));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      final relation = find.byKey(const Key('target-clash-inline-relation'));
+      final less = relationButton(const Key('target-clash-relation-less'));
+      final equal = relationButton(const Key('target-clash-relation-equal'));
+      final greater =
+          relationButton(const Key('target-clash-relation-greater'));
+      expect(
+          tester.getCenter(relation).dy, inInclusiveRange(844 * .4, 844 * .7));
+      expect(tester.getCenter(equal).dy, greaterThan(844 * .70));
+      expect(
+          tester.getCenter(relation).dy, lessThan(tester.getCenter(equal).dy));
+      expect(tester.getSize(less).width, tester.getSize(equal).width);
+      expect(tester.getSize(equal).width, tester.getSize(greater).width);
+      expect(find.text('?'), findsOneWidget);
+      expect(find.text('[?]'), findsNothing);
+      await state.quitToMenu();
+    },
+  );
+
+  testWidgets(
     '1.5x reveal keeps textual meaning and disables relation controls',
     (tester) async {
       resetViewOnTearDown(tester);
