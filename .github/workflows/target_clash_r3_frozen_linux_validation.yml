@@ -99,6 +99,7 @@ jobs:
               check_font 32F5840FB2BF844BDABAFE372591DDFB9286E98117F5B21950AAF54EA856919A assets/fonts/OpenDyslexic-Regular.otf
 
               git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /workspace/.git
               git -C /workspace cat-file -e "${BASELINE_HEAD}^{commit}"
               git -C /workspace cat-file -e "${SOURCE_HEAD}^{commit}"
               mkdir -p /work /runner-temp/baseline-captures /runner-temp/candidate-captures
