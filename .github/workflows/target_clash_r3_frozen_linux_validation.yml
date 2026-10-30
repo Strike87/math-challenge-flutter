@@ -136,9 +136,9 @@ jobs:
               ! git -C /work/candidate diff --name-only "$BASELINE_HEAD" "$SOURCE_HEAD" | grep -E '^test/failures/'
               echo 'SOURCE_SCOPE=PASS' | tee -a /runner-temp/validation-summary.txt
 
-              call_sites="$(rg -c 'TargetClashRuntimeState\\.resolveRequests\\(' /work/candidate/lib/engine/game_state.dart)"
+              call_sites="$(rg --fixed-strings --count 'TargetClashRuntimeState.resolveRequests(' /work/candidate/lib/engine/game_state.dart)"
               test "$call_sites" -eq 5
-              override_entries="$(sed -n '/static final Map<TargetClashProfileOverrideKey/,/^  };/p' /work/candidate/lib/features/target_clash/domain/target_clash_runtime_state.dart | rg -c '^      const TargetClashProfileOverrideKey\\(')"
+              override_entries="$(rg --fixed-strings --count '      const TargetClashProfileOverrideKey(' /work/candidate/lib/features/target_clash/domain/target_clash_runtime_state.dart)"
               test "$override_entries" -eq 8
               printf 'R3_RESOLVER_CALL_SITES=%s\nR3_OVERRIDE_ENTRIES=%s\n' "$call_sites" "$override_entries" \
                 | tee -a /runner-temp/validation-summary.txt
