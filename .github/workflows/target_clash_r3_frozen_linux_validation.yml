@@ -44,7 +44,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm --platform linux/amd64 \
+          docker run --rm -i --platform linux/amd64 \
             -e SOURCE_HEAD="$GITHUB_SHA" \
             -e BASELINE_HEAD="2198e3b72cd7897bcaafa2ee086b5b6fccf02641" \
             -v "$GITHUB_WORKSPACE:/workspace:ro" \
@@ -269,6 +269,10 @@ jobs:
               fi
               echo 'TC_R3_V53_FROZEN_LINUX_VALIDATION=PASS' | tee -a /runner-temp/validation-summary.txt
           CONTAINER_SCRIPT
+          test -s "$RUNNER_TEMP/validation-summary.txt"
+          test -s "$RUNNER_TEMP/target-clash-r3-v53-evidence.json"
+          grep -Fx 'TC_R3_V53_FROZEN_LINUX_VALIDATION=PASS' \
+            "$RUNNER_TEMP/validation-summary.txt"
 
       - name: Upload frozen validation evidence
         if: always()
