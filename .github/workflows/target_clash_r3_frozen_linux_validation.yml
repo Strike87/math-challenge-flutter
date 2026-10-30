@@ -1,0 +1,293 @@
+name: Target Clash R3 V5.3 Frozen Linux Validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/target-clash-r3-v53-frozen-validation
+
+permissions:
+  contents: read
+
+jobs:
+  r3-v53-frozen-linux-validation:
+    name: R3 V5.3 frozen Linux validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          fetch-depth: 0
+
+      - name: Verify frozen OCI authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          INDEX_DIGEST="sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3"
+          AMD64_DIGEST="sha256:496754492fb28b4d3049432f2ca787449331e23fb14f0dd3fffea86bf5a93eb4"
+          docker --version
+          docker buildx version
+          docker info --format '{{.OSType}} / {{.Architecture}}'
+          docker buildx imagetools inspect "ubuntu@${INDEX_DIGEST}" --raw \
+            > "$RUNNER_TEMP/target-clash-r3-ubuntu-index.json"
+          jq -e --arg digest "$AMD64_DIGEST" '
+            .manifests[] | select(
+              .platform.os == "linux" and
+              .platform.architecture == "amd64" and
+              .digest == $digest
+            )
+          ' "$RUNNER_TEMP/target-clash-r3-ubuntu-index.json" > /dev/null
+
+      - name: Run paired frozen validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --platform linux/amd64 \
+            -e SOURCE_HEAD="$GITHUB_SHA" \
+            -e BASELINE_HEAD="2198e3b72cd7897bcaafa2ee086b5b6fccf02641" \
+            -v "$GITHUB_WORKSPACE:/workspace:ro" \
+            -v "$RUNNER_TEMP:/runner-temp" \
+            ubuntu@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3 \
+            bash -s <<'CONTAINER_SCRIPT'
+              set -euo pipefail
+              exec > >(tee /runner-temp/target-clash-r3-v53-frozen-linux.log) 2>&1
+
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                ca-certificates \
+                curl \
+                file \
+                git \
+                jq \
+                libglu1-mesa \
+                libsqlite3-dev \
+                ripgrep \
+                unzip \
+                xz-utils
+              rm -rf /var/lib/apt/lists/*
+              test "$(uname -m)" = "x86_64"
+
+              FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.5-stable.tar.xz"
+              FLUTTER_SHA="2132e990f236f8d22e7c6314b29a191a95b10d7cbcfec9b4e2e303d996652cbb"
+              curl --fail --location --retry 3 "$FLUTTER_URL" -o /tmp/flutter.tar.xz
+              echo "${FLUTTER_SHA}  /tmp/flutter.tar.xz" | sha256sum --check -
+              mkdir -p /opt/flutter-sdk
+              tar -xJf /tmp/flutter.tar.xz -C /opt/flutter-sdk --strip-components=1
+              export PATH="/opt/flutter-sdk/bin:$PATH"
+              git config --global --add safe.directory /opt/flutter-sdk
+              flutter --version --machine > /runner-temp/flutter-version.json
+              jq -e '
+                .frameworkVersion == "3.47.5" and
+                .channel == "stable" and
+                .frameworkRevision == "6a19cca56475dbfba1478ee68d7bd0c2ef891da1" and
+                .engineRevision == "af7e796e161ae0bb1ff0758c71a7105418bd9ded" and
+                (.dartSdkVersion | startswith("3.13.4"))
+              ' /runner-temp/flutter-version.json > /dev/null
+              dart --version 2>&1 | tee /runner-temp/dart-version.txt
+
+              check_font() { echo "$1  /workspace/$2" | sha256sum --check; }
+              check_font A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 assets/fonts/Baloo2-Bold.ttf
+              check_font A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 assets/fonts/Baloo2-ExtraBold.ttf
+              check_font A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 assets/fonts/Baloo2-Black.ttf
+              check_font 57F73E11F51999432BF7AB22CE55B6F945D5ECA1BF824404CFA9EC2E3718C84E assets/fonts/PlusJakartaSans-Medium.ttf
+              check_font A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 assets/fonts/PlusJakartaSans-SemiBold.ttf
+              check_font A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 assets/fonts/PlusJakartaSans-Bold.ttf
+              check_font A4C5BC453CA281D90EA079E596DA7AE0DFEB5777497C29EC254E76D97FF6F890 assets/fonts/PlusJakartaSans-ExtraBold.ttf
+              check_font 32F5840FB2BF844BDABAFE372591DDFB9286E98117F5B21950AAF54EA856919A assets/fonts/OpenDyslexic-Regular.otf
+
+              git config --global --add safe.directory /workspace
+              git -C /workspace cat-file -e "${BASELINE_HEAD}^{commit}"
+              git -C /workspace cat-file -e "${SOURCE_HEAD}^{commit}"
+              mkdir -p /work /runner-temp/baseline-captures /runner-temp/candidate-captures
+              git clone /workspace /work/baseline
+              git clone /workspace /work/candidate
+              git -C /work/baseline checkout --detach "$BASELINE_HEAD"
+              git -C /work/candidate checkout --detach "$SOURCE_HEAD"
+              git config --global --add safe.directory /work/baseline
+              git config --global --add safe.directory /work/candidate
+
+              printf 'SOURCE_HEAD=%s\nBASELINE_HEAD=%s\nPLATFORM=linux/amd64\n' \
+                "$SOURCE_HEAD" "$BASELINE_HEAD" > /runner-temp/validation-summary.txt
+
+              cat > /tmp/r3-v53-allowlist <<'ALLOWLIST'
+          .github/workflows/target_clash_r3_frozen_linux_validation.yml
+          docs/target_clash/target_clash_arsenal_v1_contract.md
+          docs/target_clash/target_clash_ui_v5_presentation_amendment.md
+          lib/engine/game_state.dart
+          lib/features/target_clash/domain/target_clash_result_summary.dart
+          lib/features/target_clash/domain/target_clash_runtime_state.dart
+          lib/features/target_clash/presentation/target_clash_gameplay.dart
+          lib/features/target_clash/presentation/target_clash_results.dart
+          lib/main.dart
+          test/target_clash_tc_02c_runtime_state_test.dart
+          test/target_clash_tc_03a_game_state_reveal_test.dart
+          test/target_clash_tc_03c_gameplay_ui_test.dart
+          test/target_clash_tc_05c_accessibility_responsive_test.dart
+          test/target_clash_v5_native_ui_capture_test.dart
+          ALLOWLIST
+              sort -o /tmp/r3-v53-allowlist /tmp/r3-v53-allowlist
+              git -C /work/candidate diff --name-only "$BASELINE_HEAD" "$SOURCE_HEAD" | sort > /tmp/r3-v53-observed
+              diff -u /tmp/r3-v53-allowlist /tmp/r3-v53-observed
+              git -C /work/candidate diff --exit-code "$BASELINE_HEAD" "$SOURCE_HEAD" -- pubspec.yaml pubspec.lock
+              ! git -C /work/candidate diff --name-only "$BASELINE_HEAD" "$SOURCE_HEAD" | grep -E '^test/failures/'
+              echo 'SOURCE_SCOPE=PASS' | tee -a /runner-temp/validation-summary.txt
+
+              call_sites="$(rg -c 'TargetClashRuntimeState\\.resolveRequests\\(' /work/candidate/lib/engine/game_state.dart)"
+              test "$call_sites" -eq 5
+              override_entries="$(sed -n '/static final Map<TargetClashProfileOverrideKey/,/^  };/p' /work/candidate/lib/features/target_clash/domain/target_clash_runtime_state.dart | rg -c '^      const TargetClashProfileOverrideKey\\(')"
+              test "$override_entries" -eq 8
+              printf 'R3_RESOLVER_CALL_SITES=%s\nR3_OVERRIDE_ENTRIES=%s\n' "$call_sites" "$override_entries" \
+                | tee -a /runner-temp/validation-summary.txt
+
+              failures=0
+              ledger() {
+                printf 'LEDGER|state=%s|check=%s|exit=%s|classification=%s\n' "$1" "$2" "$3" "$4" \
+                  | tee -a /runner-temp/validation-summary.txt
+              }
+              run_check() {
+                state="$1"
+                check="$2"
+                shift 2
+                set +e
+                "$@" >> /runner-temp/validation-summary.txt 2>&1
+                code=$?
+                set -e
+                if test "$code" -eq 0; then
+                  ledger "$state" "$check" "$code" PASS
+                else
+                  ledger "$state" "$check" "$code" FAILURE
+                  failures=1
+                fi
+              }
+              prepare_state() {
+                state="$1"
+                cd "/work/$state"
+                flutter pub get --enforce-lockfile
+                ledger "$state" dependency-lock 0 PASS
+              }
+              run_candidate_validation() {
+                prepare_state candidate
+                export TC_V5_CAPTURE_DIR=/runner-temp/candidate-captures
+                run_check candidate r3-resolver flutter test --reporter compact --no-pub \
+                  test/target_clash_profile_resolver_test.dart \
+                  test/target_clash_r3_reliability_test.dart \
+                  test/target_clash_r3_stress_test.dart
+                run_check candidate target-clash-lifecycle flutter test --reporter compact --no-pub \
+                  test/target_clash_tc_02c_runtime_state_test.dart \
+                  test/target_clash_tc_02c_generator_seam_test.dart \
+                  test/target_clash_tc_02d_game_state_lifecycle_test.dart \
+                  test/target_clash_tc_03a_game_state_reveal_test.dart \
+                  test/target_clash_tc_03c_gameplay_ui_test.dart \
+                  test/target_clash_tc_05c_accessibility_responsive_test.dart \
+                  test/target_clash_v5_native_ui_capture_test.dart
+                run_check candidate full-non-golden flutter test --reporter compact --exclude-tags golden --no-pub
+                run_check candidate analyzer flutter analyze --no-pub
+                run_check candidate dart-format dart format --output=none --set-exit-if-changed \
+                  lib/engine/game_state.dart \
+                  lib/features/target_clash/domain/target_clash_result_summary.dart \
+                  lib/features/target_clash/domain/target_clash_runtime_state.dart \
+                  lib/features/target_clash/presentation/target_clash_gameplay.dart \
+                  lib/features/target_clash/presentation/target_clash_results.dart \
+                  lib/main.dart \
+                  test/target_clash_tc_02c_runtime_state_test.dart \
+                  test/target_clash_tc_03a_game_state_reveal_test.dart \
+                  test/target_clash_tc_03c_gameplay_ui_test.dart \
+                  test/target_clash_tc_05c_accessibility_responsive_test.dart \
+                  test/target_clash_v5_native_ui_capture_test.dart
+                run_check candidate diff-check git diff --check "$BASELINE_HEAD" "$SOURCE_HEAD"
+              }
+              run_visual_parity() {
+                state="$1"
+                capture_dir="$2"
+                cd "/work/$state"
+                export TC_V5_CAPTURE_DIR="$capture_dir"
+                set +e
+                flutter test --machine --no-pub test/visual_parity_test.dart \
+                  > "/runner-temp/${state}-visual-parity.jsonl" \
+                  2> "/runner-temp/${state}-visual-parity.stderr"
+                code=$?
+                set -e
+                jq -s -e 'length > 0 and .[-1].type == "done"' \
+                  "/runner-temp/${state}-visual-parity.jsonl" > /dev/null
+                if test "$code" -ne 0 && test "$code" -ne 1; then
+                  ledger "$state" visual-parity "$code" RUNNER_FAILURE
+                  failures=1
+                  return
+                fi
+                jq -r 'select(.type == "testDone" and .result != "success") | .test.name' \
+                  "/runner-temp/${state}-visual-parity.jsonl" | sort -u \
+                  > "/runner-temp/${state}-visual-parity-failed-tests.txt"
+                if test -d test/failures; then
+                  (cd test/failures && find . -type f -printf '%P\n' | sort | xargs -r sha256sum) \
+                    | sort -k2,2 > "/runner-temp/${state}-visual-parity-artifacts.sha256"
+                else
+                  : > "/runner-temp/${state}-visual-parity-artifacts.sha256"
+                fi
+                ledger "$state" visual-parity "$code" RECORDED
+              }
+
+              run_candidate_validation
+              prepare_state baseline
+              run_visual_parity baseline /runner-temp/baseline-captures
+              run_visual_parity candidate /runner-temp/candidate-captures
+              comm -13 /runner-temp/baseline-visual-parity-failed-tests.txt \
+                /runner-temp/candidate-visual-parity-failed-tests.txt \
+                > /runner-temp/candidate-only-visual-parity-failures.txt
+              if test -s /runner-temp/candidate-only-visual-parity-failures.txt; then
+                cat /runner-temp/candidate-only-visual-parity-failures.txt
+                ledger candidate visual-parity-candidate-only 1 FAILURE
+                failures=1
+              else
+                ledger candidate visual-parity-candidate-only 0 PASS
+              fi
+              { join -1 2 -2 2 \
+                  /runner-temp/baseline-visual-parity-artifacts.sha256 \
+                  /runner-temp/candidate-visual-parity-artifacts.sha256 \
+                  || true; } | awk '$2 != $3 { print $1, $2, $3 }' \
+                > /runner-temp/changed-visual-parity-artifact-signatures.txt
+              if test -s /runner-temp/changed-visual-parity-artifact-signatures.txt; then
+                cat /runner-temp/changed-visual-parity-artifact-signatures.txt
+                ledger candidate visual-parity-shared-artifact-signatures 1 FAILURE
+                failures=1
+              else
+                ledger candidate visual-parity-shared-artifact-signatures 0 PASS
+              fi
+              jq -n \
+                --arg source "$SOURCE_HEAD" \
+                --arg baseline "$BASELINE_HEAD" \
+                --arg platform linux/amd64 \
+                --slurpfile flutter /runner-temp/flutter-version.json \
+                --rawfile ledger /runner-temp/validation-summary.txt \
+                '{sourceHead: $source, baselineHead: $baseline, platform: $platform, flutter: $flutter[0], ledger: $ledger}' \
+                > /runner-temp/target-clash-r3-v53-evidence.json
+              if test "$failures" -ne 0; then
+                echo 'TC_R3_V53_FROZEN_LINUX_VALIDATION=FAIL' | tee -a /runner-temp/validation-summary.txt
+                exit 1
+              fi
+              echo 'TC_R3_V53_FROZEN_LINUX_VALIDATION=PASS' | tee -a /runner-temp/validation-summary.txt
+          CONTAINER_SCRIPT
+
+      - name: Upload frozen validation evidence
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        with:
+          name: target-clash-r3-v53-frozen-linux-evidence
+          path: |
+            ${{ runner.temp }}/target-clash-r3-v53-frozen-linux.log
+            ${{ runner.temp }}/validation-summary.txt
+            ${{ runner.temp }}/target-clash-r3-v53-evidence.json
+            ${{ runner.temp }}/flutter-version.json
+            ${{ runner.temp }}/dart-version.txt
+            ${{ runner.temp }}/*-visual-parity.jsonl
+            ${{ runner.temp }}/*-visual-parity.stderr
+            ${{ runner.temp }}/*-visual-parity-failed-tests.txt
+            ${{ runner.temp }}/*-visual-parity-artifacts.sha256
+            ${{ runner.temp }}/candidate-only-visual-parity-failures.txt
+            ${{ runner.temp }}/changed-visual-parity-artifact-signatures.txt
+            ${{ runner.temp }}/baseline-captures
+            ${{ runner.temp }}/candidate-captures
+          if-no-files-found: warn
+          retention-days: 14

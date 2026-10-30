@@ -10,6 +10,35 @@ import 'package:math_challenge/models/math_fact.dart';
 import 'package:math_challenge/models/player.dart';
 
 void main() {
+  test(
+      'Balance Scan halves Perfect Hit and stacked Power Shot Combo Fever awards',
+      () {
+    const perfectRequest = TargetClashQuestionRequest(
+        answer: PresentationAnswer.equalTo, zone: TargetZone.bullseye);
+    final perfect = _hardBossState(_stage(requests: const [perfectRequest]));
+    final armed = _hardBossState(_stage(requests: const [_lessNormal]))
+        .activatePowerShot(config: _hardConfig(), generator: _tcGenerator())
+        .state;
+    for (final scenario in [(perfect, 80), (armed, 120)]) {
+      final (before, expectedAward) = scenario;
+      expect(before.isFeverActive, isTrue);
+      expect(before.combo, 5);
+      final answer = before.currentQuestion!.correctAnswer;
+      final normal = before.resolve(
+          answer: answer, difficulty: Difficulty.hard, nextStage: _stage());
+      final scanned = before.resolve(
+          answer: answer,
+          difficulty: Difficulty.hard,
+          nextStage: _stage(),
+          balanceScan: true);
+      expect(normal.score - before.score, expectedAward);
+      expect(scanned.score - before.score, expectedAward ~/ 2);
+      expect(scanned.combo, normal.combo);
+      expect(scanned.bossHealth, normal.bossHealth);
+      expect(scanned.feverRemaining, normal.feverRemaining);
+    }
+  });
+
   test('initial state, profiles, and Triple mapping are deterministic', () {
     final state = TargetClashRuntimeState.start(_stage());
     expect(state.phase, TargetClashPhase.ordinaryStage1);
@@ -744,7 +773,8 @@ TargetClashStageResult _stage({List<TargetClashQuestionRequest>? requests}) =>
           ],
     );
 
-TargetClashStageResult _hardStage({List<TargetClashQuestionRequest>? requests}) =>
+TargetClashStageResult _hardStage(
+        {List<TargetClashQuestionRequest>? requests}) =>
     TargetClashQuestionGenerator(questionGenerator: _Generator())
         .prepareStageForTarget(
       operation: Operation.addition,
@@ -985,7 +1015,8 @@ class _Generator extends QuestionGenerator {
     required Operation type,
     required Difficulty diff,
     required NumberType numType,
-  }) => List<num>.generate(31, (index) => index);
+  }) =>
+      List<num>.generate(31, (index) => index);
 
   @override
   Question buildDirectForResult(
