@@ -211,21 +211,38 @@ jobs:
                   2> "/runner-temp/${state}-visual-parity.stderr"
                 code=$?
                 set -e
-                jq -s -e 'length > 0 and .[-1].type == "done"' \
-                  "/runner-temp/${state}-visual-parity.jsonl" > /dev/null
                 if test "$code" -ne 0 && test "$code" -ne 1; then
                   ledger "$state" visual-parity "$code" RUNNER_FAILURE
-                  failures=1
-                  return
+                  return 1
                 fi
-                jq -r 'select(.type == "testDone" and .result != "success") | .test.name' \
-                  "/runner-temp/${state}-visual-parity.jsonl" | sort -u \
+                jq -s -e --argjson runner_exit "$code" '
+                  [ .[] | if type == "array" then .[] else . end ] as $events |
+                  if ($events | length) == 0 or ($events[-1].type != "done") then error("missing terminal done") else . end |
+                  if any($events[]; type != "object") then error("invalid event") else . end |
+                  if ([$events[] | select(.type == "done")] | length) != 1 or ($events[-1].success | type) != "boolean" then error("invalid terminal result") else . end |
+                  [ $events[] | select(.type == "testStart") | .test ] as $starts |
+                  [ $events[] | select(.type == "testDone") ] as $ends |
+                  if ($starts | length) == 0 or ($starts | length) != ($ends | length) then error("incomplete tests") else . end |
+                  if any($starts[]; (.id | type) != "number" or (.name | type) != "string" or .name == "" or (.name | contains("\n"))) then error("invalid start identity") else . end |
+                  if any($ends[]; (.testID | type) != "number" or (.result != "success" and .result != "error" and .result != "failure")) then error("invalid completion") else . end |
+                  if ([$starts[].id] | unique | length) != ($starts | length) or ([$ends[].testID] | unique | length) != ($ends | length) then error("duplicate test ID") else . end |
+                  if ([$starts[].name] | unique | length) != ($starts | length) then error("duplicate test name") else . end |
+                  if ([$starts[].id] | sort) != ([$ends[].testID] | sort) then error("unmatched test ID") else . end |
+                  [ $ends[] | select(.result != "success") | .testID ] as $failed_ids |
+                  if $events[-1].success != (($failed_ids | length) == 0) or ($runner_exit == 0) != $events[-1].success then error("inconsistent runner result") else . end |
+                  if any($events[] | select(.type == "error"); .testID as $id | ($id | type) != "number" or ($failed_ids | index($id)) == null) then error("unrepresented runner error") else . end |
+                  [ $ends[] | select(.result != "success") | .testID as $id | $starts[] | select(.id == $id) | .name ] | unique
+                ' "/runner-temp/${state}-visual-parity.jsonl" > "/runner-temp/${state}-visual-parity-failed-tests.json"
+                jq -r '.[]' "/runner-temp/${state}-visual-parity-failed-tests.json" | LC_ALL=C sort -u \
                   > "/runner-temp/${state}-visual-parity-failed-tests.txt"
                 if test -d test/failures; then
                   (cd test/failures && find . -type f -printf '%P\n' | sort | xargs -r sha256sum) \
                     | sort -k2,2 > "/runner-temp/${state}-visual-parity-artifacts.sha256"
                 else
                   : > "/runner-temp/${state}-visual-parity-artifacts.sha256"
+                fi
+                if test -s "/runner-temp/${state}-visual-parity-failed-tests.txt"; then
+                  test -s "/runner-temp/${state}-visual-parity-artifacts.sha256"
                 fi
                 ledger "$state" visual-parity "$code" RECORDED
               }
@@ -244,17 +261,22 @@ jobs:
               else
                 ledger candidate visual-parity-candidate-only 0 PASS
               fi
-              { join -1 2 -2 2 \
-                  /runner-temp/baseline-visual-parity-artifacts.sha256 \
+              if cmp -s /runner-temp/baseline-visual-parity-artifacts.sha256 \
+                  /runner-temp/candidate-visual-parity-artifacts.sha256; then
+                : > /runner-temp/changed-visual-parity-artifact-signatures.txt
+                ledger candidate visual-parity-shared-artifact-signatures 0 PASS
+              else
+                code=$?
+                if test "$code" -ne 1; then
+                  echo "artifact manifest comparison failed: $code" >&2
+                  exit "$code"
+                fi
+                diff -u /runner-temp/baseline-visual-parity-artifacts.sha256 \
                   /runner-temp/candidate-visual-parity-artifacts.sha256 \
-                  || true; } | awk '$2 != $3 { print $1, $2, $3 }' \
-                > /runner-temp/changed-visual-parity-artifact-signatures.txt
-              if test -s /runner-temp/changed-visual-parity-artifact-signatures.txt; then
+                  > /runner-temp/changed-visual-parity-artifact-signatures.txt || test "$?" -eq 1
                 cat /runner-temp/changed-visual-parity-artifact-signatures.txt
                 ledger candidate visual-parity-shared-artifact-signatures 1 FAILURE
                 failures=1
-              else
-                ledger candidate visual-parity-shared-artifact-signatures 0 PASS
               fi
               jq -n \
                 --arg source "$SOURCE_HEAD" \
