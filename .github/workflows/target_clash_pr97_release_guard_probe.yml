@@ -1,0 +1,185 @@
+name: Target Clash PR97 Release Guard VM Probe
+
+on:
+  push:
+    branches:
+      - verify/target-clash-pr97-release-guard-probe
+
+permissions:
+  contents: read
+
+jobs:
+  release-guard-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Initialize fail-closed evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pr97-release-probe"
+          printf 'positive_exit=NOT_RUN\nnegative_exit=NOT_RUN\nguard_exit=NOT_RUN\nclassification=BLOCKED\n' > "$RUNNER_TEMP/pr97-release-probe/result.txt"
+
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify frozen image identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pr97-release-probe"
+          docker buildx imagetools inspect ubuntu@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3 --raw > "$RUNNER_TEMP/pr97-release-probe/ubuntu-index.json"
+          jq -e '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64" and .digest == "sha256:496754492fb28b4d3049432f2ca787449331e23fb14f0dd3fffea86bf5a93eb4")' "$RUNNER_TEMP/pr97-release-probe/ubuntu-index.json" > /dev/null
+
+      - name: Run isolated frozen VM probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm -i --platform linux/amd64 \
+            -e SOURCE_HEAD=23352a6b6169efa6089b378e4c13d707b587fc3a \
+            -e VERIFICATION_HEAD="$GITHUB_SHA" \
+            -v "$GITHUB_WORKSPACE:/workspace:ro" \
+            -v "$RUNNER_TEMP/pr97-release-probe:/evidence" \
+            ubuntu@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3 \
+            bash -s <<'CONTAINER_SCRIPT'
+              set -euo pipefail
+              positive=NOT_RUN
+              negative=NOT_RUN
+              guard=NOT_RUN
+              classification=BLOCKED
+              finish() {
+                printf 'positive_exit=%s\nnegative_exit=%s\nguard_exit=%s\nclassification=%s\n' "$positive" "$negative" "$guard" "$classification" > /evidence/result.txt
+              }
+              trap finish EXIT
+              exec > >(tee /evidence/container.log) 2>&1
+              export DEBIAN_FRONTEND=noninteractive
+              test "$(uname -m)" = x86_64
+              apt-get update
+              apt-get install -y --no-install-recommends ca-certificates curl file git jq libglu1-mesa libsqlite3-dev unzip xz-utils
+              curl --fail --location --retry 3 https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.5-stable.tar.xz -o /tmp/flutter.tar.xz
+              echo '2132e990f236f8d22e7c6314b29a191a95b10d7cbcfec9b4e2e303d996652cbb  /tmp/flutter.tar.xz' | sha256sum --check -
+              mkdir -p /opt/flutter-sdk
+              tar -xJf /tmp/flutter.tar.xz -C /opt/flutter-sdk --strip-components=1
+              export PATH="/opt/flutter-sdk/bin:$PATH"
+              git config --global --add safe.directory /opt/flutter-sdk
+              flutter --version --machine > /evidence/flutter-version.json
+              jq -e '.frameworkVersion == "3.47.5" and .channel == "stable" and .frameworkRevision == "6a19cca56475dbfba1478ee68d7bd0c2ef891da1" and .engineRevision == "af7e796e161ae0bb1ff0758c71a7105418bd9ded" and .dartSdkVersion == "3.13.4"' /evidence/flutter-version.json > /dev/null
+              dart --version > /evidence/dart-version.txt 2>&1
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /workspace/.git
+              test "$(git -C /workspace rev-parse "${VERIFICATION_HEAD}^")" = "$SOURCE_HEAD"
+              git -C /workspace diff --exit-code "$SOURCE_HEAD" "$VERIFICATION_HEAD" -- lib pubspec.yaml pubspec.lock
+              git clone /workspace /work
+              git -C /work checkout --detach "$SOURCE_HEAD"
+              cd /work
+              test "$(git rev-parse HEAD)" = "$SOURCE_HEAD"
+              git ls-tree -r "$SOURCE_HEAD" -- lib > /evidence/source-production-blobs.txt
+              git ls-tree -r "$VERIFICATION_HEAD" -- lib > /evidence/verification-production-blobs.txt
+              cmp /evidence/source-production-blobs.txt /evidence/verification-production-blobs.txt
+              sha256sum lib/main.dart pubspec.yaml pubspec.lock > /evidence/source-sha256.txt
+              flutter pub get --enforce-lockfile > /evidence/pub-get.log 2>&1
+              git diff --exit-code -- pubspec.yaml pubspec.lock lib
+              cat > test/release_guard_probe_test.dart <<'DART_TEST'
+          import 'package:flutter/foundation.dart';
+          import 'package:flutter_test/flutter_test.dart';
+          import 'package:math_challenge/engine/game_state.dart';
+          import 'package:math_challenge/main.dart';
+          import 'package:math_challenge/services/admob.dart';
+          import 'package:math_challenge/services/audio.dart';
+          import 'package:math_challenge/services/iap.dart';
+          import 'package:math_challenge/services/settings.dart';
+
+          void main() {
+            TestWidgetsFlutterBinding.ensureInitialized();
+            test('product mode is true', () {
+              expect(kReleaseMode, isTrue);
+              print('PRODUCT_MODE_ASSERTION_EXECUTED_PASS');
+            });
+            testWidgets('release injection guard rejects injected state', (tester) async {
+              expect(kReleaseMode, isTrue);
+              final settings = SettingsService();
+              final state = GameState(settings: settings, audio: _SilentAudio());
+              try {
+                await tester.pumpWidget(MathChallengeApp(
+                  adService: const UnavailableAdMobService(),
+                  iapAdapter: const UnavailableIapPurchaseAdapter(),
+                  testGameState: state,
+                ));
+                expect(tester.takeException(), isA<StateError>().having(
+                  (e) => e.message,
+                  'message',
+                  'Test GameState injection is unavailable in release.',
+                ));
+                print('INJECTION_GUARD_ASSERTION_EXECUTED_PASS');
+              } finally {
+                state.dispose();
+              }
+            });
+          }
+
+          final class _SilentAudio implements AudioService {
+            @override int get debugTonePlayCount => 0;
+            @override int get debugVibrationCount => 0;
+            @override Future<void> init() async {}
+            @override Future<void> playCorrect() async {}
+            @override Future<void> playPowerUp() async {}
+            @override Future<void> playStart() async {}
+            @override Future<void> playTones(List<List<double>> tones) async {}
+            @override Future<void> playWrong() async {}
+            @override void vibrate(int ms) {}
+            @override void vibrateCorrect() {}
+            @override void vibratePattern(List<int> pattern) {}
+            @override void vibratePowerUp() {}
+            @override void vibrateWrong() {}
+          }
+          DART_TEST
+              test "$(git status --porcelain -- test/release_guard_probe_test.dart)" = '?? test/release_guard_probe_test.dart'
+              printf '%s\n' 'flutter test --no-pub --dart-define=dart.vm.product=true --plain-name "product mode is true" test/release_guard_probe_test.dart' > /evidence/commands.txt
+              set +e
+              flutter test --no-pub --reporter expanded --dart-define=dart.vm.product=true --plain-name 'product mode is true' test/release_guard_probe_test.dart > /evidence/positive.log 2>&1
+              positive=$?
+              set -e
+              test "$positive" -eq 0
+              grep -Fx 'PRODUCT_MODE_ASSERTION_EXECUTED_PASS' /evidence/positive.log
+              printf '%s\n' 'flutter test --no-pub --plain-name "product mode is true" test/release_guard_probe_test.dart' >> /evidence/commands.txt
+              set +e
+              flutter test --no-pub --reporter expanded --plain-name 'product mode is true' test/release_guard_probe_test.dart > /evidence/negative.log 2>&1
+              negative=$?
+              set -e
+              test "$negative" -eq 1
+              grep -F 'Expected: true' /evidence/negative.log
+              grep -F 'Actual: <false>' /evidence/negative.log
+              if grep -Fq 'PRODUCT_MODE_ASSERTION_EXECUTED_PASS' /evidence/negative.log; then exit 1; fi
+              printf '%s\n' 'flutter test --no-pub --dart-define=dart.vm.product=true --plain-name "release injection guard rejects injected state" test/release_guard_probe_test.dart' >> /evidence/commands.txt
+              set +e
+              flutter test --no-pub --reporter expanded --dart-define=dart.vm.product=true --plain-name 'release injection guard rejects injected state' test/release_guard_probe_test.dart > /evidence/guard.log 2>&1
+              guard=$?
+              set -e
+              test "$guard" -eq 0
+              grep -Fx 'INJECTION_GUARD_ASSERTION_EXECUTED_PASS' /evidence/guard.log
+              sha256sum --check /evidence/source-sha256.txt
+              git diff --exit-code -- lib pubspec.yaml pubspec.lock
+              classification=PASS
+          CONTAINER_SCRIPT
+          test -s "$RUNNER_TEMP/pr97-release-probe/result.txt"
+          grep -Fx 'classification=PASS' "$RUNNER_TEMP/pr97-release-probe/result.txt"
+
+      - name: Hash retained evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pr97-release-probe"
+          cd "$RUNNER_TEMP/pr97-release-probe"
+          find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 -r sha256sum > SHA256SUMS
+
+      - name: Upload retained evidence
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        with:
+          name: target-clash-pr97-release-guard-probe
+          path: ${{ runner.temp }}/pr97-release-probe
+          if-no-files-found: error
+          retention-days: 14
