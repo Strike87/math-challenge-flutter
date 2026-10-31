@@ -14,5 +14,8 @@ jobs:
           channel: stable
       - run: flutter pub get
       # Golden tests run manually or in a dedicated golden environment because pixel output can differ by OS/font renderer.
-      - run: flutter test --reporter compact --exclude-tags golden
+      - name: Run non-golden tests
+        env:
+          TC_V5_CAPTURE_DIR: ${{ runner.temp }}/target-clash-v5-captures
+        run: flutter test --reporter compact --exclude-tags golden
       - run: flutter analyze
