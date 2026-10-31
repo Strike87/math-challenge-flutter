@@ -3,6 +3,7 @@ import 'target_clash_runtime_state.dart';
 /// Immutable successful Target Clash completion facts.
 final class TargetClashResultSummary {
   const TargetClashResultSummary._({
+    required this.assisted,
     required this.score,
     required this.correct,
     required this.resolved,
@@ -15,12 +16,14 @@ final class TargetClashResultSummary {
   });
 
   factory TargetClashResultSummary.fromFinishedRuntime(
-    TargetClashRuntimeState runtime,
-  ) {
+    TargetClashRuntimeState runtime, {
+    bool assisted = false,
+  }) {
     if (!runtime.finished) {
       throw ArgumentError.value(runtime, 'runtime', 'must be finished');
     }
     return TargetClashResultSummary._(
+      assisted: assisted,
       score: runtime.score,
       correct: runtime.correctCount,
       resolved: runtime.resolvedCount,
@@ -33,6 +36,7 @@ final class TargetClashResultSummary {
     );
   }
 
+  final bool assisted;
   final int score;
   final int correct;
   final int resolved;

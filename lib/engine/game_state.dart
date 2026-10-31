@@ -88,6 +88,8 @@ final class TargetClashRevealState {
     required this.wasPerfectHit,
     required this.wasPowerShot,
     required this.phase,
+    required this.resolvedStageQuestionIndex,
+    required this.resolvedStageQuestionCount,
   });
 
   final TargetClashQuestion question;
@@ -96,6 +98,10 @@ final class TargetClashRevealState {
   final bool wasPerfectHit;
   final bool wasPowerShot;
   final TargetClashPhase phase;
+
+  /// Immutable stage facts from before runtime resolution.
+  final int resolvedStageQuestionIndex;
+  final int resolvedStageQuestionCount;
 }
 
 enum MentalMathTerminalReason {
@@ -669,6 +675,102 @@ class GameState extends ChangeNotifier {
   int _masterProgress = 0;
   GameRunSnapshot? _runSnapshot;
   TargetClashRuntimeState? _targetClashRuntime;
+  int _clashLensUses = 0;
+  bool _clashScanUsed = false;
+  bool _clashGuardUsed = false;
+  bool _clashAssisted = false;
+  ({int runId, int questionId})? _clashScanToken;
+  ({int runId, int questionId})? _clashGuardToken;
+  ({int runId, int questionId})? _clashLensToken;
+  final List<TargetClashRevealState> _clashTripleHistory = [];
+
+  ({int runId, int questionId}) get clashQuestionToken => _currentQuestionToken;
+  bool get targetClashAssisted => _clashAssisted;
+  int get clashLensRemaining => 2 - _clashLensUses;
+  bool get clashScanUsed => _clashScanUsed;
+  bool get clashGuardUsed => _clashGuardUsed;
+  bool get clashScanActive =>
+      _clashScanToken == _currentQuestionToken && rt.accepting;
+  bool get clashGuardActive =>
+      _clashGuardToken == _currentQuestionToken && rt.accepting;
+  bool get clashLensActive =>
+      _clashLensToken == _currentQuestionToken && rt.accepting;
+  List<TargetClashRevealState> get clashTripleHistory =>
+      List.unmodifiable(_clashTripleHistory);
+  bool get _clashCanActivate =>
+      isTargetClash &&
+      rt.gameActive &&
+      rt.accepting &&
+      _targetClashReveal == null &&
+      _targetClashRuntime?.currentQuestion != null;
+
+  String? get clashSignRule {
+    final fact = _targetClashRuntime?.currentQuestion?.expression;
+    if (fact == null || (fact.left >= 0 && fact.right >= 0)) return null;
+    return switch (fact.operation) {
+      Operation.addition =>
+        'To add numbers with different signs, subtract their magnitudes and keep the sign of the larger magnitude. For matching signs, add magnitudes and keep the sign.',
+      Operation.subtraction =>
+        'Subtracting a number is the same as adding its opposite.',
+      Operation.multiplication =>
+        'For multiplication, matching signs give a positive product; different signs give a negative product. Zero gives zero.',
+      Operation.division =>
+        'For division, matching signs give a positive quotient; different signs give a negative quotient. Zero divided by a nonzero number is zero.',
+      _ => null,
+    };
+  }
+
+  bool activateClashLens() {
+    if (!_clashCanActivate ||
+        clashSignRule == null ||
+        clashLensRemaining == 0 ||
+        clashLensActive) return false;
+    _clashLensUses++;
+    _clashLensToken = _currentQuestionToken;
+    _clashAssisted = true;
+    notifyListeners();
+    return true;
+  }
+
+  bool activateClashScan() {
+    if (!_clashCanActivate || _clashScanUsed) return false;
+    _clashScanUsed = true;
+    _clashScanToken = _currentQuestionToken;
+    _clashAssisted = true;
+    notifyListeners();
+    return true;
+  }
+
+  bool activateClashGuard() {
+    if (!_clashCanActivate ||
+        _clashGuardUsed ||
+        _targetClashRuntime?.phase != TargetClashPhase.boss) return false;
+    _clashGuardUsed = true;
+    _clashGuardToken = _currentQuestionToken;
+    _clashAssisted = true;
+    notifyListeners();
+    return true;
+  }
+
+  void markClashMemoryRead() {
+    if (!_clashCanActivate ||
+        _targetClashRuntime?.phase != TargetClashPhase.triple ||
+        _clashTripleHistory.isEmpty) return;
+    _clashAssisted = true;
+    notifyListeners();
+  }
+
+  void _resetClashArsenal() {
+    _clashLensUses = 0;
+    _clashScanUsed = false;
+    _clashGuardUsed = false;
+    _clashAssisted = false;
+    _clashScanToken = null;
+    _clashGuardToken = null;
+    _clashLensToken = null;
+    _clashTripleHistory.clear();
+  }
+
   TargetClashResultSummary? _targetClashResultSummary;
   Timer? _targetClashRevealTimer;
   int _targetClashRevealId = 0;
@@ -2953,6 +3055,7 @@ class GameState extends ChangeNotifier {
     bool skipMentalMathCountdown = false,
   }) {
     _targetClashResultSummary = null;
+    _resetClashArsenal();
     if (replaySnapshot != null && !replaySnapshot.hasValidTargetClashEnvelope) {
       notifyListeners();
       return;
@@ -3369,6 +3472,12 @@ class GameState extends ChangeNotifier {
       config: config,
       generator: TargetClashQuestionGenerator(questionGenerator: _qgen),
     );
+    _clashScanToken = null;
+    _clashGuardToken = null;
+    _clashLensToken = null;
+    if (_targetClashRuntime?.phase != TargetClashPhase.triple) {
+      _clashTripleHistory.clear();
+    }
     _activeQuestionId = ++_lastQuestionId;
     _questionTerminalClaim = null;
     rt
@@ -3439,15 +3548,28 @@ class GameState extends ChangeNotifier {
       wasPowerShot:
           runtime.powerShotAppliedQuestionIndex == runtime.stageQuestionIndex,
       phase: runtime.phase,
+      resolvedStageQuestionIndex: runtime.stageQuestionIndex,
+      resolvedStageQuestionCount: runtime.preparedStage!.questions.length,
     );
     _targetClashRuntime = runtime.resolve(
       answer: answer,
+      balanceScan: _clashScanToken == questionToken,
+      bossGuard: _clashGuardToken == questionToken,
       difficulty: _runSnapshot!.targetClashConfig!.difficulty,
       nextStage: _targetClashNextStageForResolution(
         isLastQuestion: isLastQuestion,
         bossWillBeDefeated: bossWillBeDefeated,
       ),
     );
+    _clashScanToken = null;
+    _clashGuardToken = null;
+    _clashLensToken = null;
+    if (runtime.phase == TargetClashPhase.triple &&
+        _targetClashRuntime?.phase == TargetClashPhase.triple) {
+      _clashTripleHistory.add(reveal);
+    } else if (_targetClashRuntime?.phase != TargetClashPhase.triple) {
+      _clashTripleHistory.clear();
+    }
     _startTargetClashReveal(reveal);
   }
 
@@ -3503,7 +3625,8 @@ class GameState extends ChangeNotifier {
     final completed = runtime?.finished == true;
     if (completed) {
       _targetClashResultSummary ??=
-          TargetClashResultSummary.fromFinishedRuntime(runtime!);
+          TargetClashResultSummary.fromFinishedRuntime(runtime!,
+              assisted: _clashAssisted);
     } else {
       _targetClashResultSummary = null;
     }

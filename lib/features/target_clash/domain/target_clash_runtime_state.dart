@@ -281,61 +281,63 @@ final class TargetClashRuntimeState {
   static final Map<TargetClashProfileOverrideKey,
       List<TargetClashQuestionRequest>> profileOverrides = Map.unmodifiable(
     <TargetClashProfileOverrideKey, List<TargetClashQuestionRequest>>{
-    const TargetClashProfileOverrideKey(
-      operation: Operation.multiplication,
-      difficulty: Difficulty.hard,
-      numberType: NumberType.natural,
-      phase: TargetClashRequestProfilePhase.boss,
-    ): const [_ln, _gc, _ld, _gc, _eq],
-    const TargetClashProfileOverrideKey(
-      operation: Operation.multiplication,
-      difficulty: Difficulty.hard,
-      numberType: NumberType.integers,
-      phase: TargetClashRequestProfilePhase.boss,
-    ): const [_ln, _gc, _ld, _gc, _eq],
-    const TargetClashProfileOverrideKey(
-      operation: Operation.division,
-      difficulty: Difficulty.easy,
-      numberType: NumberType.natural,
-      phase: TargetClashRequestProfilePhase.ordinaryStage1,
-    ): const [_ld, _gd, _eq],
-    const TargetClashProfileOverrideKey(
-      operation: Operation.division,
-      difficulty: Difficulty.easy,
-      numberType: NumberType.natural,
-      phase: TargetClashRequestProfilePhase.ordinaryStage2,
-    ): const [_gd, _ld, _eq],
-    const TargetClashProfileOverrideKey(
-      operation: Operation.division,
-      difficulty: Difficulty.easy,
-      numberType: NumberType.natural,
-      phase: TargetClashRequestProfilePhase.boss,
-    ): const [_ld, _gd, _eq],
-    const TargetClashProfileOverrideKey(
-      operation: Operation.division,
-      difficulty: Difficulty.easy,
-      numberType: NumberType.natural,
-      phase: TargetClashRequestProfilePhase.finalTarget,
-    ): const [_ld, _gc, _eq],
-    const TargetClashProfileOverrideKey(
-      operation: Operation.division,
-      difficulty: Difficulty.easy,
-      numberType: NumberType.integers,
-      phase: TargetClashRequestProfilePhase.ordinaryStage1,
-    ): const [_ln, _gd, _eq],
-    const TargetClashProfileOverrideKey(
-      operation: Operation.division,
-      difficulty: Difficulty.easy,
-      numberType: NumberType.integers,
-      phase: TargetClashRequestProfilePhase.ordinaryStage2,
-    ): const [_gn, _ld, _eq],
-  },
+      const TargetClashProfileOverrideKey(
+        operation: Operation.multiplication,
+        difficulty: Difficulty.hard,
+        numberType: NumberType.natural,
+        phase: TargetClashRequestProfilePhase.boss,
+      ): const [_ln, _gc, _ld, _gc, _eq],
+      const TargetClashProfileOverrideKey(
+        operation: Operation.multiplication,
+        difficulty: Difficulty.hard,
+        numberType: NumberType.integers,
+        phase: TargetClashRequestProfilePhase.boss,
+      ): const [_ln, _gc, _ld, _gc, _eq],
+      const TargetClashProfileOverrideKey(
+        operation: Operation.division,
+        difficulty: Difficulty.easy,
+        numberType: NumberType.natural,
+        phase: TargetClashRequestProfilePhase.ordinaryStage1,
+      ): const [_ld, _gd, _eq],
+      const TargetClashProfileOverrideKey(
+        operation: Operation.division,
+        difficulty: Difficulty.easy,
+        numberType: NumberType.natural,
+        phase: TargetClashRequestProfilePhase.ordinaryStage2,
+      ): const [_gd, _ld, _eq],
+      const TargetClashProfileOverrideKey(
+        operation: Operation.division,
+        difficulty: Difficulty.easy,
+        numberType: NumberType.natural,
+        phase: TargetClashRequestProfilePhase.boss,
+      ): const [_ld, _gd, _eq],
+      const TargetClashProfileOverrideKey(
+        operation: Operation.division,
+        difficulty: Difficulty.easy,
+        numberType: NumberType.natural,
+        phase: TargetClashRequestProfilePhase.finalTarget,
+      ): const [_ld, _gc, _eq],
+      const TargetClashProfileOverrideKey(
+        operation: Operation.division,
+        difficulty: Difficulty.easy,
+        numberType: NumberType.integers,
+        phase: TargetClashRequestProfilePhase.ordinaryStage1,
+      ): const [_ln, _gd, _eq],
+      const TargetClashProfileOverrideKey(
+        operation: Operation.division,
+        difficulty: Difficulty.easy,
+        numberType: NumberType.integers,
+        phase: TargetClashRequestProfilePhase.ordinaryStage2,
+      ): const [_gn, _ld, _eq],
+    },
   );
 
   TargetClashRuntimeState resolve({
     PresentationAnswer? answer,
     required Difficulty difficulty,
     TargetClashStageResult? nextStage,
+    bool balanceScan = false,
+    bool bossGuard = false,
   }) {
     final question = currentQuestion;
     if (question == null) return this;
@@ -344,7 +346,11 @@ final class TargetClashRuntimeState {
         question.zone == TargetZone.bullseye &&
         question.correctAnswer == PresentationAnswer.equalTo &&
         answer == PresentationAnswer.equalTo;
-    final nextCombo = correct ? combo + 1 : 0;
+    final nextCombo = correct
+        ? combo + 1
+        : (bossGuard && phase == TargetClashPhase.boss && answer != null
+            ? combo
+            : 0);
     final multiplier = correct ? (1 + ((nextCombo - 1) ~/ 3)).clamp(1, 3) : 1;
     final feverActive = isFeverActive;
     final armed = powerShotAppliedQuestionIndex == stageQuestionIndex;
@@ -354,7 +360,7 @@ final class TargetClashRuntimeState {
             (feverActive ? 2 : 1)
         : 0;
     final base = _copy(
-      score: score + gained,
+      score: score + (balanceScan ? gained ~/ 2 : gained),
       correctCount: correctCount + (correct ? 1 : 0),
       resolvedCount: resolvedCount + 1,
       combo: nextCombo,
