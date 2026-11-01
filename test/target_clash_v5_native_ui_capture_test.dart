@@ -627,6 +627,38 @@ void main() {
     await state.quitToMenu();
   });
 
+  testWidgets('retained answer callback cannot reuse an expired Boss Guard',
+      (tester) async {
+    final state = await longNegativeBossFeverState();
+    await mountInjected(tester, state, reduceMotion: true);
+    final before = state.targetClashRuntime!;
+    expect(before.combo, greaterThan(0));
+    final wrong = PresentationAnswer.values.firstWhere(
+      (answer) => answer != state.targetClashQuestion!.correctAnswer,
+    );
+    final suffix = switch (wrong) {
+      PresentationAnswer.lessThan => 'less',
+      PresentationAnswer.equalTo => 'equal',
+      PresentationAnswer.greaterThan => 'greater',
+    };
+    final button = tester.widget<OutlinedButton>(find.descendant(
+      of: find.byKey(Key('target-clash-relation-$suffix')),
+      matching: find.byType(OutlinedButton),
+    ));
+    final staleAnswer = button.onPressed!;
+    expect(state.activateClashGuard(), isTrue);
+    state.debugInstallTargetClashRuntimeForTest(before);
+    expect(state.clashGuardActive, isFalse);
+    staleAnswer();
+    final after = state.targetClashRuntime!;
+    expect(after.resolvedCount, before.resolvedCount + 1);
+    expect(after.combo, 0);
+    expect(after.score, before.score);
+    expect(after.bossHealth, before.bossHealth);
+    expect(state.clashGuardUsed, isTrue);
+    await state.quitToMenu();
+  });
+
   testWidgets('captures ordinary light 390x844', (tester) async {
     await capturePhase(
       tester,
@@ -1064,20 +1096,6 @@ void main() {
     );
     expect(fresh, isNot(same(injected)));
     expect(fresh.targetClashRuntime, isNull);
-  });
-
-  testWidgets('release build rejects test GameState injection', (tester) async {
-    if (!kReleaseMode) return;
-    await prepareApp(dark: false);
-    viewport(tester, const Size(390, 844));
-    installAudioMocks();
-    final injected = await longNegativeBossFeverState();
-    try {
-      await tester.pumpWidget(host(testGameState: injected));
-      expect(tester.takeException(), isA<StateError>());
-    } finally {
-      injected.dispose();
-    }
   });
 }
 

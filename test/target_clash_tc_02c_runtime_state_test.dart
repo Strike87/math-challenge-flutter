@@ -10,6 +10,50 @@ import 'package:math_challenge/models/math_fact.dart';
 import 'package:math_challenge/models/player.dart';
 
 void main() {
+  test('Boss Guard preserves combo only for an incorrect submitted answer', () {
+    final before = _hardBossState(_stage(requests: const [
+      _lessNormal,
+      _lessNormal,
+      _lessNormal,
+    ]));
+    expect(before.phase, TargetClashPhase.boss);
+    expect(before.combo, 5);
+    final wrong = PresentationAnswer.values.firstWhere(
+      (answer) => answer != before.currentQuestion!.correctAnswer,
+    );
+    final guardedWrong = before.resolve(
+      answer: wrong,
+      difficulty: Difficulty.hard,
+      bossGuard: true,
+    );
+    final guardedTimeout = before.resolve(
+      difficulty: Difficulty.hard,
+      bossGuard: true,
+    );
+    final guardedCorrect = before.resolve(
+      answer: before.currentQuestion!.correctAnswer,
+      difficulty: Difficulty.hard,
+      bossGuard: true,
+    );
+    final normalCorrect = before.resolve(
+      answer: before.currentQuestion!.correctAnswer,
+      difficulty: Difficulty.hard,
+    );
+    expect(guardedWrong.combo, before.combo);
+    expect(guardedTimeout.combo, 0);
+    for (final result in [guardedWrong, guardedTimeout]) {
+      expect(result.score, before.score);
+      expect(result.bossHealth, before.bossHealth);
+      expect(result.bossQuestionsResolved, before.bossQuestionsResolved + 1);
+    }
+    expect(guardedCorrect.combo, before.combo + 1);
+    expect(guardedCorrect.score, greaterThan(before.score));
+    expect(guardedCorrect.bossHealth, lessThan(before.bossHealth));
+    expect(guardedCorrect.score, normalCorrect.score);
+    expect(guardedCorrect.bossHealth, normalCorrect.bossHealth);
+    expect(guardedCorrect.combo, normalCorrect.combo);
+  });
+
   test(
       'Balance Scan halves Perfect Hit and stacked Power Shot Combo Fever awards',
       () {

@@ -19,3 +19,21 @@ jobs:
           TC_V5_CAPTURE_DIR: ${{ runner.temp }}/target-clash-v5-captures
         run: flutter test --reporter compact --exclude-tags golden
       - run: flutter analyze
+
+  target-clash-vm-product-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.5'
+      - run: flutter pub get
+      - name: Verify injection guard in VM product mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter test --no-pub --reporter expanded \
+            --dart-define=dart.vm.product=true \
+            test/target_clash_release_guard_test.dart | tee "$RUNNER_TEMP/target-clash-release-guard.log"
+          grep -Fx 'INJECTION_GUARD_ASSERTION_EXECUTED_PASS' "$RUNNER_TEMP/target-clash-release-guard.log"
