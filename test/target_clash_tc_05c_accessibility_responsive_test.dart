@@ -87,7 +87,7 @@ void main() {
 
   Finder relationButton(Key key) => find.descendant(
         of: find.byKey(key),
-        matching: find.byType(FilledButton),
+        matching: find.byType(OutlinedButton),
       );
 
   void expectButtonSemantics(
@@ -233,7 +233,7 @@ void main() {
         Key('target-clash-relation-greater'),
       ]) {
         expect(
-          tester.widget<FilledButton>(relationButton(key)).onPressed,
+          tester.widget<OutlinedButton>(relationButton(key)).onPressed,
           isNull,
         );
       }
@@ -449,6 +449,27 @@ void main() {
   );
 
   testWidgets(
+    'compact relation controls remain reachable at 320x568 and 1.5x text',
+    (tester) async {
+      resetViewOnTearDown(tester);
+      final state = await makeState();
+      state.debugStartTargetClashForTest(config);
+      configureView(tester, const Size(320, 568), textScale: 1.5);
+      await tester.pumpWidget(host(state));
+      await tester.pump();
+      for (final key in const [
+        Key('target-clash-relation-less'),
+        Key('target-clash-relation-equal'),
+        Key('target-clash-relation-greater'),
+      ]) {
+        await expectReachable(tester, relationButton(key));
+      }
+      expect(tester.takeException(), isNull);
+      await state.quitToMenu();
+    },
+  );
+
+  testWidgets(
     'dark gameplay retains readable text and non-color state meaning',
     (tester) async {
       resetViewOnTearDown(tester);
@@ -514,7 +535,8 @@ final class _Generator extends QuestionGenerator {
     required Operation type,
     required Difficulty diff,
     required NumberType numType,
-  }) => const [6, 7, 8, 9, 10, 11, 12, 13, 14];
+  }) =>
+      const [6, 7, 8, 9, 10, 11, 12, 13, 14];
 
   @override
   Question build({
@@ -580,7 +602,8 @@ final class _FailGenerator extends QuestionGenerator {
     required Operation type,
     required Difficulty diff,
     required NumberType numType,
-  }) => const [];
+  }) =>
+      const [];
 
   @override
   Question build({

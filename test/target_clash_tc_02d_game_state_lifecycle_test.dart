@@ -84,6 +84,82 @@ void main() {
     }
   }
 
+  test('Boss Guard expires on timeout and phase replacement', () async {
+    final state = await makeState();
+    state.debugStartTargetClashForTest(config(Difficulty.easy));
+    final ordinary = state.targetClashRuntime!;
+    for (var i = 0; i < 6; i++) {
+      answer(state);
+    }
+    final before = state.targetClashRuntime!;
+    expect(before.combo, greaterThan(0));
+    expect(state.activateClashGuard(), isTrue);
+    state.debugTimeoutForTest();
+    final after = state.targetClashRuntime!;
+    expect(after.combo, 0);
+    expect(after.score, before.score);
+    expect(after.bossHealth, before.bossHealth);
+    expect(after.bossQuestionsResolved, before.bossQuestionsResolved + 1);
+    expect(state.clashGuardUsed, isTrue);
+    state.debugStartTargetClashForTest(config(Difficulty.easy));
+    for (var i = 0; i < 6; i++) {
+      answer(state);
+    }
+    expect(state.activateClashGuard(), isTrue);
+    state.debugInstallTargetClashRuntimeForTest(ordinary);
+    expect(state.targetClashRuntime!.phase, TargetClashPhase.ordinaryStage1);
+    expect(state.clashGuardActive, isFalse);
+    expect(state.clashGuardUsed, isTrue);
+    expect(state.activateClashGuard(), isFalse);
+  });
+
+  test(
+      'Boss Guard is spent once and cannot protect replacement or stale timeouts',
+      () async {
+    final state = await makeState();
+    state.debugStartTargetClashForTest(config(Difficulty.easy));
+    final ordinary = state.targetClashRuntime!;
+    for (var i = 0; i < 6; i++) {
+      answer(state);
+    }
+    final before = state.targetClashRuntime!;
+    expect(before.phase, TargetClashPhase.boss);
+    expect(before.combo, greaterThan(0));
+    expect(state.activateClashGuard(), isTrue);
+    expect(state.activateClashGuard(), isFalse);
+    final staleToken = state.debugCurrentQuestionToken;
+    answer(state, correct: false);
+    var result = state.targetClashRuntime!;
+    expect(result.combo, before.combo);
+    expect(result.score, before.score);
+    expect(result.bossHealth, before.bossHealth);
+    expect(result.bossQuestionsResolved, before.bossQuestionsResolved + 1);
+    expect(state.clashGuardUsed, isTrue);
+    expect(state.clashGuardActive, isFalse);
+    final count = result.resolvedCount;
+    state.debugTimeoutForTokenForTest(staleToken);
+    expect(state.targetClashRuntime!.resolvedCount, count);
+    expect(state.activateClashGuard(), isFalse);
+    state.debugInstallTargetClashRuntimeForTest(ordinary);
+    expect(state.clashGuardActive, isFalse);
+    expect(state.activateClashGuard(), isFalse);
+    state.debugStartTargetClashForTest(config(Difficulty.easy));
+    expect(state.clashGuardUsed, isFalse);
+    for (var i = 0; i < 6; i++) {
+      answer(state);
+    }
+    expect(state.activateClashGuard(), isTrue);
+    final replaced = state.targetClashRuntime!;
+    state.debugInstallTargetClashRuntimeForTest(replaced);
+    expect(state.clashGuardActive, isFalse);
+    answer(state, correct: false);
+    result = state.targetClashRuntime!;
+    expect(result.combo, 0);
+    expect(result.score, replaced.score);
+    expect(result.bossHealth, replaced.bossHealth);
+    expect(state.clashGuardUsed, isTrue);
+  });
+
   test('all valid Target Clash snapshots start with a typed timer', () async {
     for (final difficulty in [
       Difficulty.easy,
@@ -285,7 +361,8 @@ void main() {
 
   test('R3-13 seed 23 reaches actual Boss preparation without failure',
       () async {
-    final state = await makeState(generator: QuestionGenerator(rng: Random(23)));
+    final state =
+        await makeState(generator: QuestionGenerator(rng: Random(23)));
     state.debugStartTargetClashForTest(config(Difficulty.easy));
     for (var index = 0; index < 6; index++) answer(state);
     final runtime = state.targetClashRuntime!;
@@ -297,7 +374,8 @@ void main() {
     expect(state.isTargetClash, isTrue);
   });
 
-  test('R3-21 planner technical failure remains outside completion/reward paths',
+  test(
+      'R3-21 planner technical failure remains outside completion/reward paths',
       () async {
     final state = await makeState(
       generator: _FailAtBoundaryQuestionGenerator(_FailurePoint.stage2),
@@ -341,8 +419,7 @@ void main() {
       expect(state.rt.state, 'ended');
       expect(
         writes.where(
-          (write) =>
-              write.$1 == 'mc_adGameCount' && write.$2 == 'setInt',
+          (write) => write.$1 == 'mc_adGameCount' && write.$2 == 'setInt',
         ),
         isEmpty,
       );
@@ -678,7 +755,8 @@ class _TargetClashQuestionGenerator extends QuestionGenerator {
     if (_failAnchor) return const [];
     // Explicit, deterministic domain covering all integer zone offsets used
     // by the lifecycle fake. No inherited random-domain fallback is allowed.
-    return List<num>.unmodifiable(List<num>.generate(81, (index) => index - 20));
+    return List<num>.unmodifiable(
+        List<num>.generate(81, (index) => index - 20));
   }
 
   @override

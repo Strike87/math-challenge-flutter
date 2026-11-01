@@ -57,14 +57,23 @@ class MathChallengeApp extends StatelessWidget {
     required this.adService,
     required this.iapAdapter,
     this.playGamesService,
+    @visibleForTesting this.testGameState,
   });
 
   final AdMobService adService;
   final IapPurchaseAdapter iapAdapter;
   final PlayGamesService? playGamesService;
 
+  /// Test-only preconfigured state for authentic app-shell widget captures.
+  /// Production always constructs its own state below.
+  @visibleForTesting
+  final gs.GameState? testGameState;
+
   @override
   Widget build(BuildContext context) {
+    if (kReleaseMode && testGameState != null) {
+      throw StateError('Test GameState injection is unavailable in release.');
+    }
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => SettingsService()),
@@ -84,6 +93,8 @@ class MathChallengeApp extends StatelessWidget {
           return AudioService(s);
         }),
         ChangeNotifierProvider(create: (ctx) {
+          final injected = testGameState;
+          if (injected != null) return injected;
           final s = ctx.read<SettingsService>();
           final a = ctx.read<AudioService>();
           final state = gs.GameState(

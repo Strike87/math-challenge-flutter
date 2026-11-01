@@ -64,6 +64,30 @@ void main() {
     }
   }
 
+  testWidgets('Arsenal is above the question and Scan is single-use',
+      (tester) async {
+    final state = await makeState();
+    state.debugStartTargetClashForTest(config());
+    await tester.pumpWidget(_Host(state));
+    await tester.pump();
+    expect(find.byKey(const Key('target-clash-arsenal')), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.byKey(const Key('target-clash-arsenal'))).dy,
+      lessThan(tester
+          .getTopLeft(find.byKey(const Key('target-clash-question-panel')))
+          .dy),
+    );
+    expect(state.activateClashScan(), isTrue);
+    expect(state.activateClashScan(), isFalse);
+    final correct = state.targetClashQuestion!.correctAnswer;
+    state.onTargetClashAnswer(correct);
+    expect(state.clashScanActive, isFalse);
+    expect(state.targetClashAssisted, isTrue);
+    state.debugCompleteTargetClashRevealForTest();
+    await tester.pump();
+    await state.quitToMenu();
+  });
+
   testWidgets('production setup flow reaches dedicated Target Clash gameplay',
       (tester) async {
     final state = await makeState();
@@ -89,18 +113,29 @@ void main() {
     await state.quitToMenu();
   });
 
-  testWidgets('open prompt has typed expression and relation controls in order',
+  testWidgets('open prompt has inline typed relation and controls in order',
       (tester) async {
     final state = await makeState();
     state.debugStartTargetClashForTest(config());
     await tester.pumpWidget(_Host(state));
 
-    expect(find.byKey(const Key('target-clash-target')), findsOneWidget);
+    expect(find.byKey(const Key('target-clash-target')), findsNothing);
     expect(find.byKey(const Key('target-clash-expression')), findsOneWidget);
-    expect(find.byKey(const Key('target-clash-reveal-relation')), findsNothing);
-    final buttons = tester.widgetList<FilledButton>(find.byType(FilledButton));
     expect(
-        buttons.map((button) => (button.child! as Text).data), ['<', '=', '>']);
+        find.byKey(const Key('target-clash-inline-relation')), findsOneWidget);
+    expect(find.text('?'), findsOneWidget);
+    expect(find.byKey(const Key('target-clash-reveal-relation')), findsNothing);
+    expect(
+      const [
+        Key('target-clash-relation-less'),
+        Key('target-clash-relation-equal'),
+        Key('target-clash-relation-greater'),
+      ].map((key) => tester
+          .widget<Text>(
+              find.descendant(of: find.byKey(key), matching: find.byType(Text)))
+          .data),
+      ['<', '=', '>'],
+    );
     expect(find.bySemanticsLabel('Less than target'), findsOneWidget);
     expect(find.bySemanticsLabel('Equal to target'), findsOneWidget);
     expect(find.bySemanticsLabel('Greater than target'), findsOneWidget);
@@ -121,9 +156,9 @@ void main() {
         find.byKey(const Key('target-clash-reveal-relation')), findsOneWidget);
     expect(
       tester
-          .widget<FilledButton>(find.descendant(
+          .widget<OutlinedButton>(find.descendant(
             of: find.byKey(const Key('target-clash-relation-less')),
-            matching: find.byType(FilledButton),
+            matching: find.byType(OutlinedButton),
           ))
           .onPressed,
       isNull,
@@ -322,7 +357,7 @@ void main() {
     ]) {
       expect(find.byKey(key), findsOneWidget);
     }
-    expect(find.text('6 / 6 READY'), findsOneWidget);
+    expect(find.text('READY'), findsOneWidget);
     await ready.quitToMenu();
 
     final triple = await makeState();
@@ -391,7 +426,8 @@ class _TargetClashQuestionGenerator extends QuestionGenerator {
     required Operation type,
     required Difficulty diff,
     required NumberType numType,
-  }) => const [6, 7, 8, 9, 10, 11, 12, 13, 14];
+  }) =>
+      const [6, 7, 8, 9, 10, 11, 12, 13, 14];
 
   @override
   Question build({
@@ -476,7 +512,8 @@ final class _FailInitialGenerator extends QuestionGenerator {
     required Operation type,
     required Difficulty diff,
     required NumberType numType,
-  }) => const [];
+  }) =>
+      const [];
 
   @override
   Question build({

@@ -127,6 +127,26 @@ void main() {
     expect(state.targetClashQuestion, isNot(same(next)));
   });
 
+  test('reveal snapshots first, middle, last, and phase-boundary slots',
+      () async {
+    final state = await makeState();
+    state.debugStartTargetClashForTest(config(Difficulty.easy));
+    state.onTargetClashAnswer(state.targetClashQuestion!.correctAnswer);
+    expect(state.targetClashReveal!.resolvedStageQuestionIndex, 0);
+    expect(state.targetClashReveal!.resolvedStageQuestionCount, 3);
+    resolveAndOpen(state);
+    state.onTargetClashAnswer(state.targetClashQuestion!.correctAnswer);
+    expect(state.targetClashReveal!.resolvedStageQuestionIndex, 1);
+    expect(state.targetClashReveal!.resolvedStageQuestionCount, 3);
+    resolveAndOpen(state);
+    state.onTargetClashAnswer(state.targetClashQuestion!.correctAnswer);
+    final reveal = state.targetClashReveal!;
+    expect(reveal.resolvedStageQuestionIndex, 2);
+    expect(reveal.resolvedStageQuestionCount, 3);
+    expect(reveal.phase, TargetClashPhase.ordinaryStage1);
+    expect(state.targetClashRuntime!.phase, TargetClashPhase.ordinaryStage2);
+  });
+
   test(
       'Power Shot fails closed outside reveal, after open, and in terminal reveal',
       () async {
@@ -187,6 +207,39 @@ void main() {
     state.dispose();
   });
 
+  test(
+      'Triple Memory retains only resolved comparisons in the active Triple phase',
+      () async {
+    final state = await makeState();
+    state.debugStartTargetClashForTest(config(Difficulty.medium));
+    for (var i = 0; i < 6; i++) {
+      resolveAndOpen(state);
+    }
+    expect(state.targetClashRuntime!.phase, TargetClashPhase.triple);
+    expect(state.clashTripleHistory, isEmpty);
+    resolveAndOpen(state);
+    expect(state.clashTripleHistory, hasLength(1));
+    state.markClashMemoryRead();
+    expect(state.targetClashAssisted, isTrue);
+    resolveAndOpen(state);
+    resolveAndOpen(state);
+    expect(state.targetClashRuntime!.phase, TargetClashPhase.boss);
+    expect(state.clashTripleHistory, isEmpty);
+  });
+
+  test('an assisted completed run retains its transient qualification',
+      () async {
+    final state = await makeState();
+    state.debugStartTargetClashForTest(config(Difficulty.easy));
+    expect(state.activateClashScan(), isTrue);
+    for (var i = 0; i < 12; i++) {
+      state.onTargetClashAnswer(state.targetClashQuestion!.correctAnswer);
+      state.debugCompleteTargetClashRevealForTest();
+    }
+    expect(state.rt.gameActive, isFalse);
+    expect(state.targetClashResultSummary!.assisted, isTrue);
+  });
+
   test('Triple denial and unavailable preserve canonical runtime behavior',
       () async {
     final triple = await makeState();
@@ -225,7 +278,8 @@ class _TargetClashQuestionGenerator extends QuestionGenerator {
     required Operation type,
     required Difficulty diff,
     required NumberType numType,
-  }) => const [6, 7, 8, 9, 10, 11, 12, 13, 14];
+  }) =>
+      const [6, 7, 8, 9, 10, 11, 12, 13, 14];
 
   @override
   Question build({

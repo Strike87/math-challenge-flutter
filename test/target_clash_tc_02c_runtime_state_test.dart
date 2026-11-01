@@ -10,6 +10,79 @@ import 'package:math_challenge/models/math_fact.dart';
 import 'package:math_challenge/models/player.dart';
 
 void main() {
+  test('Boss Guard preserves combo only for an incorrect submitted answer', () {
+    final before = _hardBossState(_stage(requests: const [
+      _lessNormal,
+      _lessNormal,
+      _lessNormal,
+    ]));
+    expect(before.phase, TargetClashPhase.boss);
+    expect(before.combo, 5);
+    final wrong = PresentationAnswer.values.firstWhere(
+      (answer) => answer != before.currentQuestion!.correctAnswer,
+    );
+    final guardedWrong = before.resolve(
+      answer: wrong,
+      difficulty: Difficulty.hard,
+      bossGuard: true,
+    );
+    final guardedTimeout = before.resolve(
+      difficulty: Difficulty.hard,
+      bossGuard: true,
+    );
+    final guardedCorrect = before.resolve(
+      answer: before.currentQuestion!.correctAnswer,
+      difficulty: Difficulty.hard,
+      bossGuard: true,
+    );
+    final normalCorrect = before.resolve(
+      answer: before.currentQuestion!.correctAnswer,
+      difficulty: Difficulty.hard,
+    );
+    expect(guardedWrong.combo, before.combo);
+    expect(guardedTimeout.combo, 0);
+    for (final result in [guardedWrong, guardedTimeout]) {
+      expect(result.score, before.score);
+      expect(result.bossHealth, before.bossHealth);
+      expect(result.bossQuestionsResolved, before.bossQuestionsResolved + 1);
+    }
+    expect(guardedCorrect.combo, before.combo + 1);
+    expect(guardedCorrect.score, greaterThan(before.score));
+    expect(guardedCorrect.bossHealth, lessThan(before.bossHealth));
+    expect(guardedCorrect.score, normalCorrect.score);
+    expect(guardedCorrect.bossHealth, normalCorrect.bossHealth);
+    expect(guardedCorrect.combo, normalCorrect.combo);
+  });
+
+  test(
+      'Balance Scan halves Perfect Hit and stacked Power Shot Combo Fever awards',
+      () {
+    const perfectRequest = TargetClashQuestionRequest(
+        answer: PresentationAnswer.equalTo, zone: TargetZone.bullseye);
+    final perfect = _hardBossState(_stage(requests: const [perfectRequest]));
+    final armed = _hardBossState(_stage(requests: const [_lessNormal]))
+        .activatePowerShot(config: _hardConfig(), generator: _tcGenerator())
+        .state;
+    for (final scenario in [(perfect, 80), (armed, 120)]) {
+      final (before, expectedAward) = scenario;
+      expect(before.isFeverActive, isTrue);
+      expect(before.combo, 5);
+      final answer = before.currentQuestion!.correctAnswer;
+      final normal = before.resolve(
+          answer: answer, difficulty: Difficulty.hard, nextStage: _stage());
+      final scanned = before.resolve(
+          answer: answer,
+          difficulty: Difficulty.hard,
+          nextStage: _stage(),
+          balanceScan: true);
+      expect(normal.score - before.score, expectedAward);
+      expect(scanned.score - before.score, expectedAward ~/ 2);
+      expect(scanned.combo, normal.combo);
+      expect(scanned.bossHealth, normal.bossHealth);
+      expect(scanned.feverRemaining, normal.feverRemaining);
+    }
+  });
+
   test('initial state, profiles, and Triple mapping are deterministic', () {
     final state = TargetClashRuntimeState.start(_stage());
     expect(state.phase, TargetClashPhase.ordinaryStage1);
@@ -744,7 +817,8 @@ TargetClashStageResult _stage({List<TargetClashQuestionRequest>? requests}) =>
           ],
     );
 
-TargetClashStageResult _hardStage({List<TargetClashQuestionRequest>? requests}) =>
+TargetClashStageResult _hardStage(
+        {List<TargetClashQuestionRequest>? requests}) =>
     TargetClashQuestionGenerator(questionGenerator: _Generator())
         .prepareStageForTarget(
       operation: Operation.addition,
@@ -985,7 +1059,8 @@ class _Generator extends QuestionGenerator {
     required Operation type,
     required Difficulty diff,
     required NumberType numType,
-  }) => List<num>.generate(31, (index) => index);
+  }) =>
+      List<num>.generate(31, (index) => index);
 
   @override
   Question buildDirectForResult(
