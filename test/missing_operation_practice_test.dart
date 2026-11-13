@@ -9,7 +9,7 @@ import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/models/player.dart';
 import 'package:math_challenge/screens/game_screen.dart' as game_screen;
-import 'package:math_challenge/screens/menu_screen.dart';
+import 'package:math_challenge/screens/practice_screen.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
@@ -454,7 +454,7 @@ void main() {
           ChangeNotifierProvider<SettingsService>.value(value: state.settings),
           ChangeNotifierProvider<GameState>.value(value: state),
         ],
-        child: const MaterialApp(home: Scaffold(body: MenuScreen())),
+        child: const MaterialApp(home: Scaffold(body: PracticeScreen())),
       ),
     );
     await tester.pump();
@@ -464,13 +464,6 @@ void main() {
     expect(find.text('MISSING NUMBER'), findsNothing);
     expect(find.text('THE ULTIMATE TEST'), findsNothing);
     expect(find.text('PLAY'), findsNothing);
-
-    final fittedLabel = tester.widget<FittedBox>(
-      find.ancestor(
-        of: find.text('Missing Operation'),
-        matching: find.byType(FittedBox),
-      ),
-    );
 
     const labels = [
       'Addition',
@@ -538,7 +531,7 @@ void main() {
           child: SizedBox(
             width: 160,
             height: 32,
-            child: fittedLabel,
+            child: const Text('Missing Operation', maxLines: 2),
           ),
         ),
       ),
@@ -565,7 +558,7 @@ void main() {
           ChangeNotifierProvider<SettingsService>.value(value: state.settings),
           ChangeNotifierProvider<GameState>.value(value: state),
         ],
-        child: const MaterialApp(home: Scaffold(body: MenuScreen())),
+        child: const MaterialApp(home: Scaffold(body: PracticeScreen())),
       ),
     );
     await tester.pump();

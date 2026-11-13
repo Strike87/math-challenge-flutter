@@ -13,6 +13,7 @@ import 'package:math_challenge/models/player.dart';
 import 'package:math_challenge/screens/config_screen.dart';
 import 'package:math_challenge/screens/game_screen.dart';
 import 'package:math_challenge/screens/menu_screen.dart';
+import 'package:math_challenge/screens/practice_screen.dart';
 import 'package:math_challenge/screens/numtype_screen.dart';
 import 'package:math_challenge/screens/player_screen.dart';
 import 'package:math_challenge/services/audio.dart';
@@ -501,6 +502,7 @@ class _Host extends StatelessWidget {
             body: Consumer<engine.GameState>(
               builder: (context, gs, _) => switch (gs.currentScreen) {
                 engine.GameScreen.menu => const MenuScreen(),
+                engine.GameScreen.practice => const PracticeScreen(),
                 engine.GameScreen.numType => const NumTypeScreen(),
                 engine.GameScreen.config => const ConfigScreen(),
                 engine.GameScreen.player => const PlayerSetupScreen(),

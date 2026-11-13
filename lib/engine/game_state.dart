@@ -47,7 +47,7 @@ import '../services/play_games.dart';
 import 'question_generator.dart';
 
 /// Screen identifier — mirrors the original HTML section IDs.
-enum GameScreen { menu, practiceStyle, numType, config, player, game }
+enum GameScreen { menu, practice, practiceStyle, numType, config, player, game }
 
 /// Modal identifier — mirrors the original HTML modal IDs.
 enum GameModal {
@@ -2567,6 +2567,15 @@ class GameState extends ChangeNotifier {
         ? Operation.mixed
         : Operation.fromString(operationName);
     showScreen(GameScreen.practiceStyle);
+  }
+
+  void showPracticeMenu() {
+    _clearPendingMentalMathEntry();
+    _clearPendingTargetClashSetup();
+    _pendingPracticeStyle = false;
+    _pendingWeakSkillsPlan = null;
+    _pendingOperationQuestStageId = null;
+    showScreen(GameScreen.practice);
   }
 
   void startTimingPractice() {

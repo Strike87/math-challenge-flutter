@@ -282,6 +282,7 @@ class _ResponsiveShell extends StatelessWidget {
       body: Stack(
         children: [
           switch (state.currentScreen) {
+            GameScreen.practice => const SizedBox(),
             GameScreen.player => const PlayerSetupScreen(),
             GameScreen.game => const game_screen.GameScreen(),
             _ => const SizedBox.expand(),

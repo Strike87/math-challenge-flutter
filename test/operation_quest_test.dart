@@ -11,6 +11,7 @@ import 'package:math_challenge/game_config.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/models/player.dart';
 import 'package:math_challenge/screens/menu_screen.dart';
+import 'package:math_challenge/screens/practice_screen.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
@@ -1473,10 +1474,18 @@ void main() {
       Stack(children: const [MenuScreen(), ModalRouter()]),
     );
 
+    await tester.ensureVisible(find.byKey(const Key('practice-menu-entry')));
+    await tester.tap(find.byKey(const Key('practice-menu-entry')));
+    await tester.pump();
+    await _pump(
+      tester,
+      state,
+      const Stack(children: [PracticeScreen(), ModalRouter()]),
+    );
     expect(find.text('Operation Quest'), findsOneWidget);
     expect(find.text('10 TRAILS • 30 STAGES'), findsOneWidget);
     await tester.tap(find.text('Operation Quest'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('➕ Addition Trail'), findsOneWidget);
     expect(find.text('➖ Subtraction Trail'), findsOneWidget);
     expect(find.text('✖️ Multiplication Trail'), findsOneWidget);
@@ -1520,23 +1529,23 @@ void main() {
     expect(find.text('🔒'), findsNWidgets(29));
 
     state.startOperationQuestStage(OperationQuestStageId.subtractionEasy);
-    expect(state.currentScreen, GameScreen.menu);
+    expect(state.currentScreen, GameScreen.practice);
     state.startOperationQuestStage(OperationQuestStageId.multiplicationEasy);
-    expect(state.currentScreen, GameScreen.menu);
+    expect(state.currentScreen, GameScreen.practice);
     state.startOperationQuestStage(OperationQuestStageId.divisionEasy);
-    expect(state.currentScreen, GameScreen.menu);
+    expect(state.currentScreen, GameScreen.practice);
     state.startOperationQuestStage(OperationQuestStageId.mixedEasy);
-    expect(state.currentScreen, GameScreen.menu);
+    expect(state.currentScreen, GameScreen.practice);
     state.startOperationQuestStage(OperationQuestStageId.missingOperationEasy);
-    expect(state.currentScreen, GameScreen.menu);
+    expect(state.currentScreen, GameScreen.practice);
     state.startOperationQuestStage(OperationQuestStageId.missingNumberEasy);
-    expect(state.currentScreen, GameScreen.menu);
+    expect(state.currentScreen, GameScreen.practice);
 
     await tester.tap(
       find.byKey(const Key('operation-quest-stage-addition_medium')),
     );
     await tester.pump();
-    expect(state.currentScreen, GameScreen.menu);
+    expect(state.currentScreen, GameScreen.practice);
 
     final multiplicationEasy = find.byKey(
       const Key('operation-quest-stage-multiplication_easy'),
@@ -1544,7 +1553,7 @@ void main() {
     await tester.ensureVisible(multiplicationEasy);
     await tester.tap(multiplicationEasy);
     await tester.pump();
-    expect(state.currentScreen, GameScreen.menu);
+    expect(state.currentScreen, GameScreen.practice);
 
     final divisionEasy = find.byKey(
       const Key('operation-quest-stage-division_easy'),
@@ -1552,7 +1561,7 @@ void main() {
     await tester.ensureVisible(divisionEasy);
     await tester.tap(divisionEasy);
     await tester.pump();
-    expect(state.currentScreen, GameScreen.menu);
+    expect(state.currentScreen, GameScreen.practice);
 
     final mixedEasy = find.byKey(
       const Key('operation-quest-stage-mixed_easy'),
@@ -1560,7 +1569,7 @@ void main() {
     await tester.ensureVisible(mixedEasy);
     await tester.tap(mixedEasy);
     await tester.pump();
-    expect(state.currentScreen, GameScreen.menu);
+    expect(state.currentScreen, GameScreen.practice);
 
     await tester.ensureVisible(
       find.byKey(const Key('operation-quest-stage-addition_easy')),

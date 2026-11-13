@@ -34,6 +34,7 @@ import 'package:math_challenge/screens/numtype_screen.dart';
 import 'package:math_challenge/screens/config_screen.dart';
 import 'package:math_challenge/screens/player_screen.dart';
 import 'package:math_challenge/screens/practice_style_screen.dart';
+import 'package:math_challenge/screens/practice_screen.dart';
 import 'package:math_challenge/screens/game_screen.dart' as game_screen;
 import 'package:math_challenge/widgets/celebration_overlay.dart';
 import 'package:math_challenge/widgets/common.dart';
@@ -177,6 +178,8 @@ class TestAppShell extends StatelessWidget {
     switch (s) {
       case GameScreen.menu:
         return const MenuScreen();
+      case GameScreen.practice:
+        return const PracticeScreen();
       case GameScreen.practiceStyle:
         return const PracticeStyleScreen();
       case GameScreen.numType:
