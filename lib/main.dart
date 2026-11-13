@@ -19,6 +19,7 @@ import 'services/admob.dart';
 import 'services/iap.dart';
 import 'services/play_games.dart';
 import 'screens/menu_screen.dart';
+import 'screens/practice_screen.dart';
 import 'screens/numtype_screen.dart';
 import 'screens/config_screen.dart';
 import 'screens/player_screen.dart';
@@ -290,6 +291,8 @@ class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
     switch (s) {
       case gs.GameScreen.menu:
         return const MenuScreen();
+      case gs.GameScreen.practice:
+        return const PracticeScreen();
       case gs.GameScreen.practiceStyle:
         return const PracticeStyleScreen();
       case gs.GameScreen.numType:

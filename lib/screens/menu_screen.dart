@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../engine/game_state.dart';
 import '../game_config.dart';
-import '../models/enums.dart';
 import '../models/game_data.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
@@ -33,176 +32,116 @@ class MenuScreen extends StatelessWidget {
                 _Header(s: s, gs: gs),
                 const SizedBox(height: 20),
 
-                // PERSONALIZED LEARNING
-                _SectionLabel('RECOMMENDED FOR YOU', s),
-                _CampaignCard(
-                  key: const Key('weak-skills-practice-row'),
-                  icon: '🚀',
-                  title: 'Training Arena',
-                  subtitle: 'Build Your Skills',
-                  color: const Color(GameConfig.grape),
-                  gradientColors: _weakSkillsGradient,
-                  onTap: () => gs.goToConfig('weakSkills'),
-                ),
-                const SizedBox(height: 22),
-
-                // CHALLENGES
-                _SectionLabel(
-                  'CHALLENGES',
-                  s,
-                  trailing: _streakBadge(gs, s),
-                ),
-                _CampaignCard(
-                  key: const Key('target-clash-challenge-entry'),
-                  icon: '🎯',
-                  title: 'Target Clash',
-                  subtitle: 'Compare • Aim • Strike',
-                  color: s.accent(GameConfig.sky),
-                  gradientColors: const [
-                    Color(GameConfig.sky),
-                    Color(GameConfig.mint),
-                  ],
-                  onTap: gs.startTargetClashSetup,
-                ),
-                const SizedBox(height: 10),
-                _CampaignCard(
-                  icon: '🏆',
-                  title: 'Master Challenge',
-                  subtitle: 'BOSS BATTLES • 5 STAGES',
-                  color: s.accent(GameConfig.coral),
-                  gradientColors: const [
-                    Color(GameConfig.grape),
-                    Color(GameConfig.punch),
-                    Color(GameConfig.coral),
-                  ],
-                  onTap: () => gs.goToConfig('master'),
-                ),
-                const SizedBox(height: 10),
-                _CampaignCard(
-                  icon: gs.dailyBoss?.icon ?? '🐲',
-                  title: gs.dailyBoss?.name ?? 'Daily Boss',
-                  subtitle: gs.isDailyBossClaimedToday
-                      ? 'CLEARED TODAY'
-                      : 'NEW CHALLENGE TODAY',
-                  color: s.accent(GameConfig.punch),
-                  gradientColors: const [
-                    Color(GameConfig.punch),
-                    Color(GameConfig.coral),
-                    Color(GameConfig.mango),
-                  ],
-                  onTap: gs.isDailyBossClaimedToday ? () {} : gs.showDailyBoss,
-                ),
-                const SizedBox(height: 10),
-                _CampaignCard(
-                  key: const Key('daily-mental-math-row'),
-                  icon: '🧠⚡',
-                  title: 'Daily IQ Spark',
-                  subtitle: gs.isDailyMentalMathPerfectDay
-                      ? '★ PERFECT DAY'
-                      : gs.isDailyMentalMathClearedToday
-                          ? 'CLEARED TODAY${gs.currentDailyMentalMathRecord?.bestGrade == null ? '' : ' • Grade ${gs.currentDailyMentalMathRecord!.bestGrade!.label}'}'
-                          : '${gs.dailyMentalMathProfile.operationLabel.toUpperCase()} • ${gs.dailyMentalMathProfile.numberType.label.toUpperCase()} • AVAILABLE',
-                  color: s.accent(GameConfig.grape),
-                  gradientColors: const [
-                    Color(GameConfig.grape),
-                    Color(GameConfig.sky),
-                    Color(GameConfig.mint),
-                  ],
-                  onTap: gs.showDailyMentalMath,
-                ),
-                const SizedBox(height: 10),
-                _CampaignCard(
-                  icon: '🧭',
-                  title: 'Operation Quest',
-                  subtitle: '10 TRAILS • 30 STAGES',
-                  color: s.accent(GameConfig.mango),
-                  gradientColors: const [
-                    Color(GameConfig.mango),
-                    Color(GameConfig.punch),
-                    Color(GameConfig.mango),
-                  ],
-                  onTap: gs.showOperationQuest,
-                ),
-                const SizedBox(height: 24),
-
-                // QUICK PRACTICE
-                _SectionLabel('QUICK PRACTICE', s),
-                const SizedBox(height: 2),
+                // HOME CHALLENGES
+                _SectionLabel('CHALLENGES', s, trailing: _streakBadge(gs, s)),
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final cardWidth = (constraints.maxWidth - 12) / 2;
-                    final cardHeight = (cardWidth / 1.62).clamp(90.0, 132.0);
-
+                    final cardWidth = (constraints.maxWidth - 10) / 2;
                     return Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 12,
-                      runSpacing: 12,
+                      spacing: 10,
+                      runSpacing: 10,
                       children: [
                         SizedBox(
-                          width: cardWidth,
-                          height: cardHeight,
-                          child: _PracticeCard(
-                            '+',
-                            'Addition',
-                            s.opColor(Operation.addition),
-                            () => gs.goToPracticeStyle('addition'),
-                          ),
-                        ),
+                            width: cardWidth,
+                            child: _CampaignCard(
+                              icon: '🏆',
+                              title: 'Master Challenge',
+                              subtitle: 'BOSS BATTLES • 5 STAGES',
+                              color: s.accent(GameConfig.coral),
+                              gradientColors: const [
+                                Color(GameConfig.grape),
+                                Color(GameConfig.punch),
+                                Color(GameConfig.coral)
+                              ],
+                              vertical: true,
+                              onTap: () => gs.goToConfig('master'),
+                            )),
                         SizedBox(
-                          width: cardWidth,
-                          height: cardHeight,
-                          child: _PracticeCard(
-                            '−',
-                            'Subtraction',
-                            s.opColor(Operation.subtraction),
-                            () => gs.goToPracticeStyle('subtraction'),
-                          ),
-                        ),
+                            width: cardWidth,
+                            child: _CampaignCard(
+                              key: const Key('target-clash-challenge-entry'),
+                              icon: '🎯',
+                              title: 'Target Clash',
+                              subtitle: 'Compare • Aim • Strike',
+                              color: s.accent(GameConfig.sky),
+                              gradientColors: const [
+                                Color(GameConfig.sky),
+                                Color(GameConfig.mint)
+                              ],
+                              vertical: true,
+                              onTap: gs.startTargetClashSetup,
+                            )),
                         SizedBox(
-                          width: cardWidth,
-                          height: cardHeight,
-                          child: _PracticeCard(
-                            '×',
-                            'Multiplication',
-                            s.opColor(Operation.multiplication),
-                            () => gs.goToPracticeStyle('multiplication'),
-                          ),
-                        ),
+                            width: cardWidth,
+                            child: _CampaignCard(
+                              key: const Key('daily-mental-math-row'),
+                              icon: '🧠⚡',
+                              title: 'Daily IQ Spark',
+                              subtitle: gs.isDailyMentalMathPerfectDay
+                                  ? '★ PERFECT DAY'
+                                  : gs.isDailyMentalMathClearedToday
+                                      ? 'CLEARED TODAY${gs.currentDailyMentalMathRecord?.bestGrade == null ? '' : ' • Grade ${gs.currentDailyMentalMathRecord!.bestGrade!.label}'}'
+                                      : '${gs.dailyMentalMathProfile.operationLabel.toUpperCase()} • ${gs.dailyMentalMathProfile.numberType.label.toUpperCase()} • AVAILABLE',
+                              color: s.accent(GameConfig.grape),
+                              gradientColors: const [
+                                Color(GameConfig.grape),
+                                Color(GameConfig.sky),
+                                Color(GameConfig.mint)
+                              ],
+                              vertical: true,
+                              onTap: gs.showDailyMentalMath,
+                            )),
                         SizedBox(
-                          width: cardWidth,
-                          height: cardHeight,
-                          child: _PracticeCard(
-                            '÷',
-                            'Division',
-                            s.opColor(Operation.division),
-                            () => gs.goToPracticeStyle('division'),
-                          ),
-                        ),
-                        SizedBox(
-                          width: cardWidth,
-                          height: cardHeight,
-                          child: _PracticeCard(
-                            '?',
-                            'Missing Operation',
-                            s.opColor(Operation.mixed),
-                            () => gs.goToPracticeStyle('missingOperation'),
-                          ),
-                        ),
-                        SizedBox(
-                          width: cardWidth,
-                          height: cardHeight,
-                          child: _PracticeCard(
-                            '🧮',
-                            'Mixed Operations',
-                            s.opColor(Operation.mixed),
-                            () => gs.goToPracticeStyle('mixed'),
-                          ),
-                        ),
+                            width: cardWidth,
+                            child: _CampaignCard(
+                              icon: gs.dailyBoss?.icon ?? '🐲',
+                              title: gs.dailyBoss?.name ?? 'Daily Boss',
+                              subtitle: gs.isDailyBossClaimedToday
+                                  ? 'CLEARED TODAY'
+                                  : 'NEW CHALLENGE TODAY',
+                              color: s.accent(GameConfig.punch),
+                              gradientColors: const [
+                                Color(GameConfig.punch),
+                                Color(GameConfig.coral),
+                                Color(GameConfig.mango)
+                              ],
+                              vertical: true,
+                              onTap: gs.isDailyBossClaimedToday
+                                  ? () {}
+                                  : gs.showDailyBoss,
+                            )),
                       ],
                     );
                   },
                 ),
-                const SizedBox(height: 26),
+                const SizedBox(height: 14),
+                Column(
+                  children: [
+                    _CampaignCard(
+                      key: const Key('weak-skills-practice-row'),
+                      icon: '🚀',
+                      title: 'Training Arena',
+                      subtitle: 'Build Your Skills',
+                      color: const Color(GameConfig.grape),
+                      gradientColors: _weakSkillsGradient,
+                      onTap: () => gs.goToConfig('weakSkills'),
+                    ),
+                    const SizedBox(height: 10),
+                    _CampaignCard(
+                      key: const Key('practice-menu-entry'),
+                      icon: '🧮',
+                      title: 'Practice',
+                      subtitle: 'Choose an operation',
+                      color: s.accent(GameConfig.mango),
+                      gradientColors: const [
+                        Color(GameConfig.sky),
+                        Color(GameConfig.grape)
+                      ],
+                      onTap: gs.showPracticeMenu,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
 
                 // SECONDARY NAVIGATION
                 _BottomNavDock(gs: gs),
@@ -632,6 +571,7 @@ class _CampaignCard extends StatelessWidget {
     required this.color,
     required this.onTap,
     this.gradientColors,
+    this.vertical = false,
   });
 
   final String icon;
@@ -640,6 +580,7 @@ class _CampaignCard extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
   final List<Color>? gradientColors;
+  final bool vertical;
 
   @override
   Widget build(BuildContext context) {
@@ -657,7 +598,7 @@ class _CampaignCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         onTap: onTap,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 86),
+          constraints: BoxConstraints(minHeight: vertical ? 150 : 86),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -678,180 +619,158 @@ class _CampaignCard extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.34),
-                  ),
-                ),
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      icon,
-                      style: const TextStyle(
-                        fontSize: 27,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
+          child: vertical
+              ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    _CampaignIcon(icon: icon, size: 42),
+                    const SizedBox(height: 8),
                     Text(
                       title,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
+                        height: 1.05,
                         fontWeight: FontWeight.w900,
                         fontFamily: AppFonts.headFor(s),
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 10.5,
+                        height: 1.1,
                         fontWeight: FontWeight.w700,
                         color: Colors.white.withValues(alpha: 0.90),
-                        letterSpacing: 0.6,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: Icon(Icons.chevron_right,
+                          color: Colors.white.withValues(alpha: .9), size: 20),
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.34),
+                        ),
+                      ),
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            icon,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              fontFamily: AppFonts.headFor(s),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white.withValues(alpha: 0.90),
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.58),
+                        ),
+                        color: Colors.white.withValues(alpha: 0.12),
+                      ),
+                      child: const Icon(
+                        Icons.chevron_right,
+                        color: Colors.white,
+                        size: 21,
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.58),
-                  ),
-                  color: Colors.white.withValues(alpha: 0.12),
-                ),
-                child: const Icon(
-                  Icons.chevron_right,
-                  color: Colors.white,
-                  size: 26,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
   }
 }
 
-class _PracticeCard extends StatelessWidget {
-  const _PracticeCard(this.symbol, this.label, this.color, this.onTap);
-
-  final String symbol;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
+class _CampaignIcon extends StatelessWidget {
+  const _CampaignIcon({required this.icon, required this.size});
+  final String icon;
+  final double size;
 
   @override
-  Widget build(BuildContext context) {
-    final darkColor = Color.lerp(color, Colors.black, 0.18)!;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color.lerp(color, Colors.white, 0.16)!,
-                darkColor,
-              ],
-            ),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.26),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: color.withValues(alpha: 0.18),
-                blurRadius: 14,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.16),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.40),
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      symbol,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.34)),
+        ),
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Icon(_campaignIconFor(icon), color: Colors.white, size: 24),
           ),
         ),
-      ),
-    );
-  }
+      );
 }
+
+IconData _campaignIconFor(String icon) => switch (icon) {
+      '🏆' => Icons.emoji_events_rounded,
+      '🎯' => Icons.gps_fixed_rounded,
+      '🧠⚡' => Icons.psychology_alt_rounded,
+      '🚀' => Icons.rocket_launch_rounded,
+      '🧮' => Icons.calculate_rounded,
+      _ => Icons.auto_awesome_rounded,
+    };
 
 class _NavBtn extends StatelessWidget {
   const _NavBtn({
