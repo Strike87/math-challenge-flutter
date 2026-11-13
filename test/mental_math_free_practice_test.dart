@@ -8,6 +8,7 @@ import 'package:math_challenge/features/family/domain/family_eligibility.dart';
 import 'package:math_challenge/features/game_brain/integration/adaptive_shadow_integration.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/screens/menu_screen.dart';
+import 'package:math_challenge/screens/practice_screen.dart';
 import 'package:math_challenge/screens/practice_style_screen.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
@@ -69,28 +70,31 @@ void main() {
     state.rt.timer?.cancel();
   }
 
-  Future<void> pump(
-    WidgetTester tester,
-    GameState state,
-    Widget child,
-  ) =>
+  Future<void> pump(WidgetTester tester, GameState state, Widget child) =>
       tester.pumpWidget(
         MultiProvider(
           providers: [
             ChangeNotifierProvider<GameState>.value(value: state),
             ChangeNotifierProvider<SettingsService>.value(
-                value: state.settings),
+              value: state.settings,
+            ),
           ],
           child: MaterialApp(home: Scaffold(body: child)),
         ),
       );
 
-  testWidgets('existing operation cards lead through Practice Style',
-      (tester) async {
+  testWidgets('existing operation cards lead through Practice Style', (
+    tester,
+  ) async {
     final state = await makeState();
     await pump(tester, state, const MenuScreen());
 
     expect(find.text('Mental Math'), findsNothing);
+    await tester.ensureVisible(find.byKey(const Key('practice-menu-entry')));
+    await tester.tap(find.byKey(const Key('practice-menu-entry')));
+    await tester.pump();
+    expect(state.currentScreen, GameScreen.practice);
+    await pump(tester, state, const PracticeScreen());
     await tester.ensureVisible(find.text('Addition'));
     await tester.tap(find.text('Addition'));
     await tester.pump();
@@ -119,50 +123,102 @@ void main() {
     await state.quitToMenu();
   });
 
-  test('all canonical operations and number types preserve their fixed context',
-      () async {
-    for (final option in const [
-      (operation: Operation.addition, missingOperation: false),
-      (operation: Operation.subtraction, missingOperation: false),
-      (operation: Operation.multiplication, missingOperation: false),
-      (operation: Operation.division, missingOperation: false),
-      (operation: Operation.mixed, missingOperation: false),
-      (operation: Operation.mixed, missingOperation: true),
-    ]) {
-      for (final numberType in const [
-        NumberType.natural,
-        NumberType.integers,
-        NumberType.rationals,
-      ]) {
-        final state = await makeState();
-        await startFreePractice(
-          state,
-          operation: option.operation,
-          missingOperation: option.missingOperation,
-          numberType: numberType,
-        );
-        final snapshot = state.activeRunSnapshot!;
-        expect(snapshot.operation, option.operation);
-        expect(snapshot.questionMechanic.name,
-            option.missingOperation ? 'missingOperation' : 'standard');
-        expect(snapshot.numberType, numberType);
-        expect(snapshot.difficulty, Difficulty.medium);
-        expect(snapshot.questionTarget, 40);
-        expect(snapshot.mentalMathEntry, MentalMathEntry.freePractice);
-        expect(snapshot.answerStyle, AnswerStyle.choice4);
+  testWidgets('MENU-UX-01 Practice navigation exposes all entries',
+      (tester) async {
+    final state = await makeState();
+    await pump(tester, state, const MenuScreen());
+    expect(find.byKey(const Key('practice-menu-entry')), findsOneWidget);
+    expect(find.text('Settings'), findsNothing);
+    expect(find.text('Hall of Fame'), findsOneWidget);
+    expect(find.text('Achievements'), findsOneWidget);
+    expect(find.text('Shop'), findsOneWidget);
+    expect(find.text('Skills'), findsOneWidget);
+    expect(find.text('Daily'), findsOneWidget);
 
-        await state.replayGame();
-        state.rt.timer?.cancel();
-        expect(state.activeRunSnapshot?.mentalMathEntry,
-            MentalMathEntry.freePractice);
-        expect(state.activeRunSnapshot?.questionMechanic.name,
-            option.missingOperation ? 'missingOperation' : 'standard');
-        expect(state.activeRunSnapshot?.difficulty, Difficulty.medium);
-        expect(state.activeRunSnapshot?.questionTarget, 40);
-        expect(state.activeRunSnapshot?.answerStyle, AnswerStyle.choice4);
-      }
+    await tester.ensureVisible(find.byKey(const Key('practice-menu-entry')));
+    await tester.tap(find.byKey(const Key('practice-menu-entry')));
+    await tester.pump();
+    expect(state.currentScreen, GameScreen.practice);
+    await pump(tester, state, const PracticeScreen());
+
+    await tester.tap(find.byKey(const Key('operation-quest-practice-entry')));
+    expect(state.currentModal, GameModal.operationQuest);
+    state.closeModal();
+
+    for (final label in const [
+      'Addition',
+      'Subtraction',
+      'Multiplication',
+      'Division',
+      'Missing Operation',
+      'Mixed Operations',
+    ]) {
+      final fresh = await makeState();
+      fresh.showPracticeMenu();
+      await pump(tester, fresh, const PracticeScreen());
+      await tester.tap(find.text(label));
+      expect(fresh.currentScreen, GameScreen.practiceStyle);
     }
+
+    final backState = await makeState();
+    backState.showPracticeMenu();
+    await pump(tester, backState, const PracticeScreen());
+    await tester.tap(find.byKey(const Key('practice-menu-back')));
+    expect(backState.currentScreen, GameScreen.menu);
   });
+
+  test(
+    'all canonical operations and number types preserve their fixed context',
+    () async {
+      for (final option in const [
+        (operation: Operation.addition, missingOperation: false),
+        (operation: Operation.subtraction, missingOperation: false),
+        (operation: Operation.multiplication, missingOperation: false),
+        (operation: Operation.division, missingOperation: false),
+        (operation: Operation.mixed, missingOperation: false),
+        (operation: Operation.mixed, missingOperation: true),
+      ]) {
+        for (final numberType in const [
+          NumberType.natural,
+          NumberType.integers,
+          NumberType.rationals,
+        ]) {
+          final state = await makeState();
+          await startFreePractice(
+            state,
+            operation: option.operation,
+            missingOperation: option.missingOperation,
+            numberType: numberType,
+          );
+          final snapshot = state.activeRunSnapshot!;
+          expect(snapshot.operation, option.operation);
+          expect(
+            snapshot.questionMechanic.name,
+            option.missingOperation ? 'missingOperation' : 'standard',
+          );
+          expect(snapshot.numberType, numberType);
+          expect(snapshot.difficulty, Difficulty.medium);
+          expect(snapshot.questionTarget, 40);
+          expect(snapshot.mentalMathEntry, MentalMathEntry.freePractice);
+          expect(snapshot.answerStyle, AnswerStyle.choice4);
+
+          await state.replayGame();
+          state.rt.timer?.cancel();
+          expect(
+            state.activeRunSnapshot?.mentalMathEntry,
+            MentalMathEntry.freePractice,
+          );
+          expect(
+            state.activeRunSnapshot?.questionMechanic.name,
+            option.missingOperation ? 'missingOperation' : 'standard',
+          );
+          expect(state.activeRunSnapshot?.difficulty, Difficulty.medium);
+          expect(state.activeRunSnapshot?.questionTarget, 40);
+          expect(state.activeRunSnapshot?.answerStyle, AnswerStyle.choice4);
+        }
+      }
+    },
+  );
 
   test('unsupported manipulated Mental Math setup fails closed', () async {
     for (final configure in <void Function(GameState)>[
@@ -185,61 +241,64 @@ void main() {
   });
 
   testWidgets(
-      'Mental Math is evidence-excluded while a normal control remains eligible',
-      (tester) async {
-    var evaluations = 0;
-    final state = await makeState(
-      adaptiveShadowEvaluator: (_, __) {
-        evaluations++;
-        return const AdaptiveIntegrationDecision.noAdaptation();
-      },
-    );
-    await state.submitFamilyAgeRange(FamilyAgeRange.adult18plus);
-    await state.setGameBrainPreference(true);
-    await startFreePractice(
-      state,
-      operation: Operation.addition,
-      tester: tester,
-    );
-    state.onAnswer(state.rt.q!.ans);
+    'Mental Math is evidence-excluded while a normal control remains eligible',
+    (tester) async {
+      var evaluations = 0;
+      final state = await makeState(
+        adaptiveShadowEvaluator: (_, __) {
+          evaluations++;
+          return const AdaptiveIntegrationDecision.noAdaptation();
+        },
+      );
+      await state.submitFamilyAgeRange(FamilyAgeRange.adult18plus);
+      await state.setGameBrainPreference(true);
+      await startFreePractice(
+        state,
+        operation: Operation.addition,
+        tester: tester,
+      );
+      state.onAnswer(state.rt.q!.ans);
 
-    expect(state.debugP1F01IntegrityRunEligible, isFalse);
-    expect(state.debugQuestionExperienceObservationCount, 0);
-    expect(state.debugContextEvidenceObservationCount, 0);
-    expect(evaluations, 0);
+      expect(state.debugP1F01IntegrityRunEligible, isFalse);
+      expect(state.debugQuestionExperienceObservationCount, 0);
+      expect(state.debugContextEvidenceObservationCount, 0);
+      expect(evaluations, 0);
 
-    await state.quitToMenu();
-    state
-      ..rt.challenge = Operation.addition
-      ..players = 1
-      ..mode = GameMode.standard
-      ..adaptive = false
-      ..diff = Difficulty.easy
-      ..questionCount = 10;
-    state.startGame();
-    state.rt.timer?.cancel();
-    state.onAnswer(state.rt.q!.ans);
-    expect(state.debugQuestionExperienceObservationCount, 1);
-    expect(state.debugContextEvidenceObservationCount, 1);
-    expect(evaluations, 1);
-    await tester.pump(const Duration(milliseconds: 1301));
-    state.rt.timer?.cancel();
-    await tester.pump(const Duration(milliseconds: 1100));
-  });
+      await state.quitToMenu();
+      state
+        ..rt.challenge = Operation.addition
+        ..players = 1
+        ..mode = GameMode.standard
+        ..adaptive = false
+        ..diff = Difficulty.easy
+        ..questionCount = 10;
+      state.startGame();
+      state.rt.timer?.cancel();
+      state.onAnswer(state.rt.q!.ans);
+      expect(state.debugQuestionExperienceObservationCount, 1);
+      expect(state.debugContextEvidenceObservationCount, 1);
+      expect(evaluations, 1);
+      await tester.pump(const Duration(milliseconds: 1301));
+      state.rt.timer?.cancel();
+      await tester.pump(const Duration(milliseconds: 1100));
+    },
+  );
 
-  test('cancelled Free Practice cannot leak into ordinary Quick Practice',
-      () async {
-    final state = await makeState();
-    state.goToPracticeStyle('addition');
-    state.startMentalMathFreePractice();
-    state.backFromNumType();
-    state.startTimingPractice();
-    await state.selectNumType(NumberType.natural.name);
-    state.startGame();
-    state.rt.timer?.cancel();
+  test(
+    'cancelled Free Practice cannot leak into ordinary Quick Practice',
+    () async {
+      final state = await makeState();
+      state.goToPracticeStyle('addition');
+      state.startMentalMathFreePractice();
+      state.backFromNumType();
+      state.startTimingPractice();
+      await state.selectNumType(NumberType.natural.name);
+      state.startGame();
+      state.rt.timer?.cancel();
 
-    expect(state.activeRunSnapshot?.mentalMathEntry, isNull);
-  });
+      expect(state.activeRunSnapshot?.mentalMathEntry, isNull);
+    },
+  );
 
   test('quit clears the active Mental Math snapshot', () async {
     final state = await makeState();

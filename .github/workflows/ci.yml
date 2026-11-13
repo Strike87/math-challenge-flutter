@@ -12,6 +12,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: '3.47.5'
       - run: flutter pub get
       # Golden tests run manually or in a dedicated golden environment because pixel output can differ by OS/font renderer.
       - name: Run non-golden tests

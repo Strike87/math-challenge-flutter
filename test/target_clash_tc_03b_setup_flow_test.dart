@@ -5,6 +5,7 @@ import 'package:math_challenge/features/target_clash/domain/target_clash_run_con
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/screens/config_screen.dart';
 import 'package:math_challenge/screens/menu_screen.dart';
+import 'package:math_challenge/screens/practice_screen.dart';
 import 'package:math_challenge/screens/numtype_screen.dart';
 import 'package:math_challenge/screens/player_screen.dart';
 import 'package:math_challenge/services/audio.dart';
@@ -208,6 +209,7 @@ class _Host extends StatelessWidget {
             body: Consumer<GameState>(
               builder: (context, gs, _) => switch (gs.currentScreen) {
                 GameScreen.menu => const MenuScreen(),
+                GameScreen.practice => const PracticeScreen(),
                 GameScreen.numType => const NumTypeScreen(),
                 GameScreen.config => const ConfigScreen(),
                 GameScreen.player => const PlayerSetupScreen(),

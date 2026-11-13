@@ -6,6 +6,7 @@ import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/models/game_data.dart';
 import 'package:math_challenge/screens/config_screen.dart';
 import 'package:math_challenge/screens/menu_screen.dart';
+import 'package:math_challenge/screens/practice_screen.dart';
 import 'package:math_challenge/screens/practice_style_screen.dart';
 import 'package:math_challenge/services/audio.dart';
 import 'package:math_challenge/services/settings.dart';
@@ -220,16 +221,6 @@ void main() {
         size: const Size(390, 844));
     expect(find.text('Training Arena'), findsOneWidget);
     expect(find.text('🚀'), findsOneWidget);
-    for (final label in [
-      'Addition',
-      'Subtraction',
-      'Multiplication',
-      'Division',
-      'Missing Operation',
-      'Mixed Operations',
-    ]) {
-      expect(find.text(label), findsOneWidget);
-    }
     final rowSize = tester.getSize(
       find.byKey(const Key('weak-skills-practice-row')),
     );
@@ -457,10 +448,16 @@ void main() {
       );
 
       expect(find.byType(SingleChildScrollView), findsOneWidget);
+      state.showPracticeMenu();
+      await _pumpScreen(
+        tester,
+        state,
+        const PracticeScreen(),
+        size: testCase.size,
+        textScale: testCase.textScale,
+      );
       for (final content in [
-        find.text('Master Challenge'),
-        find.text('Training Arena'),
-        find.text('QUICK PRACTICE'),
+        find.text('Practice'),
         find.text('Addition'),
       ]) {
         await tester.ensureVisible(content);
@@ -497,7 +494,7 @@ void main() {
       await _pumpScreen(
         tester,
         state,
-        const MenuScreen(),
+        const PracticeScreen(),
         size: testCase.size,
         textScale: testCase.textScale,
       );
