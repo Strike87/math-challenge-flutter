@@ -5,7 +5,7 @@ Every row records the last verification time and must be refreshed before work
 starts. `CI_PASSED`, `REVIEWED`, `MERGED`, `DEVICE_ACCEPTED`, and `RELEASED`
 are separate facts; one never implies another.
 
-**Last verified:** 2026-11-20T22:35:58Z  
+**Last verified:** 2026-11-20T22:35:58Z
 **Verified against:** `main` `5b2259cc3725d7ae7bff1c1fcb567e318ecc47ae`
 
 | ID | Scope | Status | Base → head / merge | Last verified | Evidence | Next permitted action |
