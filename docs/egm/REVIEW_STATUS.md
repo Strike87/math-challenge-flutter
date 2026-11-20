@@ -4,11 +4,15 @@
 **Scope:** documentation-only amendment to draft PR #101
 **Owner:** repository owner approval recorded in the Codex task
 **Base SHA:** `5b2259cc3725d7ae7bff1c1fcb567e318ecc47ae`
-**Pre-amendment head SHA:** `8c1a9ed7c7db6678f043a84d647feb118453ac73`
+**Branch:** `docs/egm-project-wide-governance`  
+**Pre-amendment head SHA:** `8c1a9ed7c7db6678f043a84d647feb118453ac73`  
+**Amendment head SHA:** `0acd5b0ee5d91bc7203b85fadc5c3f419cbe30e1`
 **Last verification:** 2026-11-20T19:23:13Z
 **Changed-file count before Amendment 01:** seven (`AGENTS.md` plus six new
 `docs/egm` files)
-**Current result:** `GOLDFISH_REVIEW_PENDING`
+**Current result:** `GOLDFISH_REVIEW_PENDING`  
+**Current GitHub review decision:** none (`reviewDecision` empty)  
+**Current CI:** pending on the amendment head; [Flutter check 1](https://github.com/Strike87/math-challenge-flutter/actions/runs/44830068089/job/136612472354), [Flutter check 2](https://github.com/Strike87/math-challenge-flutter/actions/runs/44830059993/job/136612445425), [VM guard 1](https://github.com/Strike87/math-challenge-flutter/actions/runs/44830068089/job/136612472924), [VM guard 2](https://github.com/Strike87/math-challenge-flutter/actions/runs/44830059993/job/136612445025)
 
 ## Approved amendment boundary
 
@@ -51,7 +55,7 @@ evidence and is not a review of the amended head.
 
 **Reviewer:** pending fresh-context dispatch
 **Isolation:** must be a new context with no inherited Elephant conversation
-**Reviewed SHA:** pending
+**Reviewed SHA:** pending (must be `0acd5b0ee5d91bc7203b85fadc5c3f419cbe30e1` or later)  
 **Timestamp:** pending
 **Classification:** pending `PASS` / `BLOCKED` / `INCONCLUSIVE`
 **Findings/disposition:** pending; unresolved blockers must remain listed
