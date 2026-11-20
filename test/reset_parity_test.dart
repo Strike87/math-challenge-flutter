@@ -123,6 +123,7 @@ void main() {
       expect(settings.dyslexia, isFalse);
       expect(settings.colorblind, isFalse);
       expect(settings.lowPerf, isFalse);
+      expect(settings.targetClashHowToPlaySeen, isFalse);
       expect(settings.reduceMotion, isFalse);
       expect(settings.animSpeed, 1.0);
     });

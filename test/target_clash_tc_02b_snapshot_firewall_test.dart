@@ -273,10 +273,17 @@ void main() {
     state.debugStartGameFromSnapshot(
         GameRunSnapshot.targetClash(config(Difficulty.easy)));
     expect(state.activeRunSnapshot, isNotNull);
-    expect(state.rt.gameActive, isTrue);
+    expect(state.rt.gameActive, isFalse);
     expect(state.rt.q, isNull);
     expect(state.isTargetClash, isTrue);
     expect(state.activeAdaptive, isFalse);
+    expect(state.debugP1F01IntegrityRunEligible, isFalse);
+    expect(state.debugQuestionExperienceObservationCount, 0);
+    expect(state.debugContextEvidenceObservationCount, 0);
+    state
+        .beginTargetClashAfterPreflight(state.pendingTargetClashPreflightRunId);
+    expect(state.rt.gameActive, isTrue);
+    expect(state.rt.q, isNull);
     expect(state.debugP1F01IntegrityRunEligible, isFalse);
     expect(state.debugQuestionExperienceObservationCount, 0);
     expect(state.debugContextEvidenceObservationCount, 0);

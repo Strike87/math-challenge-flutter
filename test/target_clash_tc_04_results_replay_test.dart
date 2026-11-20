@@ -203,6 +203,8 @@ void main() {
     expect(random.calls, 1);
     complete(state);
     await state.replayGame();
+    state
+        .beginTargetClashAfterPreflight(state.pendingTargetClashPreflightRunId);
     for (var i = 0; i < 6; i++) {
       resolve(state);
     }
@@ -333,7 +335,8 @@ final class _InitialFailureGenerator extends QuestionGenerator {
     required Operation type,
     required Difficulty diff,
     required NumberType numType,
-  }) => const [];
+  }) =>
+      const [];
 
   @override
   Question build({
@@ -362,7 +365,8 @@ final class _TargetClashQuestionGenerator extends QuestionGenerator {
     required Operation type,
     required Difficulty diff,
     required NumberType numType,
-  }) => const [6, 7, 8, 9, 10, 11, 12, 13, 14];
+  }) =>
+      const [6, 7, 8, 9, 10, 11, 12, 13, 14];
 
   @override
   Question build({

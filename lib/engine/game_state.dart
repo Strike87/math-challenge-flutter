@@ -87,6 +87,7 @@ final class TargetClashRevealState {
     required this.wasCorrect,
     required this.wasPerfectHit,
     required this.wasPowerShot,
+    required this.wasBossGuardProtected,
     required this.phase,
     required this.resolvedStageQuestionIndex,
     required this.resolvedStageQuestionCount,
@@ -97,6 +98,7 @@ final class TargetClashRevealState {
   final bool wasCorrect;
   final bool wasPerfectHit;
   final bool wasPowerShot;
+  final bool wasBossGuardProtected;
   final TargetClashPhase phase;
 
   /// Immutable stage facts from before runtime resolution.
@@ -644,6 +646,7 @@ class GameState extends ChangeNotifier {
     'mc_animSpeed',
     'mc_reduceMotion',
     'mc_lowPerf',
+    'mc_targetClashHowToPlaySeen',
     gameBrainPreferenceStorageKey,
   ];
 
@@ -675,6 +678,10 @@ class GameState extends ChangeNotifier {
   int _masterProgress = 0;
   GameRunSnapshot? _runSnapshot;
   TargetClashRuntimeState? _targetClashRuntime;
+  int? _pendingTargetClashPreflightRunId;
+
+  int? get pendingTargetClashPreflightRunId =>
+      _pendingTargetClashPreflightRunId;
   int _clashLensUses = 0;
   bool _clashScanUsed = false;
   bool _clashGuardUsed = false;
@@ -940,8 +947,10 @@ class GameState extends ChangeNotifier {
   }
 
   @visibleForTesting
-  void debugStartTargetClashForTest(TargetClashRunConfig config) =>
-      _startGame(replaySnapshot: GameRunSnapshot.targetClash(config));
+  void debugStartTargetClashForTest(TargetClashRunConfig config) {
+    _startGame(replaySnapshot: GameRunSnapshot.targetClash(config));
+    beginTargetClashAfterPreflight(pendingTargetClashPreflightRunId);
+  }
 
   @visibleForTesting
   void debugInstallTargetClashRuntimeForTest(TargetClashRuntimeState runtime) {
@@ -3207,9 +3216,13 @@ class GameState extends ChangeNotifier {
       return;
     }
 
-    audio.playStart();
-
     if (snapshot.runType == GameRunType.targetClash) {
+      // Target Clash has a presentation-owned preflight.  Its canonical first
+      // stage is prepared here, while question interaction and its timer wait
+      // until the preflight is dismissed.
+      rt
+        ..gameActive = false
+        ..state = 'paused';
       final config = snapshot.targetClashConfig!;
       final generator = TargetClashQuestionGenerator(questionGenerator: _qgen);
       _targetClashRuntime =
@@ -3224,9 +3237,12 @@ class GameState extends ChangeNotifier {
           phase: TargetClashRequestProfilePhase.ordinaryStage1,
         ),
       ));
-      _openTargetClashQuestion();
+      _pendingTargetClashPreflightRunId = _activeRunId;
+      notifyListeners();
       return;
     }
+
+    audio.playStart();
 
     if (snapshot.mode == GameMode.blitz) {
       rt.blitzTotalMs = GameConfig.blitzTimerDefault;
@@ -3239,6 +3255,25 @@ class GameState extends ChangeNotifier {
     }
 
     _nextTurn();
+  }
+
+  /// Activates the already-materialized Target Clash run after its pre-run
+  /// explanation is dismissed.  This is intentionally unavailable to normal
+  /// games and idempotent for stale UI callbacks.
+  bool beginTargetClashAfterPreflight(int? runId) {
+    if (runId == null ||
+        runId != _pendingTargetClashPreflightRunId ||
+        runId != _activeRunId ||
+        _runSnapshot?.runType != GameRunType.targetClash ||
+        rt.gameActive ||
+        _targetClashRuntime == null) return false;
+    _pendingTargetClashPreflightRunId = null;
+    rt
+      ..gameActive = true
+      ..state = 'playing';
+    audio.playStart();
+    _openTargetClashQuestion();
+    return true;
   }
 
   void _startMentalMathCountdown() {
@@ -3549,6 +3584,10 @@ class GameState extends ChangeNotifier {
     final wasPerfectHit = wasCorrect &&
         question.zone == TargetZone.bullseye &&
         question.correctAnswer == PresentationAnswer.equalTo;
+    final wasBossGuardProtected = !wasCorrect &&
+        runtime.phase == TargetClashPhase.boss &&
+        answer != null &&
+        _clashGuardToken == questionToken;
     final reveal = TargetClashRevealState(
       question: question,
       playerAnswer: answer,
@@ -3556,6 +3595,7 @@ class GameState extends ChangeNotifier {
       wasPerfectHit: wasPerfectHit,
       wasPowerShot:
           runtime.powerShotAppliedQuestionIndex == runtime.stageQuestionIndex,
+      wasBossGuardProtected: wasBossGuardProtected,
       phase: runtime.phase,
       resolvedStageQuestionIndex: runtime.stageQuestionIndex,
       resolvedStageQuestionCount: runtime.preparedStage!.questions.length,
@@ -4776,6 +4816,7 @@ class GameState extends ChangeNotifier {
   }
 
   void _invalidateActiveRun() {
+    _pendingTargetClashPreflightRunId = null;
     _cancelTargetClashReveal();
     final runId = _activeRunId;
     if (_runSnapshot?.runType == GameRunType.targetClash) {
@@ -6578,6 +6619,7 @@ class GameState extends ChangeNotifier {
       reduceMotion: false,
       animSpeed: 1.0,
     );
+    settings.loadTargetClashHowToPlaySeen(false);
   }
 
   // ─── Reaction pill clearing ─────────────────────────────────

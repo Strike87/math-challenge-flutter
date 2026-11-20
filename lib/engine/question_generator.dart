@@ -90,11 +90,31 @@ class QuestionGenerator {
           tick >= factor + 1 && tick <= 16 * factor - 1 && tick % factor != 0;
       switch (type) {
         case Operation.addition:
-          for (var left = factor + 1; left <= 16 * factor - 1; left++) {
-            if (!decimalTick(left)) continue;
-            for (var right = factor + 1; right <= 16 * factor - 1; right++) {
-              if (decimalTick(right)) results.add((left + right) / factor);
+          // Enumerate result ticks directly. For a sum tick [sum], legal
+          // left ticks lie in the intersection of both operand ranges:
+          // [factor + 1, 16 * factor - 1] and
+          // [sum - (16 * factor - 1), sum - (factor + 1)]. At most two
+          // residues are forbidden (integer left/right operands), so for
+          // factor >= 10 three consecutive candidates are sufficient to find
+          // a legal split whenever the interval contains one.
+          final minOperandTick = factor + 1;
+          final maxOperandTick = 16 * factor - 1;
+          for (var sum = minOperandTick * 2;
+              sum <= maxOperandTick * 2;
+              sum++) {
+            final lo = max(minOperandTick, sum - maxOperandTick);
+            final hi = min(maxOperandTick, sum - minOperandTick);
+            var legal = false;
+            for (var offset = 0; offset < 3; offset++) {
+              final left = lo + offset;
+              if (left > hi) break;
+              final right = sum - left;
+              if (left % factor != 0 && right % factor != 0) {
+                legal = true;
+                break;
+              }
             }
+            if (legal) results.add(sum / factor);
           }
         case Operation.subtraction:
           for (var result = factor + 1; result <= 9 * factor - 1; result++) {

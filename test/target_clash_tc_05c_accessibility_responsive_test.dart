@@ -223,9 +223,17 @@ void main() {
       );
 
       expect(
-        find.textContaining('INCORRECT •'),
+        find.byKey(const Key('target-clash-reveal-feedback')),
         findsOneWidget,
       );
+      final feedback = tester.widget<Text>(
+        find.byKey(const Key('target-clash-reveal-feedback')),
+      );
+      expect(feedback.data, 'INCORRECT');
+      final resolvedRelation = tester.widget<Text>(
+        find.byKey(const Key('target-clash-reveal-relation')),
+      );
+      expect(resolvedRelation.data, contains('<'));
 
       for (final key in const [
         Key('target-clash-relation-less'),
@@ -346,6 +354,20 @@ void main() {
           find.byKey(const Key('target-clash-relation-greater')),
           findsOneWidget,
         );
+
+        if (viewport.width > viewport.height) {
+          final hudBottom = tester
+              .getBottomLeft(find.byKey(const Key('target-clash-hud')))
+              .dy;
+          final arsenalTop = tester
+              .getTopLeft(find.byKey(const Key('target-clash-arsenal')))
+              .dy;
+          expect(
+            arsenalTop,
+            greaterThanOrEqualTo(hudBottom),
+            reason: 'Landscape Arsenal must stay below the HUD.',
+          );
+        }
       }
 
       final results = await makeState();
@@ -510,14 +532,22 @@ void main() {
       await tester.pump();
 
       expect(
-        find.textContaining('INCORRECT •'),
+        find.byKey(const Key('target-clash-reveal-feedback')),
         findsOneWidget,
       );
+      final feedback = tester.widget<Text>(
+        find.byKey(const Key('target-clash-reveal-feedback')),
+      );
+      expect(feedback.data, 'INCORRECT');
 
       expect(
         find.byKey(const Key('target-clash-reveal-relation')),
         findsOneWidget,
       );
+      final resolvedRelation = tester.widget<Text>(
+        find.byKey(const Key('target-clash-reveal-relation')),
+      );
+      expect(resolvedRelation.data, contains('<'));
 
       expect(tester.takeException(), isNull);
       await state.quitToMenu();

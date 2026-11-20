@@ -16,6 +16,7 @@ class SettingsService extends ChangeNotifier {
   bool _reduceMotion = false;
   bool _platformReduceMotion = false;
   double _animSpeed = 1.0;
+  bool _targetClashHowToPlaySeen = false;
 
   bool get dark => _dark;
   bool get sound => _sound;
@@ -26,6 +27,17 @@ class SettingsService extends ChangeNotifier {
   bool get reduceMotion => _reduceMotion || _platformReduceMotion;
   bool get manualReduceMotion => _reduceMotion;
   double get animSpeed => _animSpeed;
+  bool get targetClashHowToPlaySeen => _targetClashHowToPlaySeen;
+
+  void setTargetClashHowToPlaySeen(bool value) {
+    _targetClashHowToPlaySeen = value;
+    unawaited(Storage.setBool('mc_targetClashHowToPlaySeen', value));
+    notifyListeners();
+  }
+
+  void loadTargetClashHowToPlaySeen(bool value) {
+    _targetClashHowToPlaySeen = value;
+  }
 
   void load({
     required bool dark,

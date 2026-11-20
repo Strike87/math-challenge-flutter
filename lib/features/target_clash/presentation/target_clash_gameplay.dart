@@ -9,6 +9,7 @@ import '../../../features/target_clash/domain/target_clash_question.dart';
 import '../../../features/target_clash/domain/target_clash_runtime_state.dart';
 import '../../../game_config.dart';
 import '../../../models/math_fact.dart';
+import '../../../models/enums.dart';
 import '../../../services/settings.dart';
 import '../../../widgets/common.dart';
 
@@ -51,12 +52,27 @@ class _TargetClashGameplayState extends State<TargetClashGameplay> {
       );
     }
 
+    if (!gs.rt.gameActive && reveal == null) {
+      final preflightRunId = gs.pendingTargetClashPreflightRunId;
+      if (widget.s.targetClashHowToPlaySeen) {
+        WidgetsBinding.instance.addPostFrameCallback(
+            (_) => gs.beginTargetClashAfterPreflight(preflightRunId));
+        return const SizedBox(key: Key('target-clash-gameplay'));
+      }
+      return _TargetClashHowToPlay(
+        gs: gs,
+        s: widget.s,
+        difficulty: gs.activeRunSnapshot!.targetClashConfig!.difficulty,
+        preflightRunId: preflightRunId,
+      );
+    }
     final question = reveal?.question ?? gs.targetClashQuestion;
-    if (question == null)
+    if (question == null) {
       return const SizedBox(key: Key('target-clash-gameplay'));
-    final compactScreen =
-        MediaQuery.sizeOf(context).width > MediaQuery.sizeOf(context).height ||
-            MediaQuery.sizeOf(context).height < 650;
+    }
+    final viewport = MediaQuery.sizeOf(context);
+    final landscape = viewport.width > viewport.height;
+    final compactScreen = landscape || viewport.height < 650;
     final accepting = gs.rt.accepting && reveal == null;
     final actionArea = Column(
       mainAxisSize: MainAxisSize.min,
@@ -72,26 +88,30 @@ class _TargetClashGameplayState extends State<TargetClashGameplay> {
         ),
         if (reveal != null &&
             !runtime.finished &&
-            runtime.phase != TargetClashPhase.technicalFailure) ...[
+            runtime.phase != TargetClashPhase.technicalFailure &&
+            (runtime.isPowerShotReady ||
+                (_powerShotMessage != null &&
+                    identical(_powerShotMessageReveal, reveal)))) ...[
           const SizedBox(height: 14),
-          _PowerShot(
-            runtime: runtime,
-            enabled: runtime.isPowerShotReady && !runtime.isTriple,
-            s: widget.s,
-            onPressed: () {
-              final currentReveal = gs.targetClashReveal;
-              final outcome = gs.activateTargetClashPowerShot();
-              setState(() {
-                _powerShotMessage = switch (outcome) {
-                  TargetClashPowerShotOutcome.applied => 'POWER SHOT ARMED',
-                  TargetClashPowerShotOutcome.unavailable =>
-                    'POWER SHOT UNAVAILABLE',
-                  TargetClashPowerShotOutcome.denied => 'POWER SHOT DENIED',
-                };
-                _powerShotMessageReveal = currentReveal;
-              });
-            },
-          ),
+          if (runtime.isPowerShotReady)
+            _PowerShot(
+              runtime: runtime,
+              enabled: runtime.isPowerShotReady && !runtime.isTriple,
+              s: widget.s,
+              onPressed: () {
+                final currentReveal = gs.targetClashReveal;
+                final outcome = gs.activateTargetClashPowerShot();
+                setState(() {
+                  _powerShotMessage = switch (outcome) {
+                    TargetClashPowerShotOutcome.applied => 'POWER SHOT ARMED',
+                    TargetClashPowerShotOutcome.unavailable =>
+                      'POWER SHOT UNAVAILABLE',
+                    TargetClashPowerShotOutcome.denied => 'POWER SHOT DENIED',
+                  };
+                  _powerShotMessageReveal = currentReveal;
+                });
+              },
+            ),
           if (_powerShotMessage != null &&
               identical(_powerShotMessageReveal, reveal))
             Padding(
@@ -135,6 +155,7 @@ class _TargetClashGameplayState extends State<TargetClashGameplay> {
         _Hud(
           runtime: runtime,
           reveal: reveal,
+          bossGuardArmed: gs.clashGuardActive,
           s: widget.s,
           compact: compactScreen,
         ),
@@ -146,7 +167,11 @@ class _TargetClashGameplayState extends State<TargetClashGameplay> {
               16,
               compactScreen ? 12 : 16,
             ),
-            child: Center(
+            // Keep the scrollable gameplay group anchored below the HUD in
+            // landscape. Centering a short viewport can pull the Arsenal row
+            // into the HUD edge before the user has a chance to scroll.
+            child: Align(
+              alignment: landscape ? Alignment.topCenter : Alignment.center,
               child: ConstrainedBox(
                 key: const Key('target-clash-gameplay'),
                 constraints: const BoxConstraints(maxWidth: 720),
@@ -154,7 +179,12 @@ class _TargetClashGameplayState extends State<TargetClashGameplay> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _ClashArsenal(gs: gs, s: widget.s),
-                    SizedBox(height: compactScreen ? 8 : 12),
+                    SizedBox(
+                        height: landscape
+                            ? 16
+                            : compactScreen
+                                ? 8
+                                : 12),
                     AnimatedSwitcher(
                       duration: (!widget.s.reduceMotion && !widget.s.lowPerf)
                           ? widget.s.duration(180)
@@ -204,6 +234,64 @@ class _TargetClashGameplayState extends State<TargetClashGameplay> {
       ],
     );
   }
+}
+
+class _TargetClashHowToPlay extends StatelessWidget {
+  const _TargetClashHowToPlay(
+      {required this.gs,
+      required this.s,
+      required this.difficulty,
+      required this.preflightRunId});
+  final GameState gs;
+  final SettingsService s;
+  final Difficulty difficulty;
+  final int? preflightRunId;
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+        child: Center(
+          key: const Key('target-clash-how-to-play'),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text('HOW TO PLAY',
+                  style: TextStyle(
+                      fontFamily: AppFonts.headFor(s),
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900)),
+              const SizedBox(height: 12),
+              Text(
+                  difficulty == Difficulty.easy
+                      ? 'Build a Target Streak, face the Boss, then clear the Final Target.'
+                      : 'Build a Target Streak, complete Triple Clash, face the Boss, then clear the Final Target.',
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 10),
+              const Text(
+                  'Use Sign Lens, Balance Scan, Boss Guard, and Triple Memory at the right moment.',
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 20),
+              FilledButton(
+                key: const Key('target-clash-how-to-play-start'),
+                onPressed: () =>
+                    gs.beginTargetClashAfterPreflight(preflightRunId),
+                child: const Text('START CLASH'),
+              ),
+              TextButton(
+                key: const Key('target-clash-how-to-play-dont-show-again'),
+                onPressed: () {
+                  if (gs.beginTargetClashAfterPreflight(preflightRunId)) {
+                    s.setTargetClashHowToPlaySeen(true);
+                  }
+                },
+                child: const Text("DON'T SHOW AGAIN"),
+              ),
+              ]),
+            ),
+          ),
+        ),
+      );
 }
 
 class _ClashArsenal extends StatelessWidget {
@@ -298,14 +386,22 @@ class _ClashArsenal extends StatelessWidget {
                       child: OutlinedButton(
                         onPressed: reason == null ? onTap : null,
                         style: OutlinedButton.styleFrom(
-                            foregroundColor: color,
+                            foregroundColor:
+                                consumed ? color.withValues(alpha: .32) : color,
                             disabledForegroundColor:
-                                color.withValues(alpha: .5),
-                            backgroundColor:
-                                active ? color.withValues(alpha: .14) : null,
+                                color.withValues(alpha: consumed ? .32 : .5),
+                            backgroundColor: active
+                                ? color.withValues(alpha: .14)
+                                : consumed
+                                    ? color.withValues(alpha: .04)
+                                    : null,
                             side: BorderSide(
-                                color:
-                                    color.withValues(alpha: active ? 1 : .45),
+                                color: color.withValues(
+                                    alpha: active
+                                        ? 1
+                                        : consumed
+                                            ? .22
+                                            : .45),
                                 width: active ? 2 : 1),
                             minimumSize: const Size(48, 48),
                             padding: const EdgeInsets.all(8)),
@@ -337,7 +433,7 @@ class _ClashArsenal extends StatelessWidget {
             () => _show(
                 context,
                 'Sign Lens',
-                'Use one of ${gs.clashLensRemaining} remaining uses to show an applicable signed-number rule for this question.',
+                'Signed-number hint: ${gs.clashSignRule ?? 'compare signs before magnitudes'}. This uses one lens charge.',
                 gs.activateClashLens)),
         control(
             'scan',
@@ -402,7 +498,6 @@ class _ClashArsenal extends StatelessWidget {
         Text(
             'Expression value: ${_number(question.expressionValue, question.expression)}',
             key: const Key('target-clash-scan-value')),
-      if (gs.clashGuardActive) const Text('Boss Guard armed for this question'),
     ]);
   }
 }
@@ -411,12 +506,14 @@ class _Hud extends StatefulWidget {
   const _Hud({
     required this.runtime,
     required this.reveal,
+    required this.bossGuardArmed,
     required this.s,
     required this.compact,
   });
 
   final TargetClashRuntimeState runtime;
   final TargetClashRevealState? reveal;
+  final bool bossGuardArmed;
   final SettingsService s;
   final bool compact;
 
@@ -531,7 +628,8 @@ class _HudState extends State<_Hud> {
     };
     final bossIndicator = runtime.phase == TargetClashPhase.boss
         ? Semantics(
-            label: 'Boss health, ${runtime.bossHealth} remaining',
+            label:
+                'Boss health, ${runtime.bossHealth} of ${runtime.bossMaximumHealth} remaining',
             child: AnimatedContainer(
               key: const Key('target-clash-boss-health'),
               duration: effectsEnabled ? s.duration(200) : Duration.zero,
@@ -557,7 +655,7 @@ class _HudState extends State<_Hud> {
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      'BOSS HEALTH  ${runtime.bossHealth}',
+                      'BOSS HEALTH  ${runtime.bossHealth} / ${runtime.bossMaximumHealth}',
                       maxLines: 1,
                       softWrap: false,
                       style: _statusLabel(s, compact),
@@ -574,7 +672,7 @@ class _HudState extends State<_Hud> {
                     builder: (context, health, _) => Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        for (var i = 0; i < 5; i++) ...[
+                        for (var i = 0; i < runtime.bossMaximumHealth; i++) ...[
                           if (i > 0) const SizedBox(width: 5),
                           Container(
                             width: compact ? 8 : 11,
@@ -684,7 +782,7 @@ class _HudState extends State<_Hud> {
                         phase,
                         key: const Key('target-clash-phase'),
                         style: TextStyle(
-                          color: accent,
+                          color: s.dark ? s.text : accent,
                           fontSize: 12,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.05,
@@ -714,14 +812,31 @@ class _HudState extends State<_Hud> {
                   const Color(GameConfig.sky),
                 )),
                 Expanded(
-                    child: _Metric(
-                  'COMBO',
-                  '${runtime.displayCombo}',
-                  const Key('target-clash-combo'),
-                  s,
-                  compact,
-                  const Color(GameConfig.mango),
-                )),
+                    child: Stack(children: [
+                  _Metric(
+                    'COMBO',
+                    '${runtime.displayCombo}',
+                    const Key('target-clash-combo'),
+                    s,
+                    compact,
+                    const Color(GameConfig.mango),
+                  ),
+                  if (widget.bossGuardArmed)
+                    Positioned(
+                      right: 2,
+                      top: 1,
+                      child: Semantics(
+                        label:
+                            'Boss Guard armed: Combo is protected on one incorrect Boss answer only',
+                        child: Icon(
+                          Icons.shield_outlined,
+                          key: const Key('target-clash-guard-armed'),
+                          size: compact ? 15 : 18,
+                          color: const Color(GameConfig.coral),
+                        ),
+                      ),
+                    ),
+                ])),
                 Expanded(
                     child: _Metric(
                   'MULTI',
@@ -901,14 +1016,17 @@ class _QuestionPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final isReveal = reveal != null;
     final relation = _relation(question.correctAnswer);
-    final feedback = isReveal
-        ? reveal!.playerAnswer == null
-            ? 'TIMEOUT • $relation'
-            : reveal!.wasCorrect
-                ? reveal!.wasPerfectHit
-                    ? 'PERFECT HIT'
-                    : 'CORRECT • $relation'
-                : 'INCORRECT • $relation'
+    final activeReveal = reveal;
+    final feedback = activeReveal != null
+        ? activeReveal.playerAnswer == null
+            ? 'TIMEOUT'
+            : activeReveal.wasBossGuardProtected
+                ? 'COMBO PROTECTED'
+                : activeReveal.wasCorrect
+                    ? activeReveal.wasPerfectHit
+                        ? 'PERFECT HIT'
+                        : null
+                    : 'INCORRECT'
         : null;
     return SizedBox(
       width: double.infinity,
@@ -982,17 +1100,17 @@ class _QuestionPanel extends StatelessWidget {
                     fontFamily: AppFonts.headFor(s),
                     fontWeight: FontWeight.w800)),
             SizedBox(height: compact ? 4 : 10),
-            Semantics(
-              liveRegion: true,
-              child: Text(
-                  '${reveal!.wasPowerShot ? 'POWER SHOT • ' : ''}$feedback',
-                  key: const Key('target-clash-reveal-feedback'),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: s.text,
-                      fontFamily: AppFonts.headFor(s),
-                      fontWeight: FontWeight.w900)),
-            ),
+            if (feedback != null)
+              Semantics(
+                liveRegion: true,
+                child: Text(feedback,
+                    key: const Key('target-clash-reveal-feedback'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: s.text,
+                        fontFamily: AppFonts.headFor(s),
+                        fontWeight: FontWeight.w900)),
+              ),
           ],
         ]),
       ),

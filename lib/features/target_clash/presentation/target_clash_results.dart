@@ -31,8 +31,6 @@ class _TargetClashResultsState extends State<TargetClashResults> {
     final config = widget.gs.activeRunSnapshot?.targetClashConfig;
     if (summary == null || config == null) return const SizedBox.shrink();
     final rows = [
-      if (summary.assisted)
-        ('Run', 'ASSISTED — scores and combos not comparable'),
       ('Score', '${summary.score}'),
       ('Correct', '${summary.correct}'),
       ('Accuracy', '${summary.accuracyPercent.round()}%'),
@@ -68,6 +66,14 @@ class _TargetClashResultsState extends State<TargetClashResults> {
                   ),
                 ),
                 const SizedBox(height: 20),
+                if (summary.assisted) ...[
+                  const Text('ASSISTED',
+                      key: Key('target-clash-results-assisted'),
+                      style: TextStyle(fontWeight: FontWeight.w900)),
+                  const Text(
+                      'Scores and combos from assisted runs are not comparable.'),
+                  const SizedBox(height: 12),
+                ],
                 for (final row in rows)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
