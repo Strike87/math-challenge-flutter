@@ -1,32 +1,69 @@
-# EGM bootstrap — preliminary source audit and independent review handoff
+# EGM Governance Amendment 01 — review status
 
-Review date: 2026-11-20. Scope: draft PR #101, six documentation-only files.
+**Task ID:** EGM-BOOTSTRAP-AMEND-01
+**Scope:** documentation-only amendment to draft PR #101
+**Owner:** repository owner approval recorded in the Codex task
+**Base SHA:** `5b2259cc3725d7ae7bff1c1fcb567e318ecc47ae`
+**Pre-amendment head SHA:** `8c1a9ed7c7db6678f043a84d647feb118453ac73`
+**Last verification:** 2026-11-20T19:23:13Z
+**Changed-file count before Amendment 01:** seven (`AGENTS.md` plus six new
+`docs/egm` files)
+**Current result:** `GOLDFISH_REVIEW_PENDING`
 
-## Classification
-**INCONCLUSIVE — INDEPENDENT_REVIEW_UNAVAILABLE.** This is a preliminary source audit conducted within the same assistant context as the original draft; it is **not** the independent Goldfish review demanded by the workflow and should not be recorded as `PASS`.
+## Approved amendment boundary
 
-## Verified
-- Root AGENTS.md still requires behavior contracts and refactor tracker, constrained task workflow, independent parity/review gates and explicit approvals.
-- Draft patch changed only AGENTS.md and five new `docs/egm/` Markdown files; no Dart, tests, workflow YAML, or product code.
-- GameBrain sources have distinct canonical governance; EGM docs explicitly grant no runtime/GameBrain authority.
-- Target Clash V5.4 is merged as PR #99; V5.5-A PR #100 is separate draft work. Revalidate their statuses when this document is used.
-- Official EGM repository: https://github.com/google/elephant-goldfish-model. It requires **fresh-subagent contexts** for Goldfish; if the agent cannot create them, the EGM review stops.
+Only these governance documents and the PR description are in scope:
 
-## Source-audit findings and dispositions
-1. **Blocker — independence:** The current connected tools have no verified fresh-context EGM reviewer. Do not represent same-context self-review as Goldfish. **Disposition:** independent review required before declaring EGM bootstrap reviewed.
-2. **Medium — manual drift:** The ledger is not auto-synced; stale PR statuses can mislead a future agent. **Disposition:** every task must recheck live PR and `main` and mark an unverified row `UNKNOWN`.
-3. **Medium — governance overlap:** The existing refactor tracker says only the first unchecked Active item may start. **Disposition:** AGENTS.md and tracker prevail; EGM docs only coordinate, do not expand authorization.
-4. **Low — documentation vs runtime:** Adding these files does not install Google EGM or enable reviewer subagents. **Disposition:** describe setup as an independent user/agent step.
+- `docs/egm/WORK_REGISTER.md`
+- `docs/egm/WORKFLOW.md`
+- `docs/egm/TASK_TEMPLATE.md`
+- `docs/egm/PROJECT_MEMORY.md`
+- `docs/egm/REVIEW_STATUS.md`
+- PR #101 description (file-count correction)
 
-## Reproducible independent review task
-Open this repository in a fresh reviewer-capable agent with the official EGM plugin installed. Supply only:
-- `docs/egm/README.md`, `PROJECT_MEMORY.md`, `WORK_REGISTER.md`, `WORKFLOW.md`, `TASK_TEMPLATE.md`
-- `AGENTS.md`, `docs/behavior_contracts.md`, `docs/refactor_tracker.md`, `docs/game_brain_integration_architecture.md`
-- PR #101 diff, plus current `main` state.
+`AGENTS.md` remains unchanged because its existing pointer and precedence
+rules are sufficient. No Dart, Flutter, tests, CI workflow, GameBrain runtime,
+persistence, build, merge, or release changes are authorized.
 
-Run the official EGM review skill (Codex: select EGM Review; Claude/Antigravity: `/egm:egm-review docs/egm/WORKFLOW.md`), ensuring that fresh reviewers are actually launched. Ask them to audit duplication, precedence, authority, stale status handling, scope, and test/rollback gates.
+## Findings addressed
 
-Capture reviewer identity/context independence and finding disposition in this file or a linked report. Only mark `PASS` if the independent reviewer actually returns it and any blocking findings are resolved.
+1. Correct the seven-file count everywhere it was stale.
+2. Add PR #98 and #99 merge evidence, PR #100 failed/pass check evidence, and
+   PR #101 branch/head/base/check/review distinctions with timestamps and
+   direct links.
+3. Make the first unchecked Active tracker item a mandatory gate. At this
+   verification, that item is `GBI`; work outside it is `BLOCKED` without a
+   recorded valid exception.
+4. Make task ID, owner, SHAs, verification time, authorization, CI links,
+   reviewer provenance, unresolved findings, and next action mandatory.
+5. Expand the source map to major modes and systems without copying contracts.
+6. Add a cross-source drift-detection checklist and fail-closed `UNKNOWN` /
+   `DRIFT` handling.
 
-## Merge/release gate
-PR #101 must remain draft until review and separately authorized merge. Do not build APK/AAB or publish the game.
+## Prior independent Goldfish result
+
+The prior fresh-context reviewer returned **`BLOCKED`** for the pre-amendment
+head. Findings were the missing PR #98 row, incorrect file count, under-recorded
+PR #100 failures, and the implicit tracker gate. This result remains historical
+evidence and is not a review of the amended head.
+
+## New independent review record
+
+**Reviewer:** pending fresh-context dispatch
+**Isolation:** must be a new context with no inherited Elephant conversation
+**Reviewed SHA:** pending
+**Timestamp:** pending
+**Classification:** pending `PASS` / `BLOCKED` / `INCONCLUSIVE`
+**Findings/disposition:** pending; unresolved blockers must remain listed
+
+## Merge and release gate
+
+PR #101 must remain draft until the amended head receives an independent
+Goldfish `PASS` and separate owner merge approval. Passing GitHub CI is not a
+replacement for independent review. Do not merge PR #101 or #100, build
+APK/AAB artifacts, or publish the game.
+
+## Next permitted action
+
+Run the documentation consistency checks, verify the complete diff and links,
+update the PR description, then dispatch the new independent Goldfish reviewer.
