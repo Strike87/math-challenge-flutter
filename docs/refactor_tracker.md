@@ -2,6 +2,20 @@
 
 Only the first unchecked item under **Active** may be started.
 
+
+## Proposed temporary exception — Target Clash V5.5-A CI lint repair
+
+- **Task ID:** TC-V55A-LINT-01
+- **Status:** OWNER APPROVED IN PRINCIPLE; INDEPENDENT GOVERNANCE REVIEW PENDING; **NOT ACTIVE**.
+- **Owner authorization:** 2026-11-21 (Africa/Cairo), documented in [PR #100 discussion](https://github.com/Strike87/math-challenge-flutter/pull/100#issuecomment-7053503322); owner subsequently instructed execution of the exception. Approval of scope is not an independent review PASS.
+- **Required approval to activate:** a genuinely separate fresh-context governance review of this exact amendment, reporting **PASS**, with reviewer, timestamp, reviewed SHA, and findings recorded before application as an operative exception. Until then, **do not start the lint fix**.
+- **Permitted task only once active:** correct the existing `avoid_print` and `prefer_interpolation_to_compose_strings` findings in `test/target_clash_v55a_difficulty_matrix_test.dart`, at the `TARGET_CLASH_V55A_MATRIX` log statement. Preserve the machine-readable prefix, JSON schema, 36 configuration observations, and all assertions.
+- **Explicit exclusions:** no production code, gameplay or scoring, question generation, difficulty formulas, other test files, goldens, CI workflow, GameBrain, persistence, or release change. No automatic merge of [PR #100](https://github.com/Strike87/math-challenge-flutter/pull/100).
+- **Ordering and authority:** this is a one-off ordinary test-only CI repair proposed outside the first-unchecked-Active gate. **GBI remains the first unchecked Active item** with unchanged order, status, and gameplay authority. No general out-of-order authorization is granted.
+- **Required execution gates after activation:** isolated clean worktree and bounded implementation-worker delegation; focused Target Clash tests, full applicable non-golden regression, visual-parity check (no golden updates), `flutter analyze`, `git diff --check`, independent final regression review, and separate owner merge approval.
+- **Lifecycle:** record **ACTIVE** only after independent governance PASS and owner authorization are verified. Upon acceptance, rejection, or abandonment of TC-V55A-LINT-01, record **CLOSED / EXPIRED**; the exception cannot be reused.
+
+
 ## Active
 
 - [x] BRAIN-06 — Offline synthetic-learning research tooling (CLOSED)
