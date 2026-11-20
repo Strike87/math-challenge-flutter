@@ -6,8 +6,8 @@
 **Base SHA:** `5b2259cc3725d7ae7bff1c1fcb567e318ecc47ae`
 **Branch:** `docs/egm-project-wide-governance`
 **Pre-amendment head SHA:** `8c1a9ed7c7db6678f043a84d647feb118453ac73`
-**Amendment head SHA:** `0778e5cbd34069e1cacd2406cf4557c9c7f9ab41`
-**Last verification:** 2026-11-20T22:35:58Z
+**Amendment head SHA:** `0b721a2f6cfd5e07c2a0a9bba13e39f2f26d37a0`
+**Last verification:** 2026-11-20T22:36:58Z
 **Changed-file count before Amendment 01:** seven (`AGENTS.md` plus six new
 `docs/egm` files)
 **Current result:** `GOLDFISH_REVIEW_PENDING`
@@ -55,7 +55,7 @@ evidence and is not a review of the amended head.
 
 **Reviewer:** pending fresh-context dispatch
 **Isolation:** must be a new context with no inherited Elephant conversation
-**Reviewed SHA:** pending (must be `0778e5cbd34069e1cacd2406cf4557c9c7f9ab41` or later)
+**Reviewed SHA:** pending (must be `0b721a2f6cfd5e07c2a0a9bba13e39f2f26d37a0` or later)
 **Timestamp:** pending
 **Classification:** pending `PASS` / `BLOCKED` / `INCONCLUSIVE`
 **Findings/disposition:** pending; unresolved blockers must remain listed
