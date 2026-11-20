@@ -6,7 +6,7 @@ State is **as of the referenced check**, not automatically synchronized with Git
 | --- | --- | --- | --- | --- |
 | TC-V5.4 | Target Clash gameplay, generator optimization, responsive UX | MERGED / release NOT verified | [PR #99](https://github.com/Strike87/math-challenge-flutter/pull/99), merge `5b2259cc3725d7ae7bff1c1fcb567e318ecc47ae` | Device acceptance and any release require separate approval |
 | TC-V5.5-A | Read-only 36-configuration difficulty baseline | DRAFT PR, CI status must be refreshed | [PR #100](https://github.com/Strike87/math-challenge-flutter/pull/100), branch `codex/target-clash-v55a-difficulty-matrix` | Check current CI and matrix output; independent review; no automatic merge |
-| EGM-BOOTSTRAP | Project-wide Elephant/Goldfish process and handoff | DRAFT PROCESS PROPOSAL | This branch / resulting draft PR | Independent review + owner approval before merge |
+| EGM-BOOTSTRAP | Project-wide Elephant/Goldfish process and handoff | DRAFT PR #101; independent review BLOCKED | [PR #101](https://github.com/Strike87/math-challenge-flutter/pull/101), [review status](REVIEW_STATUS.md) | Run genuine fresh-context Goldfish; resolve findings; separate owner merge approval |
 | GAMEBRAIN | Legacy and ongoing GameBrain authority gates | TRACKER-CONTROLLED, not globally “done” | [refactor tracker](../refactor_tracker.md) + [integration architecture](../game_brain_integration_architecture.md) | Follow specific subtask authorization; never infer runtime gameplay permission |
 
 ## Before any work
