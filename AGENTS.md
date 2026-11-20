@@ -10,6 +10,22 @@ Before working, read:
 
 Do not rely on undocumented assumptions or old conversation history.
 
+## Project-wide Elephant & Goldfish handoff (proposed)
+
+For context preservation and duplication checks, read
+`docs/egm/README.md`, `docs/egm/PROJECT_MEMORY.md` and
+`docs/egm/WORK_REGISTER.md` before starting a new workstream.
+Follow `docs/egm/WORKFLOW.md` and its task template when drafting a new
+cross-feature specification. These documents are **indexes**, not substitutes
+for live source code, approved contracts or this file's agent governance.
+
+Never claim a fresh Goldfish review was performed unless a genuinely separate
+fresh-context reviewer ran. If unavailable, record its unavailability and
+follow the fallback rules above. Do not treat this pointer as authorization
+to change behavior, commit, merge, build or release.
+
+---
+
 ## Repository
 
 This is a Flutter application.
