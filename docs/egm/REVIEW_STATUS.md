@@ -7,12 +7,13 @@
 **Branch:** `docs/egm-project-wide-governance`
 **Pre-amendment head SHA:** `8c1a9ed7c7db6678f043a84d647feb118453ac73`
 **Last substantive amendment head SHA:** `3aee7fe6a44efc4211c263bf0af8a2fb6ea70f72`
-**Last verification:** 2026-11-20T22:39:00Z
+**Current live head at last verification:** `3724b184af7c8f4921e23dd95e88263549874bc1`
+**Last verification:** 2026-11-20T22:42:00Z
 **Changed-file count before Amendment 01:** seven (`AGENTS.md` plus six new
 `docs/egm` files)
 **Current result:** `GOLDFISH_REVIEW_PENDING`
 **Current GitHub review decision:** none (`reviewDecision` empty)
-**Current CI:** pending on the amendment head; [Flutter check 1](https://github.com/Strike87/math-challenge-flutter/actions/runs/44830241614/job/136613042753), [Flutter check 2](https://github.com/Strike87/math-challenge-flutter/actions/runs/44830231013/job/136613006296), [VM guard 1](https://github.com/Strike87/math-challenge-flutter/actions/runs/44830241614/job/136613043194), [VM guard 2](https://github.com/Strike87/math-challenge-flutter/actions/runs/44830231013/job/136613005999)
+**Current CI at last verification:** [Flutter](https://github.com/Strike87/math-challenge-flutter/actions/runs/44831058325/job/136615809674), [Flutter](https://github.com/Strike87/math-challenge-flutter/actions/runs/44831069844/job/136615853756), [VM guard](https://github.com/Strike87/math-challenge-flutter/actions/runs/44831058325/job/136615810054), [VM guard](https://github.com/Strike87/math-challenge-flutter/actions/runs/44831069844/job/136615853527)
 
 ## Approved amendment boundary
 
@@ -25,8 +26,8 @@ Only these governance documents and the PR description are in scope:
 - `docs/egm/REVIEW_STATUS.md`
 - PR #101 description (file-count correction)
 
-`AGENTS.md` remains unchanged because its existing pointer and precedence
-rules are sufficient. No Dart, Flutter, tests, CI workflow, GameBrain runtime,
+`AGENTS.md` is part of the original seven-file PR baseline but unchanged by
+Amendment 01; its existing pointer and precedence rules are sufficient. No Dart, Flutter, tests, CI workflow, GameBrain runtime,
 persistence, build, merge, or release changes are authorized.
 
 ## Findings addressed
