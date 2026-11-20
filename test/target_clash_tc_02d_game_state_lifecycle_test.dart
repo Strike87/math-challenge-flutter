@@ -38,6 +38,7 @@ void main() {
     ContextEvidenceShadowObserver? contextObserver,
     P1F01IntegrityStore? p1F01IntegrityStore,
     P1F01StudyCoordinator? p1F01StudyCoordinator,
+    AudioService? audio,
   }) async {
     SharedPreferences.setMockInitialValues({});
     await Storage.init();
@@ -53,7 +54,7 @@ void main() {
           reduceMotion: true,
           animSpeed: 1,
         ),
-      audio: _NoOpAudioService(),
+      audio: audio ?? _NoOpAudioService(),
       questionGenerator: generator ?? _TargetClashQuestionGenerator(),
       runRandom: random,
       adaptiveShadowEvaluator: adaptiveShadowEvaluator,
@@ -176,6 +177,176 @@ void main() {
       expect(state.activeRunSnapshot!.timingStyle, TimingStyle.perQuestion);
       expect(state.rt.timer!.isActive, isTrue);
     }
+  });
+
+  test('Target Clash preflight starts its timer once after activation',
+      () async {
+    final state = await makeState();
+    state.debugStartGameFromSnapshot(
+      GameRunSnapshot.targetClash(config(Difficulty.medium)),
+    );
+
+    expect(state.rt.gameActive, isFalse);
+    expect(state.rt.timer, isNull);
+
+    state
+        .beginTargetClashAfterPreflight(state.pendingTargetClashPreflightRunId);
+    final firstTimer = state.rt.timer;
+
+    expect(state.rt.gameActive, isTrue);
+    expect(firstTimer?.isActive, isTrue);
+
+    state
+        .beginTargetClashAfterPreflight(state.pendingTargetClashPreflightRunId);
+
+    expect(state.rt.timer, same(firstTimer));
+  });
+
+  test('Target Clash preflight plays its start sound once on activation',
+      () async {
+    final audio = _CountingAudioService();
+    final state = await makeState(audio: audio);
+    final snapshot = GameRunSnapshot.targetClash(config(Difficulty.medium));
+
+    state.debugStartGameFromSnapshot(snapshot);
+    expect(audio.startCount, 0);
+
+    state
+        .beginTargetClashAfterPreflight(state.pendingTargetClashPreflightRunId);
+    expect(audio.startCount, 1);
+
+    state
+        .beginTargetClashAfterPreflight(state.pendingTargetClashPreflightRunId);
+    expect(audio.startCount, 1);
+
+    await state.replayGame();
+    expect(audio.startCount, 1);
+    state
+        .beginTargetClashAfterPreflight(state.pendingTargetClashPreflightRunId);
+    expect(audio.startCount, 2);
+  });
+
+  test(
+      'stale preflight tokens cannot reactivate completed, quit or replay runs',
+      () async {
+    final audio = _CountingAudioService();
+    final state = await makeState(audio: audio);
+    final snapshot = GameRunSnapshot.targetClash(config(Difficulty.easy));
+    state.debugStartGameFromSnapshot(snapshot);
+    final first = state.pendingTargetClashPreflightRunId;
+    expect(first, isNotNull);
+    expect(state.rt.gameActive, isFalse);
+    expect(state.rt.timer, isNull);
+    expect(audio.startCount, 0);
+    expect(state.beginTargetClashAfterPreflight(first), isTrue);
+    expect(audio.startCount, 1);
+    final timer = state.rt.timer;
+    expect(state.beginTargetClashAfterPreflight(first), isFalse);
+    expect(state.rt.timer, same(timer));
+    complete(state);
+    await Future<void>.delayed(Duration.zero);
+    final result = state.targetClashResultSummary;
+    final runtime = state.targetClashRuntime;
+    final score = runtime!.score;
+    final health = runtime.bossHealth;
+    final adCount = state.adGameCount;
+    final savedAdCount = Storage.getInt('mc_adGameCount', 0);
+    final pendingAd = state.debugPendingInterstitialAd;
+    final games = state.gamesPlayed;
+    final screen = state.currentScreen;
+    final modal = state.currentModal;
+    expect(state.beginTargetClashAfterPreflight(first), isFalse);
+    await Future<void>.delayed(Duration.zero);
+    expect(audio.startCount, 1);
+    expect(state.targetClashRuntime, same(runtime));
+    expect(state.targetClashRuntime!.score, score);
+    expect(state.targetClashRuntime!.bossHealth, health);
+    expect(state.targetClashResultSummary, same(result));
+    expect(state.adGameCount, adCount);
+    expect(Storage.getInt('mc_adGameCount', 0), savedAdCount);
+    expect(state.debugPendingInterstitialAd, pendingAd);
+    expect(state.gamesPlayed, games);
+    expect(state.currentScreen, screen);
+    expect(state.currentModal, modal);
+    expect(state.rt.gameActive, isFalse);
+
+    await state.replayGame();
+    final replay = state.pendingTargetClashPreflightRunId;
+    expect(replay, isNotNull);
+    expect(replay, isNot(first));
+    expect(state.beginTargetClashAfterPreflight(first), isFalse);
+    expect(state.rt.gameActive, isFalse);
+    expect(state.rt.timer?.isActive ?? false, isFalse);
+    expect(audio.startCount, 1);
+    expect(state.beginTargetClashAfterPreflight(replay), isTrue);
+    expect(state.beginTargetClashAfterPreflight(replay), isFalse);
+    expect(audio.startCount, 2);
+    await state.quitToMenu();
+    final menu = state.currentScreen;
+    expect(state.beginTargetClashAfterPreflight(replay), isFalse);
+    expect(state.currentScreen, menu);
+    expect(audio.startCount, 2);
+
+    state.debugStartGameFromSnapshot(snapshot);
+    final quitPreflight = state.pendingTargetClashPreflightRunId;
+    await state.quitToMenu();
+    expect(state.beginTargetClashAfterPreflight(quitPreflight), isFalse);
+    expect(state.rt.gameActive, isFalse);
+    expect(audio.startCount, 2);
+  });
+
+  test('stale preflight cannot duplicate completed-game cadence boundary',
+      () async {
+    final audio = _CountingAudioService();
+    final state = await makeState(audio: audio);
+    state.adGameCount = GameState.interstitialCadenceGames - 1;
+    state.debugStartGameFromSnapshot(
+        GameRunSnapshot.targetClash(config(Difficulty.easy)));
+    final token = state.pendingTargetClashPreflightRunId;
+    expect(state.beginTargetClashAfterPreflight(token), isTrue);
+    complete(state);
+    await Future<void>.delayed(Duration.zero);
+    expect(state.adGameCount, GameState.interstitialCadenceGames);
+    expect(Storage.getInt('mc_adGameCount', 0), state.adGameCount);
+    expect(state.debugPendingInterstitialAd, isTrue);
+    final result = state.targetClashResultSummary;
+    expect(state.beginTargetClashAfterPreflight(token), isFalse);
+    await Future<void>.delayed(Duration.zero);
+    expect(state.adGameCount, GameState.interstitialCadenceGames);
+    expect(Storage.getInt('mc_adGameCount', 0), state.adGameCount);
+    expect(state.debugPendingInterstitialAd, isTrue);
+    expect(state.targetClashResultSummary, same(result));
+    expect(audio.startCount, 1);
+  });
+
+  test('Target Clash quit before activation plays no start sound', () async {
+    final audio = _CountingAudioService();
+    final state = await makeState(audio: audio);
+    state.debugStartGameFromSnapshot(
+      GameRunSnapshot.targetClash(config(Difficulty.easy)),
+    );
+
+    await state.quitToMenu();
+
+    expect(audio.startCount, 0);
+  });
+
+  test('ordinary games retain one start sound', () async {
+    final audio = _CountingAudioService();
+    final state = await makeState(audio: audio);
+
+    state.debugStartGameFromSnapshot(GameRunSnapshot(
+      runType: GameRunType.normal,
+      mode: GameMode.standard,
+      operation: Operation.addition,
+      difficulty: Difficulty.easy,
+      numberType: NumberType.natural,
+      answerStyle: AnswerStyle.choice4,
+      players: 1,
+      questionTarget: 10,
+    ));
+
+    expect(audio.startCount, 1);
   });
 
   test('quit clears Target Clash runtime but terminal state remains until quit',
@@ -829,7 +1000,7 @@ final class _FailAtBoundaryQuestionGenerator
   _FailurePoint get failurePoint => _point;
 }
 
-final class _NoOpAudioService implements AudioService {
+class _NoOpAudioService implements AudioService {
   @override
   int get debugTonePlayCount => 0;
   @override
@@ -856,4 +1027,13 @@ final class _NoOpAudioService implements AudioService {
   void vibratePowerUp() {}
   @override
   void vibrateWrong() {}
+}
+
+final class _CountingAudioService extends _NoOpAudioService {
+  int startCount = 0;
+
+  @override
+  Future<void> playStart() async {
+    startCount++;
+  }
 }

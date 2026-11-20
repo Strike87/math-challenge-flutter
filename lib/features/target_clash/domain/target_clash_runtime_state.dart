@@ -198,7 +198,8 @@ final class TargetClashRuntimeState {
       ? null
       : preparedStage!.questions[stageQuestionIndex];
   num? get currentTarget => currentQuestion?.targetValue;
-  int get displayCombo => combo > 9 ? 9 : combo;
+  int get displayCombo => combo;
+  int get bossMaximumHealth => preparedStage?.questions.length ?? bossHealth;
   int get comboMultiplier =>
       combo == 0 ? 1 : (1 + ((combo - 1) ~/ 3)).clamp(1, 3);
   bool get isTriple => phase == TargetClashPhase.triple;

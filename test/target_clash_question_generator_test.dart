@@ -50,10 +50,9 @@ Question q(MathFact? fact) => Question(
 class ScriptedGenerator extends QuestionGenerator {
   ScriptedGenerator(this.questions,
       {Map<num, List<Question?>>? direct,
-      Map<num, Question?> reusableDirect = const {},
+      this.reusableDirect = const {},
       List<num> domain = const []})
       : direct = direct ?? {},
-        reusableDirect = reusableDirect,
         domain = domain.isNotEmpty
             ? domain
             : _domainForDirect([
@@ -142,6 +141,51 @@ final class _SelectionRandom implements Random {
     maxima.add(max);
     return value;
   }
+}
+
+final class _CountingRandom implements Random {
+  int calls = 0;
+
+  @override
+  bool nextBool() {
+    calls++;
+    return false;
+  }
+
+  @override
+  double nextDouble() {
+    calls++;
+    return 0;
+  }
+
+  @override
+  int nextInt(int max) {
+    calls++;
+    return 0;
+  }
+}
+
+List<num> _nestedRationalAdditionDomain(Difficulty difficulty) {
+  final places = switch (difficulty) {
+    Difficulty.easy || Difficulty.medium => 1,
+    Difficulty.hard || Difficulty.expert => 2,
+    Difficulty.insane => 3,
+  };
+  final factor = pow(10, places).toInt();
+  final minOperandTick = factor + 1;
+  final maxOperandTick = 16 * factor - 1;
+  bool isDecimalTick(int tick) =>
+      tick >= minOperandTick &&
+      tick <= maxOperandTick &&
+      tick % factor != 0;
+  final results = <num>{};
+  for (var left = minOperandTick; left <= maxOperandTick; left++) {
+    if (!isDecimalTick(left)) continue;
+    for (var right = minOperandTick; right <= maxOperandTick; right++) {
+      if (isDecimalTick(right)) results.add((left + right) / factor);
+    }
+  }
+  return results.toList()..sort((a, b) => a.compareTo(b));
 }
 
 void main() {
@@ -558,5 +602,36 @@ void main() {
     expect(domain, List<num>.generate(9, (index) => index + 1));
     expect(feasible, const [5]);
     expect(feasible.length, 1);
+  });
+
+  test('rational addition domain matches the nested reference', () {
+    for (final difficulty in [
+      Difficulty.easy,
+      Difficulty.medium,
+      Difficulty.hard,
+    ]) {
+      final expected = _nestedRationalAdditionDomain(difficulty);
+      final rng = _CountingRandom();
+      final actual = QuestionGenerator(rng: rng).canonicalDirectResultDomain(
+        type: Operation.addition,
+        diff: difficulty,
+        numType: NumberType.rationals,
+      );
+      final sorted = [...actual]..sort((a, b) => a.compareTo(b));
+      final places = switch (difficulty) {
+        Difficulty.easy || Difficulty.medium => 1,
+        Difficulty.hard || Difficulty.expert => 2,
+        Difficulty.insane => 3,
+      };
+      final factor = pow(10, places).toInt();
+
+      expect(actual, orderedEquals(expected), reason: '$difficulty domain');
+      expect(actual, orderedEquals(sorted), reason: '$difficulty sorted');
+      expect(actual.first, (2 * factor + 2) / factor,
+          reason: '$difficulty lower boundary');
+      expect(actual.last, (32 * factor - 2) / factor,
+          reason: '$difficulty upper boundary');
+      expect(rng.calls, 0, reason: '$difficulty consumed RNG');
+    }
   });
 }

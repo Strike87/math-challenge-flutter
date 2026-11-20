@@ -500,7 +500,7 @@ void main() {
         );
       }
       expect(state.resolvedCount, entry.$2);
-      expect(state.displayCombo, 9);
+      expect(state.displayCombo, entry.$2);
       expect(state.combo, entry.$2);
     }
   });

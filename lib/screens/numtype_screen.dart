@@ -371,15 +371,15 @@ class _NumTypeCard extends StatelessWidget {
                             color: color.withValues(alpha: 0.18),
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                        child: Wrap(
+                          spacing: 4,
+                          runSpacing: 2,
                           children: [
                             Icon(
                               statusIcon,
                               size: 13,
                               color: color,
                             ),
-                            const SizedBox(width: 4),
                             Text(
                               status,
                               style: TextStyle(

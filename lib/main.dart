@@ -91,6 +91,8 @@ class MathChallengeApp extends StatelessWidget {
             animSpeed: Storage.getDouble('mc_animSpeed', 1.0),
             notify: false,
           );
+          s.loadTargetClashHowToPlaySeen(
+              Storage.getBool('mc_targetClashHowToPlaySeen', false));
           return AudioService(s);
         }),
         ChangeNotifierProvider(create: (ctx) {

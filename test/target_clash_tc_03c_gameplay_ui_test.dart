@@ -24,7 +24,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  Future<engine.GameState> makeState({QuestionGenerator? generator}) async {
+  Future<engine.GameState> makeState(
+      {QuestionGenerator? generator, AudioService? audio}) async {
     SharedPreferences.setMockInitialValues({});
     await Storage.init();
     final state = engine.GameState(
@@ -39,7 +40,7 @@ void main() {
           reduceMotion: true,
           animSpeed: 1,
         ),
-      audio: _NoOpAudioService(),
+      audio: audio ?? _NoOpAudioService(),
       questionGenerator: generator ?? _TargetClashQuestionGenerator(),
     );
     await state.load();
@@ -109,8 +110,98 @@ void main() {
     expect(state.activeRunSnapshot!.players, 1);
     expect(state.activeRunSnapshot!.timingStyle, TimingStyle.perQuestion);
     expect(state.activeRunSnapshot!.targetClashConfig, isNotNull);
+    expect(find.byKey(const Key('target-clash-how-to-play')), findsOneWidget);
+    expect(state.targetClashQuestion, isNotNull);
+    expect(state.rt.timer, isNull);
+    await tester.tap(find.byKey(const Key('target-clash-how-to-play-start')));
+    await tester.pump();
+
     expect(find.byKey(const Key('target-clash-gameplay')), findsOneWidget);
+    expect(state.rt.timer?.isActive, isTrue);
     expect(find.byKey(const Key('answers-grid')), findsNothing);
+    await state.quitToMenu();
+  });
+
+  testWidgets(
+      'retained preflight buttons cannot activate replay or change preference',
+      (tester) async {
+    final state = await makeState();
+    final snapshot = engine.GameRunSnapshot.targetClash(config());
+    state.debugStartGameFromSnapshot(snapshot);
+    await tester.pumpWidget(_Host(state));
+    final oldStart = tester
+        .widget<FilledButton>(
+            find.byKey(const Key('target-clash-how-to-play-start')))
+        .onPressed!;
+    final oldDontShow = tester
+        .widget<TextButton>(
+            find.byKey(const Key('target-clash-how-to-play-dont-show-again')))
+        .onPressed!;
+    oldStart();
+    await tester.pump();
+    expect(state.rt.gameActive, isTrue);
+    await state.replayGame();
+    await tester.pump();
+    final replayToken = state.pendingTargetClashPreflightRunId;
+    expect(replayToken, isNotNull);
+    expect(state.settings.targetClashHowToPlaySeen, isFalse);
+    oldStart();
+    oldDontShow();
+    expect(state.rt.gameActive, isFalse);
+    expect(state.pendingTargetClashPreflightRunId, replayToken);
+    expect(state.settings.targetClashHowToPlaySeen, isFalse);
+    await tester.tap(find.byKey(const Key('target-clash-how-to-play-start')));
+    await tester.pump();
+    expect(state.rt.gameActive, isTrue);
+    await state.quitToMenu();
+  });
+
+  testWidgets('do not show again persists and replay auto-starts once',
+      (tester) async {
+    final audio = _CountingAudioService();
+    final state = await makeState(audio: audio);
+    state.debugStartGameFromSnapshot(
+        engine.GameRunSnapshot.targetClash(config()));
+    await tester.pumpWidget(_Host(state));
+    expect(audio.startCount, 0);
+    await tester
+        .tap(find.byKey(const Key('target-clash-how-to-play-dont-show-again')));
+    await tester.pump();
+    expect(state.rt.gameActive, isTrue);
+    expect(state.settings.targetClashHowToPlaySeen, isTrue);
+    expect(Storage.getBool('mc_targetClashHowToPlaySeen', false), isTrue);
+    expect(audio.startCount, 1);
+    await state.replayGame();
+    expect(state.rt.gameActive, isFalse);
+    await tester.pump();
+    expect(state.rt.gameActive, isTrue);
+    expect(audio.startCount, 2);
+    await tester.pump();
+    expect(audio.startCount, 2);
+    await state.quitToMenu();
+  });
+
+  testWidgets('stale scheduled auto-start cannot activate replacement run',
+      (tester) async {
+    final audio = _CountingAudioService();
+    final state = await makeState(audio: audio);
+    final snapshot = engine.GameRunSnapshot.targetClash(config());
+    state.settings.loadTargetClashHowToPlaySeen(true);
+    state.debugStartGameFromSnapshot(snapshot);
+    final oldRun = state.pendingTargetClashPreflightRunId;
+    tester.binding.addPostFrameCallback((_) {
+      state.debugStartGameFromSnapshot(snapshot);
+    });
+    await tester.pumpWidget(_Host(state));
+    expect(state.pendingTargetClashPreflightRunId, isNot(oldRun));
+    expect(state.pendingTargetClashPreflightRunId, isNotNull);
+    expect(state.rt.gameActive, isFalse);
+    expect(audio.startCount, 0);
+    await tester.pump();
+    expect(state.rt.gameActive, isTrue);
+    expect(audio.startCount, 1);
+    await tester.pump();
+    expect(audio.startCount, 1);
     await state.quitToMenu();
   });
 
@@ -275,7 +366,7 @@ void main() {
     await state.quitToMenu();
   });
 
-  testWidgets('wrong and timeout reveals retain canonical relation feedback',
+  testWidgets('wrong and timeout reveals use relation-only feedback',
       (tester) async {
     final state = await makeState();
     state.debugStartTargetClashForTest(config());
@@ -284,13 +375,15 @@ void main() {
         (answer) => answer != state.targetClashQuestion!.correctAnswer);
     state.onTargetClashAnswer(wrong);
     await tester.pump();
-    expect(find.textContaining('INCORRECT •'), findsOneWidget);
+    expect(find.textContaining('INCORRECT •'), findsNothing);
     expect(
         find.byKey(const Key('target-clash-reveal-relation')), findsOneWidget);
     state.debugCompleteTargetClashRevealForTest();
     state.debugTimeoutForTest();
     await tester.pump();
-    expect(find.textContaining('TIMEOUT •'), findsOneWidget);
+    expect(find.textContaining('TIMEOUT •'), findsNothing);
+    expect(
+        find.byKey(const Key('target-clash-reveal-feedback')), findsOneWidget);
     await state.quitToMenu();
   });
 
@@ -559,6 +652,15 @@ class _Host extends StatelessWidget {
           ),
         ),
       );
+}
+
+class _CountingAudioService extends _NoOpAudioService {
+  int startCount = 0;
+
+  @override
+  Future<void> playStart() async {
+    startCount++;
+  }
 }
 
 class _NoOpAudioService implements AudioService {

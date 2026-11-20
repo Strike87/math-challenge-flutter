@@ -173,6 +173,34 @@ class ConfigScreen extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
+                          if (gs.isTargetClashSetup)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                key: const Key(
+                                    'target-clash-how-to-play-reopen'),
+                                onPressed: () => showDialog<void>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('How to Play'),
+                                    content: Text(
+                                      gs.targetClashSetupDifficulty ==
+                                              Difficulty.easy
+                                          ? 'Build a Target Streak, face the Boss, then clear the Final Target. Sign Lens, Balance Scan, Boss Guard, and Triple Memory are available when their conditions are met.'
+                                          : 'Build a Target Streak, complete Triple Clash, face the Boss, then clear the Final Target. Sign Lens, Balance Scan, Boss Guard, and Triple Memory are available when their conditions are met.',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('CLOSE'),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                icon: const Icon(Icons.help_outline),
+                                label: const Text('HOW TO PLAY'),
+                              ),
+                            ),
                           const SizedBox(height: 18),
                           _SectionTitle(
                             gs.isTargetClashSetup
