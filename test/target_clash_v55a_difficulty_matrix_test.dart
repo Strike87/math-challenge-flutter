@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -148,12 +149,13 @@ void main() {
     }
     expect(combinations, 36);
     // Machine-readable observations are available in the CI test log.
-    print('TARGET_CLASH_V55A_MATRIX=' + jsonEncode({
+    final matrixJson = jsonEncode({
       'schema': 1,
       'configurations': combinations,
       'failures': failures,
       'rows': rows,
-    }));
+    });
+    stdout.writeln('TARGET_CLASH_V55A_MATRIX=$matrixJson');
     expect(failures, isEmpty, reason: failures.join('\n'));
   }, timeout: const Timeout(Duration(minutes: 8)));
 
