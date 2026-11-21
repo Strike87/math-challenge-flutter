@@ -2,6 +2,22 @@
 
 Only the first unchecked item under **Active** may be started.
 
+## Proposed temporary exception — Target Clash V5.5-A CI lint repair
+
+- **Task ID:** TC-V55A-LINT-01
+- **Status:** **ACTIVE / BOUNDED / NO MERGE AUTHORITY**. Activation is limited to the reviewed TC-V55A-LINT-01 scope below; it grants no production, acceptance, merge, release, or retroactive authorization.
+- **Owner authorization:** 2026-11-21 (Africa/Cairo), documented in [PR #100 discussion](https://github.com/Strike87/math-challenge-flutter/pull/100#issuecomment-7053503322). Owner scope approval is not an independent review PASS.
+- **Governance review:** PASS — `/root/goldfish_pr102_recovery_review`, fresh independent read-only context, reviewed `c95e40f875977b1fdb44edf9ac11da7d10521dcf`, timestamp 2026-11-21T13:07:22+02:00. This review applies to the corrected inactive amendment; any later scope or wording change requires re-review.
+- **Historical governance violation:** PR #100 commit `bb8735179dd22e5937d245f25029948e7bd0a91a` was pushed before this exception received independent Goldfish PASS. That out-of-order action is retained as history, is not retroactively authorized, and remains acceptance-blocked.
+- **Required ordering:** no new implementation or replay may begin until a genuinely independent fresh-context Goldfish review of this corrected exception returns `PASS`, the owner re-confirms the bounded scope, and this entry is explicitly activated. Passing CI never substitutes for that review.
+- **Bounded permitted task after activation only:** correct the existing `avoid_print` and `prefer_interpolation_to_compose_strings` findings in `test/target_clash_v55a_difficulty_matrix_test.dart` at the `TARGET_CLASH_V55A_MATRIX` log statement. Preserve the machine-readable prefix, JSON schema, 36 configuration observations, and every assertion.
+- **Explicit exclusions:** no production code, gameplay or scoring, question generation, difficulty formulas, other test files, goldens, CI workflow, GameBrain, persistence, or release change. No automatic merge of [PR #100](https://github.com/Strike87/math-challenge-flutter/pull/100).
+- **Ordering and authority:** this is a one-off exception request outside the first-unchecked-Active gate. **GBI remains the first unchecked Active item** with unchanged order, status, and gameplay authority. No general out-of-order authorization is granted.
+- **Safe rollback/replay:** before activation, preserve the original matrix commit and verify the provisional lint diff. If the exception is rejected or review remains blocked, leave PR #100 unaccepted and either revert only the lint commit with a non-destructive inverse commit or close the workstream without rewriting history. After activation, replay the identical lint-only change from a clean branch/worktree, compare the replay diff to the historical patch, and stop if unrelated files or behavior differ. Never force-push or reset shared history.
+- **Acceptance gates:** independent governance PASS and recorded activation; no unrelated PR #100 edits; focused Target Clash tests; applicable non-golden regression; visual parity without golden updates; `flutter analyze`; diff checks; independent final regression review PASS; tracker reconciliation; and separate owner merge approval.
+- **Lifecycle:** `PROPOSED` → `GOVERNANCE_REVIEW_PENDING` → `ACTIVE` after the recorded PASS and owner re-confirmation; then `CLOSED` or `EXPIRED` after acceptance, rejection, or abandonment. Any later BLOCKED/INCONCLUSIVE review suspends activation and keeps acceptance blocked. The exception cannot be reused.
+
+
 ## Active
 
 - [x] BRAIN-06 — Offline synthetic-learning research tooling (CLOSED)
