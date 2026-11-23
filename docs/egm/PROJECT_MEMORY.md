@@ -69,3 +69,12 @@ unresolved risks, last verification timestamp, next permitted action, and
 authorization still needed.
 
 A change is not complete because someone wrote “done” in chat.
+
+## TC-V55B and PR #112 governance checkpoint — 2026-11-23
+
+This is a dated source-index update; older `Validated checkpoints` entries are historical and must not be read as the current PR status.
+
+- [PR #112](https://github.com/Strike87/math-challenge-flutter/pull/112) merged at `14342c4f655798189220d356f273c4d1be3562c5` after an **owner-accepted non-independent F0-NI** governance review; no claim of independent Goldfish PASS.
+- [PR #110](https://github.com/Strike87/math-challenge-flutter/pull/110) merged at `f5ad982695bc9985e456934a00cc44553d546021` (fixed test-only HEAD `e2f3d300996fa120e1b05ab3026f60b7f1559f70`). [PR CI](https://github.com/Strike87/math-challenge-flutter/actions/runs/45027283169) succeeded. [F2 activation](https://github.com/Strike87/math-challenge-flutter/pull/110#issuecomment-7087196729) and [F3 bounded non-independent PASS](https://github.com/Strike87/math-challenge-flutter/pull/110#issuecomment-7087207498) are recorded; the one-use exception is expired.
+- The test establishes 144 bounded domain materializations, **not** production GameState RNG-sequence equivalence. No device acceptance or release is asserted. [Tracker](../refactor_tracker.md) and [work register](WORK_REGISTER.md) remain authoritative for gate and workstream status. **GBI is still the first unchecked Active item.**
+- This documentation-only closeout proposal requires review and **separate owner merge approval**; it grants no runtime, code, build or release authority.
