@@ -34,85 +34,95 @@ class MenuScreen extends StatelessWidget {
 
                 // HOME CHALLENGES
                 _SectionLabel('CHALLENGES', s, trailing: _streakBadge(gs, s)),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final cardWidth = (constraints.maxWidth - 10) / 2;
-                    return Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        SizedBox(
-                            width: cardWidth,
-                            child: _CampaignCard(
-                              icon: '🏆',
-                              title: 'Master Challenge',
-                              subtitle: 'BOSS BATTLES • 5 STAGES',
-                              color: s.accent(GameConfig.coral),
-                              gradientColors: const [
-                                Color(GameConfig.grape),
-                                Color(GameConfig.punch),
-                                Color(GameConfig.coral)
-                              ],
-                              vertical: true,
-                              onTap: () => gs.goToConfig('master'),
-                            )),
-                        SizedBox(
-                            width: cardWidth,
-                            child: _CampaignCard(
-                              key: const Key('target-clash-challenge-entry'),
-                              icon: '🎯',
-                              title: 'Target Clash',
-                              subtitle: 'Compare • Aim • Strike',
-                              color: s.accent(GameConfig.sky),
-                              gradientColors: const [
-                                Color(GameConfig.sky),
-                                Color(GameConfig.mint)
-                              ],
-                              vertical: true,
-                              onTap: gs.startTargetClashSetup,
-                            )),
-                        SizedBox(
-                            width: cardWidth,
-                            child: _CampaignCard(
-                              key: const Key('daily-mental-math-row'),
-                              icon: '🧠⚡',
-                              title: 'Daily IQ Spark',
-                              subtitle: gs.isDailyMentalMathPerfectDay
-                                  ? '★ PERFECT DAY'
-                                  : gs.isDailyMentalMathClearedToday
-                                      ? 'CLEARED TODAY${gs.currentDailyMentalMathRecord?.bestGrade == null ? '' : ' • Grade ${gs.currentDailyMentalMathRecord!.bestGrade!.label}'}'
-                                      : '${gs.dailyMentalMathProfile.operationLabel.toUpperCase()} • ${gs.dailyMentalMathProfile.numberType.label.toUpperCase()} • AVAILABLE',
-                              color: s.accent(GameConfig.grape),
-                              gradientColors: const [
-                                Color(GameConfig.grape),
-                                Color(GameConfig.sky),
-                                Color(GameConfig.mint)
-                              ],
-                              vertical: true,
-                              onTap: gs.showDailyMentalMath,
-                            )),
-                        SizedBox(
-                            width: cardWidth,
-                            child: _CampaignCard(
-                              icon: gs.dailyBoss?.icon ?? '🐲',
-                              title: gs.dailyBoss?.name ?? 'Daily Boss',
-                              subtitle: gs.isDailyBossClaimedToday
-                                  ? 'CLEARED TODAY'
-                                  : 'NEW CHALLENGE TODAY',
-                              color: s.accent(GameConfig.punch),
-                              gradientColors: const [
-                                Color(GameConfig.punch),
-                                Color(GameConfig.coral),
-                                Color(GameConfig.mango)
-                              ],
-                              vertical: true,
-                              onTap: gs.isDailyBossClaimedToday
-                                  ? () {}
-                                  : gs.showDailyBoss,
-                            )),
-                      ],
-                    );
-                  },
+                Column(
+                  children: [
+                    IntrinsicHeight(
+                    child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                    Expanded(
+                    child: _CampaignCard(
+                    icon: '🏆',
+                    title: 'Master Challenge',
+                    subtitle: 'BOSS BATTLES • 5 STAGES',
+                    color: s.accent(GameConfig.coral),
+                    gradientColors: const [
+                    Color(GameConfig.grape),
+                    Color(GameConfig.punch),
+                    Color(GameConfig.coral)
+                    ],
+                    vertical: true,
+                    onTap: () => gs.goToConfig('master'),
+                    ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                    child: _CampaignCard(
+                    key: const Key('target-clash-challenge-entry'),
+                    icon: '🎯',
+                    title: 'Target Clash',
+                    subtitle: 'Compare • Aim • Strike',
+                    color: s.accent(GameConfig.sky),
+                    gradientColors: const [
+                    Color(GameConfig.sky),
+                    Color(GameConfig.mint)
+                    ],
+                    vertical: true,
+                    onTap: gs.startTargetClashSetup,
+                    ),
+                    ),
+                    ],
+                    ),
+                    ),
+                    const SizedBox(height: 10),
+                    IntrinsicHeight(
+                    child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                    Expanded(
+                    child: _CampaignCard(
+                    key: const Key('daily-mental-math-row'),
+                    icon: '🧠⚡',
+                    title: 'Daily IQ Spark',
+                    subtitle: gs.isDailyMentalMathPerfectDay
+                    ? '★ PERFECT DAY'
+                    : gs.isDailyMentalMathClearedToday
+                    ? 'CLEARED TODAY${gs.currentDailyMentalMathRecord?.bestGrade == null ? '' : ' • Grade ${gs.currentDailyMentalMathRecord!.bestGrade!.label}'}'
+                    : '${gs.dailyMentalMathProfile.operationLabel.toUpperCase()} • ${gs.dailyMentalMathProfile.numberType.label.toUpperCase()} • AVAILABLE',
+                    color: s.accent(GameConfig.grape),
+                    gradientColors: const [
+                    Color(GameConfig.grape),
+                    Color(GameConfig.sky),
+                    Color(GameConfig.mint)
+                    ],
+                    vertical: true,
+                    onTap: gs.showDailyMentalMath,
+                    ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                    child: _CampaignCard(
+                    icon: gs.dailyBoss?.icon ?? '🐲',
+                    title: gs.dailyBoss?.name ?? 'Daily Boss',
+                    subtitle: gs.isDailyBossClaimedToday
+                    ? 'CLEARED TODAY'
+                    : 'NEW CHALLENGE TODAY',
+                    color: s.accent(GameConfig.punch),
+                    gradientColors: const [
+                    Color(GameConfig.punch),
+                    Color(GameConfig.coral),
+                    Color(GameConfig.mango)
+                    ],
+                    vertical: true,
+                    onTap: gs.isDailyBossClaimedToday
+                    ? () {}
+                    : gs.showDailyBoss,
+                    ),
+                    ),
+                    ],
+                    ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 14),
                 Column(
