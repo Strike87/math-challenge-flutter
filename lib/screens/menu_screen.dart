@@ -42,34 +42,34 @@ class MenuScreen extends StatelessWidget {
                         children: [
                           Expanded(
                             child: _CampaignCard(
-                            icon: '🏆',
-                            title: 'Master Challenge',
-                            subtitle: 'BOSS BATTLES • 5 STAGES',
-                            color: s.accent(GameConfig.coral),
-                            gradientColors: const [
-                              Color(GameConfig.grape),
-                              Color(GameConfig.punch),
-                              Color(GameConfig.coral)
-                            ],
-                            vertical: true,
-                            onTap: () => gs.goToConfig('master'),
-                            ,
+                              icon: '🏆',
+                              title: 'Master Challenge',
+                              subtitle: 'BOSS BATTLES • 5 STAGES',
+                              color: s.accent(GameConfig.coral),
+                              gradientColors: const [
+                                Color(GameConfig.grape),
+                                Color(GameConfig.punch),
+                                Color(GameConfig.coral)
+                              ],
+                              vertical: true,
+                              onTap: () => gs.goToConfig('master'),
+                              ,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: _CampaignCard(
-                            key: const Key('target-clash-challenge-entry'),
-                            icon: '🎯',
-                            title: 'Target Clash',
-                            subtitle: 'Compare • Aim • Strike',
-                            color: s.accent(GameConfig.sky),
-                            gradientColors: const [
-                              Color(GameConfig.sky),
-                              Color(GameConfig.mint)
-                            ],
-                            vertical: true,
-                            onTap: gs.startTargetClashSetup,
-                            ,
+                              key: const Key('target-clash-challenge-entry'),
+                              icon: '🎯',
+                              title: 'Target Clash',
+                              subtitle: 'Compare • Aim • Strike',
+                              color: s.accent(GameConfig.sky),
+                              gradientColors: const [
+                                Color(GameConfig.sky),
+                                Color(GameConfig.mint)
+                              ],
+                              vertical: true,
+                              onTap: gs.startTargetClashSetup,
+                              ,
                           ),
                         ],
                       ),
@@ -81,43 +81,43 @@ class MenuScreen extends StatelessWidget {
                         children: [
                           Expanded(
                             child: _CampaignCard(
-                            key: const Key('daily-mental-math-row'),
-                            icon: '🧠⚡',
-                            title: 'Daily IQ Spark',
-                            subtitle: gs.isDailyMentalMathPerfectDay
-                                ? '★ PERFECT DAY'
-                                : gs.isDailyMentalMathClearedToday
-                                    ? 'CLEARED TODAY${gs.currentDailyMentalMathRecord?.bestGrade == null ? '' : ' • Grade ${gs.currentDailyMentalMathRecord!.bestGrade!.label}'}'
-                                    : '${gs.dailyMentalMathProfile.operationLabel.toUpperCase()} • ${gs.dailyMentalMathProfile.numberType.label.toUpperCase()} • AVAILABLE',
-                            color: s.accent(GameConfig.grape),
-                            gradientColors: const [
-                              Color(GameConfig.grape),
-                              Color(GameConfig.sky),
-                              Color(GameConfig.mint)
-                            ],
-                            vertical: true,
-                            onTap: gs.showDailyMentalMath,
-                            ,
+                              key: const Key('daily-mental-math-row'),
+                              icon: '🧠⚡',
+                              title: 'Daily IQ Spark',
+                              subtitle: gs.isDailyMentalMathPerfectDay
+                                  ? '★ PERFECT DAY'
+                                  : gs.isDailyMentalMathClearedToday
+                                      ? 'CLEARED TODAY${gs.currentDailyMentalMathRecord?.bestGrade == null ? '' : ' • Grade ${gs.currentDailyMentalMathRecord!.bestGrade!.label}'}'
+                                      : '${gs.dailyMentalMathProfile.operationLabel.toUpperCase()} • ${gs.dailyMentalMathProfile.numberType.label.toUpperCase()} • AVAILABLE',
+                              color: s.accent(GameConfig.grape),
+                              gradientColors: const [
+                                Color(GameConfig.grape),
+                                Color(GameConfig.sky),
+                                Color(GameConfig.mint)
+                              ],
+                              vertical: true,
+                              onTap: gs.showDailyMentalMath,
+                              ,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: _CampaignCard(
-                            icon: gs.dailyBoss?.icon ?? '🐲',
-                            title: gs.dailyBoss?.name ?? 'Daily Boss',
-                            subtitle: gs.isDailyBossClaimedToday
-                                ? 'CLEARED TODAY'
-                                : 'NEW CHALLENGE TODAY',
-                            color: s.accent(GameConfig.punch),
-                            gradientColors: const [
-                              Color(GameConfig.punch),
-                              Color(GameConfig.coral),
-                              Color(GameConfig.mango)
-                            ],
-                            vertical: true,
-                            onTap: gs.isDailyBossClaimedToday
-                                ? () {}
-                                : gs.showDailyBoss,
-                            ,
+                              icon: gs.dailyBoss?.icon ?? '🐲',
+                              title: gs.dailyBoss?.name ?? 'Daily Boss',
+                              subtitle: gs.isDailyBossClaimedToday
+                                  ? 'CLEARED TODAY'
+                                  : 'NEW CHALLENGE TODAY',
+                              color: s.accent(GameConfig.punch),
+                              gradientColors: const [
+                                Color(GameConfig.punch),
+                                Color(GameConfig.coral),
+                                Color(GameConfig.mango)
+                              ],
+                              vertical: true,
+                              onTap: gs.isDailyBossClaimedToday
+                                  ? () {}
+                                  : gs.showDailyBoss,
+                              ,
                           ),
                         ],
                       ),
