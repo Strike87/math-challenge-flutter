@@ -146,23 +146,17 @@ class MenuScreen extends StatelessWidget {
                 // SECONDARY NAVIGATION
                 _BottomNavDock(gs: gs),
                 const SizedBox(height: 16),
-                Center(
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        '🎓 Designed by Mr. Mohamed Khairy, Mathematics Supervisor',
-                        maxLines: 1,
-                        softWrap: false,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: s.muted,
-                          fontStyle: FontStyle.italic,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                SizedBox(
+                  width: double.infinity,
+                  child: Text(
+                    '🎓 Designed by Mr. Mohamed Khairy, Mathematics Supervisor',
+                    softWrap: true,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: s.muted,
+                      fontStyle: FontStyle.italic,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],
