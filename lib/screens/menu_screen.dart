@@ -53,7 +53,7 @@ class MenuScreen extends StatelessWidget {
                               ],
                               vertical: true,
                               onTap: () => gs.goToConfig('master'),
-                              ,
+                            ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -69,7 +69,7 @@ class MenuScreen extends StatelessWidget {
                               ],
                               vertical: true,
                               onTap: gs.startTargetClashSetup,
-                              ,
+                            ),
                           ),
                         ],
                       ),
@@ -97,7 +97,7 @@ class MenuScreen extends StatelessWidget {
                               ],
                               vertical: true,
                               onTap: gs.showDailyMentalMath,
-                              ,
+                            ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -117,7 +117,7 @@ class MenuScreen extends StatelessWidget {
                               onTap: gs.isDailyBossClaimedToday
                                   ? () {}
                                   : gs.showDailyBoss,
-                              ,
+                            ),
                           ),
                         ],
                       ),
