@@ -34,8 +34,9 @@ class MenuScreen extends StatelessWidget {
 
                 // HOME CHALLENGES
                 _SectionLabel('CHALLENGES', s, trailing: _streakBadge(gs, s)),
-                Builder(
-                  builder: (context) {
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final textWidth = (constraints.maxWidth - 10) / 2 - 20;
                     final cards = <Widget>[
                       _CampaignCard(
                         icon: '🏆',
@@ -48,6 +49,7 @@ class MenuScreen extends StatelessWidget {
                           Color(GameConfig.coral)
                         ],
                         vertical: true,
+                        textWidth: textWidth,
                         onTap: () => gs.goToConfig('master'),
                     ),
                       _CampaignCard(
@@ -61,6 +63,7 @@ class MenuScreen extends StatelessWidget {
                           Color(GameConfig.mint)
                         ],
                         vertical: true,
+                        textWidth: textWidth,
                         onTap: gs.startTargetClashSetup,
                     ),
                       _CampaignCard(
@@ -79,6 +82,7 @@ class MenuScreen extends StatelessWidget {
                           Color(GameConfig.mint)
                         ],
                         vertical: true,
+                        textWidth: textWidth,
                         onTap: gs.showDailyMentalMath,
                     ),
                       _CampaignCard(
@@ -94,6 +98,7 @@ class MenuScreen extends StatelessWidget {
                           Color(GameConfig.mango)
                         ],
                         vertical: true,
+                        textWidth: textWidth,
                         onTap: gs.isDailyBossClaimedToday
                             ? () {}
                             : gs.showDailyBoss,
@@ -566,6 +571,44 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
+class _ChallengeWordFitText extends StatelessWidget {
+  const _ChallengeWordFitText(this.text, {required this.style, required this.width});
+
+  final String text;
+  final TextStyle style;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final effectiveStyle = DefaultTextStyle.of(context).style.merge(style);
+    final baseSize = effectiveStyle.fontSize ?? 14;
+    var factor = 1.0;
+    final painter = TextPainter(
+      textDirection: Directionality.of(context),
+      textScaler: scaler,
+      maxLines: 1,
+    );
+    for (final word in text.split(RegExp(r'\s+'))) {
+      painter.text = TextSpan(text: word, style: effectiveStyle);
+      painter.layout();
+      if (width > 1 && painter.width > width - 1) {
+        final fit = (width - 1) / painter.width;
+        if (fit < factor) factor = fit;
+      }
+    }
+    painter.dispose();
+    return Text(
+      text,
+      softWrap: true,
+      style: style,
+      textScaler: factor < 1
+          ? TextScaler.linear(scaler.scale(baseSize) / baseSize * factor)
+          : scaler,
+    );
+  }
+}
+
 class _CampaignCard extends StatelessWidget {
   const _CampaignCard({
     super.key,
@@ -576,6 +619,7 @@ class _CampaignCard extends StatelessWidget {
     required this.onTap,
     this.gradientColors,
     this.vertical = false,
+    this.textWidth,
   });
 
   final String icon;
@@ -585,6 +629,7 @@ class _CampaignCard extends StatelessWidget {
   final VoidCallback onTap;
   final List<Color>? gradientColors;
   final bool vertical;
+  final double? textWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -629,9 +674,9 @@ class _CampaignCard extends StatelessWidget {
                   children: [
                     _CampaignIcon(icon: icon, size: 42),
                     const SizedBox(height: 8),
-                    Text(
+                    _ChallengeWordFitText(
                       title,
-                      softWrap: true,
+                      width: textWidth!,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -641,9 +686,9 @@ class _CampaignCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
+                    _ChallengeWordFitText(
                       subtitle,
-                      softWrap: true,
+                      width: textWidth!,
                       style: TextStyle(
                         fontSize: 10.5,
                         height: 1.1,
