@@ -97,6 +97,34 @@ void main() {
             matching: find.byType(InkWell),
           ).first;
           rects.add(tester.getRect(card));
+          final labels = find.descendant(
+            of: card,
+            matching: find.byType(RichText),
+          );
+          for (final element in labels.evaluate()) {
+            final paragraph = element.renderObject;
+            if (paragraph is! RenderParagraph) continue;
+            final text = paragraph.text.toPlainText();
+            if (text != name && !text.contains(' ')) continue;
+            expect(paragraph.didExceedMaxLines, isFalse,
+                reason: 'Truncated label: $text');
+            for (final match in RegExp(r'\S+').allMatches(text)) {
+              final boxes = paragraph.getBoxesForSelection(
+                TextSelection(baseOffset: match.start, extentOffset: match.end),
+              );
+              if (boxes.isEmpty) continue;
+              final firstTop = boxes.first.top;
+              expect(
+                boxes.every((box) => (box.top - firstTop).abs() < 1),
+                isTrue,
+                reason: 'Word split across lines: ${match.group(0)} in $text',
+              );
+              for (final box in boxes) {
+                expect(box.left, greaterThanOrEqualTo(-1));
+                expect(box.right, lessThanOrEqualTo(paragraph.size.width + 1));
+              }
+            }
+          }
         }
         expect((rects[0].height - rects[1].height).abs(), lessThan(1));
         expect((rects[2].height - rects[3].height).abs(), lessThan(1));
