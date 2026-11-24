@@ -637,8 +637,7 @@ class _CampaignCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      softWrap: true,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -650,8 +649,7 @@ class _CampaignCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      softWrap: true,
                       style: TextStyle(
                         fontSize: 10.5,
                         height: 1.1,
@@ -660,6 +658,7 @@ class _CampaignCard extends StatelessWidget {
                         letterSpacing: 0.4,
                       ),
                     ),
+                    const Spacer(),
                     const SizedBox(height: 5),
                     Align(
                       alignment: Alignment.bottomRight,
