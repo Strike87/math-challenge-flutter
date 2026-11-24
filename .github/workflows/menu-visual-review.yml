@@ -1,0 +1,27 @@
+name: Menu visual review
+on:
+  pull_request:
+    paths:
+      - 'lib/screens/menu_screen.dart'
+      - 'test/menu_challenge_card_consistency_test.dart'
+      - '.github/workflows/menu-visual-review.yml'
+permissions:
+  contents: read
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter test test/menu_challenge_card_consistency_test.dart
+        env:
+          CAPTURE_MENU_PREVIEWS: '1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: menu-visual-previews
+          path: build/menu-previews/*.png
+          if-no-files-found: error
+          retention-days: 7
