@@ -36,7 +36,7 @@ class MenuScreen extends StatelessWidget {
                 _SectionLabel('CHALLENGES', s, trailing: _streakBadge(gs, s)),
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final textWidth = (constraints.maxWidth - 10) / 2 - 20;
+                    final textWidth = (constraints.maxWidth - 10) / 2 - 22;
                     final cards = <Widget>[
                       _CampaignCard(
                         icon: '🏆',
@@ -583,28 +583,42 @@ class _ChallengeWordFitText extends StatelessWidget {
     final scaler = MediaQuery.textScalerOf(context);
     final effectiveStyle = DefaultTextStyle.of(context).style.merge(style);
     final baseSize = effectiveStyle.fontSize ?? 14;
-    var factor = 1.0;
     final painter = TextPainter(
       textDirection: Directionality.of(context),
-      textScaler: scaler,
       maxLines: 1,
     );
-    for (final word in text.split(RegExp(r'\s+'))) {
-      painter.text = TextSpan(text: word, style: effectiveStyle);
-      painter.layout();
-      if (width > 1 && painter.width > width - 1) {
-        final fit = (width - 1) / painter.width;
-        if (fit < factor) factor = fit;
+    final words = text.split(RegExp(r'\s+'));
+    final requested = scaler.scale(baseSize) / baseSize;
+    bool fits(double scale) {
+      painter.textScaler = TextScaler.linear(scale);
+      for (final word in words) {
+        painter.text = TextSpan(text: word, style: effectiveStyle);
+        painter.layout();
+        if (painter.width > width - 2) return false;
       }
+      return true;
+    }
+
+    var chosen = requested;
+    if (width > 2 && !fits(requested)) {
+      var low = 0.0;
+      var high = requested;
+      for (var i = 0; i < 16; i++) {
+        final mid = (low + high) / 2;
+        if (fits(mid)) {
+          low = mid;
+        } else {
+          high = mid;
+        }
+      }
+      chosen = low;
     }
     painter.dispose();
     return Text(
       text,
       softWrap: true,
       style: style,
-      textScaler: factor < 1
-          ? TextScaler.linear(scaler.scale(baseSize) / baseSize * factor)
-          : scaler,
+      textScaler: chosen < requested ? TextScaler.linear(chosen) : scaler,
     );
   }
 }
