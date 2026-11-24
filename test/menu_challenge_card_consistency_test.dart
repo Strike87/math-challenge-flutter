@@ -98,18 +98,13 @@ void main() {
           ).first;
           rects.add(tester.getRect(card));
         }
-        if (scale == 1) {
-          expect((rects[0].height - rects[1].height).abs(), lessThan(1));
-          expect((rects[2].height - rects[3].height).abs(), lessThan(1));
-          expect(rects[0].left, lessThan(rects[1].left));
-          expect(rects[2].left, lessThan(rects[3].left));
-        } else {
-          for (var i = 1; i < rects.length; i++) {
-            expect(rects[i].left, closeTo(rects[0].left, 1));
-            expect(rects[i].width, closeTo(rects[0].width, 1));
-            expect(rects[i].top, greaterThanOrEqualTo(rects[i - 1].bottom));
-          }
-        }
+        expect((rects[0].height - rects[1].height).abs(), lessThan(1));
+        expect((rects[2].height - rects[3].height).abs(), lessThan(1));
+        expect(rects[0].left, lessThan(rects[1].left));
+        expect(rects[2].left, lessThan(rects[3].left));
+        expect(rects[0].top, closeTo(rects[1].top, 1));
+        expect(rects[2].top, closeTo(rects[3].top, 1));
+        expect(rects[2].top, greaterThanOrEqualTo(rects[0].bottom));
         expect(tester.takeException(), isNull);
 
         final footer = find.text(
