@@ -23,7 +23,7 @@ void main() {
 
   for (final size in <Size>[const Size(320, 568), const Size(390, 844)]) {
     for (final scale in <double>[1, 1.5, 2]) {
-      testWidgets('challenge cards have equal row heights: $size at $scale',
+      testWidgets('challenge cards adapt layout: $size at $scale',
           (tester) async {
         SharedPreferences.setMockInitialValues(<String, Object>{});
         await Storage.init();
@@ -98,10 +98,18 @@ void main() {
           ).first;
           rects.add(tester.getRect(card));
         }
-        expect((rects[0].height - rects[1].height).abs(), lessThan(1));
-        expect((rects[2].height - rects[3].height).abs(), lessThan(1));
-        expect(rects[0].left, lessThan(rects[1].left));
-        expect(rects[2].left, lessThan(rects[3].left));
+        if (scale == 1) {
+          expect((rects[0].height - rects[1].height).abs(), lessThan(1));
+          expect((rects[2].height - rects[3].height).abs(), lessThan(1));
+          expect(rects[0].left, lessThan(rects[1].left));
+          expect(rects[2].left, lessThan(rects[3].left));
+        } else {
+          for (var i = 1; i < rects.length; i++) {
+            expect(rects[i].left, closeTo(rects[0].left, 1));
+            expect(rects[i].width, closeTo(rects[0].width, 1));
+            expect(rects[i].top, greaterThanOrEqualTo(rects[i - 1].bottom));
+          }
+        }
         expect(tester.takeException(), isNull);
 
         final footer = find.text(
