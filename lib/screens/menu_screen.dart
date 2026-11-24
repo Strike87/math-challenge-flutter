@@ -34,85 +34,71 @@ class MenuScreen extends StatelessWidget {
 
                 // HOME CHALLENGES
                 _SectionLabel('CHALLENGES', s, trailing: _streakBadge(gs, s)),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final scale = MediaQuery.textScalerOf(context).scale(16) / 16;
-                    final twoColumns = (constraints.maxWidth - 10) / 2 >=
-                        130 * scale;
+                Builder(
+                  builder: (context) {
                     final cards = <Widget>[
                       _CampaignCard(
-                      icon: '🏆',
-                      title: 'Master Challenge',
-                      subtitle: 'BOSS BATTLES • 5 STAGES',
-                      color: s.accent(GameConfig.coral),
-                      gradientColors: const [
-                        Color(GameConfig.grape),
-                        Color(GameConfig.punch),
-                        Color(GameConfig.coral)
-                      ],
-                      vertical: true,
-                      onTap: () => gs.goToConfig('master'),
+                        icon: '🏆',
+                        title: 'Master Challenge',
+                        subtitle: 'BOSS BATTLES • 5 STAGES',
+                        color: s.accent(GameConfig.coral),
+                        gradientColors: const [
+                          Color(GameConfig.grape),
+                          Color(GameConfig.punch),
+                          Color(GameConfig.coral)
+                        ],
+                        vertical: true,
+                        onTap: () => gs.goToConfig('master'),
                     ),
                       _CampaignCard(
-                      key: const Key('target-clash-challenge-entry'),
-                      icon: '🎯',
-                      title: 'Target Clash',
-                      subtitle: 'Compare • Aim • Strike',
-                      color: s.accent(GameConfig.sky),
-                      gradientColors: const [
-                        Color(GameConfig.sky),
-                        Color(GameConfig.mint)
-                      ],
-                      vertical: true,
-                      onTap: gs.startTargetClashSetup,
+                        key: const Key('target-clash-challenge-entry'),
+                        icon: '🎯',
+                        title: 'Target Clash',
+                        subtitle: 'Compare • Aim • Strike',
+                        color: s.accent(GameConfig.sky),
+                        gradientColors: const [
+                          Color(GameConfig.sky),
+                          Color(GameConfig.mint)
+                        ],
+                        vertical: true,
+                        onTap: gs.startTargetClashSetup,
                     ),
                       _CampaignCard(
-                      key: const Key('daily-mental-math-row'),
-                      icon: '🧠⚡',
-                      title: 'Daily IQ Spark',
-                      subtitle: gs.isDailyMentalMathPerfectDay
-                          ? '★ PERFECT DAY'
-                          : gs.isDailyMentalMathClearedToday
-                              ? 'CLEARED TODAY${gs.currentDailyMentalMathRecord?.bestGrade == null ? '' : ' • Grade ${gs.currentDailyMentalMathRecord!.bestGrade!.label}'}'
-                              : '${gs.dailyMentalMathProfile.operationLabel.toUpperCase()} • ${gs.dailyMentalMathProfile.numberType.label.toUpperCase()} • AVAILABLE',
-                      color: s.accent(GameConfig.grape),
-                      gradientColors: const [
-                        Color(GameConfig.grape),
-                        Color(GameConfig.sky),
-                        Color(GameConfig.mint)
-                      ],
-                      vertical: true,
-                      onTap: gs.showDailyMentalMath,
+                        key: const Key('daily-mental-math-row'),
+                        icon: '🧠⚡',
+                        title: 'Daily IQ Spark',
+                        subtitle: gs.isDailyMentalMathPerfectDay
+                            ? '★ PERFECT DAY'
+                            : gs.isDailyMentalMathClearedToday
+                                ? 'CLEARED TODAY${gs.currentDailyMentalMathRecord?.bestGrade == null ? '' : ' • Grade ${gs.currentDailyMentalMathRecord!.bestGrade!.label}'}'
+                                : '${gs.dailyMentalMathProfile.operationLabel.toUpperCase()} • ${gs.dailyMentalMathProfile.numberType.label.toUpperCase()} • AVAILABLE',
+                        color: s.accent(GameConfig.grape),
+                        gradientColors: const [
+                          Color(GameConfig.grape),
+                          Color(GameConfig.sky),
+                          Color(GameConfig.mint)
+                        ],
+                        vertical: true,
+                        onTap: gs.showDailyMentalMath,
                     ),
                       _CampaignCard(
-                      icon: gs.dailyBoss?.icon ?? '🐲',
-                      title: gs.dailyBoss?.name ?? 'Daily Boss',
-                      subtitle: gs.isDailyBossClaimedToday
-                          ? 'CLEARED TODAY'
-                          : 'NEW CHALLENGE TODAY',
-                      color: s.accent(GameConfig.punch),
-                      gradientColors: const [
-                        Color(GameConfig.punch),
-                        Color(GameConfig.coral),
-                        Color(GameConfig.mango)
-                      ],
-                      vertical: true,
-                      onTap: gs.isDailyBossClaimedToday
-                          ? () {}
-                          : gs.showDailyBoss,
+                        icon: gs.dailyBoss?.icon ?? '🐲',
+                        title: gs.dailyBoss?.name ?? 'Daily Boss',
+                        subtitle: gs.isDailyBossClaimedToday
+                            ? 'CLEARED TODAY'
+                            : 'NEW CHALLENGE TODAY',
+                        color: s.accent(GameConfig.punch),
+                        gradientColors: const [
+                          Color(GameConfig.punch),
+                          Color(GameConfig.coral),
+                          Color(GameConfig.mango)
+                        ],
+                        vertical: true,
+                        onTap: gs.isDailyBossClaimedToday
+                            ? () {}
+                            : gs.showDailyBoss,
                     ),
                     ];
-                    if (!twoColumns) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          for (var i = 0; i < cards.length; i++) ...[
-                            if (i > 0) const SizedBox(height: 10),
-                            cards[i],
-                          ],
-                        ],
-                      );
-                    }
                     return Column(
                       children: [
                         for (var i = 0; i < cards.length; i += 2) ...[
@@ -617,7 +603,7 @@ class _CampaignCard extends StatelessWidget {
         onTap: onTap,
         child: Container(
           constraints: BoxConstraints(minHeight: vertical ? 150 : 86),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: EdgeInsets.symmetric(horizontal: vertical ? 10 : 16, vertical: 14),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.centerLeft,
