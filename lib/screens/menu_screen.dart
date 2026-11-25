@@ -752,8 +752,7 @@ class _CampaignCard extends StatelessWidget {
                         children: [
                           Text(
                             title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            softWrap: true,
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,
@@ -764,8 +763,7 @@ class _CampaignCard extends StatelessWidget {
                           const SizedBox(height: 3),
                           Text(
                             subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            softWrap: true,
                             style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
