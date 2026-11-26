@@ -224,9 +224,14 @@ class _NumTypeCard extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
-            children: [
-              Container(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final scale = MediaQuery.textScalerOf(context).scale(16) / 16;
+              // Give labels the full card width only when enlarged text
+              // would otherwise be crowded by the two icon areas.
+              final stacked = scale > 1.3 &&
+                  constraints.maxWidth - 120 < 140 * scale;
+              final leading = Container(
                 width: 58,
                 height: 58,
                 decoration: BoxDecoration(
@@ -237,82 +242,81 @@ class _NumTypeCard extends StatelessWidget {
                   ),
                 ),
                 child: Center(
-                  child: Text(
-                    icon,
-                    style: TextStyle(
-                      fontSize: 27,
-                      fontWeight: FontWeight.w900,
-                      color: color,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      icon,
+                      style: TextStyle(
+                        fontSize: 27,
+                        fontWeight: FontWeight.w900,
+                        color: color,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: locked ? s.muted : s.text,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        fontFamily: AppFonts.headFor(s),
-                      ),
+              );
+              final details = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: locked ? s.muted : s.text,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: AppFonts.headFor(s),
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      desc,
-                      style: TextStyle(
-                        fontSize: 11,
-                        height: 1.25,
-                        color: s.muted,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    desc,
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.25,
+                      color: s.muted,
+                      fontWeight: FontWeight.w600,
                     ),
-                    const SizedBox(height: 9),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 9,
-                          vertical: 5,
+                  ),
+                  const SizedBox(height: 9),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: locked ? 0.08 : 0.12),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: color.withValues(alpha: 0.18),
                         ),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: locked ? 0.08 : 0.12),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: color.withValues(alpha: 0.18),
+                      ),
+                      child: Wrap(
+                        spacing: 4,
+                        runSpacing: 2,
+                        children: [
+                          Icon(
+                            statusIcon,
+                            size: 13,
+                            color: color,
                           ),
-                        ),
-                        child: Wrap(
-                          spacing: 4,
-                          runSpacing: 2,
-                          children: [
-                            Icon(
-                              statusIcon,
-                              size: 13,
+                          Text(
+                            status,
+                            style: TextStyle(
                               color: color,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.4,
                             ),
-                            Text(
-                              status,
-                              style: TextStyle(
-                                color: color,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.4,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
+                  ),
+                ],
+              );
+              final trailing = Container(
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
@@ -327,8 +331,32 @@ class _NumTypeCard extends StatelessWidget {
                   color: color,
                   size: 22,
                 ),
-              ),
-            ],
+              );
+
+              if (stacked) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [leading, trailing],
+                    ),
+                    const SizedBox(height: 12),
+                    details,
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  leading,
+                  const SizedBox(width: 14),
+                  Expanded(child: details),
+                  const SizedBox(width: 10),
+                  trailing,
+                ],
+              );
+            },
           ),
         ),
       ),
