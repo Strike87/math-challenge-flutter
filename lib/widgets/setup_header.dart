@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../game_config.dart';
 import '../services/settings.dart';
 import 'common.dart';
+import 'setup_word_fit_text.dart';
 
 class SetupHeader extends StatelessWidget {
   const SetupHeader({
@@ -64,7 +65,7 @@ class SetupHeader extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                Text(
+                SetupWordFitText(
                   title,
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -75,7 +76,7 @@ class SetupHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
+                SetupWordFitText(
                   subtitle,
                   textAlign: TextAlign.center,
                   style: TextStyle(
