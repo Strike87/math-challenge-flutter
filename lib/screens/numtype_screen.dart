@@ -4,6 +4,7 @@ import '../engine/game_state.dart';
 import '../game_config.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
+import '../widgets/setup_header.dart';
 
 class NumTypeScreen extends StatelessWidget {
   const NumTypeScreen({super.key});
@@ -28,7 +29,7 @@ class NumTypeScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _SetupHeader(
+                    SetupHeader(
                       title: 'Number Type',
                       subtitle: 'Pick your number world',
                       onBack: gs.backFromNumType,
@@ -107,92 +108,6 @@ class NumTypeScreen extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SetupHeader extends StatelessWidget {
-  const _SetupHeader({
-    required this.title,
-    required this.subtitle,
-    required this.onBack,
-    required this.s,
-  });
-
-  final String title;
-  final String subtitle;
-  final VoidCallback onBack;
-  final SettingsService s;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = s.accent(GameConfig.sky);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      decoration: BoxDecoration(
-        color: s.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: accent.withValues(alpha: 0.16),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 48,
-            height: 48,
-            child: Material(
-              color: accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(18),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: onBack,
-                child: Icon(
-                  Icons.arrow_back_rounded,
-                  color: s.text,
-                  size: 22,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              children: [
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: s.text,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w900,
-                    fontFamily: AppFonts.headFor(s),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: s.muted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 58),
-        ],
       ),
     );
   }
@@ -309,9 +224,14 @@ class _NumTypeCard extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
-            children: [
-              Container(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final scale = MediaQuery.textScalerOf(context).scale(16) / 16;
+              // Give labels the full card width only when enlarged text
+              // would otherwise be crowded by the two icon areas.
+              final stacked = scale > 1.3 &&
+                  constraints.maxWidth - 120 < 140 * scale;
+              final leading = Container(
                 width: 58,
                 height: 58,
                 decoration: BoxDecoration(
@@ -322,82 +242,81 @@ class _NumTypeCard extends StatelessWidget {
                   ),
                 ),
                 child: Center(
-                  child: Text(
-                    icon,
-                    style: TextStyle(
-                      fontSize: 27,
-                      fontWeight: FontWeight.w900,
-                      color: color,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      icon,
+                      style: TextStyle(
+                        fontSize: 27,
+                        fontWeight: FontWeight.w900,
+                        color: color,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: locked ? s.muted : s.text,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        fontFamily: AppFonts.headFor(s),
-                      ),
+              );
+              final details = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: locked ? s.muted : s.text,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: AppFonts.headFor(s),
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      desc,
-                      style: TextStyle(
-                        fontSize: 11,
-                        height: 1.25,
-                        color: s.muted,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    desc,
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.25,
+                      color: s.muted,
+                      fontWeight: FontWeight.w600,
                     ),
-                    const SizedBox(height: 9),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 9,
-                          vertical: 5,
+                  ),
+                  const SizedBox(height: 9),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: locked ? 0.08 : 0.12),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: color.withValues(alpha: 0.18),
                         ),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: locked ? 0.08 : 0.12),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: color.withValues(alpha: 0.18),
+                      ),
+                      child: Wrap(
+                        spacing: 4,
+                        runSpacing: 2,
+                        children: [
+                          Icon(
+                            statusIcon,
+                            size: 13,
+                            color: color,
                           ),
-                        ),
-                        child: Wrap(
-                          spacing: 4,
-                          runSpacing: 2,
-                          children: [
-                            Icon(
-                              statusIcon,
-                              size: 13,
+                          Text(
+                            status,
+                            style: TextStyle(
                               color: color,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.4,
                             ),
-                            Text(
-                              status,
-                              style: TextStyle(
-                                color: color,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.4,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
+                  ),
+                ],
+              );
+              final trailing = Container(
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
@@ -412,8 +331,32 @@ class _NumTypeCard extends StatelessWidget {
                   color: color,
                   size: 22,
                 ),
-              ),
-            ],
+              );
+
+              if (stacked) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [leading, trailing],
+                    ),
+                    const SizedBox(height: 12),
+                    details,
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  leading,
+                  const SizedBox(width: 14),
+                  Expanded(child: details),
+                  const SizedBox(width: 10),
+                  trailing,
+                ],
+              );
+            },
           ),
         ),
       ),

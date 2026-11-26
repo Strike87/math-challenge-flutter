@@ -6,6 +6,7 @@ import '../game_config.dart';
 import '../models/player.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
+import '../widgets/setup_header.dart';
 
 class PlayerSetupScreen extends StatefulWidget {
   const PlayerSetupScreen({super.key});
@@ -72,7 +73,7 @@ class _PlayerSetupScreenState extends State<PlayerSetupScreen> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 96 + keyboardInset),
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 96 + keyboardInset),
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
               child: Align(
@@ -82,7 +83,8 @@ class _PlayerSetupScreenState extends State<PlayerSetupScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _SetupHeader(
+                      SetupHeader(
+                        backKey: const Key('player-setup-back'),
                         title: title,
                         subtitle: subtitle,
                         onBack: () => _goBack(gs),
@@ -123,93 +125,6 @@ class _PlayerSetupScreenState extends State<PlayerSetupScreen> {
   }
 }
 
-class _SetupHeader extends StatelessWidget {
-  const _SetupHeader({
-    required this.title,
-    required this.subtitle,
-    required this.onBack,
-    required this.s,
-  });
-
-  final String title;
-  final String subtitle;
-  final VoidCallback onBack;
-  final SettingsService s;
-
-  @override
-  Widget build(BuildContext context) {
-    const accent = Color(GameConfig.sky);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-      decoration: BoxDecoration(
-        color: s.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: accent.withValues(alpha: 0.16),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: Material(
-              color: accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(18),
-              child: InkWell(
-                key: const Key('player-setup-back'),
-                borderRadius: BorderRadius.circular(18),
-                onTap: onBack,
-                child: Icon(
-                  Icons.arrow_back_rounded,
-                  color: s.text,
-                  size: 21,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              children: [
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: s.text,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    fontFamily: AppFonts.headFor(s),
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: s.muted,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 52),
-        ],
-      ),
-    );
-  }
-}
-
 class _PlayerProgress extends StatelessWidget {
   const _PlayerProgress({
     required this.currentStep,
@@ -224,8 +139,9 @@ class _PlayerProgress extends StatelessWidget {
     const coral = Color(GameConfig.coral);
 
     return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      key: const Key('player-setup-progress'),
+      constraints: const BoxConstraints(minHeight: 36),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: s.surface,
         borderRadius: BorderRadius.circular(18),
@@ -315,7 +231,7 @@ class _ProgressStep extends StatelessWidget {
         Flexible(
           child: Text(
             label,
-            overflow: TextOverflow.ellipsis,
+            softWrap: true,
             style: TextStyle(
               color: active ? s.text : s.muted,
               fontSize: 10.5,
@@ -416,9 +332,11 @@ class _PlayerSection extends StatelessWidget {
                         ),
                       ),
                       child: Center(
-                        child: AvatarWidget(
-                          avatar: pl.avatar,
-                          size: 39,
+                        child: MediaQuery.withNoTextScaling(
+                          child: AvatarWidget(
+                            avatar: pl.avatar,
+                            size: 39,
+                          ),
                         ),
                       ),
                     ),
@@ -522,11 +440,13 @@ class _PlayerSection extends StatelessWidget {
             key: Key('player-setup-name-p$pid'),
             initialValue: pl.name,
             decoration: InputDecoration(
-              prefixIcon: Container(
-                margin: const EdgeInsets.all(7),
-                child: AvatarWidget(
-                  avatar: pl.avatar,
-                  size: 26,
+              prefixIcon: Padding(
+                padding: const EdgeInsets.all(7),
+                child: MediaQuery.withNoTextScaling(
+                  child: AvatarWidget(
+                    avatar: pl.avatar,
+                    size: 26,
+                  ),
                 ),
               ),
               hintText: 'Enter Player $pid name',
@@ -684,9 +604,11 @@ class _AvatarOption extends StatelessWidget {
           child: Stack(
             children: [
               Center(
-                child: AvatarWidget(
-                  avatar: AvatarData.emoji(avatar),
-                  size: 36,
+                child: MediaQuery.withNoTextScaling(
+                  child: AvatarWidget(
+                    avatar: AvatarData.emoji(avatar),
+                    size: 36,
+                  ),
                 ),
               ),
               if (selected)

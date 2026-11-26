@@ -6,6 +6,8 @@ import '../game_config.dart';
 import '../models/enums.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
+import '../widgets/setup_header.dart';
+import '../widgets/setup_word_fit_text.dart';
 
 class ConfigScreen extends StatelessWidget {
   const ConfigScreen({super.key});
@@ -29,7 +31,7 @@ class ConfigScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _SetupHeader(
+                    SetupHeader(
                       s: s,
                       title: 'Game Setup',
                       subtitle: 'Build your challenge',
@@ -280,9 +282,13 @@ class ConfigScreen extends StatelessWidget {
                       title: 'PERSONALIZATION',
                       icon: Icons.auto_awesome_rounded,
                       accent: s.accent(GameConfig.coral),
-                      child: Row(
-                        children: [
-                          Container(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final scale =
+                              MediaQuery.textScalerOf(context).scale(14) / 14;
+                          final stacked = scale > 1.3 &&
+                              constraints.maxWidth < 280 * scale;
+                          final icon = Container(
                             width: 42,
                             height: 42,
                             decoration: BoxDecoration(
@@ -296,53 +302,76 @@ class ConfigScreen extends StatelessWidget {
                               color: s.accent(GameConfig.coral),
                               size: 22,
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          );
+                          final title = SetupWordFitText(
+                            'Adaptive Difficulty',
+                            style: TextStyle(
+                              color: s.text,
+                              fontWeight: FontWeight.w900,
+                              fontFamily: AppFonts.headFor(s),
+                            ),
+                          );
+                          final description = SetupWordFitText(
+                            'Automatically adjusts the challenge to your skill level',
+                            style: TextStyle(
+                              color: s.muted,
+                              fontSize: 11,
+                              height: 1.25,
+                            ),
+                          );
+                          final toggle = Switch.adaptive(
+                            value: gs.isMentalMathSetup
+                                ? false
+                                : gs.setupAdaptive,
+                            activeThumbColor: s.accent(GameConfig.coral),
+                            onChanged: gs.isMentalMathSetup ||
+                                    gs.isTargetClashSetup ||
+                                    gs.setupTimingStyle !=
+                                        TimingStyle.perQuestion
+                                ? null
+                                : gs.setAdaptive,
+                          );
+                          if (stacked) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Text(
-                                  'Adaptive Difficulty',
-                                  style: TextStyle(
-                                    color: s.text,
-                                    fontWeight: FontWeight.w900,
-                                    fontFamily: AppFonts.headFor(s),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
                                 Row(
                                   children: [
-                                    Expanded(
-                                      child: Text(
-                                        'Automatically adjusts the challenge to your skill level',
-                                        style: TextStyle(
-                                          color: s.muted,
-                                          fontSize: 11,
-                                          height: 1.25,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Switch.adaptive(
-                                      value: gs.isMentalMathSetup
-                                          ? false
-                                          : gs.setupAdaptive,
-                                      activeThumbColor:
-                                          s.accent(GameConfig.coral),
-                                      onChanged: gs.isMentalMathSetup ||
-                                              gs.isTargetClashSetup ||
-                                              gs.setupTimingStyle !=
-                                                  TimingStyle.perQuestion
-                                          ? null
-                                          : gs.setAdaptive,
+                                    icon,
+                                    const Spacer(),
+                                    toggle,
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                title,
+                                const SizedBox(height: 2),
+                                description,
+                              ],
+                            );
+                          }
+                          return Row(
+                            children: [
+                              icon,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    title,
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        Expanded(child: description),
+                                        const SizedBox(width: 8),
+                                        toggle,
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                          ),
-                        ],
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
 
@@ -404,95 +433,6 @@ class ConfigScreen extends StatelessWidget {
   }
 }
 
-class _SetupHeader extends StatelessWidget {
-  const _SetupHeader({
-    required this.s,
-    required this.title,
-    required this.subtitle,
-    required this.onBack,
-  });
-
-  final SettingsService s;
-  final String title;
-  final String subtitle;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = s.accent(GameConfig.sky);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 10,
-      ),
-      decoration: BoxDecoration(
-        color: s.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: accent.withValues(alpha: 0.16),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 48,
-            height: 48,
-            child: Material(
-              color: accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(18),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: onBack,
-                child: Icon(
-                  Icons.arrow_back_rounded,
-                  color: s.text,
-                  size: 22,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              children: [
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: s.text,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w900,
-                    fontFamily: AppFonts.headFor(s),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: s.muted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 58),
-        ],
-      ),
-    );
-  }
-}
-
 class _SetupGroup extends StatelessWidget {
   const _SetupGroup({
     required this.s,
@@ -546,7 +486,7 @@ class _SetupGroup extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
+                child: SetupWordFitText(
                   title,
                   style: TextStyle(
                     color: s.text,
@@ -609,17 +549,66 @@ class _ToggleRow<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final numericOnly = options.every((option) => option.value is int &&
+            int.tryParse(option.label) != null);
+        final columns = numericOnly
+            ? options.length
+            : _optionColumns(constraints.maxWidth, scale, options.length, 8);
+        return _ConfigOptionRows(
+          columns: columns,
+          gap: 8,
+          children: [
+            for (final option in options)
+              _ToggleButton(option: option, active: active, onPick: onPick),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// Keep the original single row at normal text sizes. At enlarged text
+// sizes, reserve more width per label without changing option order.
+int _optionColumns(double width, double scale, int count, double gap) {
+  if (scale <= 1.3) return count;
+  return ((width + gap) / (100 * scale + gap))
+      .floor()
+      .clamp(1, count)
+      .toInt();
+}
+
+class _ConfigOptionRows extends StatelessWidget {
+  const _ConfigOptionRows({
+    required this.columns,
+    required this.gap,
+    required this.children,
+  });
+
+  final int columns;
+  final double gap;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
       children: [
-        for (var i = 0; i < options.length; i++) ...[
-          Expanded(
-            child: _ToggleButton(
-              option: options[i],
-              active: active,
-              onPick: onPick,
-            ),
+        for (var start = 0; start < children.length; start += columns) ...[
+          if (start != 0) SizedBox(height: gap),
+          Row(
+            children: [
+              for (var column = 0; column < columns; column++) ...[
+                if (column != 0) SizedBox(width: gap),
+                Expanded(
+                  child: start + column < children.length
+                      ? children[start + column]
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ],
           ),
-          if (i != options.length - 1) const SizedBox(width: 8),
         ],
       ],
     );
@@ -643,6 +632,8 @@ class _ToggleButton<T> extends StatelessWidget {
     final isActive = o.value == active;
     final s = context.watch<SettingsService>();
     final parts = _splitIconLabel(o.label);
+    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final enlarged = scale > 1.3;
     return Opacity(
       opacity: o.enabled ? 1 : 0.4,
       child: Material(
@@ -651,7 +642,7 @@ class _ToggleButton<T> extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           onTap: o.enabled ? () => onPick(o.value) : null,
           child: Container(
-            height: 48,
+            height: enlarged ? 64 : 48,
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
             decoration: BoxDecoration(
@@ -688,7 +679,14 @@ class _ToggleButton<T> extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (parts.icon.isNotEmpty) ...[
-                  Text(parts.icon, style: const TextStyle(fontSize: 16)),
+                  SizedBox(
+                    width: enlarged ? 28 : null,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(parts.icon,
+                          style: const TextStyle(fontSize: 16)),
+                    ),
+                  ),
                   const SizedBox(width: 4),
                 ],
                 Flexible(
@@ -761,27 +759,25 @@ class _ModeTabs extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 340;
-          return Row(
+          final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
+          return _ConfigOptionRows(
+            columns: _optionColumns(
+                constraints.maxWidth, scale, availableModes.length, 4),
+            gap: 4,
             children: [
-              for (var i = 0; i < availableModes.length; i++) ...[
-                Expanded(
-                  child: _ModeTabButton(
-                    mode: availableModes[i],
-                    active: availableModes[i] == active,
-                    disabled: !GameMode.isAvailableForPlayers(
-                            availableModes[i], players) ||
-                        (standardOnly &&
-                            availableModes[i] != GameMode.standard) ||
-                        (context.watch<GameState>().setupTimingStyle !=
-                                TimingStyle.perQuestion &&
-                            availableModes[i] != GameMode.standard),
-                    compact: compact,
-                    settings: s,
-                    onPick: onPick,
-                  ),
+              for (final mode in availableModes)
+                _ModeTabButton(
+                  mode: mode,
+                  active: mode == active,
+                  disabled: !GameMode.isAvailableForPlayers(mode, players) ||
+                      (standardOnly && mode != GameMode.standard) ||
+                      (context.watch<GameState>().setupTimingStyle !=
+                              TimingStyle.perQuestion &&
+                          mode != GameMode.standard),
+                  compact: compact,
+                  settings: s,
+                  onPick: onPick,
                 ),
-                if (i != availableModes.length - 1) const SizedBox(width: 4),
-              ],
             ],
           );
         },
@@ -810,8 +806,9 @@ class _ModeTabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeColor = settings.accent(GameConfig.coral);
+    final enlarged = MediaQuery.textScalerOf(context).scale(12) > 15.6;
     Widget buttonContent = Container(
-      height: 60,
+      height: enlarged ? 84 : 60,
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 3 : 5,
         vertical: 7,
@@ -843,7 +840,7 @@ class _ModeTabButton extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           SizedBox(
-            height: 23,
+            height: enlarged ? 32 : 23,
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(mode.icon, style: const TextStyle(fontSize: 21)),
@@ -851,7 +848,7 @@ class _ModeTabButton extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           SizedBox(
-            height: 18,
+            height: enlarged ? 30 : 18,
             width: double.infinity,
             child: Center(
               child: FittedBox(
