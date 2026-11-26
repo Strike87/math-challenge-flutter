@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:math_challenge/engine/game_state.dart';
-import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
 
