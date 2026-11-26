@@ -125,6 +125,26 @@ void main() {
                 closeTo(tester.getCenter(answers[2]).dx, 1));
             expect(tester.getCenter(answers[1]).dx,
                 closeTo(tester.getCenter(answers[3]).dx, 1));
+            // Check the initial viewport, before ensureVisible scrolls it.
+            final scroll = find.ancestor(
+              of: content,
+              matching: find.byType(Scrollable),
+            );
+            expect(scroll, findsOneWidget);
+            final viewport = tester.getRect(scroll);
+            final expression = find.byKey(
+              const Key('gameplay-question-expression'),
+            );
+            for (final element in [expression, ...answers]) {
+              final rect = tester.getRect(element);
+              expect(rect.top, greaterThanOrEqualTo(viewport.top - 1),
+                  reason: 'Question and answers must remain visible together');
+              expect(rect.bottom, lessThanOrEqualTo(viewport.bottom + 1),
+                  reason: 'Question and answers must remain visible together');
+            }
+            for (final answer in answers) {
+              expect(answer.hitTestable(), findsOneWidget);
+            }
             for (var i = 0; i < answers.length; i++) {
               final answer = answers[i];
               await tester.ensureVisible(answer);
