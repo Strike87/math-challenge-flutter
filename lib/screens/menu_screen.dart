@@ -36,80 +36,89 @@ class MenuScreen extends StatelessWidget {
                 _SectionLabel('CHALLENGES', s, trailing: _streakBadge(gs, s)),
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final cardWidth = (constraints.maxWidth - 10) / 2;
-                    return Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
+                    final textWidth = (constraints.maxWidth - 10) / 2 - 22;
+                    final cards = <Widget>[
+                      _CampaignCard(
+                        icon: '🏆',
+                        title: 'Master Challenge',
+                        subtitle: 'BOSS BATTLES • 5 STAGES',
+                        color: s.accent(GameConfig.coral),
+                        gradientColors: const [
+                          Color(GameConfig.grape),
+                          Color(GameConfig.punch),
+                          Color(GameConfig.coral)
+                        ],
+                        vertical: true,
+                        textWidth: textWidth,
+                        onTap: () => gs.goToConfig('master'),
+                    ),
+                      _CampaignCard(
+                        key: const Key('target-clash-challenge-entry'),
+                        icon: '🎯',
+                        title: 'Target Clash',
+                        subtitle: 'Compare • Aim • Strike',
+                        color: s.accent(GameConfig.sky),
+                        gradientColors: const [
+                          Color(GameConfig.sky),
+                          Color(GameConfig.mint)
+                        ],
+                        vertical: true,
+                        textWidth: textWidth,
+                        onTap: gs.startTargetClashSetup,
+                    ),
+                      _CampaignCard(
+                        key: const Key('daily-mental-math-row'),
+                        icon: '🧠⚡',
+                        title: 'Daily IQ Spark',
+                        subtitle: gs.isDailyMentalMathPerfectDay
+                            ? '★ PERFECT DAY'
+                            : gs.isDailyMentalMathClearedToday
+                                ? 'CLEARED TODAY${gs.currentDailyMentalMathRecord?.bestGrade == null ? '' : ' • Grade ${gs.currentDailyMentalMathRecord!.bestGrade!.label}'}'
+                                : '${gs.dailyMentalMathProfile.operationLabel.toUpperCase()} • ${gs.dailyMentalMathProfile.numberType.label.toUpperCase()} • AVAILABLE',
+                        color: s.accent(GameConfig.grape),
+                        gradientColors: const [
+                          Color(GameConfig.grape),
+                          Color(GameConfig.sky),
+                          Color(GameConfig.mint)
+                        ],
+                        vertical: true,
+                        textWidth: textWidth,
+                        onTap: gs.showDailyMentalMath,
+                    ),
+                      _CampaignCard(
+                        icon: gs.dailyBoss?.icon ?? '🐲',
+                        title: gs.dailyBoss?.name ?? 'Daily Boss',
+                        subtitle: gs.isDailyBossClaimedToday
+                            ? 'CLEARED TODAY'
+                            : 'NEW CHALLENGE TODAY',
+                        color: s.accent(GameConfig.punch),
+                        gradientColors: const [
+                          Color(GameConfig.punch),
+                          Color(GameConfig.coral),
+                          Color(GameConfig.mango)
+                        ],
+                        vertical: true,
+                        textWidth: textWidth,
+                        onTap: gs.isDailyBossClaimedToday
+                            ? () {}
+                            : gs.showDailyBoss,
+                    ),
+                    ];
+                    return Column(
                       children: [
-                        SizedBox(
-                            width: cardWidth,
-                            child: _CampaignCard(
-                              icon: '🏆',
-                              title: 'Master Challenge',
-                              subtitle: 'BOSS BATTLES • 5 STAGES',
-                              color: s.accent(GameConfig.coral),
-                              gradientColors: const [
-                                Color(GameConfig.grape),
-                                Color(GameConfig.punch),
-                                Color(GameConfig.coral)
+                        for (var i = 0; i < cards.length; i += 2) ...[
+                          if (i > 0) const SizedBox(height: 10),
+                          IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(child: cards[i]),
+                                const SizedBox(width: 10),
+                                Expanded(child: cards[i + 1]),
                               ],
-                              vertical: true,
-                              onTap: () => gs.goToConfig('master'),
-                            )),
-                        SizedBox(
-                            width: cardWidth,
-                            child: _CampaignCard(
-                              key: const Key('target-clash-challenge-entry'),
-                              icon: '🎯',
-                              title: 'Target Clash',
-                              subtitle: 'Compare • Aim • Strike',
-                              color: s.accent(GameConfig.sky),
-                              gradientColors: const [
-                                Color(GameConfig.sky),
-                                Color(GameConfig.mint)
-                              ],
-                              vertical: true,
-                              onTap: gs.startTargetClashSetup,
-                            )),
-                        SizedBox(
-                            width: cardWidth,
-                            child: _CampaignCard(
-                              key: const Key('daily-mental-math-row'),
-                              icon: '🧠⚡',
-                              title: 'Daily IQ Spark',
-                              subtitle: gs.isDailyMentalMathPerfectDay
-                                  ? '★ PERFECT DAY'
-                                  : gs.isDailyMentalMathClearedToday
-                                      ? 'CLEARED TODAY${gs.currentDailyMentalMathRecord?.bestGrade == null ? '' : ' • Grade ${gs.currentDailyMentalMathRecord!.bestGrade!.label}'}'
-                                      : '${gs.dailyMentalMathProfile.operationLabel.toUpperCase()} • ${gs.dailyMentalMathProfile.numberType.label.toUpperCase()} • AVAILABLE',
-                              color: s.accent(GameConfig.grape),
-                              gradientColors: const [
-                                Color(GameConfig.grape),
-                                Color(GameConfig.sky),
-                                Color(GameConfig.mint)
-                              ],
-                              vertical: true,
-                              onTap: gs.showDailyMentalMath,
-                            )),
-                        SizedBox(
-                            width: cardWidth,
-                            child: _CampaignCard(
-                              icon: gs.dailyBoss?.icon ?? '🐲',
-                              title: gs.dailyBoss?.name ?? 'Daily Boss',
-                              subtitle: gs.isDailyBossClaimedToday
-                                  ? 'CLEARED TODAY'
-                                  : 'NEW CHALLENGE TODAY',
-                              color: s.accent(GameConfig.punch),
-                              gradientColors: const [
-                                Color(GameConfig.punch),
-                                Color(GameConfig.coral),
-                                Color(GameConfig.mango)
-                              ],
-                              vertical: true,
-                              onTap: gs.isDailyBossClaimedToday
-                                  ? () {}
-                                  : gs.showDailyBoss,
-                            )),
+                            ),
+                          ),
+                        ],
                       ],
                     );
                   },
@@ -338,21 +347,24 @@ class _DailyNavBtn extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 9),
                 SizedBox(
                   height: 20,
                   width: double.infinity,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      'Daily',
-                      maxLines: 1,
-                      softWrap: false,
-                      style: TextStyle(
-                        fontSize: 10,
-                        height: 1,
-                        fontWeight: FontWeight.w800,
-                        color: s.muted,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'Daily',
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          fontSize: 10,
+                          height: 1,
+                          fontWeight: FontWeight.w800,
+                          color: s.muted,
+                        ),
                       ),
                     ),
                   ),
@@ -562,6 +574,58 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
+class _ChallengeWordFitText extends StatelessWidget {
+  const _ChallengeWordFitText(this.text, {required this.style, required this.width});
+
+  final String text;
+  final TextStyle style;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final effectiveStyle = DefaultTextStyle.of(context).style.merge(style);
+    final baseSize = effectiveStyle.fontSize ?? 14;
+    final painter = TextPainter(
+      textDirection: Directionality.of(context),
+      maxLines: 1,
+    );
+    final words = text.split(RegExp(r'\s+'));
+    final requested = scaler.scale(baseSize) / baseSize;
+    bool fits(double scale) {
+      painter.textScaler = TextScaler.linear(scale);
+      for (final word in words) {
+        painter.text = TextSpan(text: word, style: effectiveStyle);
+        painter.layout();
+        if (painter.width > width - 2) return false;
+      }
+      return true;
+    }
+
+    var chosen = requested;
+    if (width > 2 && !fits(requested)) {
+      var low = 0.0;
+      var high = requested;
+      for (var i = 0; i < 16; i++) {
+        final mid = (low + high) / 2;
+        if (fits(mid)) {
+          low = mid;
+        } else {
+          high = mid;
+        }
+      }
+      chosen = low;
+    }
+    painter.dispose();
+    return Text(
+      text,
+      softWrap: true,
+      style: style,
+      textScaler: chosen < requested ? TextScaler.linear(chosen) : scaler,
+    );
+  }
+}
+
 class _CampaignCard extends StatelessWidget {
   const _CampaignCard({
     super.key,
@@ -572,6 +636,7 @@ class _CampaignCard extends StatelessWidget {
     required this.onTap,
     this.gradientColors,
     this.vertical = false,
+    this.textWidth,
   });
 
   final String icon;
@@ -581,6 +646,7 @@ class _CampaignCard extends StatelessWidget {
   final VoidCallback onTap;
   final List<Color>? gradientColors;
   final bool vertical;
+  final double? textWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -599,7 +665,7 @@ class _CampaignCard extends StatelessWidget {
         onTap: onTap,
         child: Container(
           constraints: BoxConstraints(minHeight: vertical ? 150 : 86),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: EdgeInsets.symmetric(horizontal: vertical ? 10 : 16, vertical: 14),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.centerLeft,
@@ -625,10 +691,9 @@ class _CampaignCard extends StatelessWidget {
                   children: [
                     _CampaignIcon(icon: icon, size: 42),
                     const SizedBox(height: 8),
-                    Text(
+                    _ChallengeWordFitText(
                       title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      width: textWidth!,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -638,10 +703,9 @@ class _CampaignCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
+                    _ChallengeWordFitText(
                       subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      width: textWidth!,
                       style: TextStyle(
                         fontSize: 10.5,
                         height: 1.1,
@@ -691,8 +755,7 @@ class _CampaignCard extends StatelessWidget {
                         children: [
                           Text(
                             title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            softWrap: true,
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,
@@ -703,8 +766,7 @@ class _CampaignCard extends StatelessWidget {
                           const SizedBox(height: 3),
                           Text(
                             subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            softWrap: true,
                             style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
@@ -842,23 +904,28 @@ class _NavBtn extends StatelessWidget {
                     size: isHome ? 24 : 21,
                   ),
                 ),
-                SizedBox(height: isHome ? 2 : 6),
+                SizedBox(height: isHome ? 2 : 9),
                 SizedBox(
-                  height: isHome ? 24 : 20,
+                  height: 20,
                   width: double.infinity,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: TextStyle(
-                        fontSize: isHome ? 10.2 : 9.5,
-                        height: 1,
-                        fontWeight: isHome ? FontWeight.w900 : FontWeight.w800,
-                        color: isHome ? const Color(GameConfig.coral) : s.muted,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          fontSize: isHome ? 10.2 : 9.5,
+                          height: 1,
+                          fontWeight: isHome ? FontWeight.w900 : FontWeight.w800,
+                          color: isHome
+                              ? const Color(GameConfig.coral)
+                              : s.muted,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
