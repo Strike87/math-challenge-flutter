@@ -347,21 +347,24 @@ class _DailyNavBtn extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 9),
                 SizedBox(
                   height: 20,
                   width: double.infinity,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      'Daily',
-                      maxLines: 1,
-                      softWrap: false,
-                      style: TextStyle(
-                        fontSize: 10,
-                        height: 1,
-                        fontWeight: FontWeight.w800,
-                        color: s.muted,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'Daily',
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          fontSize: 10,
+                          height: 1,
+                          fontWeight: FontWeight.w800,
+                          color: s.muted,
+                        ),
                       ),
                     ),
                   ),
@@ -901,23 +904,28 @@ class _NavBtn extends StatelessWidget {
                     size: isHome ? 24 : 21,
                   ),
                 ),
-                SizedBox(height: isHome ? 2 : 6),
+                SizedBox(height: isHome ? 2 : 9),
                 SizedBox(
-                  height: isHome ? 24 : 20,
+                  height: 20,
                   width: double.infinity,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: TextStyle(
-                        fontSize: isHome ? 10.2 : 9.5,
-                        height: 1,
-                        fontWeight: isHome ? FontWeight.w900 : FontWeight.w800,
-                        color: isHome ? const Color(GameConfig.coral) : s.muted,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(
+                          fontSize: isHome ? 10.2 : 9.5,
+                          height: 1,
+                          fontWeight: isHome ? FontWeight.w900 : FontWeight.w800,
+                          color: isHome
+                              ? const Color(GameConfig.coral)
+                              : s.muted,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
