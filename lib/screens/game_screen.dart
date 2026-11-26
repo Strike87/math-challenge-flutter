@@ -27,6 +27,7 @@ class _GameScreenState extends State<GameScreen> {
     final gs = context.watch<GameState>();
     final s = context.watch<SettingsService>();
     final rt = gs.rt;
+    final compact = _compactGameplayHeight(context);
 
     if (gs.isMentalMathCountdown) {
       return SafeArea(child: _MentalMathCountdown(gs: gs, s: s));
@@ -114,7 +115,7 @@ class _GameScreenState extends State<GameScreen> {
                 // Question card
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(compact ? 10 : 16),
                     child: Center(
                       child: ConstrainedBox(
                         key: const Key('gameplay-content'),
@@ -122,7 +123,7 @@ class _GameScreenState extends State<GameScreen> {
                         child: Column(
                           children: [
                             _QuestionCard(gs: gs, s: s),
-                            const SizedBox(height: 16),
+                            SizedBox(height: compact ? 8 : 16),
                             if (rt.answerStyle == AnswerStyle.trueFalse)
                               _TrueFalseAnswers(gs: gs)
                             else
@@ -444,10 +445,11 @@ class _GameTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rt = gs.rt;
+    final compact = _compactGameplayHeight(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
+      padding: EdgeInsets.fromLTRB(18, compact ? 4 : 8, 18, compact ? 6 : 12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: compact ? 5 : 10),
         decoration: BoxDecoration(
           color: s.surface.withValues(alpha: 0.92),
           borderRadius: BorderRadius.circular(34),
@@ -1440,10 +1442,11 @@ class _PowerUpHud extends StatelessWidget {
       counts[pu] = (counts[pu] ?? 0) + 1;
     }
     final powerUps = PowerUp.values;
+    final compact = _compactGameplayHeight(context);
 
     return Container(
-      height: 72,
-      margin: const EdgeInsets.fromLTRB(12, 2, 12, 10),
+      height: compact ? 64 : 72,
+      margin: EdgeInsets.fromLTRB(12, 2, 12, compact ? 4 : 10),
       padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
       decoration: BoxDecoration(
         color: s.surface.withValues(alpha: 0.72),
@@ -1551,12 +1554,20 @@ class _PowerUpHud extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              child: Text(
-                                '$count',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w900,
+                              child: Padding(
+                                padding: const EdgeInsets.all(2),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    '$count',
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -1733,6 +1744,7 @@ class _QuestionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final q = gs.rt.q;
+    final compact = _compactGameplayHeight(context);
     if (q == null) {
       return Container(
         padding: const EdgeInsets.all(32),
@@ -1758,7 +1770,7 @@ class _QuestionCard extends StatelessWidget {
     final danger = _timerWarning(gs);
     final effectsEnabled = danger && !s.lowPerf && !s.reduceMotion;
     final card = Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(compact ? 12 : 20),
       decoration: BoxDecoration(
         color: s.surface,
         borderRadius: BorderRadius.circular(24),
@@ -1863,7 +1875,7 @@ class _QuestionCard extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 6 : 16),
           // Big question text
           SizedBox(
             width: double.infinity,
@@ -1885,7 +1897,7 @@ class _QuestionCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 6 : 16),
           // Mode warning
           if (_modeWarning(gs) != null)
             Container(
@@ -1903,7 +1915,7 @@ class _QuestionCard extends StatelessWidget {
                 ),
               ),
             ),
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 6 : 16),
           if (!isMentalMath) _QuestionTimerBar(gs: gs, s: s),
         ],
       ),
@@ -2035,6 +2047,10 @@ int _questionNumber(GameState gs, int totalTarget) {
   return current.clamp(1, clampedTarget).toInt();
 }
 
+bool _compactGameplayHeight(BuildContext context) =>
+    MediaQuery.sizeOf(context).height <= 600 &&
+    MediaQuery.textScalerOf(context).scale(14) > 18.2;
+
 const _answerGridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
   crossAxisCount: 2,
   mainAxisSpacing: 10,
@@ -2085,6 +2101,7 @@ class _AnswersGrid extends StatelessWidget {
             return Material(
               color: Colors.transparent,
               child: InkWell(
+                key: ValueKey('gameplay-answer-$i'),
                 borderRadius: BorderRadius.circular(18),
                 onTap: gs.rt.accepting
                     ? () {
@@ -2105,16 +2122,24 @@ class _AnswersGrid extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Center(
-                    child: Text(
-                      gs.isMissingOperation
-                          ? operatorSymbol(c)
-                          : _formatAnswer(c),
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: answerTextColor,
-                        fontFamily: AppFonts.headFor(s),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          gs.isMissingOperation
+                              ? operatorSymbol(c)
+                              : _formatAnswer(c),
+                          maxLines: 1,
+                          softWrap: false,
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: answerTextColor,
+                            fontFamily: AppFonts.headFor(s),
+                          ),
+                        ),
                       ),
                     ),
                   ),
