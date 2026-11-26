@@ -11,6 +11,8 @@ import 'package:math_challenge/services/storage.dart';
 import 'visual_parity_test.dart'
     show MockAudioService, TestAppWrapper, loadAppFonts, setTestDevice;
 
+import 'support/setup_preview.dart';
+
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -57,6 +59,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
+        await captureSetupPreview(tester, screen: 'number-type', size: size,
+            scale: scale, position: 'top');
         expect(find.text('READY'), findsNWidgets(2));
         expect(find.text('1200 🪙'), findsOneWidget);
         for (final label in <String>[
@@ -84,6 +88,10 @@ void main() {
             expect(rect.right, lessThanOrEqualTo(cardRect.right + 1));
           }
           expect(tester.takeException(), isNull);
+          if (label == 'Rationals / Decimals') {
+            await captureSetupPreview(tester, screen: 'number-type', size: size,
+                scale: scale, position: 'rationals');
+          }
         }
       });
     }
