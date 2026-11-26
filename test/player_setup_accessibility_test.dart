@@ -11,6 +11,8 @@ import 'package:math_challenge/services/storage.dart';
 import 'visual_parity_test.dart'
     show MockAudioService, TestAppWrapper, loadAppFonts, setTestDevice;
 
+import 'support/setup_preview.dart';
+
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -60,6 +62,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
+        await captureSetupPreview(tester, screen: 'player', size: size,
+            scale: scale, position: 'player1');
         final progress = find.byKey(const Key('player-setup-progress'));
         for (final label in ['Player 1', 'Player 2']) {
           final finder = find.descendant(
@@ -85,6 +89,8 @@ void main() {
         final primary = find.byKey(const Key('player-setup-primary'));
         await tester.ensureVisible(primary);
         await tester.pumpAndSettle();
+        await captureSetupPreview(tester, screen: 'player', size: size,
+            scale: scale, position: 'player1-bottom');
         await tester.tap(primary);
         await tester.pumpAndSettle();
         expect(find.text('Player 2 Setup'), findsOneWidget);
@@ -93,6 +99,8 @@ void main() {
         final back = find.byKey(const Key('player-setup-back'));
         await tester.ensureVisible(back);
         await tester.pumpAndSettle();
+        await captureSetupPreview(tester, screen: 'player', size: size,
+            scale: scale, position: 'player2');
         await tester.tap(back);
         await tester.pumpAndSettle();
         expect(find.text('Player 1 Setup'), findsOneWidget);
