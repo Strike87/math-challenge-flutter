@@ -594,17 +594,20 @@ class _TimerCircle extends StatelessWidget {
                   ],
                 ),
                 alignment: Alignment.center,
-                child: Text(
-                  seconds.toString().padLeft(2, '0'),
-                  style: TextStyle(
-                    color: danger
-                        ? const Color(GameConfig.punch)
-                        : s.dark
-                            ? const Color(GameConfig.sky)
-                            : const Color(0xFF0098E5),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
-                    fontFamily: AppFonts.headFor(s),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    seconds.toString().padLeft(2, '0'),
+                    style: TextStyle(
+                      color: danger
+                          ? const Color(GameConfig.punch)
+                          : s.dark
+                              ? const Color(GameConfig.sky)
+                              : const Color(0xFF0098E5),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                      fontFamily: AppFonts.headFor(s),
+                    ),
                   ),
                 ),
               ),
