@@ -6,6 +6,7 @@ import '../game_config.dart';
 import '../models/enums.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
+import '../widgets/setup_header.dart';
 
 class ConfigScreen extends StatelessWidget {
   const ConfigScreen({super.key});
@@ -29,7 +30,7 @@ class ConfigScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _SetupHeader(
+                    SetupHeader(
                       s: s,
                       title: 'Game Setup',
                       subtitle: 'Build your challenge',
@@ -401,95 +402,6 @@ class ConfigScreen extends StatelessWidget {
       Difficulty.expert || Difficulty.insane => throw StateError(
           'Config screen supports only player-configured difficulties.'),
     };
-  }
-}
-
-class _SetupHeader extends StatelessWidget {
-  const _SetupHeader({
-    required this.s,
-    required this.title,
-    required this.subtitle,
-    required this.onBack,
-  });
-
-  final SettingsService s;
-  final String title;
-  final String subtitle;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = s.accent(GameConfig.sky);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 10,
-      ),
-      decoration: BoxDecoration(
-        color: s.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: accent.withValues(alpha: 0.16),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 48,
-            height: 48,
-            child: Material(
-              color: accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(18),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: onBack,
-                child: Icon(
-                  Icons.arrow_back_rounded,
-                  color: s.text,
-                  size: 22,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              children: [
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: s.text,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w900,
-                    fontFamily: AppFonts.headFor(s),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: s.muted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 58),
-        ],
-      ),
-    );
   }
 }
 
