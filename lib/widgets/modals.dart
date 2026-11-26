@@ -21,6 +21,7 @@ import '../services/link_launcher.dart';
 import '../services/play_games.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
+import 'setup_word_fit_text.dart';
 
 /// Container for all modal dialogs. Routed by [GameState.currentModal].
 class ModalRouter extends StatefulWidget {
@@ -3429,8 +3430,9 @@ class _ReportRow {
 }
 
 class _ReportBox extends StatelessWidget {
-  const _ReportBox({required this.rows});
+  const _ReportBox({required this.rows, this.responsive = false});
   final List<_ReportRow> rows;
+  final bool responsive;
 
   @override
   Widget build(BuildContext context) {
@@ -3447,7 +3449,7 @@ class _ReportBox extends StatelessWidget {
       child: Column(
         children: [
           for (var i = 0; i < rows.length; i++) ...[
-            _ReportBoxRow(row: rows[i]),
+            _ReportBoxRow(row: rows[i], responsive: responsive),
             if (i != rows.length - 1)
               Divider(height: 1, color: s.border.withValues(alpha: 0.72)),
           ],
@@ -3458,12 +3460,51 @@ class _ReportBox extends StatelessWidget {
 }
 
 class _ReportBoxRow extends StatelessWidget {
-  const _ReportBoxRow({required this.row});
+  const _ReportBoxRow({required this.row, required this.responsive});
   final _ReportRow row;
+  final bool responsive;
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
+    if (responsive) {
+      return LayoutBuilder(builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(13) / 13;
+        if (scale > 1.3 && constraints.maxWidth < 240 * scale) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 9),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SetupWordFitText(
+                  row.label,
+                  style: TextStyle(
+                    color: s.muted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: AppFonts.bodyFor(s),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SetupWordFitText(
+                    row.value,
+                    textAlign: TextAlign.right,
+                    style: _reportValueStyle(s, row),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        return _horizontal(s);
+      });
+    }
+    return _horizontal(s);
+  }
+
+  Widget _horizontal(SettingsService s) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
       child: Row(
@@ -3722,6 +3763,7 @@ class _MentalMathResultReport extends StatelessWidget {
             title: 'Training Arena',
             icon: '🎯',
             child: _ReportBox(
+              responsive: true,
               rows: [
                 _ReportRow(
                   'Practice Areas',
@@ -3739,6 +3781,7 @@ class _MentalMathResultReport extends StatelessWidget {
             title: 'Daily Focus',
             icon: '🎯',
             child: _ReportBox(
+              responsive: true,
               rows: [
                 _ReportRow('Focus', summary.dailyFocus!.label),
                 _ReportRow(
@@ -3779,6 +3822,7 @@ class _MentalMathResultReport extends StatelessWidget {
           title: 'Session Metrics',
           icon: '📊',
           child: _ReportBox(
+            responsive: true,
             rows: [
               _ReportRow('Peak Momentum', '+${summary.peakMomentum}'),
               _ReportRow('Best Streak', '${summary.bestStreak}'),
@@ -3833,11 +3877,13 @@ class _ResultHeroMessage extends StatelessWidget {
               color: Colors.white.withValues(alpha: s.dark ? 0.07 : 0.62),
               borderRadius: BorderRadius.circular(13),
             ),
-            child: Text(icon, style: const TextStyle(fontSize: 23)),
+            child: MediaQuery.withNoTextScaling(
+              child: Text(icon, style: const TextStyle(fontSize: 23)),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
+            child: SetupWordFitText(
               message,
               textAlign: TextAlign.left,
               style: TextStyle(
@@ -3867,6 +3913,7 @@ class _SingleResultReport extends StatelessWidget {
       child: Column(
         children: [
           _ReportBox(
+            responsive: true,
             rows: [
               _ReportRow('Final Score', '${player.score}'),
               _ReportRow('Accuracy', '${player.accuracy.round()}%'),
@@ -3991,14 +4038,14 @@ class _ResultPanel extends StatelessWidget {
                   color: const Color(GameConfig.sky).withValues(alpha: 0.09),
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: Text(icon, style: const TextStyle(fontSize: 18)),
+                child: MediaQuery.withNoTextScaling(
+                  child: Text(icon, style: const TextStyle(fontSize: 18)),
+                ),
               ),
               const SizedBox(width: 9),
               Expanded(
-                child: Text(
+                child: SetupWordFitText(
                   title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: s.text,
                     fontWeight: FontWeight.w900,
@@ -4052,12 +4099,12 @@ class _CompareResultRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: Text(label, style: style)),
+          Expanded(child: SetupWordFitText(label, style: style)),
           Expanded(
-            child: Text(first, textAlign: TextAlign.center, style: style),
+            child: SetupWordFitText(first, textAlign: TextAlign.center, style: style),
           ),
           Expanded(
-            child: Text(second, textAlign: TextAlign.right, style: style),
+            child: SetupWordFitText(second, textAlign: TextAlign.right, style: style),
           ),
         ],
       ),
