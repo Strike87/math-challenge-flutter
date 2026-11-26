@@ -13,6 +13,8 @@ import 'visual_parity_test.dart'
 
 import 'support/setup_preview.dart';
 
+import 'support/expect_whole_words.dart';
+
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -80,6 +82,7 @@ void main() {
         }
 
         expect(find.text('Player 1 Setup'), findsOneWidget);
+        expectWholeWords(tester, 'Player 1 Setup');
         final firstName = find.byKey(const Key('player-setup-name-p1'));
         await tester.ensureVisible(firstName);
         await tester.enterText(firstName, 'Alex');
