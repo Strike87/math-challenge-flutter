@@ -1,0 +1,47 @@
+name: Setup visual review
+on:
+  pull_request:
+    paths:
+      - 'lib/screens/numtype_screen.dart'
+      - 'lib/screens/config_screen.dart'
+      - 'lib/screens/player_screen.dart'
+      - 'lib/widgets/setup_header.dart'
+      - 'test/*_accessibility_test.dart'
+      - 'test/setup_header_test.dart'
+      - 'test/support/setup_preview.dart'
+      - '.github/workflows/setup-visual-review.yml'
+permissions:
+  contents: read
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: >
+          flutter test
+          test/setup_header_test.dart
+          test/number_type_accessibility_test.dart
+          test/config_accessibility_test.dart
+          test/player_setup_accessibility_test.dart
+        env:
+          CAPTURE_SETUP_PREVIEWS: '1'
+      - name: Verify screenshot count
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          files = list(Path('build/setup-previews').glob('*.png'))
+          assert len(files) == 48, f'Expected 48 screenshots, found {len(files)}'
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: setup-visual-previews
+          path: build/setup-previews/*.png
+          if-no-files-found: error
+          retention-days: 7
