@@ -5,6 +5,8 @@ import '../engine/game_state.dart';
 import '../game_config.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
+import '../widgets/setup_header.dart';
+import '../widgets/setup_word_fit_text.dart';
 
 class PracticeStyleScreen extends StatelessWidget {
   const PracticeStyleScreen({super.key});
@@ -16,15 +18,16 @@ class PracticeStyleScreen extends StatelessWidget {
     final isTrainingArena = state.setupWeakSkillsPlan != null;
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 720),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _Header(
-                  settings: settings,
+                SetupHeader(
+                  backKey: const Key('practice-style-back'),
+                  s: settings,
                   onBack: state.cancelPracticeStyle,
                   title: isTrainingArena
                       ? 'Training Arena'
@@ -34,7 +37,7 @@ class PracticeStyleScreen extends StatelessWidget {
                       : 'Pick how you want to practice',
                 ),
                 const SizedBox(height: 20),
-                Text(
+                SetupWordFitText(
                   'CHOOSE YOUR STYLE',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -76,67 +79,6 @@ class PracticeStyleScreen extends StatelessWidget {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.settings,
-    required this.onBack,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final SettingsService settings;
-  final VoidCallback onBack;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-        decoration: BoxDecoration(
-          color: settings.surface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-              color: settings.accent(GameConfig.sky).withValues(alpha: 0.16)),
-        ),
-        child: Row(
-          children: [
-            Material(
-              color: settings.accent(GameConfig.sky).withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(18),
-              child: InkWell(
-                key: const Key('practice-style-back'),
-                borderRadius: BorderRadius.circular(18),
-                onTap: onBack,
-                child: SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: Icon(Icons.arrow_back_rounded, color: settings.text),
-                ),
-              ),
-            ),
-            Expanded(
-              child: Column(
-                children: [
-                  Text(title,
-                      style: TextStyle(
-                          color: settings.text,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          fontFamily: AppFonts.headFor(settings))),
-                  Text(subtitle,
-                      style: TextStyle(
-                          color: settings.muted,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600)),
-                ],
-              ),
-            ),
-            const SizedBox(width: 52),
-          ],
-        ),
-      );
-}
-
 class _StyleCard extends StatelessWidget {
   const _StyleCard(
       {required this.title,
@@ -175,7 +117,7 @@ class _StyleCard extends StatelessWidget {
         children: [
           Icon(icon, color: accent, size: 30),
           const SizedBox(height: 8),
-          Text(title,
+          SetupWordFitText(title,
               textAlign: TextAlign.center,
               style: TextStyle(
                   color: settings.text,
@@ -183,7 +125,7 @@ class _StyleCard extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                   fontFamily: AppFonts.headFor(settings))),
           const SizedBox(height: 4),
-          Text(description,
+          SetupWordFitText(description,
               textAlign: TextAlign.center,
               style:
                   TextStyle(color: settings.muted, fontSize: 12, height: 1.3)),
