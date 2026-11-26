@@ -440,8 +440,8 @@ class _PlayerSection extends StatelessWidget {
             key: Key('player-setup-name-p$pid'),
             initialValue: pl.name,
             decoration: InputDecoration(
-              prefixIcon: Container(
-                margin: const EdgeInsets.all(7),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.all(7),
                 child: MediaQuery.withNoTextScaling(
                   child: AvatarWidget(
                     avatar: pl.avatar,
