@@ -164,6 +164,30 @@ void main() {
         expect(footerRect.left, greaterThanOrEqualTo(viewportRect.left - 1));
         expect(footerRect.right, lessThanOrEqualTo(viewportRect.right + 1));
         expect(tester.takeException(), isNull);
+        final dockLabels = <String>[
+          'Hall of Fame',
+          'Achievements',
+          'Shop',
+          'Skills',
+          'Daily',
+        ];
+        final dockRects = <Rect>[];
+        for (final label in dockLabels) {
+          final finder = find.text(label);
+          expect(finder, findsOneWidget);
+          final text = tester.widget<Text>(finder);
+          expect(text.maxLines, 1);
+          expect(text.softWrap, false);
+          dockRects.add(tester.getRect(finder));
+        }
+        for (var i = 0; i < dockRects.length; i++) {
+          expect(dockRects[i].center.dy, closeTo(dockRects.first.center.dy, 1));
+          expect(dockRects[i].width, greaterThan(0));
+          if (i > 0) {
+            expect(dockRects[i].left - dockRects[i - 1].right,
+                greaterThanOrEqualTo(6));
+          }
+        }
         await capturePreview('-bottom');
       });
     }
