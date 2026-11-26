@@ -1037,11 +1037,19 @@ class _PlayerCard extends StatelessWidget {
                     ),
                   ),
                 ),
-              Row(
-                children: [
-                  Stack(
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final scale = MediaQuery.textScalerOf(context).scale(13) / 13;
+                  final compact = constraints.maxWidth < 110 ||
+                      (scale > 1.3 && constraints.maxWidth < 200);
+                  final avatar = Stack(
                     children: [
-                      AvatarWidget(avatar: pl.avatar, size: 38),
+                      MediaQuery.withNoTextScaling(
+                        child: AvatarWidget(
+                          avatar: pl.avatar,
+                          size: compact ? 30 : 38,
+                        ),
+                      ),
                       if (pl.streak >= 3)
                         Positioned(
                           right: -6,
@@ -1049,58 +1057,87 @@ class _PlayerCard extends StatelessWidget {
                           child: StreakFire(streak: pl.streak, size: 12),
                         ),
                     ],
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  );
+                  final name = Text(
+                    pl.name,
+                    style: TextStyle(
+                      color: s.muted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  );
+                  final score = Text(
+                    '${pl.score}',
+                    maxLines: 1,
+                    softWrap: false,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: Color(GameConfig.coral),
+                      fontFamily: AppFonts.headFor(s),
+                      height: 1,
+                    ),
+                  );
+                  final powerUps = Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final icon in activePowerUps) ...[
+                        _ActivePlayerPowerUpIcon(
+                          icon: icon,
+                          pid: pid,
+                          active: active,
+                        ),
+                        if (icon != activePowerUps.last)
+                          const SizedBox(width: 5),
+                      ],
+                    ],
+                  );
+                  if (compact) {
+                    return Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          pl.name,
-                          style: TextStyle(
-                            color: s.muted,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Row(
+                        avatar,
+                        const SizedBox(height: 4),
+                        name,
+                        FittedBox(fit: BoxFit.scaleDown, child: score),
+                        if (activePowerUps.isNotEmpty)
+                          FittedBox(fit: BoxFit.scaleDown, child: powerUps),
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      avatar,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              '${pl.score}',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                                color: Color(GameConfig.coral),
-                                fontFamily: AppFonts.headFor(s),
-                                height: 1,
-                              ),
-                            ),
-                            if (activePowerUps.isNotEmpty) ...[
-                              const SizedBox(width: 8),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  for (final icon in activePowerUps) ...[
-                                    _ActivePlayerPowerUpIcon(
-                                      icon: icon,
-                                      pid: pid,
-                                      active: active,
-                                    ),
-                                    if (icon != activePowerUps.last)
-                                      const SizedBox(width: 5),
-                                  ],
+                            name,
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: score,
+                                  ),
+                                ),
+                                if (activePowerUps.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  powerUps,
                                 ],
-                              ),
-                            ],
+                              ],
+                            ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                ],
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -1831,6 +1868,7 @@ class _QuestionCard extends StatelessWidget {
               fit: BoxFit.scaleDown,
               child: RichText(
                 textAlign: TextAlign.center,
+                textScaler: MediaQuery.textScalerOf(context),
                 text: TextSpan(
                   style: TextStyle(
                     fontSize: 44,
