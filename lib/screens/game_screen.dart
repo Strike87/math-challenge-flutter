@@ -86,13 +86,13 @@ class _GameScreenState extends State<GameScreen> {
                           if (gs.isTimeBankRun)
                             Positioned(
                               right: 0,
-                              top: 10,
+                              top: compact ? 0 : 10,
                               child: _TimeBankDisplay(gs: gs, s: s),
                             )
                           else if (rt.timer != null)
                             Positioned(
                               right: 0,
-                              top: 10,
+                              top: compact ? 0 : 10,
                               child: _TimerCircle(gs: gs, s: s),
                             ),
                         ],
@@ -115,7 +115,7 @@ class _GameScreenState extends State<GameScreen> {
                 // Question card
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: EdgeInsets.all(compact ? 10 : 16),
+                    padding: EdgeInsets.all(compact ? 6 : 16),
                     child: Center(
                       child: ConstrainedBox(
                         key: const Key('gameplay-content'),
@@ -123,12 +123,13 @@ class _GameScreenState extends State<GameScreen> {
                         child: Column(
                           children: [
                             _QuestionCard(gs: gs, s: s),
-                            SizedBox(height: compact ? 8 : 16),
+                            SizedBox(height: compact ? 6 : 16),
                             if (rt.answerStyle == AnswerStyle.trueFalse)
                               _TrueFalseAnswers(gs: gs)
                             else
                               _AnswersGrid(gs: gs, s: s),
-                            const SizedBox(height: 12),
+                            if (!compact || gs.reactionPill.isNotEmpty)
+                              SizedBox(height: compact ? 4 : 12),
                             if (gs.reactionPill.isNotEmpty)
                               ReactionPill(text: gs.reactionPill, s: s),
                           ],
@@ -569,6 +570,7 @@ class _TimerCircle extends StatelessWidget {
             Opacity(
               opacity: pulseOpacity,
               child: Container(
+                key: const Key('per-question-timer-display'),
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
@@ -731,6 +733,7 @@ class _ScoreProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = _compactGameplayHeight(context);
     final isBoss = gs.rt.challenge == Operation.dailyBoss;
     final isStandard = gs.activeMode == GameMode.standard &&
         gs.rt.challenge != Operation.master &&
@@ -752,14 +755,14 @@ class _ScoreProgress extends StatelessWidget {
     final value = (current / clampedTarget).clamp(0.0, 1.0);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 8, 2, 8),
+      padding: EdgeInsets.fromLTRB(2, compact ? 4 : 8, 2, compact ? 4 : 8),
       child: Column(
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(99),
             child: LinearProgressIndicator(
               value: value,
-              minHeight: 8,
+              minHeight: compact ? 6 : 8,
               backgroundColor:
                   s.dark ? s.surface2 : Colors.white.withValues(alpha: 0.72),
               valueColor: const AlwaysStoppedAnimation<Color>(
@@ -767,14 +770,14 @@ class _ScoreProgress extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: compact ? 2 : 8),
           Row(
             children: [
-              Text('0', style: _progressLabelStyle(s)),
+              Text('0', style: _progressLabelStyle(s, compact)),
               const Spacer(),
-              Text('$current', style: _progressLabelStyle(s)),
+              Text('$current', style: _progressLabelStyle(s, compact)),
               const Spacer(),
-              Text('$clampedTarget', style: _progressLabelStyle(s)),
+              Text('$clampedTarget', style: _progressLabelStyle(s, compact)),
             ],
           ),
         ],
@@ -782,10 +785,11 @@ class _ScoreProgress extends StatelessWidget {
     );
   }
 
-  TextStyle _progressLabelStyle(SettingsService s) {
+  TextStyle _progressLabelStyle(SettingsService s, bool compact) {
     return TextStyle(
       color: s.muted,
-      fontSize: 16,
+      fontSize: compact ? 12 : 16,
+      height: compact ? 1 : null,
       fontWeight: FontWeight.w900,
       fontFamily: AppFonts.headFor(s),
     );
@@ -993,6 +997,7 @@ class _PlayerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final pl = gs.p[pid];
     final s = context.watch<SettingsService>();
+    final shortScreen = _compactGameplayHeight(context);
     final activePowerUps = [
       if (pl.doubleActive) '✨',
       if (pl.shieldActive) '🛡️',
@@ -1005,7 +1010,11 @@ class _PlayerCard extends StatelessWidget {
         opacity: active ? 1 : 0.65,
         child: AnimatedContainer(
           duration: s.duration(200),
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+          constraints: shortScreen ? const BoxConstraints(minHeight: 56) : null,
+          padding: EdgeInsets.symmetric(
+            horizontal: shortScreen ? 8 : 15,
+            vertical: shortScreen ? 6 : 13,
+          ),
           decoration: BoxDecoration(
             color: s.surface,
             borderRadius: BorderRadius.circular(18),
@@ -1052,7 +1061,7 @@ class _PlayerCard extends StatelessWidget {
                       MediaQuery.withNoTextScaling(
                         child: AvatarWidget(
                           avatar: pl.avatar,
-                          size: compact ? 30 : 38,
+                          size: shortScreen ? 24 : (compact ? 30 : 38),
                         ),
                       ),
                       if (pl.streak >= 3)
@@ -1067,7 +1076,8 @@ class _PlayerCard extends StatelessWidget {
                     pl.name,
                     style: TextStyle(
                       color: s.muted,
-                      fontSize: 13,
+                      fontSize: shortScreen ? 11 : 13,
+                      height: shortScreen ? 1 : null,
                       fontWeight: FontWeight.w800,
                     ),
                     maxLines: 1,
@@ -1078,7 +1088,7 @@ class _PlayerCard extends StatelessWidget {
                     maxLines: 1,
                     softWrap: false,
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: shortScreen ? 19 : 24,
                       fontWeight: FontWeight.w900,
                       color: Color(GameConfig.coral),
                       fontFamily: AppFonts.headFor(s),
@@ -1104,7 +1114,7 @@ class _PlayerCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         avatar,
-                        const SizedBox(height: 4),
+                        SizedBox(height: shortScreen ? 2 : 4),
                         name,
                         FittedBox(fit: BoxFit.scaleDown, child: score),
                         if (activePowerUps.isNotEmpty)
@@ -1115,7 +1125,7 @@ class _PlayerCard extends StatelessWidget {
                   return Row(
                     children: [
                       avatar,
-                      const SizedBox(width: 10),
+                      SizedBox(width: shortScreen ? 6 : 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1445,9 +1455,9 @@ class _PowerUpHud extends StatelessWidget {
     final compact = _compactGameplayHeight(context);
 
     return Container(
-      height: compact ? 64 : 72,
-      margin: EdgeInsets.fromLTRB(12, 2, 12, compact ? 4 : 10),
-      padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+      height: compact ? 62 : 72,
+      margin: EdgeInsets.fromLTRB(12, 2, 12, compact ? 2 : 10),
+      padding: EdgeInsets.fromLTRB(8, 10, 8, compact ? 2 : 8),
       decoration: BoxDecoration(
         color: s.surface.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(24),
@@ -1770,7 +1780,7 @@ class _QuestionCard extends StatelessWidget {
     final danger = _timerWarning(gs);
     final effectsEnabled = danger && !s.lowPerf && !s.reduceMotion;
     final card = Container(
-      padding: EdgeInsets.all(compact ? 12 : 20),
+      padding: EdgeInsets.all(compact ? 8 : 20),
       decoration: BoxDecoration(
         color: s.surface,
         borderRadius: BorderRadius.circular(24),
@@ -1875,13 +1885,14 @@ class _QuestionCard extends StatelessWidget {
               );
             },
           ),
-          SizedBox(height: compact ? 6 : 16),
+          SizedBox(height: compact ? 3 : 16),
           // Big question text
           SizedBox(
             width: double.infinity,
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: RichText(
+                key: const Key('gameplay-question-expression'),
                 textAlign: TextAlign.center,
                 textScaler: MediaQuery.textScalerOf(context),
                 text: TextSpan(
@@ -1897,7 +1908,7 @@ class _QuestionCard extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(height: compact ? 6 : 16),
+          SizedBox(height: compact ? 3 : 16),
           // Mode warning
           if (_modeWarning(gs) != null)
             Container(
@@ -1915,7 +1926,7 @@ class _QuestionCard extends StatelessWidget {
                 ),
               ),
             ),
-          SizedBox(height: compact ? 6 : 16),
+          SizedBox(height: compact ? 3 : 16),
           if (!isMentalMath) _QuestionTimerBar(gs: gs, s: s),
         ],
       ),
@@ -2049,7 +2060,8 @@ int _questionNumber(GameState gs, int totalTarget) {
 
 bool _compactGameplayHeight(BuildContext context) =>
     MediaQuery.sizeOf(context).height <= 600 &&
-    MediaQuery.textScalerOf(context).scale(14) > 18.2;
+    (MediaQuery.sizeOf(context).width <= 360 ||
+        MediaQuery.textScalerOf(context).scale(14) > 18.2);
 
 const _answerGridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
   crossAxisCount: 2,
