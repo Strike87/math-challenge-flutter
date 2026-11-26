@@ -3869,16 +3869,19 @@ class _ResultHeroMessage extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
+          SizedBox(
             width: 42,
             height: 42,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: s.dark ? 0.07 : 0.62),
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: MediaQuery.withNoTextScaling(
-              child: Text(icon, style: const TextStyle(fontSize: 23)),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: s.dark ? 0.07 : 0.62),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Center(
+                child: MediaQuery.withNoTextScaling(
+                  child: Text(icon, style: const TextStyle(fontSize: 23)),
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -4030,16 +4033,19 @@ class _ResultPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
+              SizedBox(
                 width: 34,
                 height: 34,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: const Color(GameConfig.sky).withValues(alpha: 0.09),
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: MediaQuery.withNoTextScaling(
-                  child: Text(icon, style: const TextStyle(fontSize: 18)),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: const Color(GameConfig.sky).withValues(alpha: 0.09),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Center(
+                    child: MediaQuery.withNoTextScaling(
+                      child: Text(icon, style: const TextStyle(fontSize: 18)),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 9),
