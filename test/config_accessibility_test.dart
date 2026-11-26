@@ -12,6 +12,8 @@ import 'visual_parity_test.dart'
 
 import 'support/setup_preview.dart';
 
+import 'support/expect_whole_words.dart';
+
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -85,6 +87,17 @@ void main() {
             await captureSetupPreview(tester, screen: 'config', size: size,
                 scale: scale, position: label == 'Time Bank' ? 'timing' : 'bottom');
           }
+        }
+
+        for (final text in [
+          'Game Setup',
+          'PERSONALIZATION',
+          'Adaptive Difficulty',
+          'Automatically adjusts the challenge to your skill level',
+        ]) {
+          await tester.ensureVisible(find.text(text));
+          await tester.pumpAndSettle();
+          expectWholeWords(tester, text);
         }
 
         final countOptions = ['10', '15', '20', '25'].map(find.text).toList();
