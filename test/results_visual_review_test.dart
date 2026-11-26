@@ -6,6 +6,7 @@ import 'package:math_challenge/engine/game_state.dart';
 import 'package:math_challenge/models/enums.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/services/storage.dart';
+import 'package:math_challenge/widgets/common.dart';
 import 'package:math_challenge/widgets/modals.dart';
 
 import 'support/expect_whole_words.dart';
@@ -85,6 +86,32 @@ void main() {
             expect(tester.takeException(), isNull);
             for (final action in ['Replay', 'Main Menu']) {
               expect(find.text(action).hitTestable(), findsOneWidget);
+            }
+            final compact = size.height <= 600 ||
+                (size.width <= 400 && scale > 1.3);
+            if (compact) {
+              final replay = find.ancestor(
+                of: find.text('Replay'),
+                matching: find.byType(NeoButton),
+              );
+              final menu = find.ancestor(
+                of: find.text('Main Menu'),
+                matching: find.byType(NeoButton),
+              );
+              expect(tester.getCenter(replay).dy,
+                  closeTo(tester.getCenter(menu).dy, 1));
+              for (final action in [replay, menu]) {
+                final actionSize = tester.getSize(action);
+                expect(actionSize.width, greaterThanOrEqualTo(48));
+                expect(actionSize.height, greaterThanOrEqualTo(48));
+              }
+              final viewport = tester.getRect(
+                find.byType(SingleChildScrollView),
+              );
+              final score = tester.getRect(find.text('12345'));
+              expect(score.top, greaterThanOrEqualTo(viewport.top - 1));
+              expect(score.bottom, lessThanOrEqualTo(viewport.bottom + 1),
+                  reason: 'Score should be visible before scrolling');
             }
             for (final value in [
               players == 1 ? "Alex's Report" : 'Head-to-Head Report',
