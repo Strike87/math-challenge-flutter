@@ -106,6 +106,50 @@ void main() {
             final content = find.byKey(const Key('gameplay-content'));
             expect(content, findsOneWidget);
             expect(tester.getRect(content).overlaps(Offset.zero & size), isTrue);
+            final answers = [
+              for (var i = 0; i < 4; i++)
+                find.byKey(ValueKey('gameplay-answer-$i')),
+            ];
+            for (final answer in answers) {
+              expect(answer, findsOneWidget);
+              final size = tester.getSize(answer);
+              expect(size.width, greaterThanOrEqualTo(48));
+              expect(size.height, greaterThanOrEqualTo(48));
+              expect(tester.widget<InkWell>(answer).onTap, isNotNull);
+            }
+            expect(tester.getCenter(answers[0]).dy,
+                closeTo(tester.getCenter(answers[1]).dy, 1));
+            expect(tester.getCenter(answers[2]).dy,
+                closeTo(tester.getCenter(answers[3]).dy, 1));
+            expect(tester.getCenter(answers[0]).dx,
+                closeTo(tester.getCenter(answers[2]).dx, 1));
+            expect(tester.getCenter(answers[1]).dx,
+                closeTo(tester.getCenter(answers[3]).dx, 1));
+            for (var i = 0; i < answers.length; i++) {
+              final answer = answers[i];
+              await tester.ensureVisible(answer);
+              await tester.pumpAndSettle();
+              expect(answer.hitTestable(), findsOneWidget);
+              final label = find.descendant(
+                of: answer,
+                matching: find.text(['6912', '6812', '6910', '6810'][i]),
+              );
+              expect(label, findsOneWidget);
+              final tile = tester.getRect(answer);
+              final text = tester.getRect(label);
+              expect(text.left, greaterThanOrEqualTo(tile.left - 1));
+              expect(text.right, lessThanOrEqualTo(tile.right + 1));
+              expect(text.top, greaterThanOrEqualTo(tile.top - 1));
+              expect(text.bottom, lessThanOrEqualTo(tile.bottom + 1));
+            }
+            await captureSetupPreview(
+              tester,
+              screen: 'gameplay-${dark ? 'dark' : 'light'}-${players}p',
+              size: size,
+              scale: scale,
+              position: 'answers',
+            );
+            expect(tester.takeException(), isNull);
             timer.cancel();
           });
         }
