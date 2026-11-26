@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:math_challenge/services/settings.dart';
 import 'package:math_challenge/widgets/setup_header.dart';
 
+import 'support/expect_whole_words.dart';
+
 void main() {
   for (final width in <double>[320, 390]) {
     for (final scale in <double>[1, 1.5, 2]) {
@@ -47,6 +49,8 @@ void main() {
           );
           await tester.pumpAndSettle();
           expect(find.text(title), findsOneWidget);
+          expectWholeWords(tester, title);
+          expectWholeWords(tester, 'Second player, your turn');
           expect(tester.getSize(find.byKey(backKey)), const Size(48, 48));
           final titleRect = tester.getRect(find.text(title));
           expect(titleRect.center.dx, closeTo(width / 2, 1));
