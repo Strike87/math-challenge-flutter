@@ -7,6 +7,7 @@ import '../models/enums.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
 import '../widgets/setup_header.dart';
+import '../widgets/setup_word_fit_text.dart';
 
 class ConfigScreen extends StatelessWidget {
   const ConfigScreen({super.key});
@@ -281,9 +282,13 @@ class ConfigScreen extends StatelessWidget {
                       title: 'PERSONALIZATION',
                       icon: Icons.auto_awesome_rounded,
                       accent: s.accent(GameConfig.coral),
-                      child: Row(
-                        children: [
-                          Container(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final scale =
+                              MediaQuery.textScalerOf(context).scale(14) / 14;
+                          final stacked = scale > 1.3 &&
+                              constraints.maxWidth < 280 * scale;
+                          final icon = Container(
                             width: 42,
                             height: 42,
                             decoration: BoxDecoration(
@@ -297,53 +302,76 @@ class ConfigScreen extends StatelessWidget {
                               color: s.accent(GameConfig.coral),
                               size: 22,
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          );
+                          final title = SetupWordFitText(
+                            'Adaptive Difficulty',
+                            style: TextStyle(
+                              color: s.text,
+                              fontWeight: FontWeight.w900,
+                              fontFamily: AppFonts.headFor(s),
+                            ),
+                          );
+                          final description = SetupWordFitText(
+                            'Automatically adjusts the challenge to your skill level',
+                            style: TextStyle(
+                              color: s.muted,
+                              fontSize: 11,
+                              height: 1.25,
+                            ),
+                          );
+                          final toggle = Switch.adaptive(
+                            value: gs.isMentalMathSetup
+                                ? false
+                                : gs.setupAdaptive,
+                            activeThumbColor: s.accent(GameConfig.coral),
+                            onChanged: gs.isMentalMathSetup ||
+                                    gs.isTargetClashSetup ||
+                                    gs.setupTimingStyle !=
+                                        TimingStyle.perQuestion
+                                ? null
+                                : gs.setAdaptive,
+                          );
+                          if (stacked) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Text(
-                                  'Adaptive Difficulty',
-                                  style: TextStyle(
-                                    color: s.text,
-                                    fontWeight: FontWeight.w900,
-                                    fontFamily: AppFonts.headFor(s),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
                                 Row(
                                   children: [
-                                    Expanded(
-                                      child: Text(
-                                        'Automatically adjusts the challenge to your skill level',
-                                        style: TextStyle(
-                                          color: s.muted,
-                                          fontSize: 11,
-                                          height: 1.25,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Switch.adaptive(
-                                      value: gs.isMentalMathSetup
-                                          ? false
-                                          : gs.setupAdaptive,
-                                      activeThumbColor:
-                                          s.accent(GameConfig.coral),
-                                      onChanged: gs.isMentalMathSetup ||
-                                              gs.isTargetClashSetup ||
-                                              gs.setupTimingStyle !=
-                                                  TimingStyle.perQuestion
-                                          ? null
-                                          : gs.setAdaptive,
+                                    icon,
+                                    const Spacer(),
+                                    toggle,
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                title,
+                                const SizedBox(height: 2),
+                                description,
+                              ],
+                            );
+                          }
+                          return Row(
+                            children: [
+                              icon,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    title,
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        Expanded(child: description),
+                                        const SizedBox(width: 8),
+                                        toggle,
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                          ),
-                        ],
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
 
@@ -458,7 +486,7 @@ class _SetupGroup extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
+                child: SetupWordFitText(
                   title,
                   style: TextStyle(
                     color: s.text,
