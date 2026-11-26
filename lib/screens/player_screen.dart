@@ -6,6 +6,7 @@ import '../game_config.dart';
 import '../models/player.dart';
 import '../services/settings.dart';
 import '../widgets/common.dart';
+import '../widgets/setup_header.dart';
 
 class PlayerSetupScreen extends StatefulWidget {
   const PlayerSetupScreen({super.key});
@@ -82,7 +83,8 @@ class _PlayerSetupScreenState extends State<PlayerSetupScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _SetupHeader(
+                      SetupHeader(
+                        backKey: const Key('player-setup-back'),
                         title: title,
                         subtitle: subtitle,
                         onBack: () => _goBack(gs),
@@ -118,93 +120,6 @@ class _PlayerSetupScreenState extends State<PlayerSetupScreen> {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class _SetupHeader extends StatelessWidget {
-  const _SetupHeader({
-    required this.title,
-    required this.subtitle,
-    required this.onBack,
-    required this.s,
-  });
-
-  final String title;
-  final String subtitle;
-  final VoidCallback onBack;
-  final SettingsService s;
-
-  @override
-  Widget build(BuildContext context) {
-    const accent = Color(GameConfig.sky);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-      decoration: BoxDecoration(
-        color: s.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: accent.withValues(alpha: 0.16),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: Material(
-              color: accent.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(18),
-              child: InkWell(
-                key: const Key('player-setup-back'),
-                borderRadius: BorderRadius.circular(18),
-                onTap: onBack,
-                child: Icon(
-                  Icons.arrow_back_rounded,
-                  color: s.text,
-                  size: 21,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              children: [
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: s.text,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    fontFamily: AppFonts.headFor(s),
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: s.muted,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 52),
-        ],
       ),
     );
   }
