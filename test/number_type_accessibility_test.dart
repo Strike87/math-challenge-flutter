@@ -13,6 +13,8 @@ import 'visual_parity_test.dart'
 
 import 'support/setup_preview.dart';
 
+import 'support/expect_whole_words.dart';
+
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -62,6 +64,7 @@ void main() {
         await captureSetupPreview(tester, screen: 'number-type', size: size,
             scale: scale, position: 'top');
         expect(find.text('READY'), findsNWidgets(2));
+        expectWholeWords(tester, 'Number Type');
         expect(find.text('1200 🪙'), findsOneWidget);
         for (final label in <String>[
           'Natural Numbers',
