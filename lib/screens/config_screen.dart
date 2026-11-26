@@ -521,17 +521,66 @@ class _ToggleRow<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final numericOnly = options.every((option) => option.value is int &&
+            int.tryParse(option.label) != null);
+        final columns = numericOnly
+            ? options.length
+            : _optionColumns(constraints.maxWidth, scale, options.length, 8);
+        return _ConfigOptionRows(
+          columns: columns,
+          gap: 8,
+          children: [
+            for (final option in options)
+              _ToggleButton(option: option, active: active, onPick: onPick),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// Keep the original single row at normal text sizes. At enlarged text
+// sizes, reserve more width per label without changing option order.
+int _optionColumns(double width, double scale, int count, double gap) {
+  if (scale <= 1.3) return count;
+  return ((width + gap) / (100 * scale + gap))
+      .floor()
+      .clamp(1, count)
+      .toInt();
+}
+
+class _ConfigOptionRows extends StatelessWidget {
+  const _ConfigOptionRows({
+    required this.columns,
+    required this.gap,
+    required this.children,
+  });
+
+  final int columns;
+  final double gap;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
       children: [
-        for (var i = 0; i < options.length; i++) ...[
-          Expanded(
-            child: _ToggleButton(
-              option: options[i],
-              active: active,
-              onPick: onPick,
-            ),
+        for (var start = 0; start < children.length; start += columns) ...[
+          if (start != 0) SizedBox(height: gap),
+          Row(
+            children: [
+              for (var column = 0; column < columns; column++) ...[
+                if (column != 0) SizedBox(width: gap),
+                Expanded(
+                  child: start + column < children.length
+                      ? children[start + column]
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ],
           ),
-          if (i != options.length - 1) const SizedBox(width: 8),
         ],
       ],
     );
@@ -555,6 +604,8 @@ class _ToggleButton<T> extends StatelessWidget {
     final isActive = o.value == active;
     final s = context.watch<SettingsService>();
     final parts = _splitIconLabel(o.label);
+    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final enlarged = scale > 1.3;
     return Opacity(
       opacity: o.enabled ? 1 : 0.4,
       child: Material(
@@ -563,7 +614,7 @@ class _ToggleButton<T> extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           onTap: o.enabled ? () => onPick(o.value) : null,
           child: Container(
-            height: 48,
+            height: enlarged ? 64 : 48,
             alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
             decoration: BoxDecoration(
@@ -600,7 +651,14 @@ class _ToggleButton<T> extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (parts.icon.isNotEmpty) ...[
-                  Text(parts.icon, style: const TextStyle(fontSize: 16)),
+                  SizedBox(
+                    width: enlarged ? 28 : null,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(parts.icon,
+                          style: const TextStyle(fontSize: 16)),
+                    ),
+                  ),
                   const SizedBox(width: 4),
                 ],
                 Flexible(
@@ -673,27 +731,25 @@ class _ModeTabs extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 340;
-          return Row(
+          final scale = MediaQuery.textScalerOf(context).scale(12) / 12;
+          return _ConfigOptionRows(
+            columns: _optionColumns(
+                constraints.maxWidth, scale, availableModes.length, 4),
+            gap: 4,
             children: [
-              for (var i = 0; i < availableModes.length; i++) ...[
-                Expanded(
-                  child: _ModeTabButton(
-                    mode: availableModes[i],
-                    active: availableModes[i] == active,
-                    disabled: !GameMode.isAvailableForPlayers(
-                            availableModes[i], players) ||
-                        (standardOnly &&
-                            availableModes[i] != GameMode.standard) ||
-                        (context.watch<GameState>().setupTimingStyle !=
-                                TimingStyle.perQuestion &&
-                            availableModes[i] != GameMode.standard),
-                    compact: compact,
-                    settings: s,
-                    onPick: onPick,
-                  ),
+              for (final mode in availableModes)
+                _ModeTabButton(
+                  mode: mode,
+                  active: mode == active,
+                  disabled: !GameMode.isAvailableForPlayers(mode, players) ||
+                      (standardOnly && mode != GameMode.standard) ||
+                      (context.watch<GameState>().setupTimingStyle !=
+                              TimingStyle.perQuestion &&
+                          mode != GameMode.standard),
+                  compact: compact,
+                  settings: s,
+                  onPick: onPick,
                 ),
-                if (i != availableModes.length - 1) const SizedBox(width: 4),
-              ],
             ],
           );
         },
@@ -722,8 +778,9 @@ class _ModeTabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeColor = settings.accent(GameConfig.coral);
+    final enlarged = MediaQuery.textScalerOf(context).scale(12) > 15.6;
     Widget buttonContent = Container(
-      height: 60,
+      height: enlarged ? 84 : 60,
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 3 : 5,
         vertical: 7,
@@ -755,7 +812,7 @@ class _ModeTabButton extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           SizedBox(
-            height: 23,
+            height: enlarged ? 32 : 23,
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(mode.icon, style: const TextStyle(fontSize: 21)),
@@ -763,7 +820,7 @@ class _ModeTabButton extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           SizedBox(
-            height: 18,
+            height: enlarged ? 30 : 18,
             width: double.infinity,
             child: Center(
               child: FittedBox(
