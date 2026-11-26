@@ -63,7 +63,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        if (Platform.environment['CAPTURE_MENU_PREVIEWS'] == '1') {
+        Future<void> capturePreview(String suffix) async {
+          if (Platform.environment['CAPTURE_MENU_PREVIEWS'] != '1') return;
           final boundary = tester.renderObject<RenderRepaintBoundary>(
             find.byKey(const ValueKey('visual-root')),
           );
@@ -74,13 +75,15 @@ void main() {
               final directory = Directory('build/menu-previews');
               await directory.create(recursive: true);
               await File(
-                '${directory.path}/menu-${size.width.toInt()}-${(scale * 100).toInt()}.png',
+                '${directory.path}/menu-${size.width.toInt()}-${(scale * 100).toInt()}$suffix.png',
               ).writeAsBytes(bytes!.buffer.asUint8List());
             } finally {
               image.dispose();
             }
           });
         }
+
+        await capturePreview('');
 
         final names = <String>[
           'Master Challenge',
@@ -141,6 +144,27 @@ void main() {
         expect(footer, findsOneWidget);
         expect(tester.widget<Text>(footer).maxLines, 1);
         expect(tester.widget<Text>(footer).softWrap, false);
+
+        final viewport = find.byType(SingleChildScrollView);
+        expect(viewport, findsOneWidget);
+        final arena = find.byKey(const Key('weak-skills-practice-row'));
+        expect(arena, findsOneWidget);
+        await tester.ensureVisible(arena);
+        await tester.pumpAndSettle();
+        expect(tester.getRect(viewport).overlaps(tester.getRect(arena)), isTrue);
+        expect(tester.takeException(), isNull);
+        await capturePreview('-arena');
+
+        await tester.ensureVisible(footer);
+        await tester.pumpAndSettle();
+        final viewportRect = tester.getRect(viewport);
+        final footerRect = tester.getRect(footer);
+        expect(footerRect.top, greaterThanOrEqualTo(viewportRect.top - 1));
+        expect(footerRect.bottom, lessThanOrEqualTo(viewportRect.bottom + 1));
+        expect(footerRect.left, greaterThanOrEqualTo(viewportRect.left - 1));
+        expect(footerRect.right, lessThanOrEqualTo(viewportRect.right + 1));
+        expect(tester.takeException(), isNull);
+        await capturePreview('-bottom');
       });
     }
   }
