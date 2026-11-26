@@ -10,6 +10,8 @@ import 'package:math_challenge/services/storage.dart';
 import 'visual_parity_test.dart'
     show MockAudioService, TestAppWrapper, loadAppFonts, setTestDevice;
 
+import 'support/setup_preview.dart';
+
 void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -55,6 +57,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
+        await captureSetupPreview(tester, screen: 'config', size: size,
+            scale: scale, position: 'top');
         for (final label in <String>[
           '1 Player',
           '2 Players',
@@ -77,6 +81,10 @@ void main() {
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
           expect(tester.getRect(finder).overlaps(Offset.zero & size), isTrue);
+          if (label == 'Time Bank' || label == 'Continue to Player Setup →') {
+            await captureSetupPreview(tester, screen: 'config', size: size,
+                scale: scale, position: label == 'Time Bank' ? 'timing' : 'bottom');
+          }
         }
 
         final countOptions = ['10', '15', '20', '25'].map(find.text).toList();
