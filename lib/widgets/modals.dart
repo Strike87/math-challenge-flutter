@@ -1267,38 +1267,41 @@ class _ModalDefaultHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
+          SizedBox(
             width: compact ? 38 : 54,
             height: compact ? 38 : 54,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: settings.dark ? 0.16 : 0.11),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: accent.withValues(alpha: 0.20),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: settings.dark ? 0.16 : 0.11),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: accent.withValues(alpha: 0.20),
+                ),
+              ),
+              child: Center(
+                child: iconWidget == null
+                    ? (compact
+                        ? MediaQuery.withNoTextScaling(
+                            child: Text(
+                              icon,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 23, height: 1),
+                            ),
+                          )
+                        : Text(
+                            icon,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 27, height: 1),
+                          ))
+                    : Padding(
+                        padding: const EdgeInsets.all(2),
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          child: iconWidget!,
+                        ),
+                      ),
               ),
             ),
-            child: iconWidget == null
-                ? (compact
-                    ? MediaQuery.withNoTextScaling(
-                        child: Text(
-                          icon,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 23, height: 1),
-                        ),
-                      )
-                    : Text(
-                        icon,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 27, height: 1),
-                      ))
-                : Padding(
-                    padding: const EdgeInsets.all(2),
-                    child: FittedBox(
-                      fit: BoxFit.contain,
-                      child: iconWidget!,
-                    ),
-                  ),
           ),
           SizedBox(width: compact ? 8 : 12),
           Expanded(
