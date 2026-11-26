@@ -24,6 +24,12 @@ import '../widgets/common.dart';
 import 'setup_word_fit_text.dart';
 
 /// Container for all modal dialogs. Routed by [GameState.currentModal].
+bool _compactResultLayout(BuildContext context) {
+  final size = MediaQuery.sizeOf(context);
+  final scale = MediaQuery.textScalerOf(context).scale(13) / 13;
+  return size.height <= 600 || (size.width <= 400 && scale > 1.3);
+}
+
 class ModalRouter extends StatefulWidget {
   const ModalRouter({super.key});
 
@@ -95,7 +101,12 @@ class _ModalRouterState extends State<ModalRouter> {
                 child: Container(
                   constraints:
                       const BoxConstraints(maxWidth: 480, maxHeight: 720),
-                  margin: const EdgeInsets.all(24),
+                  margin: EdgeInsets.all(
+                    gs.currentModal == GameModal.win &&
+                            _compactResultLayout(context)
+                        ? 12
+                        : 24,
+                  ),
                   child: _pickModal(gs, context),
                 ),
               ),
@@ -1080,6 +1091,7 @@ class ModalShell extends StatelessWidget {
     this.header,
     this.scrollChild = true,
     this.subtitle,
+    this.compact = false,
   });
 
   final String icon;
@@ -1091,6 +1103,7 @@ class ModalShell extends StatelessWidget {
   final Widget? header;
   final bool scrollChild;
   final String? subtitle;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -1138,7 +1151,9 @@ class ModalShell extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+              padding: compact
+                  ? const EdgeInsets.fromLTRB(12, 12, 12, 10)
+                  : const EdgeInsets.fromLTRB(16, 18, 16, 16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1151,8 +1166,9 @@ class ModalShell extends StatelessWidget {
                       subtitle: subtitle,
                       iconWidget: iconWidget,
                       settings: s,
+                      compact: compact,
                     ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: compact ? 6 : 14),
                   Flexible(
                     fit: scrollChild ? FlexFit.loose : FlexFit.tight,
                     child: scrollChild
@@ -1160,10 +1176,10 @@ class ModalShell extends StatelessWidget {
                         : child,
                   ),
                   if (actions.isNotEmpty) ...[
-                    const SizedBox(height: 14),
+                    SizedBox(height: compact ? 6 : 14),
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.only(top: 12),
+                      padding: EdgeInsets.only(top: compact ? 6 : 12),
                       decoration: BoxDecoration(
                         border: Border(
                           top: BorderSide(
@@ -1171,12 +1187,28 @@ class ModalShell extends StatelessWidget {
                           ),
                         ),
                       ),
-                      child: Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: actions,
-                      ),
+                      child: compact
+                          ? Row(
+                              children: [
+                                for (var i = 0; i < actions.length; i++) ...[
+                                  if (i > 0) const SizedBox(width: 8),
+                                  Expanded(
+                                    child: ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        minHeight: 48,
+                                      ),
+                                      child: actions[i],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            )
+                          : Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: actions,
+                            ),
                     ),
                   ],
                 ],
@@ -1207,6 +1239,7 @@ class _ModalDefaultHeader extends StatelessWidget {
     required this.settings,
     this.subtitle,
     this.iconWidget,
+    this.compact = false,
   });
 
   final String icon;
@@ -1214,6 +1247,7 @@ class _ModalDefaultHeader extends StatelessWidget {
   final String? subtitle;
   final Widget? iconWidget;
   final SettingsService settings;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -1221,7 +1255,7 @@ class _ModalDefaultHeader extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(11),
+      padding: EdgeInsets.all(compact ? 7 : 11),
       decoration: BoxDecoration(
         color: settings.surface2.withValues(
           alpha: settings.dark ? 0.76 : 0.62,
@@ -1234,8 +1268,8 @@ class _ModalDefaultHeader extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 54,
-            height: 54,
+            width: compact ? 38 : 54,
+            height: compact ? 38 : 54,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: accent.withValues(alpha: settings.dark ? 0.16 : 0.11),
@@ -1245,14 +1279,19 @@ class _ModalDefaultHeader extends StatelessWidget {
               ),
             ),
             child: iconWidget == null
-                ? Text(
-                    icon,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 27,
-                      height: 1,
-                    ),
-                  )
+                ? (compact
+                    ? MediaQuery.withNoTextScaling(
+                        child: Text(
+                          icon,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 23, height: 1),
+                        ),
+                      )
+                    : Text(
+                        icon,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 27, height: 1),
+                      ))
                 : Padding(
                     padding: const EdgeInsets.all(2),
                     child: FittedBox(
@@ -1261,7 +1300,7 @@ class _ModalDefaultHeader extends StatelessWidget {
                     ),
                   ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: compact ? 8 : 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1278,7 +1317,7 @@ class _ModalDefaultHeader extends StatelessWidget {
                       softWrap: false,
                       style: TextStyle(
                         color: settings.text,
-                        fontSize: 21,
+                        fontSize: compact ? 18 : 21,
                         fontWeight: FontWeight.w900,
                         fontFamily: AppFonts.headFor(settings),
                         height: 1.0,
@@ -1287,7 +1326,7 @@ class _ModalDefaultHeader extends StatelessWidget {
                   ),
                 ),
                 if (subtitle != null && subtitle!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+                  SizedBox(height: compact ? 2 : 4),
                   Text(
                     subtitle!,
                     maxLines: 2,
@@ -3470,6 +3509,39 @@ class _ReportBoxRow extends StatelessWidget {
     if (responsive) {
       return LayoutBuilder(builder: (context, constraints) {
         final scale = MediaQuery.textScalerOf(context).scale(13) / 13;
+        if (scale > 1.3 && constraints.maxWidth < 240 * scale &&
+            _compactResultLayout(context) && !row.value.contains('\n') &&
+            row.value.length <= 12) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: SetupWordFitText(
+                    row.label,
+                    style: TextStyle(
+                      color: s.muted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: AppFonts.bodyFor(s),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: SetupWordFitText(
+                    row.value,
+                    textAlign: TextAlign.right,
+                    style: _reportValueStyle(s, row),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
         if (scale > 1.3 && constraints.maxWidth < 240 * scale) {
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 9),
@@ -3676,6 +3748,7 @@ class WinModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = _compactResultLayout(context);
     final p1 = gs.p[1];
     final p2 = gs.p[2];
     final mentalMathResult = gs.mentalMathResultSummary;
@@ -3690,16 +3763,23 @@ class WinModal extends StatelessWidget {
               ? 'IQ SPARK'
               : 'DAILY IQ SPARK',
       subtitle: mentalMathResult?.terminalTitle ?? 'Round complete',
-      maxHeight: 650,
+      maxHeight: compact ? 720 : 650,
+      compact: compact,
       actions: [
         if (canReplay)
           NeoButton(
             label: 'Replay',
+            padding: compact
+                ? const EdgeInsets.symmetric(horizontal: 10, vertical: 12)
+                : null,
             color: GameConfig.mint,
             onPressed: gs.replayGame,
           ),
         NeoButton(
           label: gs.isOperationQuest ? 'Quest Map' : 'Main Menu',
+          padding: compact
+              ? const EdgeInsets.symmetric(horizontal: 10, vertical: 12)
+              : null,
           outlined: true,
           color: GameConfig.coral,
           onPressed: gs.isOperationQuest
@@ -3715,8 +3795,9 @@ class WinModal extends StatelessWidget {
                   _ResultHeroMessage(
                     icon: gs.resultIcon,
                     message: gs.resultDescription,
+                    compact: compact,
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: compact ? 6 : 12),
                 ],
                 if (gs.activePlayers == 2 && gs.activeMode == GameMode.standard)
                   _CompareResultReport(p1: p1, p2: p2)
@@ -3732,7 +3813,7 @@ class WinModal extends StatelessWidget {
                   ),
                 ],
                 if (gs.newlyUnlocked.isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                  SizedBox(height: compact ? 6 : 12),
                   _NewAchievementsCard(achievements: gs.newlyUnlocked),
                 ],
               ],
@@ -3843,16 +3924,21 @@ class _ResultHeroMessage extends StatelessWidget {
   const _ResultHeroMessage({
     required this.icon,
     required this.message,
+    this.compact = false,
   });
 
   final String icon;
   final String message;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 9 : 14,
+        vertical: compact ? 7 : 12,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -3870,8 +3956,8 @@ class _ResultHeroMessage extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 42,
-            height: 42,
+            width: compact ? 30 : 42,
+            height: compact ? 30 : 42,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: s.dark ? 0.07 : 0.62),
@@ -3884,7 +3970,7 @@ class _ResultHeroMessage extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: compact ? 6 : 10),
           Expanded(
             child: SetupWordFitText(
               message,
@@ -3892,7 +3978,8 @@ class _ResultHeroMessage extends StatelessWidget {
               style: TextStyle(
                 color: s.text,
                 fontWeight: FontWeight.w800,
-                height: 1.35,
+                fontSize: compact ? 13 : null,
+                height: compact ? 1.15 : 1.35,
               ),
             ),
           ),
