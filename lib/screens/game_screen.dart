@@ -27,6 +27,7 @@ class _GameScreenState extends State<GameScreen> {
     final gs = context.watch<GameState>();
     final s = context.watch<SettingsService>();
     final rt = gs.rt;
+    final compact = _compactGameplayHeight(context);
 
     if (gs.isMentalMathCountdown) {
       return SafeArea(child: _MentalMathCountdown(gs: gs, s: s));
@@ -85,13 +86,13 @@ class _GameScreenState extends State<GameScreen> {
                           if (gs.isTimeBankRun)
                             Positioned(
                               right: 0,
-                              top: 10,
+                              top: compact ? 0 : 10,
                               child: _TimeBankDisplay(gs: gs, s: s),
                             )
                           else if (rt.timer != null)
                             Positioned(
                               right: 0,
-                              top: 10,
+                              top: compact ? 0 : 10,
                               child: _TimerCircle(gs: gs, s: s),
                             ),
                         ],
@@ -114,7 +115,7 @@ class _GameScreenState extends State<GameScreen> {
                 // Question card
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(compact ? 6 : 16),
                     child: Center(
                       child: ConstrainedBox(
                         key: const Key('gameplay-content'),
@@ -122,12 +123,13 @@ class _GameScreenState extends State<GameScreen> {
                         child: Column(
                           children: [
                             _QuestionCard(gs: gs, s: s),
-                            const SizedBox(height: 16),
+                            SizedBox(height: compact ? 6 : 16),
                             if (rt.answerStyle == AnswerStyle.trueFalse)
                               _TrueFalseAnswers(gs: gs)
                             else
                               _AnswersGrid(gs: gs, s: s),
-                            const SizedBox(height: 12),
+                            if (!compact || gs.reactionPill.isNotEmpty)
+                              SizedBox(height: compact ? 4 : 12),
                             if (gs.reactionPill.isNotEmpty)
                               ReactionPill(text: gs.reactionPill, s: s),
                           ],
@@ -444,10 +446,11 @@ class _GameTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rt = gs.rt;
+    final compact = _compactGameplayHeight(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
+      padding: EdgeInsets.fromLTRB(18, compact ? 4 : 8, 18, compact ? 6 : 12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: compact ? 5 : 10),
         decoration: BoxDecoration(
           color: s.surface.withValues(alpha: 0.92),
           borderRadius: BorderRadius.circular(34),
@@ -567,6 +570,7 @@ class _TimerCircle extends StatelessWidget {
             Opacity(
               opacity: pulseOpacity,
               child: Container(
+                key: const Key('per-question-timer-display'),
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
@@ -594,17 +598,20 @@ class _TimerCircle extends StatelessWidget {
                   ],
                 ),
                 alignment: Alignment.center,
-                child: Text(
-                  seconds.toString().padLeft(2, '0'),
-                  style: TextStyle(
-                    color: danger
-                        ? const Color(GameConfig.punch)
-                        : s.dark
-                            ? const Color(GameConfig.sky)
-                            : const Color(0xFF0098E5),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
-                    fontFamily: AppFonts.headFor(s),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    seconds.toString().padLeft(2, '0'),
+                    style: TextStyle(
+                      color: danger
+                          ? const Color(GameConfig.punch)
+                          : s.dark
+                              ? const Color(GameConfig.sky)
+                              : const Color(0xFF0098E5),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                      fontFamily: AppFonts.headFor(s),
+                    ),
                   ),
                 ),
               ),
@@ -726,6 +733,7 @@ class _ScoreProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = _compactGameplayHeight(context);
     final isBoss = gs.rt.challenge == Operation.dailyBoss;
     final isStandard = gs.activeMode == GameMode.standard &&
         gs.rt.challenge != Operation.master &&
@@ -747,14 +755,14 @@ class _ScoreProgress extends StatelessWidget {
     final value = (current / clampedTarget).clamp(0.0, 1.0);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 8, 2, 8),
+      padding: EdgeInsets.fromLTRB(2, compact ? 4 : 8, 2, compact ? 4 : 8),
       child: Column(
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(99),
             child: LinearProgressIndicator(
               value: value,
-              minHeight: 8,
+              minHeight: compact ? 6 : 8,
               backgroundColor:
                   s.dark ? s.surface2 : Colors.white.withValues(alpha: 0.72),
               valueColor: const AlwaysStoppedAnimation<Color>(
@@ -762,14 +770,14 @@ class _ScoreProgress extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: compact ? 2 : 8),
           Row(
             children: [
-              Text('0', style: _progressLabelStyle(s)),
+              Text('0', style: _progressLabelStyle(s, compact)),
               const Spacer(),
-              Text('$current', style: _progressLabelStyle(s)),
+              Text('$current', style: _progressLabelStyle(s, compact)),
               const Spacer(),
-              Text('$clampedTarget', style: _progressLabelStyle(s)),
+              Text('$clampedTarget', style: _progressLabelStyle(s, compact)),
             ],
           ),
         ],
@@ -777,10 +785,11 @@ class _ScoreProgress extends StatelessWidget {
     );
   }
 
-  TextStyle _progressLabelStyle(SettingsService s) {
+  TextStyle _progressLabelStyle(SettingsService s, bool compact) {
     return TextStyle(
       color: s.muted,
-      fontSize: 16,
+      fontSize: compact ? 12 : 16,
+      height: compact ? 1 : null,
       fontWeight: FontWeight.w900,
       fontFamily: AppFonts.headFor(s),
     );
@@ -988,6 +997,7 @@ class _PlayerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final pl = gs.p[pid];
     final s = context.watch<SettingsService>();
+    final shortScreen = _compactGameplayHeight(context);
     final activePowerUps = [
       if (pl.doubleActive) '✨',
       if (pl.shieldActive) '🛡️',
@@ -1000,7 +1010,11 @@ class _PlayerCard extends StatelessWidget {
         opacity: active ? 1 : 0.65,
         child: AnimatedContainer(
           duration: s.duration(200),
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+          constraints: shortScreen ? const BoxConstraints(minHeight: 56) : null,
+          padding: EdgeInsets.symmetric(
+            horizontal: shortScreen ? 8 : 15,
+            vertical: shortScreen ? 6 : 13,
+          ),
           decoration: BoxDecoration(
             color: s.surface,
             borderRadius: BorderRadius.circular(18),
@@ -1037,11 +1051,19 @@ class _PlayerCard extends StatelessWidget {
                     ),
                   ),
                 ),
-              Row(
-                children: [
-                  Stack(
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final scale = MediaQuery.textScalerOf(context).scale(13) / 13;
+                  final compact = constraints.maxWidth < 110 ||
+                      (scale > 1.3 && constraints.maxWidth < 200);
+                  final avatar = Stack(
                     children: [
-                      AvatarWidget(avatar: pl.avatar, size: 38),
+                      MediaQuery.withNoTextScaling(
+                        child: AvatarWidget(
+                          avatar: pl.avatar,
+                          size: shortScreen ? 24 : (compact ? 30 : 38),
+                        ),
+                      ),
                       if (pl.streak >= 3)
                         Positioned(
                           right: -6,
@@ -1049,58 +1071,88 @@ class _PlayerCard extends StatelessWidget {
                           child: StreakFire(streak: pl.streak, size: 12),
                         ),
                     ],
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  );
+                  final name = Text(
+                    pl.name,
+                    style: TextStyle(
+                      color: s.muted,
+                      fontSize: shortScreen ? 11 : 13,
+                      height: shortScreen ? 1 : null,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  );
+                  final score = Text(
+                    '${pl.score}',
+                    maxLines: 1,
+                    softWrap: false,
+                    style: TextStyle(
+                      fontSize: shortScreen ? 19 : 24,
+                      fontWeight: FontWeight.w900,
+                      color: Color(GameConfig.coral),
+                      fontFamily: AppFonts.headFor(s),
+                      height: 1,
+                    ),
+                  );
+                  final powerUps = Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final icon in activePowerUps) ...[
+                        _ActivePlayerPowerUpIcon(
+                          icon: icon,
+                          pid: pid,
+                          active: active,
+                        ),
+                        if (icon != activePowerUps.last)
+                          const SizedBox(width: 5),
+                      ],
+                    ],
+                  );
+                  if (compact) {
+                    return Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          pl.name,
-                          style: TextStyle(
-                            color: s.muted,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Row(
+                        avatar,
+                        SizedBox(height: shortScreen ? 2 : 4),
+                        name,
+                        FittedBox(fit: BoxFit.scaleDown, child: score),
+                        if (activePowerUps.isNotEmpty)
+                          FittedBox(fit: BoxFit.scaleDown, child: powerUps),
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      avatar,
+                      SizedBox(width: shortScreen ? 6 : 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              '${pl.score}',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                                color: Color(GameConfig.coral),
-                                fontFamily: AppFonts.headFor(s),
-                                height: 1,
-                              ),
-                            ),
-                            if (activePowerUps.isNotEmpty) ...[
-                              const SizedBox(width: 8),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  for (final icon in activePowerUps) ...[
-                                    _ActivePlayerPowerUpIcon(
-                                      icon: icon,
-                                      pid: pid,
-                                      active: active,
-                                    ),
-                                    if (icon != activePowerUps.last)
-                                      const SizedBox(width: 5),
-                                  ],
+                            name,
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: score,
+                                  ),
+                                ),
+                                if (activePowerUps.isNotEmpty) ...[
+                                  const SizedBox(width: 8),
+                                  powerUps,
                                 ],
-                              ),
-                            ],
+                              ],
+                            ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                ],
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -1400,11 +1452,12 @@ class _PowerUpHud extends StatelessWidget {
       counts[pu] = (counts[pu] ?? 0) + 1;
     }
     final powerUps = PowerUp.values;
+    final compact = _compactGameplayHeight(context);
 
     return Container(
-      height: 72,
-      margin: const EdgeInsets.fromLTRB(12, 2, 12, 10),
-      padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+      height: compact ? 62 : 72,
+      margin: EdgeInsets.fromLTRB(12, 2, 12, compact ? 2 : 10),
+      padding: EdgeInsets.fromLTRB(8, 10, 8, compact ? 2 : 8),
       decoration: BoxDecoration(
         color: s.surface.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(24),
@@ -1511,12 +1564,20 @@ class _PowerUpHud extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              child: Text(
-                                '$count',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w900,
+                              child: Padding(
+                                padding: const EdgeInsets.all(2),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    '$count',
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -1693,6 +1754,7 @@ class _QuestionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final q = gs.rt.q;
+    final compact = _compactGameplayHeight(context);
     if (q == null) {
       return Container(
         padding: const EdgeInsets.all(32),
@@ -1718,7 +1780,7 @@ class _QuestionCard extends StatelessWidget {
     final danger = _timerWarning(gs);
     final effectsEnabled = danger && !s.lowPerf && !s.reduceMotion;
     final card = Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(compact ? 8 : 20),
       decoration: BoxDecoration(
         color: s.surface,
         borderRadius: BorderRadius.circular(24),
@@ -1823,14 +1885,16 @@ class _QuestionCard extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 3 : 16),
           // Big question text
           SizedBox(
             width: double.infinity,
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: RichText(
+                key: const Key('gameplay-question-expression'),
                 textAlign: TextAlign.center,
+                textScaler: MediaQuery.textScalerOf(context),
                 text: TextSpan(
                   style: TextStyle(
                     fontSize: 44,
@@ -1844,7 +1908,7 @@ class _QuestionCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 3 : 16),
           // Mode warning
           if (_modeWarning(gs) != null)
             Container(
@@ -1862,7 +1926,7 @@ class _QuestionCard extends StatelessWidget {
                 ),
               ),
             ),
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 3 : 16),
           if (!isMentalMath) _QuestionTimerBar(gs: gs, s: s),
         ],
       ),
@@ -1994,6 +2058,11 @@ int _questionNumber(GameState gs, int totalTarget) {
   return current.clamp(1, clampedTarget).toInt();
 }
 
+bool _compactGameplayHeight(BuildContext context) =>
+    MediaQuery.sizeOf(context).height <= 600 &&
+    (MediaQuery.sizeOf(context).width <= 360 ||
+        MediaQuery.textScalerOf(context).scale(14) > 18.2);
+
 const _answerGridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
   crossAxisCount: 2,
   mainAxisSpacing: 10,
@@ -2044,6 +2113,7 @@ class _AnswersGrid extends StatelessWidget {
             return Material(
               color: Colors.transparent,
               child: InkWell(
+                key: ValueKey('gameplay-answer-$i'),
                 borderRadius: BorderRadius.circular(18),
                 onTap: gs.rt.accepting
                     ? () {
@@ -2064,16 +2134,24 @@ class _AnswersGrid extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Center(
-                    child: Text(
-                      gs.isMissingOperation
-                          ? operatorSymbol(c)
-                          : _formatAnswer(c),
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                        color: answerTextColor,
-                        fontFamily: AppFonts.headFor(s),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          gs.isMissingOperation
+                              ? operatorSymbol(c)
+                              : _formatAnswer(c),
+                          maxLines: 1,
+                          softWrap: false,
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: answerTextColor,
+                            fontFamily: AppFonts.headFor(s),
+                          ),
+                        ),
                       ),
                     ),
                   ),

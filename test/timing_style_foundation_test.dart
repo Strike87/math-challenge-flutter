@@ -137,17 +137,8 @@ void main() {
     await tester.pump(const Duration(seconds: 4));
   }
 
-  Finder timerCircleFinder() => find.byWidgetPredicate((widget) {
-        if (widget is! Container ||
-            widget.constraints !=
-                const BoxConstraints.tightFor(width: 56, height: 56) ||
-            widget.child is! Text) {
-          return false;
-        }
-        final decoration = widget.decoration;
-        return decoration is BoxDecoration &&
-            decoration.shape == BoxShape.circle;
-      });
+  Finder timerCircleFinder() =>
+      find.byKey(const Key('per-question-timer-display'));
 
   test('snapshot defaults to per-question timing', () {
     expect(supportedSnapshot().timingStyle, TimingStyle.perQuestion);
