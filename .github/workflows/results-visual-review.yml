@@ -28,7 +28,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           files = list(Path('build/setup-previews').glob('results-*.png'))
-          assert len(files) == 32, f'Expected 32 screenshots, found {len(files)}'
+          assert len(files) == 80, f'Expected 80 screenshots, found {len(files)}'
           PY
       - uses: actions/upload-artifact@v4
         if: always()
