@@ -1,0 +1,239 @@
+name: MD3 05F-01 Golden Parity Verification
+
+on:
+  push:
+    branches:
+      - verify/md3-05f-01-golden-parity
+    paths:
+      - .github/workflows/md3-modal-visual-verification.yml
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      TZ: UTC
+      BASELINE_SHA: fdbbfc63e9e2f1c095512db2337ce5bbfa150f31
+      CANDIDATE_SHA: feadfb059b0892846b06ecfd42d38f55d2cde290
+    steps:
+      - name: Checkout exact baseline
+        uses: actions/checkout@v5
+        with:
+          ref: fdbbfc63e9e2f1c095512db2337ce5bbfa150f31
+          path: baseline
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Checkout exact candidate
+        uses: actions/checkout@v5
+        with:
+          ref: feadfb059b0892846b06ecfd42d38f55d2cde290
+          path: candidate
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.5'
+      - name: Compare existing goldens in identical runner without updates
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/md3-golden-evidence"
+          python3 - <<'PY'
+          import collections
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import shutil
+          import subprocess
+          import sys
+
+          root = Path(os.environ["GITHUB_WORKSPACE"])
+          evidence = Path(os.environ["RUNNER_TEMP"]) / "md3-golden-evidence"
+          labels = ("baseline", "candidate")
+          expected = {label: os.environ[label.upper() + "_SHA"] for label in labels}
+
+          def cmd(args, cwd=None):
+              return subprocess.check_output(args, cwd=cwd, text=True).strip()
+
+          def write_json(path, value):
+              path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+
+          def digest(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+
+          def manifest(work, tracked_dir):
+              raw = subprocess.check_output(
+                  ["git", "ls-files", "-z", "--", tracked_dir], cwd=work
+              )
+              paths = [os.fsdecode(p) for p in raw.split(b"\0") if p]
+              if not paths:
+                  raise RuntimeError("No tracked files in " + tracked_dir)
+              return {p: digest(work / p) for p in sorted(paths)}
+
+          def run_logged(args, cwd, log):
+              with log.open("w") as out:
+                  proc = subprocess.Popen(args, cwd=cwd, stdout=subprocess.PIPE,
+                                          stderr=subprocess.STDOUT, text=True)
+                  for line in proc.stdout:
+                      out.write(line)
+                      print(line, end="", flush=True)
+                  return proc.wait()
+
+          def parse_events(log):
+              names, done, errors = {}, {}, collections.defaultdict(list)
+              completed = False
+              for line in log.read_text(errors="replace").splitlines():
+                  try:
+                      event = json.loads(line)
+                  except ValueError:
+                      continue
+                  if not isinstance(event, dict):
+                      continue
+                  kind = event.get("type")
+                  if kind == "testStart":
+                      test = event["test"]
+                      names[test["id"]] = test["name"]
+                  elif kind == "testDone":
+                      done[event["testID"]] = event
+                  elif kind == "error":
+                      errors[event["testID"]].append(event.get("error", ""))
+                  elif kind == "done":
+                      completed = True
+              cases = {}
+              for tid, event in done.items():
+                  if event.get("hidden"):
+                      continue
+                  name = names.get(tid, "UNKNOWN TEST ID " + str(tid))
+                  if name in cases:
+                      raise RuntimeError("Duplicate test name: " + name)
+                  cases[name] = {
+                      "result": "skipped" if event.get("skipped") else event["result"],
+                      "errors": errors.get(tid, []),
+                  }
+              return {"complete": completed, "cases": cases,
+                      "counts": dict(collections.Counter(c["result"] for c in cases.values())),
+                      "unfinished": [name for tid, name in names.items() if tid not in done]}
+
+          version = json.loads(cmd(["flutter", "--version", "--machine"]))
+          write_json(evidence / "flutter-version.json", version)
+          assert version["frameworkVersion"] == "3.47.5", version
+          assert version["dartSdkVersion"].startswith("3.13.4"), version
+          assert version["frameworkRevision"] == "6a19cca56475dbfba1478ee68d7bd0c2ef891da1", version
+          assert version["engineRevision"] == "af7e796e161ae0bb1ff0758c71a7105418bd9ded", version
+          (evidence / "environment.txt").write_text(
+              cmd(["uname", "-a"]) + "\n" + Path("/etc/os-release").read_text()
+              + "\n" + cmd(["locale"]) + "\nTZ=" + os.environ["TZ"]
+              + "\nRenderer: same native flutter_tester from pinned SDK; no renderer overrides."
+              + "\nDevice sizes, DPR, themes, font loading and locale defaults: unchanged test harness."
+              + "\nRunner image: " + os.environ.get("ImageVersion", "unknown")
+              + "\n" + cmd(["fc-list", "--format", "%{file} %{family} %{style}\\n"])
+              + "\n")
+          write_json(evidence / "source-shas.json", expected)
+          snapshots = {}
+          for label in labels:
+              work = root / label
+              assert cmd(["git", "rev-parse", "HEAD"], work) == expected[label]
+              assert not cmd(["git", "status", "--porcelain", "--untracked-files=no"], work)
+              snapshots[label] = {
+                  "goldens": manifest(work, "test/goldens"),
+                  "fonts": manifest(work, "assets/fonts"),
+                  "harness": digest(work / "test/visual_parity_test.dart"),
+                  "lockfile": digest(work / "pubspec.lock"),
+              }
+              out = evidence / label
+              out.mkdir()
+              write_json(out / "before.json", snapshots[label])
+          assert snapshots["baseline"] == snapshots["candidate"], "Inputs differ: see before.json"
+          diff = subprocess.run(["git", "diff", "--check", expected["baseline"],
+                                 expected["candidate"]], cwd=root / "candidate",
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+          (evidence / "diff-check.txt").write_text(diff.stdout + "\nexit=" + str(diff.returncode))
+          results = {}
+          for label in labels:
+              work, out = root / label, evidence / label
+              record = {"sha": expected[label], "pub_get_exit": None, "test_exit": None}
+              try:
+                  record["pub_get_exit"] = run_logged(["flutter", "pub", "get"], work, out / "pub-get.log")
+                  if record["pub_get_exit"] == 0:
+                      record["test_exit"] = run_logged(
+                          ["flutter", "test", "--no-pub", "--reporter", "json", "--concurrency=1",
+                           "test/visual_parity_test.dart"], work, out / "tests.jsonl")
+                      record.update(parse_events(out / "tests.jsonl"))
+              except Exception as exc:
+                  record["collection_error"] = repr(exc)
+              finally:
+                  try:
+                      after = {
+                          "goldens": manifest(work, "test/goldens"),
+                          "fonts": manifest(work, "assets/fonts"),
+                          "harness": digest(work / "test/visual_parity_test.dart"),
+                          "lockfile": digest(work / "pubspec.lock"),
+                      }
+                      write_json(out / "after.json", after)
+                      record["inputs_unchanged"] = after == snapshots[label]
+                      status = cmd(["git", "status", "--porcelain", "--untracked-files=no"], work)
+                      record["tracked_status"] = status
+                      failures = work / "test/failures"
+                      if failures.exists():
+                          shutil.copytree(failures, out / "failures")
+                      record["failure_artifacts"] = {
+                          str(p.relative_to(out)): digest(p)
+                          for p in sorted((out / "failures").rglob("*")) if p.is_file()
+                      }
+                  except Exception as exc:
+                      record["integrity_error"] = repr(exc)
+                  write_json(out / "result.json", record)
+                  results[label] = record
+
+          b, c = (results[label] for label in labels)
+          bc, cc = b.get("cases", {}), c.get("cases", {})
+          failed = lambda cases: {n for n, v in cases.items() if v["result"] in ("failure", "error")}
+          bf, cf = failed(bc), failed(cc)
+          baseline_complete = b.get("complete") and bool(bc) and not b.get("unfinished") and b["test_exit"] is not None
+          candidate_complete = c.get("complete") and bool(cc) and not c.get("unfinished") and c["test_exit"] is not None
+          comparable = bool(baseline_complete and candidate_complete and bc.keys() == cc.keys())
+          report = {
+              "baseline_counts": b.get("counts", {}),
+              "candidate_counts": c.get("counts", {}),
+              "comparable_test_inventory": comparable,
+              "candidate_only_regressions": sorted(n for n in cf - bf if n in bc and bc[n]["result"] == "success"),
+              "candidate_failures_without_baseline_pass": sorted(n for n in cf - bf if n not in bc or bc[n]["result"] != "success"),
+              "shared_failure_names_not_proof_of_parity": sorted(bf & cf),
+              "baseline_only_failures": sorted(bf - cf),
+              "missing_in_candidate": sorted(bc.keys() - cc.keys()),
+              "missing_in_baseline": sorted(cc.keys() - bc.keys()),
+              "changed_shared_failure_artifacts": sorted(
+                  p for p in b.get("failure_artifacts", {}).keys() & c.get("failure_artifacts", {}).keys()
+                  if b["failure_artifacts"][p] != c["failure_artifacts"][p]),
+              "baseline_only_artifacts": sorted(b.get("failure_artifacts", {}).keys() - c.get("failure_artifacts", {}).keys()),
+              "candidate_only_artifacts": sorted(c.get("failure_artifacts", {}).keys() - b.get("failure_artifacts", {}).keys()),
+              "diff_check_exit": diff.returncode,
+              "coverage_limit": "Existing matchesGoldenFile cases only; not every new header, custom header, safe-area or keyboard state. Shared failures require inspection, not waiver. No device or human visual acceptance implied.",
+          }
+          good = comparable and diff.returncode == 0 and all(
+              r["pub_get_exit"] == 0 and r["test_exit"] == 0
+              and r.get("inputs_unchanged") and r.get("tracked_status") == ""
+              and not r.get("collection_error") and not r.get("integrity_error")
+              and not failed(r.get("cases", {}))
+              and all(v["result"] in ("success", "skipped") for v in r.get("cases", {}).values())
+              for r in results.values())
+          report["golden_parity"] = "PASS" if good else "BLOCKED"
+          write_json(evidence / "comparison.json", report)
+          print(json.dumps(report, indent=2))
+          sys.exit(0 if good else 1)
+          PY
+      - name: Upload evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: md3-05f-01-golden-evidence
+          path: ${{ runner.temp }}/md3-golden-evidence
+          if-no-files-found: error
+          retention-days: 14
