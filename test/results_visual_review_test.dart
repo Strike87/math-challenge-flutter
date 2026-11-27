@@ -263,7 +263,11 @@ void _registerIqSparkResults() {
                           data: MediaQuery.of(context).copyWith(
                             textScaler: TextScaler.linear(scale),
                           ),
-                          child: const ModalRouter(),
+                          child: ModalRouter(
+                            key: ValueKey(
+                              '${fixture.name}-${summaries.indexOf(summary)}',
+                            ),
+                          ),
                         ),
                       ),
                     ),
