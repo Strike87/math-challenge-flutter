@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -94,21 +95,32 @@ class _ModalRouterState extends State<ModalRouter> {
               dismissible: false,
             ),
             Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.viewInsetsOf(context).bottom,
-              ),
-              child: Center(
-                child: Container(
-                  constraints:
-                      const BoxConstraints(maxWidth: 480, maxHeight: 720),
-                  margin: EdgeInsets.all(
-                    gs.currentModal == GameModal.win &&
-                            _compactResultLayout(context)
-                        ? 12
-                        : 24,
-                  ),
-                  child: _pickModal(gs, context),
-                ),
+              // padding is the unconsumed safe area; viewInsets covers the
+              // obscured area. Their sum avoids counting a keyboard twice.
+              padding: MediaQuery.paddingOf(context) +
+                  MediaQuery.viewInsetsOf(context),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final margin = gs.currentModal == GameModal.win &&
+                          _compactResultLayout(context)
+                      ? 12.0
+                      : 24.0;
+                  return Center(
+                    child: Container(
+                      constraints: const BoxConstraints(
+                        maxWidth: 480,
+                        maxHeight: 720,
+                      ),
+                      margin: EdgeInsets.symmetric(
+                        horizontal: math.min(margin, constraints.maxWidth / 12),
+                        vertical: constraints.maxHeight < 260
+                            ? math.min(margin, constraints.maxHeight / 20)
+                            : margin,
+                      ),
+                      child: _pickModal(gs, context),
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -1079,7 +1091,7 @@ class _OperationQuestStageCard extends StatelessWidget {
 }
 
 /// Base modal shell with icon + title + content + actions.
-class ModalShell extends StatelessWidget {
+class ModalShell extends StatefulWidget {
   const ModalShell({
     super.key,
     required this.icon,
@@ -1106,8 +1118,116 @@ class ModalShell extends StatelessWidget {
   final bool compact;
 
   @override
+  State<ModalShell> createState() => _ModalShellState();
+}
+
+class _ModalShellState extends State<ModalShell> {
+  // Keep the same header, body, scroll position and actions when an inset
+  // moves the shell between the pinned and whole-shell scrolling layouts.
+  final _headerKey = GlobalKey();
+  final _bodyKey = GlobalKey();
+  final _actionsKey = GlobalKey();
+
+  Size _measure(BuildContext context, String text, TextStyle style,
+      {double maxWidth = double.infinity}) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: DefaultTextStyle.of(context).style.merge(style),
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout(maxWidth: math.max(1.0, maxWidth));
+    final size = painter.size;
+    painter.dispose();
+    return size;
+  }
+
+  // Estimate a conservative pinned-chrome budget from the same text styles
+  // and width as the header/footer. The fallback is a single bounded scroll
+  // view, not an unbounded Column containing another scroll view.
+  double _pinnedHeight(BuildContext context, SettingsService s, double width) {
+    final compact = widget.compact;
+    final gap = compact ? 6.0 : 14.0;
+    double headerHeight;
+    if (widget.header != null) {
+      // The existing SkillDashboardHeader uses a 44sp icon and 30sp title.
+      // Keep that custom widget intact.
+      headerHeight = MediaQuery.textScalerOf(context).scale(44) * 1.25;
+    } else {
+      final textWidth = width - (compact ? 62 : 90);
+      final titleHeight = _measure(
+        context,
+        widget.title,
+        _ModalDefaultHeader.titleStyle(s, compact),
+        maxWidth: textWidth,
+      ).height;
+      final subtitle = widget.subtitle;
+      final subtitleHeight = subtitle == null || subtitle.isEmpty
+          ? 0.0
+          : (compact ? 2.0 : 4.0) +
+              _measure(context, subtitle, _ModalDefaultHeader.subtitleStyle(s),
+                      maxWidth: textWidth)
+                  .height;
+      headerHeight = math.max(compact ? 38.0 : 54.0,
+              titleHeight + subtitleHeight) +
+          (compact ? 16 : 24);
+    }
+    if (widget.actions.isEmpty) return headerHeight + gap;
+    double runWidth = 0;
+    double runHeight = 0;
+    double actionsHeight = 0;
+    for (final action in widget.actions) {
+      final button = action is NeoButton ? action : null;
+      final padding = button?.padding ??
+          const EdgeInsets.symmetric(horizontal: 28, vertical: 13);
+      final labelSize = _measure(
+        context,
+        button?.label ?? '',
+        TextStyle(
+          fontSize: button?.fontSize ?? 16,
+          fontFamily: AppFonts.headFor(s),
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.5,
+          height: 1.05,
+        ),
+      );
+      final buttonWidth = button == null
+          ? width
+          : math.min(
+              width,
+              labelSize.width +
+                  padding.horizontal +
+                  3 +
+                  (button.icon == null ? 0 : button.fontSize + 10),
+            );
+      final buttonHeight = math.max(
+        compact ? 48.0 : 0.0,
+        math.max(labelSize.height,
+                MediaQuery.textScalerOf(context).scale(button?.fontSize ?? 16) *
+                    1.15) +
+            padding.vertical +
+            3,
+      );
+      if (!compact && runWidth > 0 && runWidth + 10 + buttonWidth > width) {
+        actionsHeight += runHeight + 10;
+        runWidth = 0;
+        runHeight = 0;
+      }
+      runWidth += (runWidth == 0 ? 0 : 10) + buttonWidth;
+      runHeight = math.max(runHeight, buttonHeight);
+    }
+    return headerHeight +
+        gap * 2 +
+        actionsHeight +
+        runHeight +
+        (compact ? 7 : 13);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final s = context.watch<SettingsService>();
+    final compact = widget.compact;
     final radius = BorderRadius.circular(28);
     final modal = Container(
       decoration: BoxDecoration(
@@ -1129,7 +1249,7 @@ class ModalShell extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxHeight ?? 600),
+        constraints: BoxConstraints(maxHeight: widget.maxHeight ?? 600),
         child: Stack(
           children: [
             Positioned(
@@ -1154,64 +1274,106 @@ class ModalShell extends StatelessWidget {
               padding: compact
                   ? const EdgeInsets.fromLTRB(12, 12, 12, 10)
                   : const EdgeInsets.fromLTRB(16, 18, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (header != null)
-                    header!
-                  else
-                    _ModalDefaultHeader(
-                      icon: icon,
-                      title: title,
-                      subtitle: subtitle,
-                      iconWidget: iconWidget,
-                      settings: s,
-                      compact: compact,
-                    ),
-                  SizedBox(height: compact ? 6 : 14),
-                  Flexible(
-                    fit: scrollChild ? FlexFit.loose : FlexFit.tight,
-                    child: scrollChild
-                        ? SingleChildScrollView(child: child)
-                        : child,
-                  ),
-                  if (actions.isNotEmpty) ...[
-                    SizedBox(height: compact ? 6 : 14),
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.only(top: compact ? 6 : 12),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(
-                            color: s.border.withValues(alpha: 0.62),
-                          ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final gap = compact ? 6.0 : 14.0;
+                  final wholeShellScroll = widget.scrollChild &&
+                      constraints.hasBoundedHeight &&
+                      constraints.maxHeight <
+                          _pinnedHeight(context, s, constraints.maxWidth) + 48;
+                  final modalHeader = KeyedSubtree(
+                    key: _headerKey,
+                    child: widget.header ??
+                        _ModalDefaultHeader(
+                          icon: widget.icon,
+                          title: widget.title,
+                          subtitle: widget.subtitle,
+                          iconWidget: widget.iconWidget,
+                          settings: s,
+                          compact: compact,
                         ),
-                      ),
-                      child: compact
-                          ? Row(
-                              children: [
-                                for (var i = 0; i < actions.length; i++) ...[
-                                  if (i > 0) const SizedBox(width: 8),
-                                  Expanded(
-                                    child: ConstrainedBox(
-                                      constraints: const BoxConstraints(
-                                        minHeight: 48,
-                                      ),
-                                      child: actions[i],
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            )
-                          : Wrap(
-                              alignment: WrapAlignment.center,
-                              spacing: 10,
-                              runSpacing: 10,
-                              children: actions,
+                  );
+                  final modalBody = KeyedSubtree(
+                    key: _bodyKey,
+                    child: widget.child,
+                  );
+                  final modalActions = widget.actions.isEmpty
+                      ? null
+                      : KeyedSubtree(
+                          key: _actionsKey,
+                          child: Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.only(top: compact ? 6 : 12),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(
+                                  color: s.border.withValues(alpha: 0.62),
+                                ),
+                              ),
                             ),
-                    ),
-                  ],
-                ],
+                            child: compact
+                                ? Row(
+                                    children: [
+                                      for (var i = 0; i < widget.actions.length; i++) ...[
+                                        if (i > 0) const SizedBox(width: 8),
+                                        Expanded(
+                                          child: ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                              minHeight: 48,
+                                            ),
+                                            child: widget.actions[i],
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  )
+                                : Wrap(
+                                    alignment: WrapAlignment.center,
+                                    spacing: 10,
+                                    runSpacing: 10,
+                                    children: widget.actions,
+                                  ),
+                          ),
+                        );
+
+                  // Avatar Builder owns its scrollable picker and must
+                  // always receive a bounded height, never a second scroller.
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!wholeShellScroll) ...[
+                        modalHeader,
+                        SizedBox(height: gap),
+                      ],
+                      Flexible(
+                        key: const ValueKey('modal-body-flex'),
+                        fit: widget.scrollChild ? FlexFit.loose : FlexFit.tight,
+                        child: widget.scrollChild
+                            ? SingleChildScrollView(
+                                child: wholeShellScroll
+                                    ? Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          modalHeader,
+                                          SizedBox(height: gap),
+                                          modalBody,
+                                          if (modalActions != null) ...[
+                                            SizedBox(height: gap),
+                                            modalActions,
+                                          ],
+                                        ],
+                                      )
+                                    : modalBody,
+                              )
+                            : modalBody,
+                      ),
+                      if (!wholeShellScroll && modalActions != null) ...[
+                        SizedBox(height: gap),
+                        modalActions,
+                      ],
+                    ],
+                  );
+                },
               ),
             ),
           ],
@@ -1248,6 +1410,22 @@ class _ModalDefaultHeader extends StatelessWidget {
   final Widget? iconWidget;
   final SettingsService settings;
   final bool compact;
+
+  static TextStyle titleStyle(SettingsService settings, bool compact) =>
+      TextStyle(
+        color: settings.text,
+        fontSize: compact ? 18 : 21,
+        fontWeight: FontWeight.w900,
+        fontFamily: AppFonts.headFor(settings),
+        height: 1.0,
+      );
+
+  static TextStyle subtitleStyle(SettingsService settings) => TextStyle(
+        color: settings.muted,
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        height: 1.2,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -1309,37 +1487,17 @@ class _ModalDefaultHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: TextStyle(
-                        color: settings.text,
-                        fontSize: compact ? 18 : 21,
-                        fontWeight: FontWeight.w900,
-                        fontFamily: AppFonts.headFor(settings),
-                        height: 1.0,
-                      ),
-                    ),
-                  ),
+                Text(
+                  title,
+                  softWrap: true,
+                  style: titleStyle(settings, compact),
                 ),
                 if (subtitle != null && subtitle!.isNotEmpty) ...[
                   SizedBox(height: compact ? 2 : 4),
                   Text(
                     subtitle!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: settings.muted,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
-                    ),
+                    softWrap: true,
+                    style: subtitleStyle(settings),
                   ),
                 ],
               ],
