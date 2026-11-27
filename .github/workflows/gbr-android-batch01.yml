@@ -1,0 +1,38 @@
+name: GBR Android Batch 01 Build Verification
+on:
+  push:
+    branches: [verify/gbr-android-batch01]
+    paths:
+      - '.github/workflows/gbr-android-batch01.yml'
+      - 'tools/verification/gbr_android_build.py'
+permissions:
+  contents: read
+jobs:
+  build-verification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.5'
+      - name: Install exact Android toolchain components
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;28.2.13676358"
+      - name: Verify isolated APK builds
+        run: python3 tools/verification/gbr_android_build.py --out "$RUNNER_TEMP/gbr-android-build"
+      - name: Retain evidence only (no APK or private key)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gbr-android-build-evidence
+          path: ${{ runner.temp }}/gbr-android-build/evidence
+          if-no-files-found: warn
+          retention-days: 14
