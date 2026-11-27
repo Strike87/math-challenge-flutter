@@ -4,3 +4,6 @@ Review original expected / regenerated baseline / regenerated candidate per imag
 
 ## GBR-FINAL status
 Prior recovery run 46040044238: generation 64/64, 71 images, reproducible; 67 identical and four changed scenes. Legacy golden parity remains blocked. A/B/C diagnostic pending execution and direct review. Scene classifications unresolved; no physical Android evidence available, no golden replacement authorized.
+
+## GBR-FINAL-RECOVERY pending
+Diagnostic run 46046333717, artifact 15221734198: C resolves sampled glyphs, A/B did not; ordinary samples unchanged. Correction is test-only theme fallback, not proof that every explicit RichText or other glyph uses it. Fail closed on A control mismatch or unrelated drift. Four scenes remain UNREVIEWED until recovered rendered evidence inspected. Physical Android NOT VALIDATED; owner visual acceptance and separate replacement approval mandatory. No acceptance asserted.

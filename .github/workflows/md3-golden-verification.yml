@@ -7,6 +7,7 @@ on:
       - 'tools/verification/md3_golden_audit.py'
 permissions:
   contents: read
+  actions: read
 jobs:
   recovery:
     runs-on: ubuntu-24.04
@@ -26,6 +27,13 @@ jobs:
           ref: feadfb059b0892846b06ecfd42d38f55d2cde290
           persist-credentials: false
           path: candidate
+      - name: Download prior recovery evidence (exact run)
+        uses: actions/download-artifact@v4
+        with:
+          name: md3-gbr-evidence
+          path: prior-evidence
+          github-token: ${{ github.token }}
+          run-id: 46040044238
       - name: Verify pinned OCI manifest and execute isolated recovery
         shell: bash
         run: |
@@ -39,6 +47,7 @@ jobs:
             -e LANG=C.UTF-8 -e LC_ALL=C.UTF-8 -e TZ=UTC \
             -v "$GITHUB_WORKSPACE/baseline:/sources/baseline:ro" \
             -v "$GITHUB_WORKSPACE/candidate:/sources/candidate:ro" \
+            -v "$GITHUB_WORKSPACE/prior-evidence:/prior:ro" \
             -v "$GITHUB_WORKSPACE/verification/tools/verification/md3_golden_audit.py:/audit.py:ro" \
             -v "$RUNNER_TEMP/md3-gbr-evidence:/evidence" \
             "ubuntu@$AMD64" bash -lc '
@@ -67,12 +76,12 @@ jobs:
               flutter config --no-analytics
               flutter --version
               fc-cache -f
-              python3 /audit.py --emoji-probe
+              python3 /audit.py
             ' 2>&1 | tee "$RUNNER_TEMP/md3-gbr-evidence/runner.log"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: md3-gbr-emoji-probe-evidence
+          name: md3-gbr-final-recovery-evidence
           path: ${{ runner.temp }}/md3-gbr-evidence
           if-no-files-found: error
           retention-days: 14

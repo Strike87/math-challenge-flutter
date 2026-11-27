@@ -132,7 +132,7 @@ def patch(root):
     path.write_text(source)
     return sha(path)
 
-def execute(label, iteration, mode, pins, snapshots):
+def execute(label, iteration, mode, pins, snapshots, font_mode="C"):
     out = OUT / label / iteration / mode
     out.mkdir(parents=True)
     src = SOURCE / label
@@ -141,11 +141,17 @@ def execute(label, iteration, mode, pins, snapshots):
     shutil.copytree(src, root, ignore=shutil.ignore_patterns(".git", ".dart_tool", "build", "failures"))
     require(not (root / "test/failures").exists(), "Stale failure artifacts")
     patched_hash = patch(root)
+    patched_hash = recovery_patch(root)
     dump(out / "inputs.json", {"source": SHAS[label], "source_snapshot": snapshots[label], "patched_harness": patched_hash})
     env = dict(os.environ, HOME=str(WORK / (root.name + "-home")),
                PUB_CACHE=str(WORK / (root.name + "-pub-cache")))
     Path(env["HOME"]).mkdir()
     Path(env["PUB_CACHE"]).mkdir()
+    env["GBR_FONT_MODE"] = font_mode
+    env["GBR_EMOJI_FONT"] = str(EMOJI_FONT)
+    if mode == "generate":
+        (out/"layouts").mkdir()
+        env["GBR_LAYOUT_OUTPUT"] = str(out/"layouts")
     pub = run(["flutter", "pub", "get", "--enforce-lockfile"], root, out / "pub-get.log", env)
     require(pub == 0 and sha(root / "pubspec.lock") == snapshots[label]["lock"], "Dependency pin mismatch")
     if mode == "generate":
@@ -173,6 +179,8 @@ def execute(label, iteration, mode, pins, snapshots):
                 target = images / Path(name).name
                 shutil.copyfile(image, target)
         result["image_hashes"] = file_hashes(images, images.rglob("*.png"))
+        result["layout_hashes"] = file_hashes(out/"layouts", (out/"layouts").glob("*.json"))
+        result["font_mode"] = font_mode
         result["missing_images"] = sorted(set(Path(p).name for p in EXPECTED_IMAGES) -
                                           set(result["image_hashes"]))
     else:
@@ -207,11 +215,17 @@ def main():
             require(snapshots[label]["fonts"].get(path) == expected, "App font pin mismatch: " + path)
     require(snapshots["baseline"] == snapshots["candidate"], "Source golden/font/harness/lock drift")
     dump(OUT / "source-snapshots.json", snapshots)
+    verify_prior(pins, snapshots)
     results = {}
+    controls = {}
+    # Run A controls, then screen the first corrected generation before proceeding.
     for label in SHAS:
+        controls[label] = execute(label, "control-A", "generate", pins, snapshots, "A")
+        verify_control(label, controls[label])
         for iteration in ("run-01", "run-02"):
-            for mode in ("verify", "generate"):
-                results[label,iteration,mode] = execute(label, iteration, mode, pins, snapshots)
+            results[label,iteration,"generate"] = execute(label, iteration, "generate", pins, snapshots, "C")
+            drift_guard(label, iteration, controls[label], results[label,iteration,"generate"])
+            results[label,iteration,"verify"] = execute(label, iteration, "verify", pins, snapshots, "C")
     reproducibility = {}
     for label in SHAS:
         for mode in ("verify", "generate"):
@@ -222,6 +236,7 @@ def main():
                 "exit_equal": a["exit"]==b["exit"],
                 "failure_hashes_equal": a["failure_hashes"]==b["failure_hashes"],
                 "image_hashes_equal": a.get("image_hashes")==b.get("image_hashes"),
+                "layout_hashes_equal": a.get("layout_hashes")==b.get("layout_hashes"),
                 "all_images_present": not a.get("missing_images") and not b.get("missing_images"),
             }
     dump(OUT/"comparisons/reproducibility.json", reproducibility)
@@ -229,6 +244,10 @@ def main():
     bs,cs = statuses(b),statuses(c)
     regressions = sorted(n for n,v in cs.items() if v in ("error","failure") and bs.get(n)=="success")
     generated = {label: results[label,"run-01","generate"]["image_hashes"] for label in SHAS}
+    changed = {name for name in generated["baseline"] if generated["baseline"][name]!=generated["candidate"].get(name)}
+    dump(OUT/"comparisons/changed-scenes.json", {"previous":sorted(PRIOR_CHANGED),"current":sorted(changed),
+        "newly_changed":sorted(changed-PRIOR_CHANGED),"classification":"PENDING_RENDERED_REVIEW"})
+    require(not changed-PRIOR_CHANGED,"New baseline/candidate difference outside prior four scenes")
     rows = []
     from PIL import Image, ImageChops
     image_out = OUT / "comparisons/images"
@@ -264,7 +283,8 @@ def main():
         "images":rows,"stable":stable,"generation_ok":generation_ok})
     dump(OUT/"acceptance-manifest.json", {"status":"PENDING_HUMAN_AND_OWNER_APPROVAL",
         "source_shas":SHAS,"stable":stable,"generation_ok":generation_ok,
-        "images":rows,"coverage_limit":"Existing 64 tests, not full 05F-03 matrix. No replacement or acceptance implied."})
+        "images":rows,"font_mode":"C","prior_recovery":46040044238,"physical_android":"NOT_VALIDATED",
+        "scene_classifications":"PENDING_HUMAN_REVIEW","coverage_limit":"Existing 64 tests, not full 05F-03 matrix. No replacement or acceptance implied."})
     for label in SHAS:
         require(source_snapshot(SOURCE/label)==snapshots[label], "Final mounted source mutation")
     print(json.dumps({"stable":stable,"generation_ok":generation_ok,"candidate_only_regressions":regressions,
@@ -272,6 +292,131 @@ def main():
                       "human_acceptance":"PENDING"}), flush=True)
     # Preserve legacy verification failures; generated evidence is not a parity pass.
     return 0 if stable and generation_ok and not regressions and b["exit"]==c["exit"]==0 else 1
+
+
+
+# Full recovery uses the previously reviewed C fallback only in the temporary
+# test harness. An instrumented A control must reproduce prior raw images.
+RECOVERY_DART = "\nconst _gbrEmoji = 'NotoColorEmoji';\nbool get _gbrCorrected => Platform.environment['GBR_FONT_MODE'] == 'C';\nFuture<void> _gbrLoadEmoji() async {\n  if (!_gbrCorrected) return;\n  final data = File(Platform.environment['GBR_EMOJI_FONT']!).readAsBytesSync();\n  final loader = FontLoader(_gbrEmoji)\n    ..addFont(Future<ByteData>.value(ByteData.sublistView(data)));\n  await loader.load();\n}\nTextStyle? _gbrStyle(TextStyle? s) {\n  if (s == null || !_gbrCorrected) return s;\n  final existing = s.fontFamilyFallback ?? const <String>[];\n  if (existing.contains(_gbrEmoji)) return s;\n  return s.copyWith(fontFamilyFallback: [...existing, _gbrEmoji]);\n}\nTextTheme _gbrTextTheme(TextTheme t) => t.copyWith(\n  displayLarge: _gbrStyle(t.displayLarge), displayMedium: _gbrStyle(t.displayMedium),\n  displaySmall: _gbrStyle(t.displaySmall), headlineLarge: _gbrStyle(t.headlineLarge),\n  headlineMedium: _gbrStyle(t.headlineMedium), headlineSmall: _gbrStyle(t.headlineSmall),\n  titleLarge: _gbrStyle(t.titleLarge), titleMedium: _gbrStyle(t.titleMedium),\n  titleSmall: _gbrStyle(t.titleSmall), bodyLarge: _gbrStyle(t.bodyLarge),\n  bodyMedium: _gbrStyle(t.bodyMedium), bodySmall: _gbrStyle(t.bodySmall),\n  labelLarge: _gbrStyle(t.labelLarge), labelMedium: _gbrStyle(t.labelMedium),\n  labelSmall: _gbrStyle(t.labelSmall),\n);\nThemeData _gbrTheme(ThemeData t) => !_gbrCorrected ? t : t.copyWith(\n  textTheme: _gbrTextTheme(t.textTheme),\n  primaryTextTheme: _gbrTextTheme(t.primaryTextTheme),\n);\nclass _GbrGolden {\n  const _GbrGolden(this.name, this.matcher);\n  final String name;\n  final dynamic matcher;\n}\n_GbrGolden matchesGoldenFile(String name) =>\n    _GbrGolden(name, gbr.matchesGoldenFile(name));\n// Capture the same nearest repaint boundary as the widget golden matcher.\n// Material icon private-use glyphs and ordinary text are protected, not masked.\nbool _gbrSymbol(int cp) =>\n    (cp >= 0x1f000 && cp <= 0x1faff) ||\n    (cp >= 0x2600 && cp <= 0x27bf) ||\n    cp == 0x2b50 || cp == 0x2b55 || cp == 0x231a || cp == 0x231b;\nbool _gbrJoin(int cp) => cp == 0xfe0f || cp == 0xfe0e || cp == 0x200d || cp == 0x20e3;\ndouble _gbrRound(double d) => (d * 10000).roundToDouble() / 10000;\nList<double> _gbrRect(Rect r) => [r.left,r.top,r.right,r.bottom].map(_gbrRound).toList();\nvoid _gbrCapture(Finder finder, String name, String directory) {\n  RenderObject boundary = finder.evaluate().single.findRenderObject()!;\n  while (!boundary.isRepaintBoundary) {\n    boundary = boundary.parent! as RenderObject;\n  }\n  final box = boundary as RenderBox;\n  final visible = Offset.zero & box.size;\n  final protected = <Map<String, Object?>>[];\n  final symbols = <Map<String, Object?>>[];\n  void walk(RenderObject node) {\n    if (node is RenderParagraph && node.hasSize && node.attached) {\n      final text = node.text.toPlainText(includeSemanticsLabels: false);\n      final matrix = node.getTransformTo(boundary);\n      var offset = 0;\n      var start = 0;\n      bool? symbol;\n      void record(int end) {\n        if (start == end) return;\n        final rects = <List<double>>[];\n        for (final selected in node.getBoxesForSelection(TextSelection(baseOffset: start, extentOffset: end))) {\n          final rect = MatrixUtils.transformRect(matrix, selected.toRect());\n          if (!rect.isFinite) continue;\n          final clipped = rect.intersect(visible);\n          if (!clipped.isEmpty) rects.add(_gbrRect(clipped));\n        }\n        if (rects.isNotEmpty) {\n          final value = {'text': text.substring(start, end), 'rects': rects};\n          (symbol == true ? symbols : protected).add(value);\n        }\n      }\n      for (final cp in text.runes) {\n        final next = _gbrJoin(cp) ? (symbol ?? false) : _gbrSymbol(cp);\n        if (symbol != null && next != symbol) {\n          record(offset);\n          start = offset;\n        }\n        symbol = next;\n        offset += cp > 0xffff ? 2 : 1;\n      }\n      record(offset);\n    }\n    node.visitChildren(walk);\n  }\n  walk(boundary);\n  final out = File('$directory/${name.split('/').last}.json');\n  out.writeAsStringSync(jsonEncode({\n    'size': [box.size.width, box.size.height],\n    'protected': protected, 'symbol_candidates': symbols,\n  }));\n}\nFuture<void> expectLater(dynamic actual, _GbrGolden matcher) async {\n  final directory = Platform.environment['GBR_LAYOUT_OUTPUT'];\n  if (directory != null) _gbrCapture(actual as Finder, matcher.name, directory);\n  await gbr.expectLater(actual, matcher.matcher);\n}\n"
+PRIOR = Path("/prior")
+PRIOR_HASHES = {
+    "environment.json": "c916f24a77c2434e2cd7d04c3104c19ec0fe79bcdb3bc1cb565e4ae3e68c0d4f",
+    "acceptance-manifest.json": "95f39b2e9ee954b5a8f09c033e86ca4f0d2780330187d95d7bb2b24a6d6e19ad",
+    "source-snapshots.json": "b76e66b696bba0533eeea08b3bcd80c5fb9dd192be95ae763e37e972177d996d",
+    "comparisons/differences.json": "1ba074d3a83596f62c754f5e3ad85bcb9962d5794deaa03494b18c9b85fa6d9f",
+    "baseline/run-01/generate/result.json": "61b5e9bf096268bdd9fe18223aaabae2545207bc933dd0ec409ba366b2fef09d",
+    "candidate/run-01/generate/result.json": "c0c5f5482a1a14e9802f655b077d52af5c3eb35bbedf333eeaf3489ed2010042",
+}
+PRIOR_CHANGED = {"10_win_modal.png", "28_cloud_save_conflict_native_light.png",
+                 "28_cloud_save_conflict_ordinary_dark.png", "28_cloud_save_conflict_ordinary_light.png"}
+EMOJI_FONT = Path("/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf")
+EMOJI_HASH = "93cdc4ee9aa40e2afceecc63da0ca05ec7aab4bec991ece51a6b52389f48a477"
+
+def verify_prior(pins, snapshots):
+    for name, expected in PRIOR_HASHES.items():
+        require((PRIOR/name).is_file() and sha(PRIOR/name)==expected, "Prior evidence hash mismatch: "+name)
+    require(json.loads((PRIOR/"environment.json").read_text())==pins, "Environment differs from prior validated A/C runs")
+    require(json.loads((PRIOR/"source-snapshots.json").read_text())==snapshots, "Prior source snapshot mismatch")
+    require(EMOJI_FONT.is_file() and sha(EMOJI_FONT)==EMOJI_HASH, "Emoji font hash mismatch")
+    prior = json.loads((PRIOR/"acceptance-manifest.json").read_text())
+    require(prior["source_shas"]==SHAS and prior["stable"] and prior["generation_ok"], "Prior recovery invalid")
+    for label in SHAS:
+        result = json.loads((PRIOR/label/"run-01/generate/result.json").read_text())
+        require(complete(result) and result["exit"]==0 and len(result["image_hashes"])==len(EXPECTED_IMAGES), "Prior inventory invalid")
+        for name, digest in result["image_hashes"].items():
+            require(sha(PRIOR/label/"run-01/generate/images"/name)==digest, "Prior image mismatch: "+name)
+    dump(OUT/"prior-evidence.json", {"run":46040044238,"artifact":15220595002,
+        "validated_hashes":PRIOR_HASHES,"emoji_font_sha256":EMOJI_HASH})
+
+def recovery_patch(root):
+    path = root/"test/visual_parity_test.dart"
+    source = path.read_text()
+    edits = [
+        ("import 'dart:convert';", "import 'dart:convert';\\nimport 'dart:io';"),
+        ("import 'package:flutter/material.dart';", "import 'package:flutter/material.dart';\\nimport 'package:flutter/rendering.dart';"),
+        ("import 'package:flutter_test/flutter_test.dart';",
+         "import 'package:flutter_test/flutter_test.dart' hide matchesGoldenFile, expectLater;\\nimport 'package:flutter_test/flutter_test.dart' as gbr;"),
+        ("  await fontLoader2.load();", "  await fontLoader2.load();\\n  await _gbrLoadEmoji();"),
+        ("theme: AppTheme.light(s),", "theme: _gbrTheme(AppTheme.light(s)),"),
+        ("darkTheme: AppTheme.dark(s),", "darkTheme: _gbrTheme(AppTheme.dark(s)),"),
+    ]
+    for old,new in edits:
+        require(source.count(old)==1, "Recovery patch anchor drift: "+old)
+        source = source.replace(old,new.replace("\\n","\n"))
+    require(source.count("void main() {")==1,"Main anchor drift")
+    source = source.replace("void main() {", RECOVERY_DART+"\nvoid main() {")
+    require(len(re.findall(r"testWidgets\(",source))==EXPECTED_TESTS,"Test inventory drift")
+    require(re.findall(r"matchesGoldenFile\(\s*'([^']+)'",source)==EXPECTED_IMAGES,"Golden inventory drift")
+    path.write_text(source)
+    return sha(path)
+
+def valid_generation(r):
+    return (r["exit"]==0 and complete(r) and not r["missing_images"]
+            and all(v=="success" for v in statuses(r).values())
+            and len(r.get("layout_hashes",{}))==len(EXPECTED_IMAGES))
+
+def drift_guard(label, iteration, control, corrected):
+    from PIL import Image, ImageChops, ImageDraw
+    import math
+    require(valid_generation(control) and valid_generation(corrected),"Incomplete A/C generation")
+    before = OUT/label/"control-A/generate"
+    after = OUT/label/iteration/"generate"
+    destination = OUT/"comparisons"/"fallback-drift"/label/iteration
+    destination.mkdir(parents=True)
+    rows = []
+    def rectangles(data, key):
+        return [r for item in data[key] for r in item["rects"]]
+    def draw_rect(draw, rect, fill, size, pad=0):
+        l,t,r,b=rect
+        coords=(max(0, math.floor(l)-pad),max(0,math.floor(t)-pad),
+                min(size[0]-1,math.ceil(r)-1+pad),min(size[1]-1,math.ceil(b)-1+pad))
+        if coords[0]<=coords[2] and coords[1]<=coords[3]:
+            draw.rectangle(coords,fill=fill)
+    for name in sorted(control["image_hashes"]):
+        a=Image.open(before/"images"/name).convert("RGBA")
+        b=Image.open(after/"images"/name).convert("RGBA")
+        l1=json.loads((before/"layouts"/(name+".json")).read_text())
+        l2=json.loads((after/"layouts"/(name+".json")).read_text())
+        row={"image":name,"A_sha256":control["image_hashes"][name],"C_sha256":corrected["image_hashes"][name],
+             "same_dimensions":a.size==b.size,"protected_geometry_equal":l1["protected"]==l2["protected"],
+             "layout_size_matches":l1["size"]==list(a.size) and l2["size"]==list(b.size)}
+        if a.size==b.size and row["layout_size_matches"]:
+            diff=ImageChops.difference(a,b)
+            channels=diff.split()
+            changed=channels[0]
+            for ch in channels[1:]:
+                changed=ImageChops.lighter(changed,ch)
+            changed=changed.point(lambda x:255 if x else 0)
+            mask=Image.new("L",a.size,0)
+            draw=ImageDraw.Draw(mask)
+            for rect in rectangles(l1,"symbol_candidates")+rectangles(l2,"symbol_candidates"):
+                draw_rect(draw,rect,255,a.size,2)
+            # Never exempt ordinary glyphs/Material private-use icon boxes.
+            for rect in rectangles(l1,"protected")+rectangles(l2,"protected"):
+                draw_rect(draw,rect,0,a.size)
+            unexplained=ImageChops.multiply(changed,ImageChops.invert(mask))
+            row["different_pixels"]=changed.histogram()[255]
+            row["unexplained_pixels"]=unexplained.histogram()[255]
+            if row["different_pixels"]:
+                canvas=Image.new("RGB",(a.width*3,a.height),"white")
+                canvas.paste(a.convert("RGB"),(0,0))
+                canvas.paste(b.convert("RGB"),(a.width,0))
+                canvas.paste(diff.convert("RGB"),(a.width*2,0))
+                canvas.save(destination/(Path(name).stem+"-A-C-diff.png"))
+                unexplained.save(destination/(Path(name).stem+"-unexplained-mask.png"))
+        row["guard_pass"]=(row["same_dimensions"] and row["layout_size_matches"]
+             and row["protected_geometry_equal"] and row.get("unexplained_pixels")==0)
+        row["classification"]="SYMBOL_REGION_ONLY_PENDING_VISUAL_REVIEW" if row["guard_pass"] else "BLOCKED_UNEXPLAINED_DRIFT"
+        rows.append(row)
+    dump(destination/"report.json",{"all_pass":all(r["guard_pass"] for r in rows),"images":rows,
+         "limit":"Symbol-range masks are conservative screening, not proof of glyph correctness or human acceptance."})
+    require(all(r["guard_pass"] for r in rows),"Unexplained pixel/ordinary text or icon geometry drift: "+label+" "+iteration)
+
+def verify_control(label, result):
+    require(valid_generation(result),"A control incomplete: "+label)
+    prior=json.loads((PRIOR/label/"run-01/generate/result.json").read_text())
+    require(result["image_hashes"]==prior["image_hashes"],"A control does not reproduce prior evidence: "+label)
+    require(statuses(result)==statuses(prior),"A control test results differ: "+label)
 
 
 # Diagnostic only: isolated synthetic probe using the original font loader.
