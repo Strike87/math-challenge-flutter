@@ -1195,6 +1195,16 @@ void main() {
           testWidgets('05F-01 headers $size @ ${scale}x dark=$dark',
               (tester) async {
             final state = await _makeState({'mc_dark': dark});
+            state.settings.load(
+              dark: dark,
+              sound: false,
+              vibration: false,
+              dyslexia: false,
+              colorblind: false,
+              lowPerf: true,
+              reduceMotion: true,
+              animSpeed: 1,
+            );
             try {
               _setTestView(tester, size);
               const safe = EdgeInsets.fromLTRB(8, 18, 12, 14);
