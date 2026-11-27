@@ -67,12 +67,12 @@ jobs:
               flutter config --no-analytics
               flutter --version
               fc-cache -f
-              python3 /audit.py
+              python3 /audit.py --emoji-probe
             ' 2>&1 | tee "$RUNNER_TEMP/md3-gbr-evidence/runner.log"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: md3-gbr-evidence
+          name: md3-gbr-emoji-probe-evidence
           path: ${{ runner.temp }}/md3-gbr-evidence
           if-no-files-found: error
           retention-days: 14

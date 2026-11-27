@@ -273,9 +273,149 @@ def main():
     # Preserve legacy verification failures; generated evidence is not a parity pass.
     return 0 if stable and generation_ok and not regressions and b["exit"]==c["exit"]==0 else 1
 
+
+# Diagnostic only: isolated synthetic probe using the original font loader.
+# Never select a font correction or replace a golden from this experiment.
+PROBE_DART = "import 'dart:convert';\nimport 'dart:io';\nimport 'dart:typed_data';\nimport 'dart:ui' as ui;\nimport 'package:flutter/material.dart';\nimport 'package:flutter/rendering.dart';\nimport 'package:flutter/services.dart';\nimport 'package:flutter_test/flutter_test.dart';\nimport 'package:math_challenge/services/settings.dart';\nimport 'package:math_challenge/theme.dart';\nimport 'visual_parity_test.dart' as existing;\n\nconst samples = <String>[\n  'Math 123 + -',\n  '🚀', '🧮', '🎓', '🏆', '🧠⚡', '🎯', '🐲', '🧭',\n  '➕', '✖️', '⭐', 'IQ 56',\n];\nconst families = <String?>['Baloo2', 'PlusJakartaSans', null];\n\nvoid main() {\n  final mode = Platform.environment['GBR_PROBE_MODE']!;\n  final output = Platform.environment['GBR_PROBE_OUTPUT']!;\n  setUpAll(() async {\n    TestWidgetsFlutterBinding.ensureInitialized();\n    await existing.loadAppFonts();\n    if (mode != 'A') {\n      final bytes = File(Platform.environment['GBR_PROBE_FONT']!).readAsBytesSync();\n      final emoji = FontLoader('NotoColorEmoji')\n        ..addFont(Future<ByteData>.value(ByteData.sublistView(bytes)));\n      await emoji.load();\n    }\n  });\n  testWidgets('temporary glyph probe', (tester) async {\n    await existing.setTestDevice(tester, logicalSize: const Size(390, 844));\n    final settings = SettingsService()\n      ..load(dark: false, sound: false, vibration: false, dyslexia: false,\n        colorblind: false, lowPerf: true, reduceMotion: true, animSpeed: 1);\n    addTearDown(settings.dispose);\n    final key = GlobalKey();\n    Map<String, Object?>? metadata;\n    await tester.pumpWidget(MaterialApp(\n      debugShowCheckedModeBanner: false,\n      theme: AppTheme.light(settings),\n      home: RepaintBoundary(\n        key: key,\n        child: Scaffold(\n          backgroundColor: Colors.white,\n          body: Builder(builder: (context) {\n            metadata = {\n              'mode': mode,\n              'explicit_registration': mode != 'A',\n              'explicit_fallback': mode == 'C',\n              'locale': Localizations.localeOf(context).toLanguageTag(),\n              'platform_locale': tester.binding.platformDispatcher.locale.toLanguageTag(),\n              'text_scale_at_1': MediaQuery.textScalerOf(context).scale(1),\n              'logical_size': [MediaQuery.sizeOf(context).width, MediaQuery.sizeOf(context).height],\n              'device_pixel_ratio': tester.view.devicePixelRatio,\n              'default_family': DefaultTextStyle.of(context).style.fontFamily,\n              'families': families,\n              'samples': samples,\n              'row_height': 60,\n              'renderer': 'native flutter_tester',\n            };\n            return Column(\n              children: [\n                for (final sample in samples)\n                  SizedBox(height: 60, child: Row(\n                    children: [\n                      for (final family in families)\n                        Expanded(child: Center(child: Text(\n                          sample,\n                          maxLines: 1,\n                          style: TextStyle(\n                            fontFamily: family,\n                            fontFamilyFallback: mode == 'C' ? const ['NotoColorEmoji'] : null,\n                            fontSize: 22,\n                            fontWeight: FontWeight.w700,\n                            color: Colors.black,\n                          ),\n                        ))),\n                    ],\n                  )),\n              ],\n            );\n          }),\n        ),\n      ),\n    ));\n    await tester.pumpAndSettle();\n    expect(tester.takeException(), isNull);\n    expect(metadata, isNotNull);\n    await tester.runAsync(() async {\n      final boundary = key.currentContext!.findRenderObject()! as RenderRepaintBoundary;\n      final image = await boundary.toImage(pixelRatio: 1);\n      final data = (await image.toByteData(format: ui.ImageByteFormat.png))!;\n      File('$output/probe.png').writeAsBytesSync(\n          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes));\n      image.dispose();\n      File('$output/render.json').writeAsStringSync(jsonEncode(metadata));\n    });\n    expect(File('$output/probe.png').existsSync(), isTrue);\n    expect(tester.takeException(), isNull);\n  });\n}\n"
+PROBE_SAMPLES = ["Math 123 + -","🚀","🧮","🎓","🏆","🧠⚡","🎯","🐲","🧭","➕","✖️","⭐","IQ 56"]
+
+def glyph_inventory(path):
+    result = subprocess.run(["fc-query", "--format", "%{family}\\n%{charset}\\n", str(path)],
+                            text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    lines = result.stdout.splitlines()
+    intervals = []
+    if result.returncode == 0:
+        for line in lines[1::2]:
+            for token in line.split():
+                bounds = token.split("-")
+                try:
+                    intervals.append((int(bounds[0], 16), int(bounds[-1], 16)))
+                except ValueError:
+                    pass
+    points = sorted({ord(ch) for sample in PROBE_SAMPLES for ch in sample})
+    return {"sha256": sha(path), "fc_query_exit": result.returncode,
+            "raw_fontconfig": result.stdout, "stderr": result.stderr,
+            "codepoint_coverage": {f"U+{p:04X}": any(a <= p <= b for a,b in intervals)
+                                   for p in points},
+            "limit": "Codepoint coverage is not proof of shaped sequence or renderer coverage."}
+
+def emoji_probe():
+    from PIL import Image, ImageChops
+    OUT.mkdir(exist_ok=True)
+    WORK.mkdir(exist_ok=True)
+    pins = environment()
+    require(pins["architecture"] == "x86_64", "Unexpected architecture")
+    dump(OUT / "environment.json", pins)
+    snapshots = {}
+    for label, ref in SHAS.items():
+        root = SOURCE / label
+        require(command(["git", "-c", "safe.directory="+str(root), "rev-parse", "HEAD"], root) == ref,
+                "SHA mismatch")
+        snapshots[label] = source_snapshot(root)
+        for path, expected in EXPECTED_FONT_HASHES.items():
+            require(snapshots[label]["fonts"].get(path) == expected, "App font pin mismatch: "+path)
+        source = (root / "test/visual_parity_test.dart").read_text()
+        require(len(re.findall(r"testWidgets\(", source)) == EXPECTED_TESTS, "Test inventory drift")
+        require(re.findall(r"matchesGoldenFile\(\s*'([^']+)'", source) == EXPECTED_IMAGES, "Golden inventory drift")
+    require(snapshots["baseline"] == snapshots["candidate"], "Source input drift")
+    dump(OUT / "source-snapshots.json", snapshots)
+    fonts = [Path(p) for p in pins["system_fonts"] if Path(p).name == "NotoColorEmoji.ttf"]
+    require(len(fonts) == 1, "Expected one pinned NotoColorEmoji file")
+    font = fonts[0]
+    require(sha(font) == pins["system_fonts"][str(font)], "Emoji font hash mismatch")
+    coverage = {"system_emoji": glyph_inventory(font),
+                "app_fonts": {p: glyph_inventory(SOURCE/"baseline"/p) for p in EXPECTED_FONT_HASHES},
+                "fontconfig_match": {sample: command(["fc-match", "-f", "%{file} %{family}", sample])
+                                     for sample in ("Noto Color Emoji", "Baloo2", "PlusJakartaSans", ":charset=1f680")}}
+    dump(OUT / "glyph-coverage.json", coverage)
+    require(coverage["system_emoji"]["fc_query_exit"] == 0, "Emoji coverage query failed")
+    results = {}
+    for label in SHAS:
+        for mode in ("A", "B", "C"):
+            out = OUT / "emoji-probes" / label / mode
+            out.mkdir(parents=True)
+            root = WORK / ("probe-"+label+"-"+mode)
+            require(environment() == pins, "Environment changed before probe")
+            shutil.copytree(SOURCE/label, root, ignore=shutil.ignore_patterns(".git", ".dart_tool", "build", "failures"))
+            probe = root / "test/gbr_temporary_emoji_probe_test.dart"
+            probe.write_text(PROBE_DART)
+            env = dict(os.environ, HOME=str(WORK/(root.name+"-home")),
+                       PUB_CACHE=str(WORK/(root.name+"-cache")),
+                       GBR_PROBE_MODE=mode, GBR_PROBE_FONT=str(font), GBR_PROBE_OUTPUT=str(out))
+            Path(env["HOME"]).mkdir()
+            Path(env["PUB_CACHE"]).mkdir()
+            pub = run(["flutter","pub","get","--enforce-lockfile"], root, out/"pub-get.log", env)
+            require(pub == 0 and sha(root/"pubspec.lock") == snapshots[label]["lock"], "Dependency pin mismatch")
+            rc = run(["flutter","test","--no-pub","--reporter","json","--concurrency=1",
+                      "test/gbr_temporary_emoji_probe_test.dart"], root, out/"tests.jsonl", env)
+            result = events(out/"tests.jsonl")
+            result.update({"source_sha": SHAS[label], "exit": rc, "mode": mode,
+                           "probe_sha256": sha(probe), "emoji_font_sha256": sha(font)})
+            if (out/"probe.png").exists() and (out/"render.json").exists():
+                result["image_sha256"] = sha(out/"probe.png")
+                result["render"] = json.loads((out/"render.json").read_text())
+            require(sha(root/"test/visual_parity_test.dart") == snapshots[label]["harness"], "Harness changed")
+            require(all(sha(root/p)==h for p,h in snapshots[label]["goldens"].items()), "Scratch golden mutation")
+            require(source_snapshot(SOURCE/label)==snapshots[label], "Source mutation")
+            require(environment()==pins, "Environment drift after probe")
+            dump(out/"result.json", result)
+            results[label,mode] = result
+            shutil.rmtree(root)
+            shutil.rmtree(env["HOME"])
+            shutil.rmtree(env["PUB_CACHE"])
+    def valid(r):
+        return (r["exit"] == 0 and r["complete"] and not r["unfinished"]
+                and r["counts"] == {"success": 1} and bool(r.get("image_sha256")))
+    all_valid = all(valid(r) for r in results.values())
+    comparison = {"all_probes_completed": all_valid, "source_shas": SHAS,
+                  "mode_semantics": {"A":"original loader", "B":"explicit registration",
+                                     "C":"explicit registration and sample TextStyle fallback"},
+                  "selection": "NONE_PENDING_IMAGE_REVIEW", "physical_android": "NOT_VALIDATED",
+                  "coverage_limit": "Synthetic glyph samples using actual app font loader; not full-screen parity, not device evidence.",
+                  "pairs": []}
+    def compare(left, right):
+        im1 = Image.open(OUT/"emoji-probes"/left[0]/left[1]/"probe.png").convert("RGB")
+        im2 = Image.open(OUT/"emoji-probes"/right[0]/right[1]/"probe.png").convert("RGB")
+        require(im1.size == im2.size == (390,844), "Unexpected probe image dimensions")
+        diff = ImageChops.difference(im1,im2)
+        rows = []
+        for i,sample in enumerate(PROBE_SAMPLES):
+            columns = []
+            for j in range(3):
+                tile = diff.crop((j*130,i*60,(j+1)*130,(i+1)*60))
+                columns.append(sum(1 for p in tile.getdata() if p != (0,0,0)))
+            rows.append({"sample": sample, "different_pixels_by_family": columns})
+        name = "-".join(left)+"_vs_"+"-".join(right)
+        diff_path = OUT/"emoji-probes"/(name+"-diff.png")
+        diff.save(diff_path)
+        return {"left": list(left), "right": list(right),
+                "sha_equal": results[left]["image_sha256"]==results[right]["image_sha256"],
+                "diff_sha256": sha(diff_path), "rows":rows}
+    if all_valid:
+        for label in SHAS:
+            for mode in ("B","C"):
+                comparison["pairs"].append(compare((label,"A"),(label,mode)))
+            canvas = Image.new("RGB", (1170,844), "white")
+            for i,mode in enumerate(("A","B","C")):
+                with Image.open(OUT/"emoji-probes"/label/mode/"probe.png") as im:
+                    canvas.paste(im.convert("RGB"), (390*i,0))
+            canvas.save(OUT/"emoji-probes"/(label+"-A-B-C.png"))
+        for mode in ("A","B","C"):
+            comparison["pairs"].append(compare(("baseline",mode),("candidate",mode)))
+    dump(OUT/"emoji-probes/comparison.json", comparison)
+    dump(OUT/"acceptance-manifest.json", {"status":"BLOCKED_PENDING_GLYPH_REVIEW_AND_PHYSICAL_ANDROID",
+         "source_shas":SHAS,"probe_success":all_valid,"golden_replacement":"NOT_AUTHORIZED",
+         "legacy_recovery_run":46040044238,"scene_classifications":"UNRESOLVED",
+         "note":"No full-suite font correction selected or applied; 64 original tests and 71 golden references untouched."})
+    for label in SHAS:
+        require(source_snapshot(SOURCE/label)==snapshots[label], "Final source mutation")
+    print(json.dumps({"emoji_probe_complete":all_valid,"physical_android":"NOT_VALIDATED",
+                      "golden_acceptance":"BLOCKED"}),flush=True)
+    return 0 if all_valid else 1
+
 if __name__ == "__main__":
     try:
-        sys.exit(main())
+        sys.exit(emoji_probe() if sys.argv[1:] == ["--emoji-probe"] else main())
     except Exception as exc:
         dump(OUT/"blocker.json", {"error":repr(exc)})
         raise
