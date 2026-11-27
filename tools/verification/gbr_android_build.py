@@ -1,6 +1,7 @@
 """GBR Batch 01: isolated debug builds; no installation or APK upload."""
 import argparse, difflib, hashlib, json, os, re, shutil, subprocess, sys, tarfile, tempfile
 from pathlib import Path
+import time
 ROOT=Path(__file__).resolve().parents[2]
 SHAS={"baseline":"fdbbfc63e9e2f1c095512db2337ce5bbfa150f31","candidate":"feadfb059b0892846b06ecfd42d38f55d2cde290"}
 PROD="com.mohamedk.mathchallenge"
@@ -90,6 +91,12 @@ def build(label,ref,sdk,evidence,work,keep):
     env=dict(os.environ,GRADLE_USER_HOME=str(work/(label+"-gradle")),PUB_CACHE=str(work/(label+"-pub")))
     for key in list(env):
         if key.startswith("ORG_GRADLE_PROJECT_"): env.pop(key)
+    # Prevent persistent Gradle/Kotlin workers from writing into deleted scratch caches.
+    gradle_home=Path(env["GRADLE_USER_HOME"])
+    gradle_home.mkdir()
+    worker_config="org.gradle.daemon=false\nkotlin.compiler.execution.strategy=in-process\n"
+    (gradle_home/"gradle.properties").write_text(worker_config,encoding="utf-8")
+    (ev/"gradle-worker-config.txt").write_text(worker_config,encoding="utf-8")
     key=root/"android/app/gbr-test-debug.jks"
     cert=ev/"test-signing-cert.der"
     run(["keytool","-genkeypair","-keystore",key,"-storetype","JKS","-storepass","android","-keypass","android","-alias","gbrtest","-keyalg","RSA","-keysize","2048","-validity","365","-dname","CN=GBR "+label+" verification only"],root,env,ev/"keygen.log")
@@ -143,8 +150,22 @@ def main():
         java=run(["java","-version"])
         require(re.search(r'version "17(?:[."]|$)',java),"JDK 17 required")
         dump(ev/"environment.json",{"flutter":version,"java":java,"platform":sys.platform,"sdk_components":{p:(sdk/p/"source.properties").read_text() for p in COMPONENTS},"gradle_expected":"8.14","source_shas":SHAS,"note":"Toolchain record, not bit-identical build claim."})
-        with tempfile.TemporaryDirectory(prefix="gbr-android-") as d:
-            results={label:build(label,ref,sdk,ev,Path(d),a.keep_local_apks) for label,ref in SHAS.items()}
+        work=Path(tempfile.mkdtemp(prefix="gbr-android-"))
+        try:
+            results={label:build(label,ref,sdk,ev,work,a.keep_local_apks) for label,ref in SHAS.items()}
+        finally:
+            # Single-use workers can still be exiting. Retry bounded cleanup;
+            # never report successful cleanup if any scratch files remain.
+            cleanup_errors=[]
+            for attempt in range(6):
+                try:
+                    if work.exists(): shutil.rmtree(work)
+                    if not work.exists(): break
+                except OSError as exc:
+                    cleanup_errors.append(str(exc))
+                if attempt<5: time.sleep(2)
+            dump(ev/"cleanup.json",{"removed":not work.exists(),"errors":cleanup_errors})
+            require(not work.exists(),"Scratch cleanup failed; no successful batch or usable partial pair")
         require(results["baseline"]["package"]!=results["candidate"]["package"],"Package isolation failed")
         dump(ev/"batch-result.json",{"status":"BUILDS_VERIFIED_NOT_DEVICE_VALIDATED","results":results,"apk_retention":"local only" if a.keep_local_apks else "discarded after CI verification","golden_authority":"UNCHANGED","physical_android":"PENDING","owner_acceptance":"PENDING","cloud_scenes":"UNRESOLVED; safe fixture route separately authorized if unreachable"})
     except Exception as exc:
