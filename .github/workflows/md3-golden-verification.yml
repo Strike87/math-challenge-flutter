@@ -1,0 +1,78 @@
+name: MD3 GBR Isolated Golden Recovery
+on:
+  push:
+    branches: [verify/md3-golden-recovery]
+    paths:
+      - '.github/workflows/md3-golden-verification.yml'
+      - 'tools/verification/md3_golden_audit.py'
+permissions:
+  contents: read
+jobs:
+  recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          path: verification
+      - uses: actions/checkout@v5
+        with:
+          ref: fdbbfc63e9e2f1c095512db2337ce5bbfa150f31
+          persist-credentials: false
+          path: baseline
+      - uses: actions/checkout@v5
+        with:
+          ref: feadfb059b0892846b06ecfd42d38f55d2cde290
+          persist-credentials: false
+          path: candidate
+      - name: Verify pinned OCI manifest and execute isolated recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/md3-gbr-evidence"
+          INDEX=sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3
+          AMD64=sha256:496754492fb28b4d3049432f2ca787449331e23fb14f0dd3fffea86bf5a93eb4
+          docker buildx imagetools inspect "ubuntu@$INDEX" --raw > "$RUNNER_TEMP/md3-gbr-evidence/oci-index.json"
+          jq -e --arg digest "$AMD64" '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64" and .digest == $digest)' "$RUNNER_TEMP/md3-gbr-evidence/oci-index.json"
+          docker run --rm --platform linux/amd64 \
+            -e LANG=C.UTF-8 -e LC_ALL=C.UTF-8 -e TZ=UTC \
+            -v "$GITHUB_WORKSPACE/baseline:/sources/baseline:ro" \
+            -v "$GITHUB_WORKSPACE/candidate:/sources/candidate:ro" \
+            -v "$GITHUB_WORKSPACE/verification/tools/verification/md3_golden_audit.py:/audit.py:ro" \
+            -v "$RUNNER_TEMP/md3-gbr-evidence:/evidence" \
+            "ubuntu@$AMD64" bash -lc '
+              set -euo pipefail
+              export DEBIAN_FRONTEND=noninteractive
+              mkdir -p /pins /work
+              apt-get update
+              # Resolve and download package bytes once before any rendering.
+              # Capture exact versions and hashes; install only these cached bytes.
+              packages=(ca-certificates curl git jq libglu1-mesa unzip xz-utils python3 python3-pil fontconfig fonts-dejavu-core fonts-noto-color-emoji)
+              apt-get -y --no-install-recommends --download-only install "${packages[@]}"
+              find /var/cache/apt/archives -maxdepth 1 -name "*.deb" -type f -print0 | sort -z | xargs -0 -r sha256sum > /pins/debs.sha256
+              test -s /pins/debs.sha256
+              sha256sum --check /pins/debs.sha256
+              apt-get -y --no-install-recommends --no-download install "${packages[@]}"
+              python3 -c "import json; from pathlib import Path; print(json.dumps(dict((p,h) for h,p in (l.split(maxsplit=1) for l in Path(\"/pins/debs.sha256\").read_text().splitlines())),sort_keys=True))" > /pins/debs.json
+              cp /pins/debs.sha256 /evidence/downloaded-packages.sha256
+              dpkg-query -W > /evidence/package-versions.txt
+              curl --fail --location --retry 3 https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.47.5-stable.tar.xz -o /tmp/flutter.tar.xz
+              echo "2132e990f236f8d22e7c6314b29a191a95b10d7cbcfec9b4e2e303d996652cbb  /tmp/flutter.tar.xz" | sha256sum --check -
+              mkdir -p /opt/flutter-sdk
+              tar -xJf /tmp/flutter.tar.xz -C /opt/flutter-sdk --strip-components=1
+              rm /tmp/flutter.tar.xz
+              export PATH="/opt/flutter-sdk/bin:$PATH"
+              git config --system --add safe.directory /opt/flutter-sdk
+              flutter config --no-analytics
+              flutter --version
+              fc-cache -f
+              python3 /audit.py
+            ' 2>&1 | tee "$RUNNER_TEMP/md3-gbr-evidence/runner.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: md3-gbr-evidence
+          path: ${{ runner.temp }}/md3-gbr-evidence
+          if-no-files-found: error
+          retention-days: 14

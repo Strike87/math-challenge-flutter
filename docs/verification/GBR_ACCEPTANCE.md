@@ -1,0 +1,3 @@
+# GBR acceptance — PENDING
+No golden replacement, visual acceptance, merge or release is authorized here.
+Review original expected / regenerated baseline / regenerated candidate per image at full resolution, especially 10_win_modal and 28_cloud_save_conflict ordinary light, ordinary dark, native light. Classify intentional / regression / unresolved only after human review. Require exact SHAs, frozen environment manifest, successful generation, independent-run reproducibility, inventory and named failure evidence, unchanged source hashes, and reviewer provenance. Record precise accepted paths/hashes and rejected images. Existing legacy parity failures remain explicit; no blanket update. Owner authorization for replacement is separate. Device acceptance is separate.
