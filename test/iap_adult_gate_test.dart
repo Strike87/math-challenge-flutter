@@ -82,6 +82,69 @@ void main() {
       expect(adapter.buyCalls, isEmpty);
     });
 
+    for (final size in [const Size(320, 568), const Size(844, 390)]) {
+      testWidgets('05F-01 Adult Gate preserves input across inset at $size',
+          (tester) async {
+        final adapter = _FakeIapPurchaseAdapter();
+        final state = await _makeState(adapter: adapter);
+        addTearDown(state.dispose);
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        state.beginIapPurchase(IapProducts.small);
+        await tester.pumpWidget(_modalHost(state, size: size, textScale: 2));
+        await tester.pumpAndSettle();
+        final next = find.text('Continue');
+        await tester.ensureVisible(next);
+        await tester.tap(next);
+        await tester.pumpAndSettle();
+        final field = find.byKey(const Key('adultGateAnswerField'));
+        await tester.ensureVisible(field);
+        await tester.enterText(field, '65');
+        await tester.pump();
+        final focus = tester.widget<EditableText>(
+          find.descendant(of: field, matching: find.byType(EditableText)),
+        ).focusNode;
+        expect(focus.hasFocus, isTrue);
+
+        // Simulate a short usable region after the keyboard opens. The
+        // existing field/focus and purchase callbacks must survive reflow.
+        final inset = size.height - 190;
+        await tester.pumpWidget(_modalHost(
+          state,
+          size: size,
+          textScale: 2,
+          viewInsets: EdgeInsets.only(bottom: inset),
+        ));
+        await tester.pumpAndSettle();
+        expect(tester.widget<TextField>(field).controller!.text, '65');
+        expect(tester.widget<EditableText>(
+          find.descendant(of: field, matching: find.byType(EditableText)),
+        ).focusNode, same(focus));
+        expect(focus.hasFocus, isTrue);
+        final shell = find.byType(ModalShell);
+        expect(tester.getRect(shell).bottom, lessThanOrEqualTo(190));
+        expect(
+          find.descendant(of: shell, matching: find.byType(SingleChildScrollView)),
+          findsOneWidget,
+        );
+        await tester.ensureVisible(field);
+        await tester.pump();
+        expect(field.hitTestable(), findsOneWidget);
+        final cancel = find.text('Cancel');
+        await tester.ensureVisible(cancel);
+        await tester.pump();
+        expect(cancel.hitTestable(), findsOneWidget);
+        await tester.tap(cancel);
+        await tester.pumpAndSettle();
+        expect(state.currentModal, GameModal.none);
+        expect(adapter.buyCalls, isEmpty);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
     testWidgets('wrong answer does not call adapter', (tester) async {
       final adapter = _FakeIapPurchaseAdapter();
       final state = await _makeState(adapter: adapter);
@@ -392,7 +455,12 @@ Future<GameState> _makeState({
   return state;
 }
 
-Widget _modalHost(GameState state, {Size size = const Size(390, 700)}) {
+Widget _modalHost(
+  GameState state, {
+  Size size = const Size(390, 700),
+  double textScale = 1,
+  EdgeInsets viewInsets = EdgeInsets.zero,
+}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<GameState>.value(value: state),
@@ -400,8 +468,13 @@ Widget _modalHost(GameState state, {Size size = const Size(390, 700)}) {
     ],
     child: MaterialApp(
       home: MediaQuery(
-        data: MediaQueryData(size: size),
+        data: MediaQueryData(
+          size: size,
+          textScaler: TextScaler.linear(textScale),
+          viewInsets: viewInsets,
+        ),
         child: const Scaffold(
+          resizeToAvoidBottomInset: false,
           body: Stack(children: [ModalRouter()]),
         ),
       ),

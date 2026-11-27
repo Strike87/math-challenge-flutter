@@ -1183,6 +1183,71 @@ void main() {
       }
     });
 
+    // 05F-01 representative default/custom header coverage; the complete
+    // 17-consumer matrix remains a separate 05F-03 task.
+    for (final size in [
+      const Size(320, 568),
+      const Size(390, 844),
+      const Size(844, 390),
+    ]) {
+      for (final scale in [1.0, 1.5, 2.0]) {
+        for (final dark in [false, true]) {
+          testWidgets('05F-01 headers $size @ ${scale}x dark=$dark',
+              (tester) async {
+            final state = await _makeState({'mc_dark': dark});
+            try {
+              _setTestView(tester, size);
+              const safe = EdgeInsets.fromLTRB(8, 18, 12, 14);
+              for (final modal in [
+                GameModal.highScore,
+                GameModal.skillDashboard,
+              ]) {
+                state.showModal(modal);
+                await tester.pumpWidget(
+                  _modalHost(
+                    state,
+                    size: size,
+                    textScale: scale,
+                    safePadding: safe,
+                  ),
+                );
+                await tester.pumpAndSettle();
+                expect(state.settings.dark, dark);
+                final shell = find.byType(ModalShell);
+                final bounds = tester.getRect(shell);
+                expect(bounds.left, greaterThanOrEqualTo(safe.left));
+                expect(bounds.top, greaterThanOrEqualTo(safe.top));
+                expect(bounds.right, lessThanOrEqualTo(size.width - safe.right));
+                expect(bounds.bottom,
+                    lessThanOrEqualTo(size.height - safe.bottom));
+                final title = find.text(modal == GameModal.highScore
+                    ? 'Hall of Fame'
+                    : 'Skills Dashboard');
+                expect(title, findsOneWidget);
+                await _expectReachableInsideModal(tester, title);
+                if (modal == GameModal.highScore) {
+                  final subtitle = find.text('Your best Math Challenge runs');
+                  expect(subtitle, findsOneWidget);
+                  expect(tester.widget<Text>(title).softWrap, isTrue);
+                  expect(tester.widget<Text>(title).maxLines, isNull);
+                  expect(tester.widget<Text>(subtitle).softWrap, isTrue);
+                  expect(tester.widget<Text>(subtitle).maxLines, isNull);
+                  await _expectReachableInsideModal(tester, subtitle);
+                } else {
+                  await _expectReachableInsideModal(
+                      tester, find.text('YOUR SKILLS'));
+                }
+                expect(tester.takeException(), isNull);
+                await _closeResponsiveModal(tester, state, 'Close');
+              }
+            } finally {
+              state.dispose();
+            }
+          });
+        }
+      }
+    }
+
     testWidgets('modal shell remains scrollable on compact viewports',
         (tester) async {
       final state = await _makeState();
@@ -1838,6 +1903,7 @@ Widget _modalHost(
   Size size = const Size(390, 700),
   EdgeInsets viewInsets = EdgeInsets.zero,
   double textScale = 1,
+  EdgeInsets safePadding = EdgeInsets.zero,
 }) {
   return MultiProvider(
     providers: [
@@ -1856,6 +1922,8 @@ Widget _modalHost(
         data: MediaQueryData(
           size: size,
           viewInsets: viewInsets,
+          padding: safePadding,
+          viewPadding: safePadding,
           textScaler: TextScaler.linear(textScale),
         ),
         child: const Scaffold(
