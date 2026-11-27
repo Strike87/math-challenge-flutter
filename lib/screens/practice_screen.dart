@@ -5,6 +5,7 @@ import '../engine/game_state.dart';
 import '../game_config.dart';
 import '../models/enums.dart';
 import '../services/settings.dart';
+import '../widgets/setup_word_fit_text.dart';
 
 class PracticeScreen extends StatelessWidget {
   const PracticeScreen({super.key});
@@ -55,7 +56,7 @@ class PracticeScreen extends StatelessWidget {
                   onTap: gs.showOperationQuest,
                 ),
                 const SizedBox(height: 18),
-                Text(
+                SetupWordFitText(
                   'QUICK PRACTICE',
                   style: TextStyle(
                     color: s.muted,
@@ -168,20 +169,16 @@ class _PracticeCampaign extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
+                      SetupWordFitText(
                         title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      Text(
+                      SetupWordFitText(
                         subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: .9),
                           fontSize: 10,
@@ -245,20 +242,20 @@ class _PracticeTile extends StatelessWidget {
                     symbol == '🧮'
                         ? const Icon(Icons.calculate_rounded,
                             color: Colors.white, size: 32)
-                        : Text(
-                            symbol,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
+                        : MediaQuery.withNoTextScaling(
+                            child: Text(
+                              symbol,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
                           ),
                     const SizedBox(height: 7),
-                    Text(
+                    SetupWordFitText(
                       label,
-                      maxLines: 2,
                       textAlign: TextAlign.center,
-                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
                         height: 1.1,
