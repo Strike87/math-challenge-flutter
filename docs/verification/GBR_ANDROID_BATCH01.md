@@ -21,3 +21,13 @@ Record device model, Android version/build, resolution/density, locale, orientat
 | Typography and Material Icons | Labels, numbers, operators, glyph clipping | PENDING |
 | Modal accessibility | Adult Gate keyboard without purchase, focus, safe areas, scrolling, reachable controls, theme/text scale | PENDING |
 Each row requires baseline/candidate observations and screenshot hashes. Cloud scenarios need safe synthetic fixture; no new injection route in these ordinary offline APKs. Separate scope authorization required if inaccessible; no real account conflicts or native-service evidence inferred from synthetic UI. Physical device NOT VALIDATED. Owner visual acceptance PENDING. All four scene classifications UNRESOLVED. Golden replacement, merge, deployment and release separately authorized and independently reviewed.
+
+## Sequential low-disk build update — owner approved
+Windows local attempt: baseline verified; candidate failed with "There is not enough space on the disk" on C: during mergeDebugNativeLibs, and scratch cleanup also failed (WinError 145). Neither was an app logic failure or a completed device-test pair. CI run 46055421909 previously verified both builds and full cleanup; this update preserves every signing, source, permission, dependency and golden guard. Each SHA now gets a fresh separate scratch root, caches and child temp directory; its scratch root must be deleted before the next starts. Staged local APKs are held in pending-apks, verified again as a pair, then renamed to apks only after both builds and cleanups pass; failure invalidates the batch and attempts removal, with any cleanup failure recorded. Console logs stream to terminal and evidence files. Windows long-path cleanup applies only to script-owned directories. Minimum free scratch space before each build is 20 GiB on Windows / 8 GiB on Linux; local output also requires 2 GiB. These are conservative preflight thresholds, not a guaranteed upper bound. No global cache cleanup, no modification of primary SDK, no shared dependency cache.
+On the existing Windows checkout, use:
+```powershell
+git pull --ff-only
+$env:Path = "D:\FlutterProjects\flutter-3.47.5\bin;$env:Path"
+py -3 tools/verification/gbr_android_build.py --out "$PWD/device-build-v3" --scratch-dir D:\GBR_TEMP --keep-local-apks
+```
+If either stage fails, report the live log, blocker.json and cleanup.json; do not install from pending-apks or incomplete builds. A new clean output directory is required for retries. No Android device acceptance or merge asserted.

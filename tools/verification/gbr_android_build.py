@@ -18,14 +18,29 @@ def sha(p):
     return h.hexdigest()
 def run(args,cwd=None,env=None,log=None):
     args=list(map(str,args))
+    display=" ".join(args[:3])
     args[0]=shutil.which(args[0]) or args[0]
     if os.name=="nt" and args[0].lower().endswith((".bat",".cmd")):
         args=[os.environ.get("COMSPEC","cmd.exe"),"/d","/c",subprocess.list2cmdline(args)]
-    print("Executing "+Path(args[0]).name+" "+str(args[1:3]),flush=True)
-    p=subprocess.run(args,cwd=cwd,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding="utf-8",errors="replace")
-    if log: log.write_text(p.stdout,encoding="utf-8")
-    require(p.returncode==0,"Command failed: "+str(log or p.stdout[-2000:]))
-    return p.stdout
+    print("Executing "+display,flush=True)
+    if log:
+        lines=[]
+        with log.open("w",encoding="utf-8") as f:
+            with subprocess.Popen(args,cwd=cwd,env=env,stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT,text=True,encoding="utf-8",errors="replace",bufsize=1) as p:
+                for line in p.stdout:
+                    f.write(line)
+                    f.flush()
+                    print(line,end="",flush=True)
+                    lines.append(line)
+                code=p.wait()
+        output="".join(lines)
+    else:
+        p=subprocess.run(args,cwd=cwd,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding="utf-8",errors="replace")
+        output=p.stdout
+        code=p.returncode
+    require(code==0,"Command failed: "+str(log or output[-2000:]))
+    return output
 def once(s,a,b):
     require(s.count(a)==1,"Isolation anchor drift: "+a)
     return s.replace(a,b)
@@ -88,7 +103,10 @@ def build(label,ref,sdk,evidence,work,keep):
     dump(ev/"source-inventory.json",before)
     lock=sha(root/"pubspec.lock")
     package=prepare(root,label,ev)
-    env=dict(os.environ,GRADLE_USER_HOME=str(work/(label+"-gradle")),PUB_CACHE=str(work/(label+"-pub")))
+    stage_temp=work/"tmp"
+    stage_temp.mkdir()
+    env=dict(os.environ,GRADLE_USER_HOME=str(work/(label+"-gradle")),PUB_CACHE=str(work/(label+"-pub")),
+             TEMP=str(stage_temp),TMP=str(stage_temp),TMPDIR=str(stage_temp))
     for key in list(env):
         if key.startswith("ORG_GRADLE_PROJECT_"): env.pop(key)
     # Prevent persistent Gradle/Kotlin workers from writing into deleted scratch caches.
@@ -124,23 +142,49 @@ def build(label,ref,sdk,evidence,work,keep):
     result={"status":"BUILD_VERIFIED_NOT_DEVICE_VALIDATED","source_sha":ref,"package":package,"apk_sha256":sha(apk),"apk_bytes":apk.stat().st_size,"certificate_sha256":digest,"signing":"ephemeral debug verified","command":cmd,"lock_sha256":lock,"source_inventories_unchanged":True,"forbidden_permissions_absent":True,"backup_disabled":True}
     dump(ev/"result.json",result)
     if keep:
-        dest=evidence.parent/"apks"
+        # A partial pair must never appear in the final installable APK directory.
+        dest=evidence.parent/"pending-apks"
         dest.mkdir(exist_ok=True)
         target=dest/(label+"-"+ref[:12]+"-debug.apk")
         shutil.copyfile(apk,target)
         require(sha(target)==result["apk_sha256"],"APK copy mismatch")
     print(label+" verified "+result["apk_sha256"],flush=True)
     return result
+def cleanup(path):
+    errors=[]
+    # Only a script-owned, absolute scratch or staging directory is passed here.
+    # Extended-length paths allow Windows to delete deeply nested Gradle files.
+    target=str(path.resolve())
+    if os.name=="nt":
+        target=("\\\\?\\UNC\\"+target[2:]) if target.startswith("\\\\") else ("\\\\?\\"+target)
+    for attempt in range(12):
+        try:
+            if os.path.exists(target): shutil.rmtree(target)
+            if not os.path.exists(target): break
+        except OSError as exc:
+            errors.append(str(exc))
+        if attempt<11: time.sleep(2)
+    return {"removed":not os.path.exists(target),"errors":errors}
+
+def space(path, minimum_gib, report, stage):
+    free=shutil.disk_usage(path).free
+    data={"stage":stage,"path":str(path),"free_bytes":free,"minimum_bytes":minimum_gib*1024**3}
+    dump(report,data)
+    print(f"{stage}: {free/1024**3:.2f} GiB available at {path} (minimum {minimum_gib} GiB)",flush=True)
+    require(free>=data["minimum_bytes"],f"Insufficient disk space before {stage}; see {report}")
+
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("--out",required=True,type=Path)
     p.add_argument("--keep-local-apks",action="store_true")
+    p.add_argument("--scratch-dir",type=Path,help="Parent for fresh per-source temporary workspaces")
     a=p.parse_args()
     out=a.out.resolve()
     require(not out.exists(),"Use fresh output directory")
     require(not (os.environ.get("GITHUB_ACTIONS")=="true" and a.keep_local_apks),"CI APK retention forbidden")
     ev=out/"evidence"
     ev.mkdir(parents=True)
+    if hasattr(sys.stdout,"reconfigure"): sys.stdout.reconfigure(errors="replace")
     try:
         sdk=Path(os.environ.get("ANDROID_SDK_ROOT") or os.environ.get("ANDROID_HOME") or "")
         require(sdk.is_absolute() and sdk.is_dir(),"Set ANDROID_SDK_ROOT or ANDROID_HOME")
@@ -150,27 +194,51 @@ def main():
         java=run(["java","-version"])
         require(re.search(r'version "17(?:[."]|$)',java),"JDK 17 required")
         dump(ev/"environment.json",{"flutter":version,"java":java,"platform":sys.platform,"sdk_components":{p:(sdk/p/"source.properties").read_text() for p in COMPONENTS},"gradle_expected":"8.14","source_shas":SHAS,"note":"Toolchain record, not bit-identical build claim."})
-        work=Path(tempfile.mkdtemp(prefix="gbr-android-"))
-        try:
-            results={label:build(label,ref,sdk,ev,work,a.keep_local_apks) for label,ref in SHAS.items()}
-        finally:
-            # Single-use workers can still be exiting. Retry bounded cleanup;
-            # never report successful cleanup if any scratch files remain.
-            cleanup_errors=[]
-            for attempt in range(6):
-                try:
-                    if work.exists(): shutil.rmtree(work)
-                    if not work.exists(): break
-                except OSError as exc:
-                    cleanup_errors.append(str(exc))
-                if attempt<5: time.sleep(2)
-            dump(ev/"cleanup.json",{"removed":not work.exists(),"errors":cleanup_errors})
-            require(not work.exists(),"Scratch cleanup failed; no successful batch or usable partial pair")
+        scratch=(a.scratch_dir or Path(tempfile.gettempdir())).resolve()
+        scratch.mkdir(parents=True,exist_ok=True)
+        results={}
+        cleanup_results={}
+        # Conservative preflight thresholds, not a guarantee of peak disk usage.
+        minimum=20 if os.name=="nt" else 8
+        for label,ref in SHAS.items():
+            print("\n=== "+label.upper()+" / "+ref+" ===",flush=True)
+            space(scratch,minimum,ev/(label+"-space-before.json"),label+" scratch")
+            if a.keep_local_apks:
+                space(out,2,ev/(label+"-output-space.json"),label+" output")
+            work=Path(tempfile.mkdtemp(prefix="gbr-android-"+label+"-",dir=scratch))
+            try:
+                results[label]=build(label,ref,sdk,ev,work,a.keep_local_apks)
+            finally:
+                # Preserve an original build error even if cleanup also fails.
+                active_error=sys.exc_info()[0] is not None
+                print("Cleaning "+label+" scratch workspace",flush=True)
+                result=cleanup(work)
+                cleanup_results[label]=result
+                dump(ev/"cleanup.json",cleanup_results)
+                if not result["removed"]:
+                    print("Scratch cleanup BLOCKED; see cleanup.json",flush=True)
+                    if not active_error:
+                        raise RuntimeError("Scratch cleanup failed; no next build or usable partial pair")
+                else:
+                    print(label+" scratch removed",flush=True)
+            space(scratch,0,ev/(label+"-space-after.json"),label+" after cleanup")
+        require(set(results)==set(SHAS) and all(cleanup_results[k]["removed"] for k in SHAS),"Incomplete pair or cleanup")
         require(results["baseline"]["package"]!=results["candidate"]["package"],"Package isolation failed")
+        if a.keep_local_apks:
+            pending=out/"pending-apks"
+            for label,ref in SHAS.items():
+                apk=pending/(label+"-"+ref[:12]+"-debug.apk")
+                require(apk.is_file() and sha(apk)==results[label]["apk_sha256"],"Final pair hash mismatch")
+            pending.rename(out/"apks")
         dump(ev/"batch-result.json",{"status":"BUILDS_VERIFIED_NOT_DEVICE_VALIDATED","results":results,"apk_retention":"local only" if a.keep_local_apks else "discarded after CI verification","golden_authority":"UNCHANGED","physical_android":"PENDING","owner_acceptance":"PENDING","cloud_scenes":"UNRESOLVED; safe fixture route separately authorized if unreachable"})
-    except Exception as exc:
-        if (out/"apks").exists(): shutil.rmtree(out/"apks")
-        dump(ev/"blocker.json",{"status":"BLOCKED","error":str(exc)})
+    except BaseException as exc:
+        # Never publish a success manifest or leave an accepted partial pair.
+        (ev/"batch-result.json").unlink(missing_ok=True)
+        removal={}
+        for name in ("pending-apks","apks"):
+            path=out/name
+            if path.exists(): removal[name]=cleanup(path)
+        dump(ev/"blocker.json",{"status":"BLOCKED","error":str(exc),"partial_pair_cleanup":removal})
         raise
 if __name__=="__main__":
     main()
