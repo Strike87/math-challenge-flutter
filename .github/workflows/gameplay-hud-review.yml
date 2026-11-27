@@ -1,0 +1,39 @@
+name: Gameplay HUD visual review
+on:
+  pull_request:
+    paths:
+      - 'lib/screens/game_screen.dart'
+      - 'lib/features/gameplay/presentation/widgets/**'
+      - 'test/gameplay_hud_review_test.dart'
+      - '.github/workflows/gameplay-hud-review.yml'
+permissions:
+  contents: read
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter test test/gameplay_hud_review_test.dart
+        env:
+          CAPTURE_SETUP_PREVIEWS: '1'
+      - name: Verify screenshot count
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          files = list(Path('build/setup-previews').glob('gameplay-*.png'))
+          assert len(files) == 32, f'Expected 32 screenshots, found {len(files)}'
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gameplay-hud-previews
+          path: build/setup-previews/gameplay-*.png
+          if-no-files-found: warn
+          retention-days: 7
